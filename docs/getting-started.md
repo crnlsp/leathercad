@@ -140,6 +140,8 @@ problem** and **Next problem** buttons. Going to a problem opens Design, selects
 frames the evidence and focuses its row. Several problems on one feature are visited separately.
 These keys can be changed in *Settings → Keyboard shortcuts*; fields and dialogs keep their own
 keys, and navigation does not add an Undo step.
+If you already assigned F8 or Shift+F8 to something else, that shortcut is kept. The conflicting
+new command reads *Not assigned* in Settings until you choose a key; the drawer's buttons still work.
 
 ## 4. Save
 

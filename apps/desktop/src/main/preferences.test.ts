@@ -297,6 +297,13 @@ describe('the maker’s keys (U.12)', () => {
     expect(DEFAULT_PREFERENCES.keyBindings).toEqual({});
   });
 
+  it('preserves the maker’s F8 when 9.15 introduces problem-navigation defaults', () => {
+    expect(stored({ selectionBar: [{ code: 'F8' }] })).toEqual({
+      selectionBar: [{ code: 'F8' }],
+      nextProblem: [],
+    });
+  });
+
   it('keeps a usable change, and drops an unknown command, a malformed key, Enter and a clash', () => {
     expect(
       stored({

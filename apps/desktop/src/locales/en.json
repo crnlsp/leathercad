@@ -501,7 +501,8 @@
       "swapped": "{{command}} and {{other}} swapped keys.",
       "allReset": "Every key is back to its default.",
       "typesOther": "Held that way, the key types “{{typed}}” rather than its letter, so it can't be a shortcut. Press other keys.",
-      "typesSize": "Numbers, points and commas type sizes on the board, so they need a modifier held. Press other keys."
+      "typesSize": "Numbers, points and commas type sizes on the board, so they need a modifier held. Press other keys.",
+      "unassigned": "Not assigned"
     },
     "updates": {
       "note": "LeatherCAD asks GitHub which version is the latest only when you ask it to, here or by pressing the version in the status bar. Nothing about you or your patterns is sent, and nothing is downloaded or installed.",

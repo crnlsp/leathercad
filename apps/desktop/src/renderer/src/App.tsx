@@ -1067,6 +1067,9 @@ export function App({
         // A field or another control may have received focus while layout
         // settled. The pending navigation must not take its next key.
         const focusedNow = document.activeElement;
+        // Another handler can focus a field during the same key event,
+        // before our request was recorded. That field keeps focus too.
+        if (isTyping(focusedNow)) return;
         if (focusedNow !== focusedAtRequest && focusedNow !== document.body) return;
         row.focus({ preventScroll: true });
         row.scrollIntoView({ block: 'nearest' });

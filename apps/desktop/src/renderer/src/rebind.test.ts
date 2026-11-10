@@ -351,6 +351,38 @@ describe('which keys can change', () => {
 });
 
 describe('reading the keys preferences.json holds', () => {
+  it('keeps an existing F8 custom binding when problem navigation adds that default (9.15)', () => {
+    const bindings = readBindings({ selectionBar: [{ code: 'F8' }] });
+    expect(bindings).toEqual({ selectionBar: [{ code: 'F8' }], nextProblem: [] });
+    expect(readBindings(bindings)).toEqual(bindings);
+    const map = withBindings(bindings);
+    expect(commandFor(at('F8', 'F8'), false, map)).toBe('selectionBar');
+    expect(commandFor(at('F6', 'F6'), false, map)).toBeNull();
+    expect(keysOf('nextProblem', map)).toEqual([]);
+    expect(keysOf('previousProblem', map)).toEqual([{ code: 'F8', shift: true }]);
+  });
+
+  it('yields both new defaults when a canvas command also hears the shifted key (9.15)', () => {
+    expect(readBindings({ delete: [{ code: 'F8' }] })).toEqual({
+      delete: [{ code: 'F8' }],
+      nextProblem: [],
+      previousProblem: [],
+    });
+  });
+
+  it('lets the maker assign an unassigned new command without changing their older key (9.15)', () => {
+    const bindings = readBindings({ selectionBar: [{ code: 'F8' }] });
+    const next = changed(
+      apply(bindings, proposeKey('nextProblem', { code: 'F7' }, at('F7', 'F7')), false),
+    );
+    expect(readBindings(next)).toEqual({
+      selectionBar: [{ code: 'F8' }],
+      nextProblem: [{ code: 'F7' }],
+    });
+    expect(commandFor(at('F7', 'F7'), false, withBindings(next))).toBe('nextProblem');
+    expect(commandFor(at('F8', 'F8'), false, withBindings(next))).toBe('selectionBar');
+  });
+
   it('keeps a usable change', () => {
     expect(readBindings({ save: [{ code: 'F5' }] })).toEqual({ save: [{ code: 'F5' }] });
     expect(readBindings({ save: [{ code: 'KeyS', mod: true, shift: false, extra: 1 }] })).toEqual(
