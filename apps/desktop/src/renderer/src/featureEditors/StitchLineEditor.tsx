@@ -10,9 +10,9 @@ type Offset = Extract<Derivation, { type: 'offset' }>;
 /**
  * How far from the edge the thread runs.
  *
- * One number, because that is the whole relationship: the stitch line is not a
- * copy of the edge it follows, it is "3.5 mm in from it", and moving the edge
- * moves this with it.
+ * The edge margin sets the inset; the run chooses the contour corners it
+ * follows. Neither copies the edge: changing the outline moves the stitching
+ * with it.
  *
  * **Edge margin**, not "inset", because the same number has to read correctly
  * round a cut-out: there the line runs *away* from the hole and into the
