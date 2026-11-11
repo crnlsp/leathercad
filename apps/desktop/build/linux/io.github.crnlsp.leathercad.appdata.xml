@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  AppStream metadata: what an app store or catalog shows about LeatherCAD — a
+  summary, a description and screenshots. electron-builder writes none, so the
+  AppImage carries this file in usr/share/metainfo/ (electron-builder.config.mjs).
+
+  The `.appdata.xml` name is AppStream's older one, still valid: the AppImage
+  catalog (appimage.github.io) reads the summary only from a file named so.
+  The screenshots are the README's, from `main`, retaken by `pnpm docs:media`.
+-->
+<component type="desktop-application">
+  <id>io.github.crnlsp.leathercad</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>Apache-2.0</project_license>
+  <name>LeatherCAD</name>
+  <summary>Leathercraft patterns that print at exact 1:1 scale</summary>
+  <developer id="io.github.crnlsp">
+    <name>crnlsp</name>
+  </developer>
+  <description>
+    <p>
+      Draw leathercraft patterns in real millimetres, stitch along the edge, and print a template
+      you can cut out. A line drawn as 100 mm measures 100 mm on paper.
+    </p>
+    <ul>
+      <li>Parts made of outlines, cut-outs, folds, marking lines, hardware holes, text and dimensions</li>
+      <li>Stitch lines that follow the edge, with holes at your pricking iron's pitch</li>
+      <li>Change an outline and its stitching updates itself</li>
+      <li>Problems listed, such as holes too close to the edge</li>
+      <li>Parts bigger than a sheet tiled across several sheets, never scaled to fit</li>
+      <li>A 100 mm gauge on every printed sheet, to check it with a steel rule</li>
+      <li>Export to vector PDF, SVG and DXF in millimetres</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">leathercad.desktop</launchable>
+  <url type="homepage">https://github.com/crnlsp/leathercad</url>
+  <url type="bugtracker">https://github.com/crnlsp/leathercad/issues</url>
+  <url type="vcs-browser">https://github.com/crnlsp/leathercad</url>
+  <screenshots>
+    <screenshot type="default">
+      <caption>A bifold wallet drafted, with its stitch holes' pitch and spacing</caption>
+      <image>https://raw.githubusercontent.com/crnlsp/leathercad/main/docs/images/design.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>The Sheets view: the pieces on the paper, as the PDF places them</caption>
+      <image>https://raw.githubusercontent.com/crnlsp/leathercad/main/docs/images/sheets.png</image>
+    </screenshot>
+  </screenshots>
+  <categories>
+    <category>Graphics</category>
+  </categories>
+  <keywords>
+    <keyword>leather</keyword>
+    <keyword>leathercraft</keyword>
+    <keyword>pattern</keyword>
+    <keyword>stitch</keyword>
+    <keyword>template</keyword>
+  </keywords>
+  <provides>
+    <mediatype>application/vnd.leathercad.project</mediatype>
+  </provides>
+  <content_rating type="oars-1.1"/>
+</component>

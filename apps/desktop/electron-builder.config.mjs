@@ -84,6 +84,16 @@ export default {
     // also the window's app_id / WM_CLASS: without the match, a desktop cannot
     // tell which entry a running window belongs to, and shows a generic icon.
     syncDesktopName: true,
+    // AppStream metadata, for app catalogs (build/linux/*.appdata.xml says
+    // why). The app's own directory is the AppImage's root, so this lands in
+    // its usr/share/metainfo/. electron-builder has no per-target extraFiles:
+    // the .deb gets a copy under /opt/LeatherCAD/ that nothing reads.
+    extraFiles: [
+      {
+        from: 'build/linux/io.github.crnlsp.leathercad.appdata.xml',
+        to: 'usr/share/metainfo/io.github.crnlsp.leathercad.appdata.xml',
+      },
+    ],
     desktop: {
       entry: {
         GenericName: 'Leathercraft pattern designer',
