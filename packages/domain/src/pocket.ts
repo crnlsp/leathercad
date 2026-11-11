@@ -1,4 +1,4 @@
-import { EPS_LENGTH, EPS_POINT, approxEq } from '@leathercad/core';
+import { EPS_LENGTH, EPS_POINT, approxEq, type Mm } from '@leathercad/core';
 import {
   PathOps,
   SegmentOps,
@@ -27,6 +27,41 @@ export interface PocketSize {
  * Takes a validated geometry Path; inputs are never modified.
  */
 export function pocketSize(source: Path): PocketSize | null {
+  const frame = chordFrame(source);
+  if (frame === null) return null;
+  const { local, chord } = frame;
+  const left = sideEnd(local);
+  const right = sideEnd(PathOps.reverse(local));
+  if (left === null || right === null) return null;
+  const sharedDepth = Math.min(left.point.y, right.point.y);
+  if (sharedDepth <= EPS_LENGTH) return null;
+  // Straight sides give an affine gap: its minimum is at one of the ends.
+  const bottomGap =
+    chord +
+    ((right.point.x - chord) * sharedDepth) / right.point.y -
+    (left.point.x * sharedDepth) / left.point.y;
+  const widthMm = Math.min(chord, bottomGap);
+  if (widthMm <= EPS_LENGTH) return null;
+  const bottom = local.segments.slice(left.count, local.segments.length - right.count);
+  if (bottom.length === 0) return null;
+  const bounds = PathOps.bbox(PathOps.open(bottom));
+  if (bounds === null || bounds.minY < sharedDepth - EPS_POINT) return null;
+  if (
+    bounds.minX < Math.min(left.point.x, right.point.x) - EPS_POINT ||
+    bounds.maxX > Math.max(left.point.x, right.point.x) + EPS_POINT ||
+    selfIntersections(local).length > 0
+  )
+    return null;
+  return { widthMm, depthMm: bounds.maxY };
+}
+
+/**
+ * The stitching in its own frame: x along the endpoint chord, y from the
+ * chord toward the first side's far end — into the pocket — with the start at
+ * the origin. Null for a closed, too short or degenerate path, or one that
+ * does not leave its start along a line.
+ */
+function chordFrame(source: Path): { local: Path; chord: Mm } | null {
   if (source.closed || source.segments.length < 3) return null;
   // Geometry treats segments below EPS_LENGTH as degenerate.
   const path = PathOps.open(
@@ -51,29 +86,7 @@ export function pocketSize(source: Path): PocketSize | null {
     d: y.y,
     f: -dot(start, y),
   });
-  const left = sideEnd(local);
-  const right = sideEnd(PathOps.reverse(local));
-  if (left === null || right === null) return null;
-  const sharedDepth = Math.min(left.point.y, right.point.y);
-  if (sharedDepth <= EPS_LENGTH) return null;
-  // Straight sides give an affine gap: its minimum is at one of the ends.
-  const bottomGap =
-    chord +
-    ((right.point.x - chord) * sharedDepth) / right.point.y -
-    (left.point.x * sharedDepth) / left.point.y;
-  const widthMm = Math.min(chord, bottomGap);
-  if (widthMm <= EPS_LENGTH) return null;
-  const bottom = local.segments.slice(left.count, local.segments.length - right.count);
-  if (bottom.length === 0) return null;
-  const bounds = PathOps.bbox(PathOps.open(bottom));
-  if (bounds === null || bounds.minY < sharedDepth - EPS_POINT) return null;
-  if (
-    bounds.minX < Math.min(left.point.x, right.point.x) - EPS_POINT ||
-    bounds.maxX > Math.max(left.point.x, right.point.x) + EPS_POINT ||
-    selfIntersections(local).length > 0
-  )
-    return null;
-  return { widthMm, depthMm: bounds.maxY };
+  return { local, chord };
 }
 
 /** Merge the maximal straight run from an endpoint, independent of segmentation. */
