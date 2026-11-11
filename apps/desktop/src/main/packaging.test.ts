@@ -15,7 +15,12 @@ const DESKTOP = resolve(import.meta.dirname, '../..');
 interface BuilderConfig {
   executableName: string;
   directories: { buildResources: string };
-  linux: { icon: string; syncDesktopName: boolean };
+  appId: string;
+  linux: {
+    icon: string;
+    syncDesktopName: boolean;
+    extraFiles: { from: string; to: string }[];
+  };
   win: { icon: string };
   mac: { icon: string };
   fileAssociations: { ext: string; mimeType: string; name: string }[];
@@ -70,6 +75,19 @@ describe('desktop integration', () => {
       types.push(icns.subarray(at, at + 4).toString('ascii'));
     }
     expect(types).toEqual(expect.arrayContaining(['icp4', 'ic07', 'ic09', 'ic10']));
+  });
+
+  it('describes the app to catalogs, for the entry and the type it installs', async () => {
+    // The AppImage's root is the app's directory, so `to` is where an
+    // AppImage catalog looks: usr/share/metainfo/, named for the app id.
+    const { appId, executableName, linux } = await config();
+    const { from, to } = linux.extraFiles.find((file) => file.to.includes('metainfo'))!;
+    expect(to).toBe(`usr/share/metainfo/${appId}.appdata.xml`);
+
+    const xml = readFileSync(join(DESKTOP, from), 'utf8');
+    expect(xml).toContain(`<id>${appId}</id>`);
+    expect(xml).toContain(`<launchable type="desktop-id">${executableName}.desktop</launchable>`);
+    expect(xml).toContain(`<mediatype>${LCP_MIME}</mediatype>`);
   });
 });
 
