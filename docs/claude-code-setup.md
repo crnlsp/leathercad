@@ -159,6 +159,10 @@ edit, and a noisy one gets ignored.
 In `.claude/settings.json` there is one: **`PostToolUse` on `Edit`/`Write`** runs Prettier on the
 changed file if it is code or configuration. Fast, and it takes formatting out of review.
 
+The same file sets `attribution`, so Claude Code ends a commit or pull request with
+`Assisted-by: Claude Code` instead of a co-author line, and links no session
+([`CONTRIBUTING.md`](../CONTRIBUTING.md) § Commits and pull requests).
+
 **What is deliberately a lint or layering rule instead**, because rules run in CI and in the editor
 while hooks only run in Claude Code:
 
