@@ -26,7 +26,7 @@ import {
   createSelectTool,
   createGuideTool,
   createTextTool,
-  hitTest,
+  pickAt,
   type DrawMode,
   type EditPointsOptions,
   type HardwareOptions,
@@ -1071,12 +1071,14 @@ export function CanvasHost({
       cursor.set(at);
       pointerRef.current = at;
 
-      // Hover says what a click would pick, so only where a click picks.
-      const hovered =
+      // Hover says what a click would pick, so only where a click picks: a
+      // line, or a piece by its body, haloed by its outline (3.13).
+      const pick =
         managerRef.current?.activeTool.id === 'select'
-          ? hitTest(evaluate(store.getState().document.project), raw, viewport.pickToleranceMm())
+          ? pickAt(evaluate(store.getState().document.project), raw, viewport.pickToleranceMm())
           : null;
-      hoveredRef.current = hovered;
+      hoveredRef.current =
+        pick?.kind === 'feature' ? pick.id : pick?.kind === 'part' ? pick.outline : null;
       invalidate();
     },
     [camera, cursor, invalidate, pickOnSheets, pointerCss, rulerGuideAt, store, toInput],
@@ -1097,15 +1099,16 @@ export function CanvasHost({
       const viewport = viewportRef.current;
       const rect = event.currentTarget.getBoundingClientRect();
       const at = viewport.fromCssPoint(event.clientX - rect.left, event.clientY - rect.top);
-      const hit = hitTest(
+      const pick = pickAt(
         evaluate(store.getState().document.project),
         at,
         viewport.pickToleranceMm(),
         { locked: true },
       );
-      if (hit === null) return;
+      // A piece's body offers the piece's menu, as its heading in Parts does (3.13).
+      if (pick === null || pick.kind === 'guide') return;
       onContextMenuRef.current?.(
-        { kind: 'feature', id: hit },
+        pick.kind === 'part' ? { kind: 'part', id: pick.id } : { kind: 'feature', id: pick.id },
         { x: event.clientX, y: event.clientY },
       );
     },

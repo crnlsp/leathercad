@@ -10,11 +10,11 @@ import {
   deleteGuide,
 } from '@leathercad/document';
 import type { FeatureId } from '@leathercad/domain';
-import { evaluate, projectToGuide, type Guide, type Problem } from '@leathercad/domain';
-import { MatOps, RectOps, Shapes, dist, type Vec2 } from '@leathercad/geometry';
+import { evaluate, type Guide, type PartId, type Problem } from '@leathercad/domain';
+import { MatOps, RectOps, Shapes, type Vec2 } from '@leathercad/geometry';
 import { CANVAS, pathItem, type DisplayList } from '@leathercad/render';
 
-import { featuresWithin, hitTest } from '../hitTest.js';
+import { featuresWithin, pickAt } from '../hitTest.js';
 import { means, type Tool, type ToolContext } from '../tool.js';
 import { isDrag } from './gesture.js';
 
@@ -55,26 +55,16 @@ export function createSelectTool(): Tool {
       if (event.button !== 0) return;
 
       const resolved = evaluate(ctx.store.getState().document.project);
-      const hit = hitTest(resolved, event.at, ctx.viewport.pickToleranceMm());
+      const pick = pickAt(resolved, event.at, ctx.viewport.pickToleranceMm());
 
-      if (hit === null) {
-        const guides = ctx.store.getState().document.project.guides ?? [];
-        let guide: Guide | undefined;
-        let closest = ctx.viewport.pickToleranceMm();
-        for (const entry of guides) {
-          const distance = dist(projectToGuide(entry, event.at), event.at);
-          if (distance <= closest) {
-            guide = entry;
-            closest = distance;
-          }
-        }
-        if (guide !== undefined) {
-          ctx.store.selectGuide(guide.id);
-          ctx.store.begin({ action: 'edit-guide' });
-          state = { kind: 'guide', guide, startMm: event.at };
-          ctx.invalidate();
-          return;
-        }
+      if (pick?.kind === 'guide') {
+        ctx.store.selectGuide(pick.guide.id);
+        ctx.store.begin({ action: 'edit-guide' });
+        state = { kind: 'guide', guide: pick.guide, startMm: event.at };
+        ctx.invalidate();
+        return;
+      }
+      if (pick === null) {
         if (!event.shiftKey) ctx.store.clearSelection();
         state = { kind: 'band', startMm: event.at, currentMm: event.at };
         ctx.invalidate();
@@ -82,15 +72,17 @@ export function createSelectTool(): Tool {
       }
 
       const { selection, document } = ctx.store.getState();
-      if (event.shiftKey) {
+      if (pick.kind === 'part') {
+        pickPiece(ctx, pick.id, pick.outline, event.shiftKey);
+      } else if (event.shiftKey) {
         // Added to what is picked — a part picked by its heading included, as
         // the features it stands for, rather than dropped (Q29).
         const next = new Set(selectedFeatureIds(document.project, selection));
-        if (next.has(hit)) next.delete(hit);
-        else next.add(hit);
+        if (next.has(pick.id)) next.delete(pick.id);
+        else next.add(pick.id);
         ctx.store.select(next);
-      } else if (!selection.features.has(hit)) {
-        ctx.store.select([hit]);
+      } else if (!selection.features.has(pick.id)) {
+        ctx.store.select([pick.id]);
       }
 
       state = { kind: 'maybe-move', startMm: event.at };
@@ -125,8 +117,12 @@ export function createSelectTool(): Tool {
         if (!isDrag(ctx, state.startMm, event.at)) return;
         const { document, selection } = ctx.store.getState();
         ctx.store.begin({ action: 'move' });
-        // A piece's outline carries the piece (Q30), hidden features and all.
-        const { features } = pieceScope(document.project, [...selection.features]);
+        // A piece's outline carries the piece (Q30), hidden features and all —
+        // and a piece picked by its body or its heading is its features (3.13).
+        const { features } = pieceScope(
+          document.project,
+          selectedFeatureIds(document.project, selection),
+        );
         state = { kind: 'moving', startMm: state.startMm, moving: features, refusal: null };
       }
 
@@ -256,4 +252,26 @@ export function createSelectTool(): Tool {
       reset(ctx);
     },
   };
+}
+
+/**
+ * A press on a piece's body (3.13). Alone, it picks the piece as its heading in
+ * Parts does — unless what is picked already holds the piece, which the press
+ * then drags as it is. With Shift, the piece's features join what is picked or,
+ * when all of them already are, leave it: Shift toggles, as on a line.
+ */
+function pickPiece(ctx: ToolContext, partId: PartId, outline: FeatureId, shift: boolean): void {
+  const { selection, document } = ctx.store.getState();
+  if (!shift) {
+    if (!selection.parts.has(partId) && !selection.features.has(outline)) {
+      ctx.store.selectParts([partId]);
+    }
+    return;
+  }
+  const part = document.project.parts.find((candidate) => candidate.id === partId);
+  const own = part?.features.map((feature) => feature.id) ?? [];
+  const next = new Set(selectedFeatureIds(document.project, selection));
+  if (own.every((id) => next.has(id))) for (const id of own) next.delete(id);
+  else for (const id of own) next.add(id);
+  ctx.store.select(next);
 }
