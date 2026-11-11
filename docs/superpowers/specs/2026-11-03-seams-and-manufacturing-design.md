@@ -176,10 +176,24 @@ pieces at the paired holes, so the pieces line up when glued and stitched.
 
 ## 7. Pockets that hold what they must (9.14)
 
-**The reading (9.14a), no requirement needed.** For an **open stitch line** — one with two ends —
-Properties and the selection bar show the pocket it makes: the *clear width*, the shortest distance
-between its two side runs measured parallel to the line joining its ends, and the *depth*, from
-that line to the farthest point of the stitching. Both between hole centres, said so in the label.
+**The reading (9.14a), no requirement needed.** Properties and the selection bar show
+**Width between stitch lines** and **Stitch depth** for an open U-shaped stitch line with two
+straight side runs. Width is the narrowest gap between those sides, parallel to the line joining
+the endpoints, over their shared depth. Bottom corner turns are excluded from the side runs;
+otherwise a rounded bottom would misleadingly reduce the reading toward zero. Collinear segment
+subdivision does not change the sides. Depth is perpendicular to the endpoint line, to the
+farthest point of the stitching. A rounded bottom is supported; curved or ambiguous sides and
+degenerate shapes have no numerical reading. Rotation, reflection and reversing the path do not
+change the measurements. Measurements are derived, never persisted.
+
+**Terminology approved by the maintainer:** call this *Stitch depth*, not *Pocket depth*. The
+opening may extend above the stitch ends. Leather thickness and stitching tension reduce usable
+space; these are geometric readings, not a promise of card capacity. The corrected card holder
+has 99.0 mm between its side stitch lines and approximately 41.3487 mm stitch depth. Its actual
+opening is 3 mm above the stitch ends, giving 44.3487 mm to the bottom stitching (D19 and the
+[template audit](../../template-audit.md)). The old 38 mm acceptance value described the original
+template and is superseded. In 9.14b, depth-based fit or exposed-card readings must identify the
+actual opening explicitly rather than treat stitch endpoints as that opening.
 
 **The requirement (9.14b).** The maker says what the pocket holds — a payment card (ID-1,
 85.60 × 53.98 mm) or a size they type — and an **ease**, their own, from Settings › My tools if set
@@ -189,14 +203,15 @@ there, never invented (product-roadmap decision 6). Kept on the stitch line as m
 - `POCKET_TOO_NARROW` (warning, rule **DR8 — a pocket holds what it is for**) when the clear width
   is less than the content's width plus the ease.
 - **Depth is reported, not judged, unless asked.** A card holder's pockets are meant to let the
-  card stand proud — the shipped one is 38 mm deep for a 53.98 mm card, 16 mm showing. A
+  card stand proud — the corrected template has 44.3487 mm from the actual opening to the
+  bottom stitching for a 53.98 mm card, about 9.63 mm showing before material effects. A
   requirement marked *Holds it fully* adds `POCKET_TOO_SHALLOW`.
 - **Thickness is not counted** until 9.1: the words say "leather thickness and the stitching's
   pull are not counted — leave ease for them". A geometric fit, never a promise.
 
 **On the templates:** the card holder's pockets are 99.0 mm across between stitch lines for an
-85.60 mm card. The bifold's are **87.0 mm** across — 1.4 mm of room for a card between two
-stitch lines. §8 asks a maker whether that is too tight.
+85.60 mm card. The corrected bifold's are **89.0 mm** across — 3.4 mm of geometric room
+between stitch lines (D20). §8 records the maker's construction decisions.
 
 ## 8. Questions for a maker (8.14b)
 

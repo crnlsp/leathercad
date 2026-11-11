@@ -1136,6 +1136,14 @@ reuse.
 | Material thickness compensation | Fields stored | 9.1 |
 | Hardware library | `hardwareType` only | 9.3 |
 
+### Stitch dimensions (9.14a)
+
+`pocketSize` derives width between straight side stitch runs and depth from the endpoint chord
+for an open U-shaped stitch path, independent of placement and path direction. Bottom corner
+turns do not reduce the side width; rounded bottoms are supported. Ambiguous or degenerate
+shapes return no measurement. No derived reading is saved. These dimensions describe stitching,
+not the actual pocket opening or usable capacity; see the [manufacturing spec §7](superpowers/specs/2026-11-03-seams-and-manufacturing-design.md#7-pockets-that-hold-what-they-must-914).
+
 ## 11. Where the model is going
 
 The model's share of [product-roadmap.md](product-roadmap.md): what its next layers need, and the

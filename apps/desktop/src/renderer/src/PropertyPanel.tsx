@@ -25,6 +25,7 @@ import { PathOps } from '@leathercad/geometry';
 import { followRefusal, isHolesAlongALine, type ResolvedFeature } from '@leathercad/domain';
 import type { ReactNode } from 'react';
 
+import { PocketReading } from './PocketReading.js';
 import type { Translate } from '../../shared/i18n.js';
 import { useI18n } from './i18n.js';
 import { KeyCap, useKeysInSentences } from './keyCaps.js';
@@ -253,6 +254,11 @@ export function PropertyPanel({
         {resolved?.ok === true && (
           <Measured project={project} feature={feature} resolved={resolved} />
         )}
+
+        {resolved?.ok === true &&
+          (feature.kind === 'stitch-line' || feature.kind === 'stitch-hole-set') && (
+            <PocketReading path={resolved.path} />
+          )}
 
         <ProblemSection
           store={store}

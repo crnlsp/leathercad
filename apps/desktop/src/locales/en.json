@@ -1510,6 +1510,13 @@
       "height": "Height is less than its corners need ({{size}}). {{enter}} uses {{size}}."
     }
   },
+  "pocket": {
+    "title": "Stitching dimensions",
+    "width": "Width between stitch lines",
+    "depth": "Stitch depth",
+    "value": "{{value}} mm",
+    "note": "Measured between stitch centres. Depth starts at the line joining the stitch ends; the pocket opening may extend above it. Leather thickness and stitching tension reduce usable space."
+  },
   "selectionBar": {
     "title": "Stitching of {{piece}}",
     "noStitching": "No stitching yet",

@@ -14,6 +14,7 @@ import {
   type ReactNode,
 } from 'react';
 
+import { PocketReading } from './PocketReading.js';
 import { seamStretchName } from './seams.js';
 import { SeamReading } from './SeamPanel.js';
 import { useI18n } from './i18n.js';
@@ -125,6 +126,8 @@ export const SelectionBar = memo(function SelectionBar({
       place(view, { area, obstacles }, taken, hidden) {
         const bar = barRef.current;
         if (bar === null) return;
+        // Fit a wrapping pocket reading to the available board before placing it.
+        bar.style.maxWidth = area === undefined ? '100%' : `${String(area.right - area.left)}px`;
         const { document, selection: now } = store.getState();
         const current = stitchChain(document.project, now);
         const bounds =
@@ -170,6 +173,9 @@ export const SelectionBar = memo(function SelectionBar({
   const resolved = resolvedFor(project)
     .parts.flatMap((part) => part.features)
     .find((entry) => entry.feature.id === chain.holes?.id);
+  const stitch = resolvedFor(project)
+    .parts.flatMap((part) => part.features)
+    .find((entry) => entry.feature.id === chain.stitch?.id);
   const holes = resolved?.ok === true ? resolved.holes : undefined;
   const op =
     chain.holes?.source.kind === 'derived' && chain.holes.source.op.type === 'stitch-holes'
@@ -329,6 +335,7 @@ export const SelectionBar = memo(function SelectionBar({
           </Fragment>
         ))}
       </p>
+      {stitch?.ok === true && <PocketReading path={stitch.path} compact />}
       {(project.seams ?? [])
         .filter(
           (s) => selection.features.has(s.a.holeSetId) || selection.features.has(s.b.holeSetId),
