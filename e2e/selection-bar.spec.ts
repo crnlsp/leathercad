@@ -7,6 +7,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import { closeApp } from './closeApp.js';
 import { readoutAt } from './cursorReadout.js';
 import { openApp, openSample } from './launchApp.js';
+import { nextFrame } from './renderCount.js';
 
 /**
  * U.17, R-14: the bar under the selected piece — how its stitching came out,
@@ -31,12 +32,19 @@ async function pick(window: Page, row: string): Promise<void> {
   await window.getByTestId('editor-canvas').focus();
 }
 
+/**
+ * The level shows the camera last painted, a frame behind a key or a click:
+ * read before that frame, it says the old zoom, one click too many goes in,
+ * and the chips move after the test has measured them.
+ */
 async function zoomOutTo(window: Page, percent: number): Promise<void> {
   const level = window.getByTestId('zoom-level');
+  await nextFrame(window);
   for (let i = 0; i < 20; i++) {
-    const shown = Number.parseInt((await level.textContent()) ?? '', 10);
-    if (shown <= percent) return;
+    const was = (await level.textContent()) ?? '';
+    if (Number.parseInt(was, 10) <= percent) return;
     await window.getByTestId('zoom-out').click();
+    await expect(level).not.toHaveText(was);
   }
 }
 
