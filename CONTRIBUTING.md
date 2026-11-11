@@ -168,6 +168,13 @@ refuses. Scopes are the package or area: `geometry`, `domain`, `export`, `deskto
 A pull request fills in the template: what changes and why, how it was checked, and whether the
 docs moved with it.
 
+A commit or pull request made with an AI tool says so in a trailer at the end of its message:
+`Assisted-by: Claude Code`, `Assisted-by: Codex`. It is never a `Co-Authored-By`, which names a
+person who shares authorship. The person who commits is the author and answers for the change.
+Claude Code adds its trailer itself, from `attribution` in `.claude/settings.json`; for any other
+tool, write the trailer by hand and remove any co-author line it adds. Older commits carry
+`Co-Authored-By` trailers from before this convention; history is not rewritten.
+
 ## When a check fails
 
 `pnpm check` runs what CI's *Static checks* and *Tests and coverage* run, so most failures reproduce

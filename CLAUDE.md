@@ -189,5 +189,8 @@ something in this file or in `docs/`, update it in the same commit.
   `docs/print-verification-log.md`.
 - Do not put private data in anything that leaves the machine — commits, pull requests, comments,
   docs, fixtures, screenshots. That means no `claude.ai/code/session_…` links, email addresses,
-  home-directory paths, hostnames, or tokens. A `Co-Authored-By` trailer or a "Generated with
-  Claude Code" line is fine.
+  home-directory paths, hostnames, or tokens.
+- Do not credit an AI tool as a co-author. A commit or pull request it helped with ends with an
+  `Assisted-by: <tool>` trailer — `Assisted-by: Claude Code`, `Assisted-by: Codex` — never a
+  `Co-Authored-By`, whatever the tool adds by default. Claude Code writes its trailer from
+  `attribution` in `.claude/settings.json`. See `CONTRIBUTING.md` § Commits and pull requests.
