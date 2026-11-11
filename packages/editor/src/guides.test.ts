@@ -20,6 +20,8 @@ describe('guide snapping and selection', () => {
     expect(snap(index, resolved, { x: 1000, y: 11 }, { toleranceMm: 2 })).toEqual({
       kind: 'guide',
       point: { x: 1000, y: 10 },
+      // Every candidate names where it came from (3.20).
+      guideId: 'h',
     });
     const crossing = snap(index, resolved, { x: 20.5, y: 10.5 }, { toleranceMm: 2 });
     expect(crossing?.kind).toBe('intersection');

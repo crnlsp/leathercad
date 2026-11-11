@@ -440,6 +440,10 @@
       "name": "Show the selection bar under the selected piece",
       "note": "How its stitching came out, and the next step in one click. Off, nothing is shown under the piece, and its key does nothing."
     },
+    "smartGuides": {
+      "name": "Smart guides",
+      "note": "While you move a piece or a hole, line it up with the pieces and guides around it. Off, a move still snaps to corners, midpoints and lines."
+    },
     "toolNames": {
       "name": "Show tool names in the rail",
       "note": "When off, each tool shows only its key. In windows narrower than 1280 px, the rail shows only keys regardless."

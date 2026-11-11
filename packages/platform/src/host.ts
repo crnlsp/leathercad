@@ -491,6 +491,12 @@ export interface Preferences {
    */
   readonly selectionBar: boolean;
   /**
+   * Whether a move aligns to pieces and guides as well as snapping to points
+   * (3.20, smart-guides spec §5). On by default. An application preference,
+   * never in a project.
+   */
+  readonly smartGuides: boolean;
+  /**
    * Closing the window keeps unsaved projects for the next start rather than
    * asking about them (8.12), as Notepad does. Off unless the maker turns it on.
    */
@@ -590,6 +596,7 @@ export const STARTER_IRONS: readonly Iron[] = [
 export const DEFAULT_PREFERENCES: Preferences = {
   legendOpen: true,
   selectionBar: true,
+  smartGuides: true,
   keepUnsaved: false,
   templateSort: 'name',
   templateShow: 'all',

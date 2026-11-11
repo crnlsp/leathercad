@@ -82,6 +82,7 @@ export const PIN_LIMIT = 20;
 const FLAGS = [
   'legendOpen',
   'selectionBar',
+  'smartGuides',
   'keepUnsaved',
   'toolRailCollapsed',
   'partsFolded',
@@ -137,6 +138,8 @@ function fromRecord(record: Record<string, unknown>): StoredPreferences {
     legendOpen,
     // Absent before U.17: on, the default.
     selectionBar: flag('selectionBar'),
+    // Absent before 3.20: on, the default.
+    smartGuides: flag('smartGuides'),
     // Absent before 8.12: off, the default.
     keepUnsaved: flag('keepUnsaved'),
     // Absent before 8.14: by name, all of them.

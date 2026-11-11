@@ -20,8 +20,20 @@ export { ToolManager } from './tool.js';
 
 export { featuresWithin, hitTest } from './hitTest.js';
 
-export type { SnapCandidate, SnapIndex, SnapIndexOptions, SnapKind, SnapOptions } from './snap.js';
-export { buildSnapIndex, snap, snapGlyph } from './snap.js';
+export type {
+  AxisCandidate,
+  AxisKind,
+  IndexedCandidate,
+  Measured,
+  SnapCandidate,
+  Snapped,
+  SnapIndex,
+  SnapIndexOptions,
+  SnapKind,
+  SnapOptions,
+  SnapSource,
+} from './snap.js';
+export { buildSnapIndex, decideSnap, snap, snapGlyph } from './snap.js';
 
 export { createArcTool } from './tools/arcTool.js';
 export { createCircleTool } from './tools/circleTool.js';

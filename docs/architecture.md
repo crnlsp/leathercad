@@ -490,20 +490,21 @@ polyline is not part of the file.
 
 ### 6.4 Snapping
 
-A pure function, fully testable without a canvas:
+One model, in `packages/editor/src/snap.ts` (3.20; the smart-guides spec §5 is its design). A
+candidate is a point (`SnapCandidate`) or an axis value, `x = c` or `y = c` (`AxisCandidate`), and
+names its source — the features or guides it lies on — so a drag can exclude what it moves and an
+overlay can say what was caught. `decideSnap`, a pure function, picks from them by **one priority
+table**, `PRIORITY`: point kinds first, endpoint to grid, then the alignment kinds. A point within
+tolerance wins both axes; otherwise each axis is decided on its own. Within a kind the nearest
+wins, and a tie in distance goes to the candidate earlier in document order, so the answer never
+depends on the order candidates were found in. Explicit priority is what makes snapping feel
+deliberate rather than random.
 
-```ts
-function snap(
-  cursorMm: Vec2,
-  candidates: SnapIndex,
-  toleranceMm: number,
-  enabled: SnapKindSet,
-): SnapResult | null;   // { point, kind, sourceId }
-```
-
-Priority order when several candidates are within tolerance: **vertex/endpoint → intersection →
-midpoint → centre → on-path projection → guide → grid**. Explicit priority is what makes snapping
-feel deliberate rather than random.
+**Hysteresis.** What the previous pointer event caught holds while the cursor stays within 1.5 ×
+tolerance and nothing of a higher kind comes within tolerance, so a cursor between two targets no
+longer flips between them. It depends only on the previous result, never on time. The router
+(`ToolManager`) hands each event's result to the next; Ctrl, leaving the board, a tool change and
+a reload let go of it.
 
 Tolerance is defined in *pixels* (default 10 px) and converted to mm through the viewport, so
 snapping feels the same at every zoom level. Candidates come from a spatial index (a uniform grid

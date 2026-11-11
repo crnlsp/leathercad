@@ -191,6 +191,7 @@ export function CanvasHost({
   onToolChange,
   drawAs,
   makerDefaults,
+  smartGuides,
   hardware,
   pointOptions = DEFAULT_EDIT_POINTS,
   requestDelete,
@@ -218,6 +219,8 @@ export function CanvasHost({
   drawAs: DrawMode;
   /** The maker's margin and leather (U.13): what *Stitch + allowance* and a new fold take. */
   makerDefaults: MakerDefaults;
+  /** Settings › General › Smart guides (3.20): whether a move aligns as well as snaps. */
+  smartGuides: boolean;
   hardware: HardwareOptions;
   /** The corner radius Edit Points rounds to (3.9d). */
   pointOptions?: EditPointsOptions;
@@ -526,6 +529,8 @@ export function CanvasHost({
   drawAsRef.current = drawAs;
   const makerDefaultsRef = useRef(makerDefaults);
   makerDefaultsRef.current = makerDefaults;
+  const smartGuidesRef = useRef(smartGuides);
+  smartGuidesRef.current = smartGuides;
   const hardwareRef = useRef(hardware);
   hardwareRef.current = hardware;
   const pointOptionsRef = useRef(pointOptions);
@@ -568,6 +573,7 @@ export function CanvasHost({
         invalidate,
         drawAs: () => drawAsRef.current,
         makerDefaults: () => makerDefaultsRef.current,
+        smartGuides: () => smartGuidesRef.current,
         requestDelete: (ids) => requestDeleteRef.current(ids),
         requestDeletePart: (partId) => requestDeletePartRef.current(partId),
       },

@@ -264,6 +264,42 @@ describe('ToolManager snapping', () => {
   });
 });
 
+describe('ToolManager holding a snap (3.20)', () => {
+  /** The square's corner at (20, 0) and a second square's at (23, 0): 3 mm apart. */
+  function twoCorners() {
+    const h = harness(); // 4 px/mm: a 2.5 mm tolerance, held to 3.75 mm
+    addSquare(h.store);
+    h.store.dispatch(
+      addPart(
+        rectanglePart('p2' as never, 'p2-f' as never, 'Panel', rectShape(vec(23, 0), 20, 20)),
+      ),
+    );
+    return h;
+  }
+
+  it('keeps the corner it caught while the cursor moves nearer the next one', () => {
+    const { manager, tool } = twoCorners();
+
+    manager.pointerMove(pointer(vec(20.5, 0.3)));
+    // 1 mm from (23, 0), 2 mm from (20, 0): it used to flip here.
+    manager.pointerMove(pointer(vec(22, 0.3)));
+    // 3.9 mm from (20, 0): beyond 1.5 × tolerance, so it lets go.
+    manager.pointerMove(pointer(vec(23.9, 0.3)));
+
+    expect(tool.points).toEqual([vec(20, 0), vec(20, 0), vec(23, 0)]);
+  });
+
+  it('holds nothing across Ctrl', () => {
+    const { manager, tool } = twoCorners();
+
+    manager.pointerMove(pointer(vec(20.5, 0.3)));
+    manager.pointerMove(pointer(vec(22, 0.3), { ctrlKey: true }));
+    manager.pointerMove(pointer(vec(22, 0.3)));
+
+    expect(tool.points.at(-1)).toEqual(vec(23, 0));
+  });
+});
+
 /**
  * Whether a cursor `offsetPx` diagonally outside the origin corner snapped to
  * it, at the given zoom. Returns the snapped point, or null if it did not.

@@ -252,6 +252,34 @@ test('a setting applies at once and is kept, and Clear list empties the recent p
   }
 });
 
+test('Smart guides is on until the maker turns it off, and stays off (3.20)', async () => {
+  const configHome = mkdtempSync(join(tmpdir(), 'leathercad-e2e-guides-'));
+  const stored = join(configHome, 'leathercad', 'preferences.json');
+
+  const first = await launch(configHome);
+  try {
+    await first.window.getByTestId('settings').click();
+    const toggle = first.window.getByTestId('setting-smart-guides');
+    await expect(toggle).toBeChecked();
+    await toggle.uncheck();
+    await first.window.getByTestId('settings-close').click();
+    // The app's preference, never the project's.
+    await expect
+      .poll(() => existsSync(stored) && JSON.parse(readFileSync(stored, 'utf8')).smartGuides)
+      .toBe(false);
+  } finally {
+    await closeApp(first.app);
+  }
+
+  const second = await launch(configHome);
+  try {
+    await second.window.getByTestId('settings').click();
+    await expect(second.window.getByTestId('setting-smart-guides')).not.toBeChecked();
+  } finally {
+    await closeApp(second.app);
+  }
+});
+
 test('hiding a part lets go of what was selected in it (Q14)', async () => {
   const { window, app } = await launch(mkdtempSync(join(tmpdir(), 'leathercad-e2e-hide-')));
   try {
