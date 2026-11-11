@@ -144,6 +144,13 @@ A pocket 0.61 mm lower (44.39 mm) distributes its 3.85 mm iron over 37.39 mm as 
 its bottom the outer's corners and so the outer's 98.57 mm run: drift 0 there too. That length is
 the fix 9.17 offers: previewed, one undo step.
 
+**As built (9.17).** Changing a pocket's height changes what is cut and, as D19 showed, needs a
+maker's decision, so 9.17 does not offer it. The fix moves only the open end of a **drawn** stitch
+line, along its last straight side, until its last paired hole lands on its partner's: the 1.6
+card holder's pocket stitching ends 0.61 mm lower and both sides pair 11 = 11 within 0.0002 mm,
+the pocket's outline untouched. Stitching derived from an outline, a count mismatch, and a seam
+whose two sides could both move are offered nothing.
+
 **Bifold.** No seam is declared, nothing is checked, nothing is flagged: the lining is punched
 through with the outer and the pockets. A seam needs holes on both sides.
 

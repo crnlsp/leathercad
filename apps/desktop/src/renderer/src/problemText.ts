@@ -81,6 +81,7 @@ const CATALOGUE: { readonly [K in ProblemCode]: Describe<K> } = {
       radius: formatEditable(f.radiusMm, 2),
     }),
   NOT_A_ROUNDED_CORNER: (f, t) => t('problems.NOT_A_ROUNDED_CORNER.description', f),
+  FIX_NO_LONGER_APPLIES: (f, t) => t(`problems.FIX_NO_LONGER_APPLIES.${f.why}`),
   CORNER_IN_USE: (f, t) => t('problems.CORNER_IN_USE.description', f),
   NOT_DERIVED: (f, t) => t('problems.NOT_DERIVED.description', f),
   DERIVED_MOVED_ALONE: (f, t) => t('problems.DERIVED_MOVED_ALONE.description', f),

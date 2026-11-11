@@ -1,4 +1,5 @@
 import { problemKey, type Diagnostic, type Project } from '@leathercad/domain';
+import type { ReactNode } from 'react';
 
 import { useI18n } from './i18n.js';
 import { problemExplanation, problemTitle } from './problemText.js';
@@ -18,6 +19,7 @@ export function ProblemRows({
   onGoTo,
   showWhere = true,
   current = null,
+  action,
 }: {
   diagnostics: readonly Diagnostic[];
   project: Project;
@@ -30,6 +32,8 @@ export function ProblemRows({
   showWhere?: boolean;
   /** Stable identity of the problem being walked in the drawer (9.15). */
   current?: string | null;
+  /** A control under the message, such as a fix (9.17). Rows that go somewhere have none. */
+  action?: (diagnostic: Diagnostic) => ReactNode;
 }) {
   const { t } = useI18n();
   return (
@@ -66,6 +70,7 @@ export function ProblemRows({
                   </>
                 )}
               </span>
+              {onGoTo === undefined && action?.(diagnostic)}
             </span>
           </>
         );

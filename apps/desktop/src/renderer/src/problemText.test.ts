@@ -92,6 +92,7 @@ const SAMPLES: { readonly [K in ProblemCode]: ProblemFacts[K] } = {
   POINT_EDIT_DEGENERATE: named,
   ROUNDING_DOES_NOT_FIT: { ...named, radiusMm: 60 },
   NOT_A_ROUNDED_CORNER: named,
+  FIX_NO_LONGER_APPLIES: { why: 'changed' },
   CORNER_IN_USE: { ...named, usedByName: 'Stitch line' },
   DERIVED_MOVED_ALONE: { ...named, rootId: 'f-2', rootName: 'Outline' },
   MIRROR_WOULD_SCALE: { ...named, sourceName: 'Outline' },
@@ -170,6 +171,13 @@ describe('every listed problem explains why and what to do (9.15)', () => {
   });
 });
 const sample = (code: ProblemCode): Problem => problem(code, SAMPLES[code] as never);
+
+describe('units', () => {
+  // A formatted length already carries its unit: "drift 0.61 mm mm" read on screen (9.17).
+  it.each(everyCode)('%s never says a unit twice', (code) => {
+    expect(describeProblem(sample(code), t)).not.toMatch(/\bmm mm\b/);
+  });
+});
 
 describe('the message catalogue, in English', () => {
   it('keeps a small-text height below its stated limit instead of rounding it up (Q34)', () => {

@@ -80,6 +80,7 @@ export const PROBLEM_CODES: { readonly [K in ProblemCode]: CodeInfo } = {
   POINT_EDIT_DEGENERATE: interaction('X1'),
   ROUNDING_DOES_NOT_FIT: interaction('X1'),
   NOT_A_ROUNDED_CORNER: interaction('X1'),
+  FIX_NO_LONGER_APPLIES: interaction('X1'),
   CORNER_IN_USE: interaction('X3'),
   DERIVED_MOVED_ALONE: interaction('X3'),
   TRANSFORM_FLATTENS: interaction('X9'),

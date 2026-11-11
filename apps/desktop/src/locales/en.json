@@ -1103,6 +1103,11 @@
       "title": "Nothing to sharpen",
       "description": "That is not a rounded corner between two straight sides of {{featureName}}, so there is no corner to sharpen it back to."
     },
+    "FIX_NO_LONGER_APPLIES": {
+      "title": "Fix out of date",
+      "resolved": "The problem this fix was for has gone already.",
+      "changed": "The pattern changed after this fix was offered. Look at the problem again."
+    },
     "CORNER_IN_USE": {
       "title": "A corner in use",
       "description": "{{usedByName}} is attached to that corner of {{featureName}}, and this edit would take the corner away. Change {{usedByName}} first."
@@ -1301,7 +1306,7 @@
     },
     "SEAM_RUNS_OFF_THE_LINE": {
       "title": "Seam runs past its line",
-      "description": "The seam needs {{length}} mm, but this side has only {{available}} mm in the chosen direction.",
+      "description": "The seam needs {{length}}, but this side has only {{available}} in the chosen direction.",
       "fix": "Choose another starting anchor or direction, or shorten the other side."
     },
     "SEAM_REQUIRES_CLOSED_LINE": {
@@ -1315,8 +1320,8 @@
     },
     "SEAM_HOLES_DRIFT": {
       "title": "Sewn holes drift apart",
-      "description": "{{a}} and {{b}} drift {{drift}} mm at pair {{pair}}, measured along the stitching from the first hole.",
-      "fix": "Adjust the stretch length or stitching spacing so paired holes stay within {{limit}} mm."
+      "description": "{{a}} and {{b}} drift {{drift}} at pair {{pair}}, measured along the stitching from the first hole.",
+      "fix": "Adjust the stretch length or stitching spacing so paired holes stay within {{limit}}."
     }
   },
   "contextMenu": {
@@ -1390,6 +1395,12 @@
       "corner": "Corner {{number}}"
     }
   },
+  "fixes": {
+    "shorten": "Shorten {{name}} by {{length}}",
+    "lengthen": "Lengthen {{name}} by {{length}}",
+    "margin": "Move {{name}} {{margin}} in",
+    "hint": "Shows the change while you point at it. One undo step."
+  },
   "history": {
     "add": "Add {{name}}",
     "add-dimension": "Add dimension",
@@ -1411,6 +1422,7 @@
     "deleteWithDependentsKeepFrozen_other": "Delete {{what}} and {{count}} dependents, keep {{frozen}} frozen",
     "duplicate": "Duplicate {{name}}",
     "duplicate-part": "Duplicate part",
+    "fix": "Fix {{name}}",
     "edit-derivation": "Edit derivation",
     "edit-dimension": "Edit dimension",
     "edit-label": "Edit label",

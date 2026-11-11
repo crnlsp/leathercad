@@ -156,7 +156,8 @@ export type HistoryAction =
   | 'remove-point'
   | 'round-corner'
   | 'sharpen-corner'
-  | 'convert-to-path';
+  | 'convert-to-path'
+  | 'fix';
 
 /**
  * A step of the undo history, as facts: what was done, and the name or the

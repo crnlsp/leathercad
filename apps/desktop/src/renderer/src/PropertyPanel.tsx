@@ -33,7 +33,7 @@ import { allowanceCommand, derive, holesCommand, stitchLineCommand } from './nex
 import { NumberField } from './NumberField.js';
 import { GuidesPanel } from './GuidesPanel.js';
 import { ArrangePanel } from './ArrangePanel.js';
-import { ProblemRows } from './ProblemList.js';
+import { ProblemSection } from './ProblemSection.js';
 import { jobTotals, trailOf } from './propertyFacts.js';
 import { ReasonedButton, ReasonedRow, type ReasonedButtonProps } from './ReasonedButton.js';
 import { resolvedFor } from './sheets.js';
@@ -254,14 +254,14 @@ export function PropertyPanel({
           <Measured project={project} feature={feature} resolved={resolved} />
         )}
 
-        {problems.length > 0 && (
-          <section className="panel-section" data-testid="feature-problems">
-            <div className="panel-heading">
-              {t('properties.problems', { count: problems.length })}
-            </div>
-            <ProblemRows diagnostics={problems} project={project} showWhere={false} />
-          </section>
-        )}
+        <ProblemSection
+          store={store}
+          diagnostics={diagnostics}
+          project={project}
+          of={(d) => d.featureId === feature.id}
+          testId="feature-problems"
+          showWhere={false}
+        />
       </div>
 
       <div className="panel-group" data-testid="property-identity">
@@ -541,14 +541,13 @@ function PartProperties({
       {(measured || problems.length > 0) && (
         <div className="panel-group">
           {measured && <Measured project={project} feature={outline} resolved={resolved} />}
-          {problems.length > 0 && (
-            <section className="panel-section" data-testid="part-problems">
-              <div className="panel-heading">
-                {t('properties.problems', { count: problems.length })}
-              </div>
-              <ProblemRows diagnostics={problems} project={project} />
-            </section>
-          )}
+          <ProblemSection
+            store={store}
+            diagnostics={diagnostics}
+            project={project}
+            of={(d) => d.partId === part.id}
+            testId="part-problems"
+          />
         </div>
       )}
 
