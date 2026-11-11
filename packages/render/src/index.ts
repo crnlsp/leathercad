@@ -8,6 +8,7 @@
 
 export {
   ACCENT,
+  ALIGNMENT_MARK,
   CANVAS,
   DASH_LEGIBLE_PX,
   DENSITY,
@@ -94,3 +95,4 @@ export type { PlacedSelectionBar, SelectionBarInput } from './selectionBar.js';
 export { placeSelectionBar } from './selectionBar.js';
 
 export { seamOverlay } from './seamOverlay.js';
+export { alignmentTick } from './alignmentTick.js';

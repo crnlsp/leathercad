@@ -4,11 +4,13 @@ import {
   type Project,
   type Seam,
   type SeamAnchor,
+  type SeamMarks,
   type SeamSide,
 } from '@leathercad/domain';
 import { useEffect, useRef } from 'react';
 
 import { useI18n } from './i18n.js';
+import { NumberField } from './NumberField.js';
 import { describeProblem } from './problemText.js';
 import { SeverityGlyph } from './SeverityGlyph.js';
 import {
@@ -104,6 +106,13 @@ export function SeamPanel({
               onChange={(side) => workflow.update({ ...draft.seam, [key]: side })}
             />
           ))}
+          <SeamMarksFields
+            marks={draft.seam.marks}
+            onChange={(marks) => {
+              const { marks: _, ...rest } = draft.seam;
+              workflow.update(marks === undefined ? rest : { ...rest, marks });
+            }}
+          />
           <p aria-live="polite">
             <SeamReading project={project} seam={draft.seam} />
           </p>
@@ -149,6 +158,13 @@ export function SeamPanel({
               <p className="panel-note">
                 {seamStretchName(seam.a.stretch, t)} · {seamStretchName(seam.b.stretch, t)}
               </p>
+              {seam.marks !== undefined && (
+                <p className="panel-note" data-testid="seam-marked">
+                  {seam.marks.kind === 'ends'
+                    ? t('seams.markedEnds')
+                    : t('seams.markedEvery', { count: seam.marks.n })}
+                </p>
+              )}
               <p>
                 <SeamReading project={project} seam={seam} />
               </p>
@@ -180,6 +196,55 @@ export function SeamPanel({
     </section>
   );
 }
+
+/** Which paired holes print a mark on both pieces (9.13); previewed with the seam. */
+function SeamMarksFields({
+  marks,
+  onChange,
+}: {
+  marks: SeamMarks | undefined;
+  onChange: (marks: SeamMarks | undefined) => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <>
+      <label className="field">
+        <span className="field-label">{t('seams.marks')}</span>
+        <select
+          data-testid="seam-marks"
+          aria-label={t('seams.marks')}
+          value={marks?.kind ?? 'none'}
+          onChange={(e) =>
+            onChange(
+              e.target.value === 'ends'
+                ? { kind: 'ends' }
+                : e.target.value === 'every'
+                  ? { kind: 'every', n: MARKS_STEP }
+                  : undefined,
+            )
+          }
+        >
+          <option value="none">{t('seams.marksNone')}</option>
+          <option value="ends">{t('seams.marksEnds')}</option>
+          <option value="every">{t('seams.marksEvery')}</option>
+        </select>
+      </label>
+      {marks?.kind === 'every' && (
+        <NumberField
+          label={t('seams.marksStep')}
+          value={marks.n}
+          suffix={t('seams.marksStepSuffix')}
+          min={1}
+          precision={0}
+          onCommit={(n) => onChange({ kind: 'every', n: Math.max(1, Math.round(n)) })}
+        />
+      )}
+    </>
+  );
+}
+
+/** The step offered first: the board numbers every fifth pair while a seam is shown. */
+const MARKS_STEP = 5;
 
 function SeamSideFields({
   project,

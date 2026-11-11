@@ -119,7 +119,7 @@ as any item that will not make it does.
 - ☐ **9.14a A pocket's clear size** (P1).
 - ☐ **9.14b A pocket that holds what it must** (P1).
 - ☐ **9.12 The production summary** (P1) — pieces, holes, hardware, thread and net leather, estimates labelled.
-- ☐ **9.13 Alignment marks on mating edges** (P1) — prints: format 13, measured on paper.
+- ◐ **9.13 Alignment marks on mating edges** (P1) — prints: format 13; marks at a seam's first and last or every *n*th pair on both pieces, on the board, Sheets, PDF, SVG and DXF. Awaiting its paper reading ([log](print-verification-log.md#alignment-marks--913)).
 - ☐ **Q21 Cut two, one turned over** (P1) — prints: a format version of its own, measured on paper.
 - ✅ **Q43 A laser export names pieces that overlap on the board** (P1).
 

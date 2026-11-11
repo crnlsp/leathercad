@@ -1,4 +1,5 @@
 import {
+  alignmentMarks,
   draftDimensionLine,
   isHolesAlongALine,
   type Diagnostic,
@@ -34,6 +35,7 @@ import {
   type DisplayItem,
   type DisplayList,
 } from './displayList.js';
+import { alignmentTick } from './alignmentTick.js';
 import { foldTicksAlong, linkTickOn, slitsFor } from './leather.js';
 import { CANVAS, DIMENSION_MARKS, GROUND, ROLE_STYLES, STATE } from './theme/index.js';
 import { TRUE_SIZE_CSS_PX_PER_MM, cssPxPerMm, visibleBoundsMm, type ViewportView } from './view.js';
@@ -132,6 +134,9 @@ export function buildDisplayList(
       pathItem('construction', path, { colour, widthPx: CANVAS.halo.widthPx, dashPx: [] }),
     );
   };
+
+  // Alignment marks (9.13) are the seam's, drawn on each piece they fall on.
+  const marks = alignmentMarks(resolved);
 
   for (const part of resolved.parts) {
     const drawn: Rect[] = [];
@@ -281,6 +286,9 @@ export function buildDisplayList(
         const tick = linkTickOn(entry.path);
         if (tick !== null) items.push(linkTickItem(entry.role, tick.at, tick.tangent));
       }
+    }
+    for (const mark of marks) {
+      if (mark.partId === part.part.id) items.push(pathItem('mark', alignmentTick(mark)));
     }
     items.splice(partStart, 0, ...beneath);
 

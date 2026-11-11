@@ -3,8 +3,9 @@
 **Status:** design, for the 1.7 plan ([`2026-11-03-release-1.7.md`](../plans/2026-11-03-release-1.7.md)).
 9.6a implements the model, persistence and deletion, including approved open-line endpoint
 references (plan D17). The implemented contract is in [domain-model](../../domain-model.md) §7.
-9.6b implements authoring and paired-hole checks; 8.14b corrected the templates. Later
-manufacturing features below remain planned.
+9.6b implements authoring and paired-hole checks; 8.14b corrected the templates; 9.13 implements
+the alignment marks of §6 (domain-model §7, file-format §4.1e). Later manufacturing features below
+remain planned.
 
 **Evidence.** Every number below was computed with the real evaluator (`evaluate`, `diagnose`) on
 the built-in templates at develop 7a69dc9, in a throwaway test that is not part of the repository.

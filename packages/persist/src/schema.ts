@@ -285,14 +285,29 @@ const seamSide = z.looseObject({
   ]),
 });
 
+const seamMarks = z.discriminatedUnion('kind', [
+  z.looseObject({ kind: z.literal('ends') }),
+  z.looseObject({ kind: z.literal('every'), n: z.number().int().min(1) }),
+]);
+
 export const ProjectSchema = z
   .looseObject({
     id: z.string().min(1),
     name: z.string(),
     settings,
     parts: z.array(part),
-    // Advisory metadata, backward-compatible through 1.6's loose root object.
-    seams: z.array(z.looseObject({ id: z.string().min(1), a: seamSide, b: seamSide })).optional(),
+    // Advisory metadata, backward-compatible through 1.6's loose root object;
+    // its marks print, so they arrived with format 13 (9.13).
+    seams: z
+      .array(
+        z.looseObject({
+          id: z.string().min(1),
+          a: seamSide,
+          b: seamSide,
+          marks: seamMarks.optional(),
+        }),
+      )
+      .optional(),
     guides: z
       .array(
         z.looseObject({

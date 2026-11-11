@@ -36,7 +36,12 @@ number of holes* in the same positions.
 
 **Seam** — Two runs of stitching that are sewn to each other: on two pieces, or on one piece folded
 over itself. Saddle-stitched, both runs must have the same number of holes. Not the same as a *seam
-allowance*. Designed in [domain-model.md](domain-model.md) §7, not modelled yet (roadmap 9.6).
+allowance*. Modelled in [domain-model.md](domain-model.md) §7 (9.6a–b).
+
+**Alignment mark** — A short tick printed on both pieces of a seam at the same paired hole — the
+first and last pair, or every *n*th — so the pieces line up when glued and stitched (9.13). It
+lies across the stitch line, into the leather, in the marking layer. Not a notch in the cut edge,
+and not a *registration mark*, which joins sheets of paper.
 
 **Seam allowance** — The margin of material outside the stitch line, between the stitching and the
 cut edge. In this codebase it is modelled as a *derivation direction*: a cut contour derived

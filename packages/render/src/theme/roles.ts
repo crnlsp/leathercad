@@ -116,6 +116,16 @@ export const DIMENSION_MARKS = {
 } as const;
 
 /**
+ * An alignment mark (9.13): a tick square to the stitch line at a paired hole,
+ * into the leather, in the marking role's line — true millimetres on screen and
+ * on paper, as a role's dash rhythm is. It starts clear of the 1 mm hole
+ * marker, so the awl's centre stays readable, and is a whole dash, gap and
+ * dash of the marking rhythm long (1 + 1.5 + 1 mm), so both of its ends are
+ * inked in every medium that dashes the role.
+ */
+export const ALIGNMENT_MARK = { gapMm: 1, lengthMm: 3.5 } as const;
+
+/**
  * The smallest dash or gap, in CSS pixels, that still reads as one.
  * Below it a rhythm is noise, and the line is drawn solid instead.
  */

@@ -484,6 +484,7 @@ commit that re-records one changes its row here:
 | `geometry/self-traced-1000`, `geometry/self-star-1002` | PERF-006's fix, 2026-11-01 | 24.22.1 | 5.0.5 | New with PERF-006 |
 | `domain/check-seams-unrelated` | 9.6b, 2026-11-10 | 24.22.2 | 5.0.5 | Forty paired-hole verdicts after an unrelated edit; new baseline, existing baselines untouched |
 | `domain/resolve-seams-unrelated` | 9.6a, 2026-11-10 | 24.22.2 | 5.0.5 | Forty declared seams after an unrelated edit; new baseline, existing baselines untouched |
+| `domain/mark-seams-unrelated` | 9.13, 2026-11-11 | 24.22.2 | 5.0.5 | Forty seams' alignment marks after an unrelated edit, evaluation included; new baseline, existing baselines untouched |
 | `editor/snap-hover-traced-1000` | 3.20, 2026-11-11 | 24.22.2 | 5.0.5 | One `snap()` per move round the 1,000-point traced outline, recorded on the code before the one snapping model so it compares against it; existing baselines untouched |
 
 `apps/desktop/src/bench-discovery.test.ts` fails if a baseline has no row here, or a row names

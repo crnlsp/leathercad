@@ -163,6 +163,16 @@ in an export's pattern (`ExportPath.filled`): filled in the PDF and the SVG, and
 whose lines have no fill. The print test measures a dimension between its extension lines, since
 its line is no longer one stroke.
 
+**A seam's alignment marks print in the marking layer** (9.13). Each is a 3.5 mm tick square to
+the stitch line at a chosen paired hole, starting 1 mm in from the hole's centre so the 1 mm hole
+marker stays readable, pointing into the leather: in the `mark` role's line, 0.10 mm, its dash
+rhythm 1–1.5 mm, so the tick is a dash, a gap and a dash with both ends inked. Both pieces of the
+seam carry it at the same pair. The scene adds the ticks beside each part's own ink
+(`alignmentMarks` in the domain, `alignmentTick` and `ALIGNMENT_MARK` in `render`), so the board,
+the Sheets view, the PDF, the SVG and the DXF draw the same marks, and a preset without `mark` — a
+laser cut — has none. They are never a notch in the cut edge, which would be a flaw where the
+edge is burnished, and are not the registration crosses of §7, which join sheets of paper.
+
 **Text on paper is outlines, not a font.** Every string printed — part captions, measurement values,
 text labels, the verification strip's words — is laid out once in millimetres and written as
 filled glyph paths from the vendored typeface. Nothing then depends on a viewer's or a cutter

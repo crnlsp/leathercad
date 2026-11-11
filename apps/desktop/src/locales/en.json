@@ -1713,6 +1713,15 @@
     "show": "Show seam",
     "edit": "Edit",
     "unsew": "Unsew",
-    "sewnTo": "Sewn to {{piece}} · {{stretch}}"
+    "sewnTo": "Sewn to {{piece}} · {{stretch}}",
+    "marks": "Alignment marks",
+    "marksNone": "None",
+    "marksEnds": "First and last pair",
+    "marksEvery": "Every few pairs…",
+    "marksStep": "Mark every",
+    "marksStepSuffix": "pairs",
+    "markedEnds": "Marked at the first and last pair",
+    "markedEvery_one": "Marked at every pair",
+    "markedEvery_other": "Marked every {{count}} pairs"
   }
 }

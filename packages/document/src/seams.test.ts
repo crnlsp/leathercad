@@ -342,3 +342,33 @@ describe('seam editing (9.6b)', () => {
     expect(store.getState().document).toBe(before);
   });
 });
+
+describe('a seam’s alignment marks (9.13)', () => {
+  it('are set, changed and taken away by editing the seam, one undo step each', () => {
+    const store = storeWithSeam();
+    const before = store.getState().document;
+    store.dispatch(setSeam({ ...seam, marks: { kind: 'ends' } }));
+    expect(store.getState().document.project.seams?.[0]?.marks).toEqual({ kind: 'ends' });
+    store.dispatch(setSeam({ ...seam, marks: { kind: 'every', n: 6 } }));
+    expect(store.getState().document.project.seams?.[0]?.marks).toEqual({ kind: 'every', n: 6 });
+    store.dispatch(setSeam(seam));
+    expect(store.getState().document.project.seams?.[0]).toEqual(seam);
+    store.undo();
+    store.undo();
+    store.undo();
+    expect(store.getState().document).toBe(before);
+  });
+
+  it('keep what a newer writer added to the seam when they are taken away', () => {
+    const store = storeWithSeam();
+    store.dispatch(setSeam({ ...seam, marks: { kind: 'ends' } }));
+    store.dispatch(addSeam({ ...seam, id: 'future', extra: true } as Seam));
+    store.dispatch(setSeam({ ...seam, id: 'future', marks: { kind: 'ends' } }));
+    store.dispatch(setSeam({ ...seam, id: 'future' }));
+    expect(store.getState().document.project.seams?.find((s) => s.id === 'future')).toEqual({
+      ...seam,
+      id: 'future',
+      extra: true,
+    });
+  });
+});

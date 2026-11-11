@@ -4,7 +4,7 @@ import { dirname, resolve } from 'node:path';
 import { strFromU8, unzipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
 
-import type { Feature } from '@leathercad/domain';
+import { alignmentMarks, evaluate, type Feature } from '@leathercad/domain';
 
 import { loadProject, readManifest, saveProject } from './lcp.js';
 import {
@@ -20,6 +20,7 @@ import {
   fixtureProjectV10,
   fixtureProjectV11,
   fixtureProjectV12,
+  fixtureProjectV13,
 } from './makeFixture.js';
 import { CURRENT_FORMAT_VERSION } from './migrations/index.js';
 
@@ -35,6 +36,7 @@ const FIXTURE_V10 = resolve(import.meta.dirname, '../../../fixtures/format/v10.l
 const FIXTURE_V9 = resolve(import.meta.dirname, '../../../fixtures/format/v9.lcp');
 const FIXTURE_V11 = resolve(import.meta.dirname, '../../../fixtures/format/v11.lcp');
 const FIXTURE_V12 = resolve(import.meta.dirname, '../../../fixtures/format/v12.lcp');
+const FIXTURE_V13 = resolve(import.meta.dirname, '../../../fixtures/format/v13.lcp');
 
 // Fixed, so regenerating an unchanged fixture produces no diff and a real
 // change to the format is visible in review.
@@ -61,9 +63,9 @@ describe('the format baseline fixture', () => {
       // Only the *current* version's fixture is ever regenerated. v1 to v4 are
       // real old files, and rewriting any of them would delete the only proof
       // that a file from that version still opens.
-      mkdirSync(dirname(FIXTURE_V12), { recursive: true });
-      writeFileSync(FIXTURE_V12, saveProject(fixtureProjectV12(), OPTIONS));
-      expect(existsSync(FIXTURE_V12)).toBe(true);
+      mkdirSync(dirname(FIXTURE_V13), { recursive: true });
+      writeFileSync(FIXTURE_V13, saveProject(fixtureProjectV13(), OPTIONS));
+      expect(existsSync(FIXTURE_V13)).toBe(true);
     });
   }
 
@@ -455,8 +457,38 @@ it('stores a row of holes as its pitch and radius, never as holes (§3.3)', () =
 });
 
 it('holds a piece’s overall size in the version 12 fixture', () => {
-  expect(readManifest(readFileSync(FIXTURE_V12)).formatVersion).toBe(CURRENT_FORMAT_VERSION);
+  // v12 stopped being current when alignment marks arrived (9.13). Never
+  // regenerated: it is the proof a file from before them still opens.
+  expect(readManifest(readFileSync(FIXTURE_V12)).formatVersion).toBe(12);
+  expect(CURRENT_FORMAT_VERSION).toBeGreaterThan(12);
   expect(loadProject(readFileSync(FIXTURE_V12)).project).toEqual(fixtureProjectV12());
+});
+
+it('holds a seam’s alignment marks in the version 13 fixture', () => {
+  expect(readManifest(readFileSync(FIXTURE_V13)).formatVersion).toBe(CURRENT_FORMAT_VERSION);
+  const project = loadProject(readFileSync(FIXTURE_V13)).project;
+  expect(project).toEqual(fixtureProjectV13());
+  // The seam walks, and its marks fall at every fifth pair on both pieces.
+  const pairs = alignmentMarks(evaluate(project)).map((mark) => `${mark.holeSetId}:${mark.pair}`);
+  expect(pairs.length).toBeGreaterThan(0);
+  expect(new Set(pairs.map((pair) => Number(pair.split(':')[1]) % 5))).toEqual(new Set([0]));
+});
+
+it('stores which pairs are marked, never where the marks are (§3.3)', () => {
+  const raw = strFromU8(unzipSync(new Uint8Array(readFileSync(FIXTURE_V13)))['document.json']!);
+  const stored = (JSON.parse(raw) as { seams: unknown[] }).seams;
+
+  expect(stored).toEqual([
+    {
+      a: {
+        holeSetId: 'holes-2',
+        stretch: { fromAnchor: 'start', kind: 'between', toAnchor: 'end' },
+      },
+      b: { holeSetId: 'holes-1', stretch: { anchor: 0, kind: 'from', toward: 'next' } },
+      id: 'seam-1',
+      marks: { kind: 'every', n: 5 },
+    },
+  ]);
 });
 
 it('stores an overall dimension as which corners of the box, never its size (§3.3)', () => {

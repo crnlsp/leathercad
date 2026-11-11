@@ -20,11 +20,23 @@ export interface SeamSide {
     | { readonly kind: 'from'; readonly anchor: SeamAnchor; readonly toward: 'next' | 'previous' };
 }
 
-/** Advisory manufacturing metadata; no geometry is stored here (9.6a). */
+/**
+ * Which paired holes carry an alignment mark (9.13), counted from the first
+ * pair as at the bench: the first and last pair, or every `n`th pair — pairs
+ * n, 2n, 3n…, as the board numbers every fifth while a seam is shown.
+ */
+export type SeamMarks = { readonly kind: 'ends' } | { readonly kind: 'every'; readonly n: number };
+
+/**
+ * Manufacturing metadata; no geometry is stored here (9.6a). The marks it
+ * asks for print (9.13, format 13); where they fall is derived from the holes.
+ */
 export interface Seam {
   readonly id: SeamId;
   readonly a: SeamSide;
   readonly b: SeamSide;
+  /** Absent: no marks, as every seam before format 13. */
+  readonly marks?: SeamMarks;
 }
 
 /**

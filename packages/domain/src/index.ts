@@ -27,6 +27,7 @@ export type {
   Seam,
   SeamAnchor,
   SeamId,
+  SeamMarks,
   SeamSide,
   FeatureKind,
   FoldLine,
@@ -86,6 +87,8 @@ export {
   validate,
 } from './validate.js';
 export { diagnose } from './diagnose.js';
+export type { AlignmentMark } from './alignmentMarks.js';
+export { alignmentMarks } from './alignmentMarks.js';
 export {
   seamVerdict,
   SEAM_DRIFT_LIMIT_MM,

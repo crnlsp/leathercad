@@ -12,6 +12,7 @@ export { CANVAS, alpha } from './canvas.js';
 export { PAPER_FURNITURE, SHEET } from './sheets.js';
 export { NOMINAL_IRON } from './iron.js';
 export {
+  ALIGNMENT_MARK,
   DASH_LEGIBLE_PX,
   DIMENSION_MARKS,
   ROLE_STYLES,
