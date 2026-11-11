@@ -1016,6 +1016,7 @@ table and no longer a sentence — the sentence had gone four slices out of date
 | `POINT_EDIT_DEGENERATE` | interaction | X1 | Point-editing commands |
 | `ROUNDING_DOES_NOT_FIT` | interaction | X1 | Point-editing commands |
 | `NOT_A_ROUNDED_CORNER` | interaction | X1 | Point-editing commands |
+| `FIX_NO_LONGER_APPLIES` | interaction | X1 | A fix offered for a problem (9.17) |
 | `CORNER_IN_USE` | interaction | X3 | Point-editing commands |
 | `DERIVED_MOVED_ALONE` | interaction | X3 | Commands |
 | `MIRROR_WOULD_SCALE` | interaction | X3 | Commands |
@@ -1135,8 +1136,10 @@ decisions still open. No schema is fixed here before its slice.
   never words (ADR 0018). It has to find its problem again after an edit, which is Q4.
 - **Fixes (9.17).** A fix is an ordinary command made from a diagnostic, previewed through the
   store's `preview` and `rollback`, and applied as one undo step — never without the maker.
-  Recommended: proposed in `document`, which may import the domain, so that the domain goes on
-  reporting facts (§8.6).
+  Built in `document` (`fixes.ts`), so the domain goes on reporting facts (§8.6). One is offered
+  only when it is the single plainly safe change and the evaluator shows it clears its problem and
+  adds no warning or error. A fix whose problem has gone, or whose pattern changed since it was
+  offered, is refused with `FIX_NO_LONGER_APPLIES` (X1).
 - **Thickness (9.1).** A fold stores its own today, and the maker's default is copied into each new
   fold (U.13). Compensation needs what lies inside a fold or along a seam — a stack. Open: whether
   thickness belongs to a part, a fold, or both.

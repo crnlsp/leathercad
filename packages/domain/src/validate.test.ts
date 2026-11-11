@@ -707,6 +707,15 @@ describe('the rules about a part and its material', () => {
       expect(codes(evaluate(project([panel(), rivetAt(8)])))).toEqual([]);
     });
 
+    it('does not warn about stitching inset exactly the minimum, whatever the offset rounds to', () => {
+      // An inset of 1.5 mm measured 1.4999999999999911 mm from the edge (9.17).
+      for (const radius of [0, 4, 8]) {
+        expect(
+          codes(evaluate(project([panel(105, 75, radius), stitchLine(1.5), holeSet()]))),
+        ).not.toContain('HOLE_TOO_CLOSE_TO_EDGE');
+      }
+    });
+
     it('measures to a cut-out’s edge as readily as to the outline', () => {
       // A rivet whose rim is 1 mm outside the slot: far from the outline, far
       // too near the hole. Both are edges the leather can tear to.

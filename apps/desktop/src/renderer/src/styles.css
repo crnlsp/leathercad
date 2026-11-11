@@ -3544,6 +3544,12 @@ button.problem-row[aria-current='true'] {
   color: var(--text-dim);
 }
 
+/* A fix sits under the message it acts on, as wide as its words (9.17). */
+.problem-action {
+  align-self: flex-start;
+  margin-top: var(--space-1);
+}
+
 /* ——— The problems drawer (§7.1) ———————————————————————————————————————————
    Under the canvas, full width. Collapsed it is a 28 px handle that still says
    the verdict; open it takes at most 40% of the column and scrolls. */

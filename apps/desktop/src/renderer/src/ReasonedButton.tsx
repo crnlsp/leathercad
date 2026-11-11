@@ -17,6 +17,8 @@ export interface ReasonedButtonProps {
   /** What it does, shown in a tooltip while it can. */
   readonly hint?: string;
   readonly onClick: () => void;
+  /** Pointed at — hovered or focused — and left again: what previews a fix (9.17). */
+  readonly onPoint?: (pointing: boolean) => void;
   readonly testId: string;
   readonly variant?: 'secondary' | 'destructive';
 }
@@ -102,6 +104,7 @@ function Button({
   reason,
   hint,
   onClick,
+  onPoint,
   testId,
   variant = 'secondary',
   reasonId,
@@ -116,6 +119,10 @@ function Button({
         disabled={reason !== null}
         aria-describedby={reason === null ? undefined : reasonId}
         onClick={onClick}
+        onPointerEnter={onPoint && (() => onPoint(true))}
+        onPointerLeave={onPoint && (() => onPoint(false))}
+        onFocus={onPoint && (() => onPoint(true))}
+        onBlur={onPoint && (() => onPoint(false))}
       >
         {children}
       </button>

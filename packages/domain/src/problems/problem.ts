@@ -224,6 +224,11 @@ export interface ProblemFacts {
   /** X1: sharpening asked of something that is not a rounded corner (3.9d). */
   readonly NOT_A_ROUNDED_CORNER: About;
   /**
+   * X1: a fix offered for a problem (9.17) that no longer applies — the
+   * problem has gone, or the pattern changed so the fix would be another one.
+   */
+  readonly FIX_NO_LONGER_APPLIES: { readonly why: 'resolved' | 'changed' };
+  /**
    * X3: a stitch run or a dimension is attached to a corner the point edit
    * would take away — by removing its point, splitting its rounding, or
    * straightening it. Moving the attachment to another corner is the silent
