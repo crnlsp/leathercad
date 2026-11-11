@@ -8,7 +8,7 @@ import {
 import { PathOps, uniformRadii } from '@leathercad/geometry';
 import { test, type Bench } from 'vitest';
 
-import { buildSnapIndex } from './snap.js';
+import { buildSnapIndex, snap } from './snap.js';
 
 /**
  * What one pointer move of a drag pays for snapping (PERF-004). A preview makes
@@ -143,3 +143,22 @@ test('carry a tab across a 1000-point traced outline: evaluate and index snaps',
     'snap-drag-beside-traced',
     dragStep((step) => project([still, tabPart(step / 10)])),
   ));
+
+/**
+ * What one pointer move pays for snapping itself when nothing is being moved
+ * (3.20): the index is built once and each iteration is one `snap()`, the
+ * previous result handed back as the pointer router does. The cursor walks
+ * round the 1000-point traced outline (`traced-1000.lcp`), 2.6 mm out — the
+ * 10 px pick radius at 100 % — so every move is in range of something.
+ */
+const hovered = evaluate(project([still]));
+const hoverIndex = buildSnapIndex(hovered);
+let hoverStep = 0;
+let held: ReturnType<typeof snap> = null;
+test('hover round a 1000-point traced outline: one snap per move', ({ bench }) =>
+  measure(bench, 'snap-hover-traced-1000', () => {
+    const angle = ((hoverStep = (hoverStep + 1) % 3600) / 3600) * Math.PI * 2;
+    const at = { x: 300 + 291 * Math.cos(angle), y: 300 + 291 * Math.sin(angle) };
+    held = snap(hoverIndex, hovered, at, { toleranceMm: 2.6, held });
+    return held;
+  }));
