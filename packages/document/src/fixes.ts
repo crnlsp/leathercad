@@ -127,7 +127,7 @@ function seamFix(project: Project, seamId: string, key: string): Fix | null {
     lengthFix(project, seam.b, resolved.b, resolved.a, key),
   ].filter((fix): fix is Fix => fix !== null && clears(project, fix.edit, key));
   // Both sides could move: which one is the maker's choice.
-  return candidates.length === 1 ? candidates[0]! : null;
+  return candidates.length === 1 ? (candidates[0] ?? null) : null;
 }
 
 type Walk = Extract<ReturnType<typeof resolveSeam>, { ok: true }>['a'];
