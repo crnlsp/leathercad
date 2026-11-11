@@ -460,7 +460,9 @@ function offMaterial(
         off.push(centre);
         continue;
       }
-      if (rimMm >= MIN_HOLE_EDGE_CLEARANCE_MM) continue;
+      // At the minimum is clear: an inset of exactly 1.5 mm measures a last
+      // bit short of it, and a maker who typed 1.5 met the rule (9.17).
+      if (approxGte(rimMm, MIN_HOLE_EDGE_CLEARANCE_MM, EPS_LENGTH)) continue;
       clearanceMm = Math.min(clearanceMm, Math.max(0, rimMm));
       tight.push(centre);
     }
