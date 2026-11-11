@@ -223,7 +223,10 @@ for (const tag of ['pl', 'de', 'ru', 'fr', 'es'] as const) {
     copyFileSync(resolve('fixtures/projects/print-test.lcp'), project);
     const original = readFileSync(project);
     const { app, window } = await openApp({
-      env: { ...ENGLISH_SYSTEM, PATH: `${cups.bin}:${process.env['PATH'] ?? ''}` },
+      env:
+        process.platform === 'win32'
+          ? ENGLISH_SYSTEM
+          : { ...ENGLISH_SYSTEM, PATH: `${cups.bin}:${process.env['PATH'] ?? ''}` },
     });
     const words = CATALOGUES[tag];
     try {
@@ -349,6 +352,17 @@ for (const tag of ['pl', 'de', 'ru', 'fr', 'es'] as const) {
         await noHorizontalOverflow(window);
         await expectNoViolations(window, `${tag} print ${width}`);
         await capture(window, `${tag}-print-${width}`);
+        if (process.platform === 'win32') {
+          // No CUPS on Windows (main/printing.ts): the preview says so and
+          // saves a PDF instead, so there is no printer to calibrate.
+          await expect(preview.getByTestId('print-unavailable')).toHaveText(
+            words.printPreview.unavailable.platform,
+          );
+          await expect(preview.getByTestId('print-calibrate')).toHaveCount(0);
+          await window.keyboard.press('Escape');
+          await expect(preview).toHaveCount(0);
+          continue;
+        }
         await preview.getByTestId('print-calibrate').click();
         const calibration = preview.getByTestId('calibration');
         const across = calibration.getByLabel(
