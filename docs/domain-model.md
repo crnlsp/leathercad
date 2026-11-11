@@ -763,7 +763,7 @@ hint; the model never stores inches.
 - Total stitch line length, for estimating thread (roughly 4–5 × the seam length; roadmap 9.12
   settles the formula, which printing.md §12 gives as 4×).
 
-## 7. Assembly and seams — built, 9.6a–b
+## 7. Assembly and seams — built, 9.6a–b, marks 9.13
 
 A seam is an explicit relationship between two stitch hole sets, including mirrored sets and two
 stretches of the same piece. It lives in the optional project-level `seams` array. Nothing is
@@ -774,7 +774,9 @@ interface Seam {
   readonly id: SeamId;
   readonly a: SeamSide;
   readonly b: SeamSide;
+  readonly marks?: SeamMarks;          // 9.13, format 13
 }
+type SeamMarks = { readonly kind: 'ends' } | { readonly kind: 'every'; readonly n: number };
 type SeamAnchor = number | 'start' | 'end';
 interface SeamSide {
   readonly holeSetId: FeatureId;
@@ -799,7 +801,8 @@ and the loader. An out-of-range anchor refuses rather than re-targeting a neighb
 an anchor evaluation has swallowed is still missing. A missing or failed hole set is an outcome,
 `SEAM_SIDE_MISSING`, and a following stretch longer than its available line is
 `SEAM_RUNS_OFF_THE_LINE`. Missing sides deliberately load: 1.6 preserves the unknown seam metadata
-but may delete its source. Seams keep format 12 (file-format §4.5 rule 3, approved D2).
+but may delete its source. Seams kept format 12 (file-format §4.5 rule 3, approved D2); their marks
+print, and arrived with format 13.
 
 `addSeam` adds, `setSeam` edits and `removeSeam` unsews a relationship in one undo step. Editing
 preserves unknown metadata at every level. `planDelete` lists seams through their hole-set
@@ -812,6 +815,19 @@ Point edits and conversion to drawn paths renumber seam anchors through the exis
 mapping, including anchors on derived hole sets. Taking an attached corner away refuses the edit.
 Unchanged seams reuse their resolution while both hole sets, paths, holes and anchors are
 identical; changes to either side re-evaluate it. Problem identity includes the seam id.
+
+**Alignment marks (9.13).** A seam may ask for marks at its paired holes, counted from the first
+pair as the walk counts them: `ends` is the first and the last pair, `every` is pairs *n*, 2*n*,
+3*n*… (`markedPairs`). `alignmentMarks(resolved)` gives each mark's piece, hole set, pair, the
+hole's centre and a unit normal into the leather — onto the material, then away from the nearer
+edge (`materialOf`, `distanceToEdge`). Nothing about a mark is stored but which pairs: it follows
+its holes when either piece changes, a seam that does not resolve marks nothing, a hidden hole
+set's marks are hidden with it, and unsewing the seam takes them (ADR 0009). A count mismatch
+still marks the pairs it has. The tick drawn there is the theme's (`ALIGNMENT_MARK`, 3.5 mm
+starting 1 mm from the hole centre) in the `mark` role, on the board, the Sheets view, the PDF,
+the SVG and the DXF alike — never a notch in the cut edge, and not the paper's registration
+crosses. Marks print, so they bumped the format to 13 (file-format §4.1e). `setSeam` replaces
+them with the edit's: an edit without marks unmarks the seam.
 
 **Open-line endpoints (D17, approved).** A seam reference is an existing corner index, or
 `'start'` / `'end'` for the geometric boundaries of an open stitch line. It follows the current

@@ -110,3 +110,42 @@ This is the construction check 8.14b asks for: cut from leather once, holes lini
 a 1:1 print-scale reading; the rows above remain the record for that. The
 [template audit](template-audit.md#physical-check-to-record) gives the procedure and what a fuller
 record would add.
+
+## Alignment marks — 9.13
+
+9.13 prints a seam's alignment marks, so it is measured on paper (seams spec §6). Until a row
+below carries real readings, 9.13 is not done and its roadmap line stays ◐.
+
+**What is checked automatically.** `cardHolderMarks.test.ts` holds the fixture below to the shipped
+card holder with marks added through the app's commands, and checks that each mark is at the 6th
+and 12th paired hole of both pieces, the two the same distance from the corner hole along the
+stitch line (to 0.0005 mm). `packages/export` checks that the ticks reach the scene, the sheet
+plan, the PDF, the SVG and the DXF. None of that is the printer.
+
+**The procedure**, about five minutes, with the steel rule of the procedure above:
+
+1. **Open** `fixtures/projects/card-holder-marks.lcp` in the build under test: the shipped card
+   holder, its left and right seams marked every 6th pair. Note the version in the status bar.
+2. **Sheets** shows one A4 portrait sheet: *Outer* and *Pocket — cut 2*, each with four short grey
+   ticks just inside its left and right stitching, square to it.
+3. **Print** as step 3 above (on Windows, *Save PDF…* and print at *Actual size*). Never scaled.
+4. **Measure**, to the nearest half millimetre. The corner hole is the one on the rounded bottom
+   corner; *to the mark* is to the centre of the hole the tick points at, with the rule laid
+   straight between the two hole centres.
+
+   | # | Where | What | Expected |
+   |---|---|---|---|
+   | A, B | The gauge | As above | 100.0 × 5.0 mm |
+   | N | *Outer*, left side | Bottom corner hole to the lower mark (6th hole) | 18.6 mm |
+   | O | *Pocket*, left side | Bottom corner hole to the lower mark (6th hole) | 18.6 mm |
+   | P | *Outer*, left side | Bottom corner hole to the upper mark (12th hole) | 41.1 mm |
+   | Q | *Pocket*, left side | Bottom corner hole to the upper mark (12th hole) | 41.1 mm |
+   | R | Both pieces, right side | N to Q again | as N to Q |
+
+5. **Record** a row. The check passes when N and O, and P and Q, are within 0.5 mm of each other on
+   each side — the seams spec's acceptance — and each within 0.5 mm of expected. A tick that is not
+   inside the stitching, or that touches the cut edge, fails however it measures.
+
+| Date | Build | OS, viewer and scale setting | Printer, paper | Readings N · O · P · Q (left; right) | Result |
+|---|---|---|---|---|---|
+| _pending_ | | | | | |

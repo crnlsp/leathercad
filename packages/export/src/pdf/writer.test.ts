@@ -8,6 +8,7 @@ import {
   DEFAULT_SETTINGS,
   ORIENTATIONS,
   PAPER_NAMES,
+  alignmentMarks,
   evaluate,
   type Orientation,
   type Project,
@@ -37,6 +38,7 @@ import {
   verificationLayout,
   type PageSetup,
 } from '../paper.js';
+import { sewnProject } from '../../test/scenes.js';
 import { PRINT_STYLES, buildExportScene } from '../scene.js';
 import { sheetInk } from '../sheetInk.js';
 import { calibrationPage } from '../calibrationPage.js';
@@ -544,6 +546,24 @@ describe('document structure', () => {
 
     expect(strokes).toHaveLength(7);
     for (const count of strokes) expect(count).toBeLessThan(scene.parts[0]!.paths.length / 3);
+  });
+});
+
+describe('alignment marks on paper (9.13)', () => {
+  it('strokes one tick a mark, in the marking role’s grey, and nothing else changes', async () => {
+    const strokesOf = async (project: Project) =>
+      (await PDFDocument.load(await pdfFor(project)))
+        .getPages()
+        .map((page) => contentOf(page).match(/^S$/gm)?.length ?? 0)
+        .reduce((a, b) => a + b, 0);
+    const marks = alignmentMarks(evaluate(sewnProject({ kind: 'ends' })));
+
+    expect(marks).toHaveLength(4);
+    expect(await strokesOf(sewnProject({ kind: 'ends' }))).toBe(
+      (await strokesOf(sewnProject())) + marks.length,
+    );
+    const page = (await PDFDocument.load(await pdfFor(sewnProject({ kind: 'ends' })))).getPage(0);
+    expect(contentOf(page)).toContain(`${PRINT_STYLES.mark.grey} G`);
   });
 });
 

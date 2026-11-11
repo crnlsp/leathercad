@@ -15,6 +15,7 @@ import { strFromU8, unzipSync } from 'fflate';
 
 import { fixtureProjectV12 } from './makeFixture.js';
 import { InvalidProjectFileError, loadProject, saveProject } from './lcp.js';
+import { CURRENT_FORMAT_VERSION } from './migrations/index.js';
 import { ProjectSchema } from './schema.js';
 // Frozen verbatim from leathercad-v1.6.0:packages/persist/src/schema.ts.
 import {
@@ -30,7 +31,7 @@ const seam: Seam = {
   b: { holeSetId: 'holes-1', stretch: { kind: 'from', anchor: 3, toward: 'previous' } },
 };
 
-describe('seams in format 12 (9.6a)', () => {
+describe('seams, kept at format 12 and marked from 13 (9.6a, 9.13)', () => {
   it.each([
     { id: 'left', pocketCorner: 0, pocketEnd: 'start', outerCorner: 3, toward: 'previous' },
     { id: 'right', pocketCorner: 1, pocketEnd: 'end', outerCorner: 0, toward: 'next' },
@@ -185,7 +186,9 @@ describe('seams in format 12 (9.6a)', () => {
     const manifest: Manifest = ReleasedManifestSchema.parse(
       JSON.parse(strFromU8(entries['manifest.json']!)),
     );
-    expect(manifest.formatVersion).toBe(12);
+    // 1.7 writes format 13 (9.13), which 1.6 refuses by its number; what its
+    // schema proves is that a 1.6 build kept the seams of a format-12 file.
+    expect(manifest.formatVersion).toBe(CURRENT_FORMAT_VERSION);
     const old = ReleasedSchema.parse(JSON.parse(strFromU8(entries['document.json']!)));
     const edited = { ...old, name: 'Edited in 1.6' };
     const reopened = loadProject(saveProject(edited as Project, options)).project;
@@ -200,7 +203,7 @@ describe('seams in format 12 (9.6a)', () => {
     };
     const bytes = saveProject({ ...fixtureProjectV12(), seams: [extended] }, options);
     const loaded = loadProject(bytes);
-    expect(loaded.manifest.formatVersion).toBe(12);
+    expect(loaded.manifest.formatVersion).toBe(CURRENT_FORMAT_VERSION);
     expect(loaded.project.seams).toEqual([extended]);
     expect(saveProject(loaded.project, options)).toEqual(bytes);
   });
@@ -295,5 +298,33 @@ it('checks the released 1.6 card holder bottom as 27 pairs within the drift limi
     severity: 'info',
     worstPair: 27,
     driftMm: expect.closeTo(99 - (97 + Math.PI / 2), 9),
+  });
+});
+
+describe('a seam’s alignment marks, format 13 (9.13)', () => {
+  it('round-trip which pairs are marked, and unknown fields on them, byte-identically', () => {
+    for (const marks of [
+      { kind: 'ends' as const },
+      { kind: 'every' as const, n: 6 },
+      { kind: 'every' as const, n: 3, future: 'kept' },
+    ]) {
+      const bytes = saveProject({ ...fixtureProjectV12(), seams: [{ ...seam, marks }] }, options);
+      const loaded = loadProject(bytes);
+      expect(loaded.manifest.formatVersion).toBe(13);
+      expect(loaded.project.seams).toEqual([{ ...seam, marks }]);
+      expect(saveProject(loaded.project, options)).toEqual(bytes);
+    }
+  });
+
+  it('refuses marks that count no pairs, or of a kind this build does not know', () => {
+    const p = fixtureProjectV12();
+    for (const marks of [
+      { kind: 'every', n: 0 },
+      { kind: 'every', n: -2 },
+      { kind: 'every', n: 1.5 },
+      { kind: 'every' },
+      { kind: 'nearest' },
+    ])
+      expect(ProjectSchema.safeParse({ ...p, seams: [{ ...seam, marks }] }).success).toBe(false);
   });
 });

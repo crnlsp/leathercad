@@ -711,3 +711,57 @@ export function fixtureProjectV12(): Project {
     ),
   };
 }
+
+/**
+ * Version 13 — alignment marks (9.13).
+ *
+ * The pocket's stitching gets its holes and is sewn to the panel's, with a
+ * mark at every fifth pair. What the file holds is which pairs; where the
+ * marks fall is read from the holes on every load.
+ */
+export function fixtureProjectV13(): Project {
+  const previous = fixtureProjectV12();
+  return {
+    ...previous,
+    id: 'fixture-v13',
+    name: 'Format baseline v13',
+    parts: previous.parts.map((part) =>
+      part.id !== 'part-pocket'
+        ? part
+        : {
+            ...part,
+            features: [
+              ...part.features,
+              {
+                id: 'holes-2',
+                kind: 'stitch-hole-set' as const,
+                name: 'Stitch holes',
+                visible: true,
+                locked: false,
+                source: {
+                  kind: 'derived' as const,
+                  sourceId: 'stitch-2',
+                  op: {
+                    type: 'stitch-holes' as const,
+                    pitchMm: 3.85,
+                    mode: 'fit-whole' as const,
+                    corners: 'hole-at-corner' as const,
+                  },
+                },
+              },
+            ],
+          },
+    ),
+    seams: [
+      {
+        id: 'seam-1',
+        a: {
+          holeSetId: 'holes-2',
+          stretch: { kind: 'between', fromAnchor: 'start', toAnchor: 'end' },
+        },
+        b: { holeSetId: 'holes-1', stretch: { kind: 'from', anchor: 0, toward: 'next' } },
+        marks: { kind: 'every', n: 5 },
+      },
+    ],
+  };
+}

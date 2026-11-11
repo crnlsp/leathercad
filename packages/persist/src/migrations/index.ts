@@ -24,6 +24,7 @@ import { v8ToV9 } from './v8_to_v9.js';
 import { v9ToV10 } from './v9_to_v10.js';
 import { v10ToV11 } from './v10_to_v11.js';
 import { v11ToV12 } from './v11_to_v12.js';
+import { v12ToV13 } from './v12_to_v13.js';
 
 export interface Migration {
   readonly from: number;
@@ -46,9 +47,10 @@ export const MIGRATIONS: readonly Migration[] = [
   { from: 9, to: 10, migrate: v9ToV10 },
   { from: 10, to: 11, migrate: v10ToV11 },
   { from: 11, to: 12, migrate: v11ToV12 },
+  { from: 12, to: 13, migrate: v12ToV13 },
 ];
 
-export const CURRENT_FORMAT_VERSION = 12;
+export const CURRENT_FORMAT_VERSION = 13;
 
 export class NewerFormatError extends Error {
   /**

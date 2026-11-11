@@ -6,6 +6,7 @@ import { validate } from './validate.js';
 import type { Project } from './feature.js';
 import { bag, seamedBag, strap, tracedOutline } from './workloads.js';
 import { resolveSeam, seamVerdict } from './seams.js';
+import { alignmentMarks } from './alignmentMarks.js';
 
 /** Milliseconds for one cold `diagnose` — the memo is per project object. */
 function timeDiagnose(project: Project): number {
@@ -32,6 +33,17 @@ describe('regeneration budget', () => {
     diagnose(edited)
       .filter((d) => 'seamId' in d.problem.facts)
       .forEach((d, i) => expect(d).toBe(diagnostics[i]));
+  });
+  it('reuses all forty seams’ alignment marks after an unrelated edit (9.13)', () => {
+    const marked = seamedBag();
+    const project = {
+      ...marked,
+      seams: (marked.seams ?? []).map((seam) => ({ ...seam, marks: { kind: 'ends' as const } })),
+    };
+    const before = alignmentMarks(evaluate(project));
+    expect(before).toHaveLength(160);
+    const after = alignmentMarks(evaluate({ ...project, name: 'Unrelated' }));
+    after.forEach((mark, i) => expect(mark).toBe(before[i]));
   });
   it('rebuilds a chain of three thousand holes well inside 50 ms', () => {
     // ~11.6 m of stitch line at 3.85 mm — a long strap stitched both sides.

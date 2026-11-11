@@ -176,8 +176,8 @@ are preserved like every other object (§4.3). A stretch reference is a non-nega
 or `'start'` / `'end'` for an open line's geometric boundaries. Endpoint references do not
 renumber existing corners or store any derived position (approved D17).
 
-Format 12 is retained by the approved decision D2 (§4.5 rule 3): seams change no drawing or print
-output. A regression test uses the exact released 1.6.0 schema to prove preservation through open,
+Format 12 was retained by the approved decision D2 (§4.5 rule 3): seams change no drawing or print
+output. A seam's alignment marks do, and arrived with format 13 (§4.1e). A regression test uses the exact released 1.6.0 schema to prove preservation through open,
 edit and save. A seam whose hole set was removed in 1.6 loads unchanged and reports
 `SEAM_SIDE_MISSING`; wrong feature kinds, two length-following sides, duplicate ids and
 out-of-range anchors, endpoints on closed lines and whole stretches on open lines are refused.
@@ -277,6 +277,19 @@ read from the outline on every load (§3.3).
 The v11→v12 migration is an identity: every older dimension is between anchors, which are
 unchanged. The version increases because an older build would not know the end and would refuse
 the dimension. `fixtures/format/v12.lcp` adds a belt end's overall width and height to v11's.
+
+### 4.1e Version 13 — alignment marks
+
+A seam may carry `marks`: `{ "kind": "ends" }` for its first and last paired holes, or
+`{ "kind": "every", "n": 6 }` for pairs 6, 12, 18… (9.13, [domain-model.md](domain-model.md) §7).
+`n` is a whole number of at least 1, checked by the schema. Which pairs are stored; where the marks
+fall, and which way they point, are read from the holes on every load (§3.3).
+
+The v12→v13 migration is an identity: no older seam has marks, and none are invented on open. The
+version increases because marks print (§4.5 rule 2): a 1.6 build would carry the field through as
+unknown data and print the pattern without them. So every file 1.7 saves is format 13, which 1.6
+refuses with its *update LeatherCAD* sentence. `fixtures/format/v13.lcp` sews the v12 pocket's new
+hole set to the panel's with a mark at every fifth pair.
 
 ### 4.2 The rules
 

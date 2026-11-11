@@ -1,6 +1,7 @@
 import { EPS_LENGTH, approxZero, type Mm } from '@leathercad/core';
 import {
   LAYER_ROLES,
+  alignmentMarks,
   draftDimensionLine,
   type Feature,
   type LayerRole,
@@ -22,6 +23,7 @@ import {
   CAPTION_SIZE_MM,
   DIMENSION_MARKS,
   ROLE_STYLES,
+  alignmentTick,
   describePart,
 } from '@leathercad/render';
 import { outlinesOf, placedText, type PlacedText } from '@leathercad/typography';
@@ -142,6 +144,13 @@ export function buildExportScene(
 ): ExportScene {
   const wanted = new Set(roles);
   const parts: ExportPart[] = [];
+  // A seam's alignment marks (9.13), on each piece they fall on: the seam's,
+  // not the part's, so they are drawn beside its ink rather than in it.
+  const ticks = new Map<string, ExportPath[]>();
+  for (const mark of alignmentMarks(resolved)) {
+    const tick = { role: 'mark' as const, path: alignmentTick(mark), style: PRINT_STYLES.mark };
+    ticks.set(mark.partId, [...(ticks.get(mark.partId) ?? []), tick]);
+  }
 
   for (const resolvedPart of resolved.parts) {
     const ink = inkOf(resolvedPart);
@@ -155,10 +164,13 @@ export function buildExportScene(
     // The roles asked for (6.4) are chosen here, once, for every writer: the
     // PDF, the SVG and the DXF add no filter of their own. The box and the
     // caption follow what is left, so a page is the size of what it holds.
-    const kept = onlyWanted(ink.paths, wanted);
+    const marks = onlyWanted(ticks.get(resolvedPart.part.id) ?? [], wanted);
+    const inked = onlyWanted(ink.paths, wanted);
+    const kept = marks.length === 0 ? inked : [...inked, ...marks];
     const words = onlyWanted(ink.texts, wanted);
     // Whole: as every role prints it, caption included — the one way of a
-    // part worth keeping, since it is the one every revision asks for.
+    // part worth keeping, since it is the one every revision asks for. A
+    // marked part is made afresh: its marks follow another piece too.
     const whole = kept === ink.paths && words === ink.texts && wanted.has('annotation');
 
     const bounds = whole ? ink.boundsMm : boundsOf(kept, words);

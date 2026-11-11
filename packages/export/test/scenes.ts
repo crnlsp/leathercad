@@ -5,6 +5,7 @@ import {
   type LayerRole,
   type Part,
   type Project,
+  type SeamMarks,
 } from '@leathercad/domain';
 import {
   PathOps,
@@ -146,6 +147,29 @@ export const MIXED_PROJECT: Project = {
     partOf('strap', [outlineOf('o4', 275, 25)]),
   ],
 };
+
+/**
+ * A pocket sewn to a panel along one side (9.13): its marks, when asked for,
+ * fall on both pieces.
+ */
+export function sewnProject(marks?: SeamMarks): Project {
+  const side = (holeSetId: string) => ({
+    holeSetId,
+    stretch: { kind: 'between' as const, fromAnchor: 0, toAnchor: 1 },
+  });
+  return {
+    id: 'sewn',
+    name: 'Sewn',
+    settings: DEFAULT_SETTINGS,
+    parts: [
+      partOf('panel', [outlineOf('o1', 100, 70), inset('s1', 'o1', 3), holesOn('h1', 's1')]),
+      partOf('pocket', [outlineOf('o2', 100, 40), inset('s2', 'o2', 3), holesOn('h2', 's2')]),
+    ],
+    seams: [
+      { id: 'seam', a: side('h2'), b: side('h1'), ...(marks === undefined ? {} : { marks }) },
+    ],
+  };
+}
 
 export const mixedScene = (): ExportScene =>
   buildExportScene(evaluate(MIXED_PROJECT), MIXED_PROJECT.name);

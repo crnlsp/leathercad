@@ -14,7 +14,10 @@ export function addSeam(seam: Seam): Command {
   });
 }
 
-/** Replace only a known seam, retaining fields a newer writer may have added. */
+/**
+ * Replace only a known seam, retaining fields a newer writer may have added;
+ * its marks are the edit's, so an edit without them unmarks the seam.
+ */
 export function setSeam(seam: Seam): Command {
   return namedSeamCommand(seam, 'edit-seam', (document) => {
     const old = document.project.seams?.find((s) => s.id === seam.id);
@@ -31,7 +34,9 @@ export function setSeam(seam: Seam): Command {
         ...after.stretch,
       },
     });
-    const next = { ...old, ...seam, a: side(old.a, seam.a), b: side(old.b, seam.b) };
+    // Marks are this build's own field: absent from the edit means none (9.13).
+    const { marks: _, ...kept } = old;
+    const next = { ...kept, ...seam, a: side(old.a, seam.a), b: side(old.b, seam.b) };
     if (JSON.stringify(old) === JSON.stringify(next)) return document;
     const project = {
       ...document.project,

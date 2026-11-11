@@ -4,6 +4,7 @@ import { diagnose } from './diagnose.js';
 import { evaluate } from './evaluate.js';
 import { seamedBag, strap, tracedOutline } from './workloads.js';
 import { resolveSeam, seamVerdict } from './seams.js';
+import { alignmentMarks } from './alignmentMarks.js';
 
 /**
  * What one edit costs: evaluation alone, and `diagnose` — evaluation plus
@@ -52,5 +53,17 @@ test('check forty seams after an unrelated edit (9.6b)', ({ bench }) => {
   return measure(bench, 'check-seams-unrelated', () => {
     const edited = { ...project };
     for (const seam of edited.seams ?? []) seamVerdict(edited, seam);
+  });
+});
+
+test('mark forty seams after an unrelated edit (9.13)', ({ bench }) => {
+  const marked = seamedBag();
+  const project = {
+    ...marked,
+    seams: (marked.seams ?? []).map((seam) => ({ ...seam, marks: { kind: 'ends' as const } })),
+  };
+  alignmentMarks(evaluate(project));
+  return measure(bench, 'mark-seams-unrelated', () => {
+    alignmentMarks(evaluate({ ...project }));
   });
 });
