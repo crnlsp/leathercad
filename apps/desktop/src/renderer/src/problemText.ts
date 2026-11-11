@@ -179,6 +179,22 @@ const CATALOGUE: { readonly [K in ProblemCode]: Describe<K> } = {
     }),
 
   EMPTY_PART: (f, t) => t('problems.EMPTY_PART.description', f),
+  POCKET_TOO_NARROW: (f, t) =>
+    t(`problems.POCKET_TOO_NARROW.${f.content}`, {
+      featureName: f.featureName,
+      width: shortOf(f.widthMm, f.neededMm),
+      ease: formatMm(f.easeMm),
+      needed: formatMm(f.neededMm),
+    }),
+  POCKET_TOO_SHALLOW: (f, t) =>
+    t(`problems.POCKET_TOO_SHALLOW.${f.content}`, {
+      featureName: f.featureName,
+      depth: shortOf(f.depthMm, f.neededMm),
+      ease: formatMm(f.easeMm),
+      needed: formatMm(f.neededMm),
+    }),
+  POCKET_NOT_MEASURABLE: (f, t) =>
+    t(`problems.POCKET_NOT_MEASURABLE.${f.reading}`, { featureName: f.featureName }),
 };
 
 // The catalogue above supplies the reason with the occurrence's facts and
@@ -216,6 +232,9 @@ const FIXES: { readonly [K in ProblemCode]?: MessageKey | Describe<K> } = {
   CUT_OUT_OUTSIDE_PART: 'problems.CUT_OUT_OUTSIDE_PART.fix',
   OUTSIDE_PART: 'problems.OUTSIDE_PART.fix',
   HOLE_TOO_CLOSE_TO_EDGE: 'problems.HOLE_TOO_CLOSE_TO_EDGE.fix',
+  POCKET_TOO_NARROW: 'problems.POCKET_TOO_NARROW.fix',
+  POCKET_TOO_SHALLOW: 'problems.POCKET_TOO_SHALLOW.fix',
+  POCKET_NOT_MEASURABLE: 'problems.POCKET_NOT_MEASURABLE.fix',
 };
 
 /** The facts and reason, and an action for every listed problem (9.15). */
@@ -258,6 +277,19 @@ export function describeProblemWithSubject(p: Problem, t: Translate): string {
   return name === undefined || sentence.includes(name)
     ? sentence
     : t('problems.withSubject', { name, sentence });
+}
+
+/**
+ * A measurement that falls short, never rounded up to the figure it misses:
+ * 89.59996 mm against 89.60 mm reads 89.5999 mm, not 89.60 (as Q34's text
+ * height). Only ever given a value under the need, so cutting the digits off
+ * keeps it under.
+ */
+function shortOf(measuredMm: number, neededMm: number): string {
+  const shown = formatMm(measuredMm);
+  return shown === formatMm(neededMm)
+    ? formatMm(Math.floor(measuredMm * 10_000) / 10_000, 4)
+    : shown;
 }
 
 /** Enough precision to recognise a typed value, without float noise. */

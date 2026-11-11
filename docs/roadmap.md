@@ -117,7 +117,7 @@ as any item that will not make it does.
 - ✅ **9.17 Fixes offered with a problem** (P1) — a drifting seam's drawn stitching shortened or lengthened until its holes pair, and stitching too near an edge moved in to clear it; previewed while pointed at, one undo step, refused when out of date.
 - ☐ **9.16 Accepting a warning** (P1).
 - ✅ **9.14a A pocket's clear size** (P1) — width between stitch lines and stitch depth for an open U of stitching, in Properties and the selection bar: the card holder 99.0 × 41.35 mm, the bifold 89.0 mm across.
-- ☐ **9.14b A pocket that holds what it must** (P1).
+- ✅ **9.14b A pocket that holds what it must** (P1) — a payment card or a typed size, the maker's ease from My tools, `POCKET_TOO_NARROW` and, held fully, `POCKET_TOO_SHALLOW` from the opening on the outline: an ID-1 card with 4 mm ease flags the bifold and not the card holder.
 - ☐ **9.12 The production summary** (P1) — pieces, holes, hardware, thread and net leather, estimates labelled.
 - ◐ **9.13 Alignment marks on mating edges** (P1) — prints: format 13; marks at a seam's first and last or every *n*th pair on both pieces, on the board, Sheets, PDF, SVG and DXF. Awaiting its paper reading ([log](print-verification-log.md#alignment-marks--913)).
 - ☐ **Q21 Cut two, one turned over** (P1) — prints: a format version of its own, measured on paper.

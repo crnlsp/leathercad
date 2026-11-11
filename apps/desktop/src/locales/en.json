@@ -472,6 +472,10 @@
       "thickness": {
         "name": "Leather thickness",
         "note": "Written into each new fold. Leave it blank to record none."
+      },
+      "pocketEase": {
+        "name": "Pocket ease",
+        "note": "Room a pocket you say a card goes in leaves beyond the card, for the leather and the stitching. Copied into each new requirement. Leave it blank to start with none."
       }
     },
     "language": {
@@ -1282,6 +1286,24 @@
       "description": "{{featureName}} comes within {{clearance}} of an edge, under the {{minimum}} a hole needs. Leather tears out between a hole and an edge.",
       "fix": "Increase the inset or move the holes farther from the edge. A smaller hole diameter also leaves more leather."
     },
+    "POCKET_TOO_NARROW": {
+      "title": "Pocket too narrow",
+      "id-1": "{{featureName}} leaves {{width}} between its stitch lines; a payment card with {{ease}} of ease needs {{needed}}.",
+      "size": "{{featureName}} leaves {{width}} between its stitch lines; what it holds, with {{ease}} of ease, needs {{needed}}.",
+      "fix": "Stitch the sides farther apart, or make the piece wider. Leather thickness and the stitching's pull are not counted, so lower the ease only if you know the leather allows it."
+    },
+    "POCKET_TOO_SHALLOW": {
+      "title": "Pocket too shallow",
+      "id-1": "{{featureName}} is {{depth}} deep below its opening; a payment card with {{ease}} of ease needs {{needed}} to go in fully.",
+      "size": "{{featureName}} is {{depth}} deep below its opening; what it holds, with {{ease}} of ease, needs {{needed}} to go in fully.",
+      "fix": "Make the piece taller, or clear Holds it fully in Properties if the card is meant to stand proud."
+    },
+    "POCKET_NOT_MEASURABLE": {
+      "title": "Pocket not checked",
+      "width": "{{featureName}} is said to hold something, but it is not open stitching with two straight sides and a bottom, so its width cannot be checked.",
+      "opening": "{{featureName}} must hold its content fully, but no opening was found on the outline above both stitch ends, so its depth cannot be checked.",
+      "fix": "Stitch it open, with two straight sides and a bottom inside the outline, or set Holds to Nothing stated in Properties."
+    },
     "EMPTY_PART": {
       "title": "Empty part",
       "description": "{{partName}} has nothing in it, so there is nothing to cut or print.",
@@ -1414,6 +1436,7 @@
     "add-seam-allowance": "Add seam allowance",
     "change-fold-direction": "Change fold direction",
     "change-fold-thickness": "Change fold thickness",
+    "change-pocket-requirement": "Change what the pocket holds",
     "change-hardware-type": "Change hardware type",
     "change-marking-purpose": "Change marking purpose",
     "change-paper": "Change paper",
@@ -1515,7 +1538,20 @@
     "width": "Width between stitch lines",
     "depth": "Stitch depth",
     "value": "{{value}} mm",
-    "note": "Measured between stitch centres. Depth starts at the line joining the stitch ends; the pocket opening may extend above it. Leather thickness and stitching tension reduce usable space."
+    "note": "Measured between stitch centres. Depth starts at the line joining the stitch ends; the pocket opening may extend above it. Leather thickness and stitching tension reduce usable space.",
+    "holds": {
+      "label": "Holds",
+      "none": "Nothing stated",
+      "id-1": "Payment card, {{width}} × {{height}} mm",
+      "size": "Another size",
+      "width": "Width",
+      "height": "Height",
+      "ease": "Ease",
+      "fully": "Holds it fully",
+      "proud": "What it holds stands {{value}} mm above the opening.",
+      "below": "What it holds goes {{value}} mm below the opening.",
+      "note": "A geometric check of the stitching: leather thickness and the stitching's pull are not counted — leave ease for them. Without Holds it fully, depth is shown and not judged."
+    }
   },
   "selectionBar": {
     "title": "Stitching of {{piece}}",

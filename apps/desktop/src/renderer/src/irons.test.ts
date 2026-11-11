@@ -10,6 +10,7 @@ const tools = (irons: MakerTools['irons'], defaultIronId: string | null): MakerT
   defaultIronId,
   stitchMarginMm: 3.5,
   leatherThicknessMm: null,
+  pocketEaseMm: null,
 });
 
 describe('the starter irons', () => {

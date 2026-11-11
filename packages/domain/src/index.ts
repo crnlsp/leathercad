@@ -48,6 +48,8 @@ export type {
   Run,
   Part,
   PartId,
+  PocketContent,
+  PocketRequirement,
   Project,
   ProjectSettings,
   StitchLine,
@@ -152,4 +154,4 @@ export { MIN_PITCH_MM, distributeHoles, splitAtCorners } from './stitch.js';
 
 export { checkProjectSize } from './resourceSize.js';
 
-export { pocketSize, type PocketSize } from './pocket.js';
+export { ID1_CARD, contentSize, depthBelowOpening, pocketSize, type PocketSize } from './pocket.js';

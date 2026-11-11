@@ -306,12 +306,14 @@ export function App({
       defaultIronId: preferences.defaultIronId,
       stitchMarginMm: preferences.stitchMarginMm,
       leatherThicknessMm: preferences.leatherThicknessMm,
+      pocketEaseMm: preferences.pocketEaseMm,
     }),
     [
       preferences.irons,
       preferences.defaultIronId,
       preferences.stitchMarginMm,
       preferences.leatherThicknessMm,
+      preferences.pocketEaseMm,
     ],
   );
   // The bar under the selected piece (U.17), unless Settings › Appearance turned it off.

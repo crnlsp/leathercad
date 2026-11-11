@@ -45,6 +45,7 @@ const TOOLS: MakerTools = {
   defaultIronId: 'crimson-3.0',
   stitchMarginMm: 4,
   leatherThicknessMm: null,
+  pocketEaseMm: null,
 };
 
 function sample(...commands: Command[]): Project {

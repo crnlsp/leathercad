@@ -149,6 +149,7 @@ export type HistoryAction =
   | 'set-quantity'
   | 'change-fold-direction'
   | 'change-fold-thickness'
+  | 'change-pocket-requirement'
   | 'change-marking-purpose'
   | 'change-hardware-type'
   | 'move-point'

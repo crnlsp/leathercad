@@ -273,6 +273,16 @@ describe('My tools (U.13)', () => {
       ).toBeNull();
   });
 
+  it('keeps a pocket ease that is a real length, quantised, and leaves it not set otherwise (9.14b)', () => {
+    expect(parsePreferences('{}').pocketEaseMm).toBeNull();
+    expect(parsePreferences(JSON.stringify({ pocketEaseMm: 4.000_04 })).pocketEaseMm).toBe(4);
+    for (const bad of [0, -1, 'loose', null])
+      expect(parsePreferences(JSON.stringify({ pocketEaseMm: bad })).pocketEaseMm).toBeNull();
+    expect(validChanges({ pocketEaseMm: 3 })).toEqual({ pocketEaseMm: 3 });
+    expect(validChanges({ pocketEaseMm: null })).toEqual({ pocketEaseMm: null });
+    expect(validChanges({ pocketEaseMm: -2 })).toEqual({});
+  });
+
   it('takes the same changes from the renderer, by the same rules', () => {
     expect(
       validChanges({

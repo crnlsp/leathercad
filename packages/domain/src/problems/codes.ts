@@ -121,6 +121,9 @@ export const PROBLEM_CODES: { readonly [K in ProblemCode]: CodeInfo } = {
   // punched through nothing, while a line off it is a guide that overshoots.
   OUTSIDE_PART: rule('DR2', 'error'),
   HOLE_TOO_CLOSE_TO_EDGE: rule('DR2', 'warning'),
+  POCKET_TOO_NARROW: rule('DR8', 'warning'),
+  POCKET_TOO_SHALLOW: rule('DR8', 'warning'),
+  POCKET_NOT_MEASURABLE: rule('DR8', 'warning'),
 };
 
 /**

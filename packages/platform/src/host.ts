@@ -542,6 +542,13 @@ export interface Preferences {
    */
   readonly leatherThicknessMm: number | null;
   /**
+   * The ease a new pocket requirement starts with (9.14b): room beyond what
+   * the pocket holds, for the leather's thickness and the stitching's pull.
+   * Copied into the requirement, never read by evaluation. `null` until the
+   * maker sets one: their allowance, and none is invented.
+   */
+  readonly pocketEaseMm: number | null;
+  /**
    * The keys the maker changed in Settings › Keyboard shortcuts (U.12), by
    * the app's command id: each one's keys in place of its defaults. Only what
    * differs is kept, so a new default reaches a command the maker never moved.
@@ -609,6 +616,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   defaultIronId: 'ks-3.85',
   stitchMarginMm: 3.5,
   leatherThicknessMm: null,
+  pocketEaseMm: null,
   keyBindings: {},
   exportRoles: null,
 };
