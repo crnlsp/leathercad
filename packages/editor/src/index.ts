@@ -18,7 +18,7 @@ export type {
 } from './tool.js';
 export { ToolManager } from './tool.js';
 
-export { featuresWithin, hitTest } from './hitTest.js';
+export { featuresWithin, pickAt } from './hitTest.js';
 
 export type {
   AxisCandidate,

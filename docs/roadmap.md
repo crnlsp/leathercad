@@ -1,6 +1,6 @@
 # Roadmap
 
-**Released:** v1.6.0 (2026-11-02) · **Next:** 1.7 — Design & Construct · **Last updated:** 2026-11-07
+**Released:** v1.6.0 (2026-11-02) · **Next:** 1.7 — Design & Construct · **Last updated:** 2026-11-11
 
 What comes next, and everything known that is not done yet. What already shipped is in
 [`CHANGELOG.md`](../CHANGELOG.md). The full record of how 1.0 was built — every slice from 0.1 to
@@ -94,7 +94,7 @@ as any item that will not make it does.
 ### Stage 2 — The core editor ([plan](superpowers/plans/2026-11-03-release-1.7.md#stage-2--the-core-editor))
 
 - ✅ **3.20 One snapping model** — one priority table, sources, hysteresis; the base for smart guides.
-- ☐ **3.13 A click on a piece's body selects it** — today only its lines can be clicked.
+- ✅ **3.13 A click on a piece's body selects it** — on its leather, not in a cut-out; a line or a guide within the pick radius still wins; the drag moves the piece whole, the hover halos its outline, and a right-click offers the piece's menu.
 - ☐ **U.22 Hover, selected, editing and locked read differently** (P1).
 - ☐ **3.14 Arrow keys nudge, Ctrl+A selects every piece.**
 - ☐ **3.15 Typed position and Move by.**
