@@ -116,7 +116,7 @@ as any item that will not make it does.
 - ✅ **8.14b The built-in templates, checked as leatherwork** — matching card-holder seams, cut in leather with its holes lining up; fold-linked rivets; a bifold whose pockets fit and whose lining is cut to match ([audit](template-audit.md)).
 - ✅ **9.17 Fixes offered with a problem** (P1) — a drifting seam's drawn stitching shortened or lengthened until its holes pair, and stitching too near an edge moved in to clear it; previewed while pointed at, one undo step, refused when out of date.
 - ☐ **9.16 Accepting a warning** (P1).
-- ☐ **9.14a A pocket's clear size** (P1).
+- ✅ **9.14a A pocket's clear size** (P1) — width between stitch lines and stitch depth for an open U of stitching, in Properties and the selection bar: the card holder 99.0 × 41.35 mm, the bifold 89.0 mm across.
 - ☐ **9.14b A pocket that holds what it must** (P1).
 - ☐ **9.12 The production summary** (P1) — pieces, holes, hardware, thread and net leather, estimates labelled.
 - ◐ **9.13 Alignment marks on mating edges** (P1) — prints: format 13; marks at a seam's first and last or every *n*th pair on both pieces, on the board, Sheets, PDF, SVG and DXF. Awaiting its paper reading ([log](print-verification-log.md#alignment-marks--913)).
