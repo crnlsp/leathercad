@@ -94,6 +94,15 @@ export interface ToolContext {
    * headless caller with no maker.
    */
   readonly makerDefaults?: () => MakerDefaults;
+  /**
+   * Settings › General › Smart guides (smart-guides spec §5): whether a move
+   * aligns to pieces and guides as well as snapping to points. A function,
+   * like `drawAs`. Read by the alignment 3.16 adds through `decideSnap`;
+   * point snapping is the same either way.
+   *
+   * Absent means on, the preference's default.
+   */
+  readonly smartGuides?: () => boolean;
 }
 
 /** What a tool takes from the maker's settings: values, never a reference to them. */
@@ -236,7 +245,10 @@ function sameSnap(a: SnapCandidate | null, b: SnapCandidate | null): boolean {
 export class ToolManager {
   private active: Tool;
 
-  /** The snap the last pointer event caught, for the overlay glyph. */
+  /**
+   * The snap the last pointer event caught: for the overlay glyph, and held
+   * by the next event while the cursor stays near it (hysteresis, 3.20).
+   */
   private caught: SnapCandidate | null = null;
 
   /**
@@ -378,7 +390,7 @@ export class ToolManager {
     exclude: readonly string[] = this.active.snapExclusions?.(this.context) ?? NOTHING_EXCLUDED,
   ): PointerInput {
     const before = this.caught;
-    this.caught = event.ctrlKey ? null : this.findSnap(event, exclude);
+    this.caught = event.ctrlKey ? null : this.findSnap(event, exclude, before);
 
     // A hovering pointer changes no document, and an idle tool asks for no
     // repaint — so without this the glyph is computed and never drawn until
@@ -397,13 +409,18 @@ export class ToolManager {
     return this.snapped(event, exclude);
   }
 
-  private findSnap(event: PointerInput, exclude: readonly string[]): SnapCandidate | null {
+  private findSnap(
+    event: PointerInput,
+    exclude: readonly string[],
+    held: SnapCandidate | null,
+  ): SnapCandidate | null {
     const { resolved, index } = this.snapIndex();
     return snap(index, resolved, event.at, {
       // A pick radius in pixels, so the feel is identical at any zoom — the
       // same rule `hitTest` follows. See CLAUDE.md invariant 1.
       toleranceMm: this.context.viewport.pickToleranceMm(),
       exclude,
+      held,
     });
   }
 

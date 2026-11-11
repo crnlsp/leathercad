@@ -93,7 +93,7 @@ as any item that will not make it does.
 
 ### Stage 2 — The core editor ([plan](superpowers/plans/2026-11-03-release-1.7.md#stage-2--the-core-editor))
 
-- ☐ **3.20 One snapping model** — one priority table, sources, hysteresis; the base for smart guides.
+- ✅ **3.20 One snapping model** — one priority table, sources, hysteresis; the base for smart guides.
 - ☐ **3.13 A click on a piece's body selects it** — today only its lines can be clicked.
 - ☐ **U.22 Hover, selected, editing and locked read differently** (P1).
 - ☐ **3.14 Arrow keys nudge, Ctrl+A selects every piece.**

@@ -1707,6 +1707,7 @@ export function App({
                   selectionBar={selectionBarOn ? tools : null}
                   drawAs={drawAs}
                   makerDefaults={makerDefaults}
+                  smartGuides={preferences.smartGuides}
                   hardware={hardware}
                   pointOptions={pointOptions}
                   requestDelete={requestDelete}

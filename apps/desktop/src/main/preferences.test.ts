@@ -102,6 +102,17 @@ describe('reading preferences.json', () => {
     expect(validChanges({ selectionBar: 0 })).toEqual({});
   });
 
+  it('keeps smart guides on unless the maker turned them off (3.20)', () => {
+    // On a first launch, and in a file from before 3.20, which has no field.
+    expect(DEFAULT_PREFERENCES.smartGuides).toBe(true);
+    expect(parsePreferences(null).smartGuides).toBe(true);
+    expect(parsePreferences(JSON.stringify({ version: 2 })).smartGuides).toBe(true);
+    expect(parsePreferences(JSON.stringify({ smartGuides: false })).smartGuides).toBe(false);
+    expect(parsePreferences(JSON.stringify({ smartGuides: 'off' })).smartGuides).toBe(true);
+    expect(validChanges({ smartGuides: false })).toEqual({ smartGuides: false });
+    expect(validChanges({ smartGuides: 0 })).toEqual({});
+  });
+
   it('keeps no switch for checking for a new version: only the maker asks (8.9)', () => {
     expect(DEFAULT_PREFERENCES).not.toHaveProperty('updateCheck');
     expect(parsePreferences(JSON.stringify({ updateCheck: true }))).not.toHaveProperty(

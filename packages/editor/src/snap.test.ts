@@ -11,6 +11,7 @@ import {
 import type {
   CutContour,
   Feature,
+  FeatureId,
   GeometrySource,
   Guide,
   Part,
@@ -33,8 +34,14 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildSnapIndex,
+  decideSnap,
   snap,
   snapGlyph,
+  type AxisCandidate,
+  type AxisKind,
+  type Measured,
+  type SnapCandidate,
+  type Snapped,
   type SnapIndex,
   type SnapKind,
   type SnapOptions,
@@ -541,5 +548,381 @@ describe('snapGlyph', () => {
 
     // Four times the scale, a quarter of the millimetre size.
     expect(widthOf(near)).toBeCloseTo(widthOf(far) * 4, 9);
+  });
+});
+
+/**
+ * The one snapping model (3.20, smart-guides spec §5 and §13): a candidate
+ * with a source and either a point or an axis value, one priority table, ties
+ * by document order and hysteresis. `decideSnap` is the whole decision; these
+ * properties drive it with synthetic candidates, and the examples after them
+ * show what it does to `snap`.
+ */
+describe('one snapping model (3.20)', () => {
+  const TOL = 2;
+  const POINT_KINDS: readonly SnapKind[] = [
+    'endpoint',
+    'midpoint',
+    'centre',
+    'intersection',
+    'guide',
+    'on-path',
+    'grid',
+  ];
+  const AXIS_KINDS: readonly AxisKind[] = [
+    'guide-axis',
+    'host-centre',
+    'host-edge',
+    'piece-centre',
+    'piece-edge',
+    'equal-spacing',
+  ];
+  /** The spec's table, restated so that reordering the one in `snap.ts` fails here. */
+  const rank = (kind: SnapKind | AxisKind): number => [...POINT_KINDS, ...AXIS_KINDS].indexOf(kind);
+
+  /** Distances on a coarse grid, so that ties in distance are common. */
+  const arbDistance = fc.integer({ min: 0, max: 12 }).map((n) => (n * TOL) / 4);
+
+  /** Point candidates, each its own target: its own feature and point, its place its order. */
+  const arbPoints = fc
+    .array(fc.record({ kind: fc.constantFrom(...POINT_KINDS), d: arbDistance }), {
+      maxLength: 12,
+    })
+    .map((drawn): Measured<SnapCandidate>[] =>
+      drawn.map(({ kind, d }, order) => ({
+        candidate: { kind, point: vec(order, 0), featureId: `f${order}` as FeatureId },
+        distanceMm: d,
+        order,
+      })),
+    );
+
+  const arbAxes = fc
+    .array(
+      fc.record({
+        kind: fc.constantFrom(...AXIS_KINDS),
+        axis: fc.constantFrom('x' as const, 'y' as const),
+        d: arbDistance,
+      }),
+      { maxLength: 12 },
+    )
+    .map((drawn): Measured<AxisCandidate>[] =>
+      drawn.map(({ kind, axis, d }, order) => ({
+        candidate: { kind, axis, value: order, featureId: `a${order}` as FeatureId },
+        distanceMm: d,
+        order,
+      })),
+    );
+
+  /** The same candidates in another order: the answer must not depend on it. */
+  const shuffled = <T>(items: readonly T[]) =>
+    fc.shuffledSubarray([...items], { minLength: items.length, maxLength: items.length });
+
+  /** Highest rank, then nearest, then earliest in document order — among those in tolerance. */
+  function expected<C extends SnapCandidate | AxisCandidate>(
+    found: readonly Measured<C>[],
+  ): C | null {
+    const caught = found
+      .filter((f) => f.distanceMm <= TOL)
+      .sort(
+        (a, b) =>
+          rank(a.candidate.kind) - rank(b.candidate.kind) ||
+          a.distanceMm - b.distanceMm ||
+          a.order - b.order,
+      );
+    return caught[0]?.candidate ?? null;
+  }
+
+  const decide = (
+    points: readonly Measured<SnapCandidate>[],
+    axes: readonly Measured<AxisCandidate>[] = [],
+    held: Snapped | null = null,
+    smartGuides = true,
+  ): Snapped => decideSnap(points, axes, held, { toleranceMm: TOL, smartGuides });
+
+  describe('priority and ties', () => {
+    it('takes the highest kind in tolerance, then the nearest, then the earliest in document order', () => {
+      fc.assert(
+        fc.property(
+          arbPoints.chain((points) => fc.tuple(fc.constant(points), shuffled(points))),
+          ([points, reordered]) => {
+            expect(decide(points).point).toBe(expected(points));
+            expect(decide(reordered).point).toBe(expected(points));
+          },
+        ),
+      );
+    });
+
+    it('lets a point in tolerance win both axes', () => {
+      fc.assert(
+        fc.property(arbPoints, arbAxes, (points, axes) => {
+          fc.pre(expected(points) !== null);
+          const result = decide(points, axes);
+          expect(result.point).toBe(expected(points));
+          expect(result.x).toBeNull();
+          expect(result.y).toBeNull();
+        }),
+      );
+    });
+
+    it('otherwise decides each axis on its own, by the same rules', () => {
+      fc.assert(
+        fc.property(
+          arbAxes.chain((axes) => fc.tuple(fc.constant(axes), shuffled(axes))),
+          ([axes, reordered]) => {
+            const on = (axis: 'x' | 'y') => axes.filter((f) => f.candidate.axis === axis);
+            for (const result of [decide([], axes), decide([], reordered)]) {
+              expect(result.point).toBeNull();
+              expect(result.x).toBe(expected(on('x')));
+              expect(result.y).toBe(expected(on('y')));
+            }
+          },
+        ),
+      );
+    });
+
+    it('ranks the kinds in the spec table order, in both directions', () => {
+      // Each kind beats every kind after it — even nearer and earlier in
+      // document order — and so loses to every kind before it.
+      for (const [i, higher] of POINT_KINDS.entries()) {
+        for (const lower of POINT_KINDS.slice(i + 1)) {
+          const measure = (kind: SnapKind, d: number, order: number) => ({
+            candidate: { kind, point: vec(order, 0), featureId: `f${order}` as FeatureId },
+            distanceMm: d,
+            order,
+          });
+          expect(decide([measure(lower, 0, 0), measure(higher, TOL, 1)]).point?.kind).toBe(higher);
+        }
+      }
+      // Axis kinds among themselves, on one axis.
+      for (const [i, higher] of AXIS_KINDS.entries()) {
+        for (const lower of AXIS_KINDS.slice(i + 1)) {
+          const measure = (kind: AxisKind, d: number, order: number) => ({
+            candidate: { kind, axis: 'x' as const, value: order },
+            distanceMm: d,
+            order,
+          });
+          expect(decide([], [measure(lower, 0, 0), measure(higher, TOL, 1)]).x?.kind).toBe(higher);
+        }
+      }
+    });
+  });
+
+  describe('tolerance', () => {
+    it('catches nothing beyond tolerance', () => {
+      fc.assert(
+        fc.property(arbPoints, arbAxes, (points, axes) => {
+          const far = (f: Measured<SnapCandidate> | Measured<AxisCandidate>) => f.distanceMm > TOL;
+          const result = decide(points.filter(far), axes.filter(far));
+          expect(result).toEqual({ point: null, x: null, y: null });
+        }),
+      );
+    });
+
+    it('never loses a catch when the tolerance widens', () => {
+      fc.assert(
+        fc.property(
+          arbPoints,
+          arbAxes,
+          fc.double({ min: 0, max: TOL, noNaN: true }),
+          (points, axes, extra) => {
+            const at = (toleranceMm: number) =>
+              decideSnap(points, axes, null, { toleranceMm, smartGuides: true });
+            const narrow = at(TOL);
+            const wide = at(TOL + extra);
+            if (narrow.point !== null) expect(wide.point).not.toBeNull();
+            else if (wide.point === null) {
+              if (narrow.x !== null) expect(wide.x).not.toBeNull();
+              if (narrow.y !== null) expect(wide.y).not.toBeNull();
+            }
+          },
+        ),
+      );
+    });
+
+    it('with smart guides off, catches points only', () => {
+      fc.assert(
+        fc.property(arbPoints, arbAxes, (points, axes) => {
+          expect(decide(points, axes, null, false)).toEqual({
+            point: expected(points),
+            x: null,
+            y: null,
+          });
+        }),
+      );
+    });
+  });
+
+  describe('hysteresis', () => {
+    /** A held result naming a copy of the candidate: what is held is the target, not the object. */
+    const holding = (candidate: SnapCandidate): Snapped => ({
+      point: { ...candidate, point: { ...candidate.point } },
+      x: null,
+      y: null,
+    });
+
+    it('keeps a caught point to 1.5 × tolerance, unless a higher kind comes within tolerance', () => {
+      fc.assert(
+        fc.property(
+          arbPoints.filter((points) => points.length > 0),
+          fc.nat(),
+          fc.integer({ min: 0, max: 6 }).map((n) => (n * TOL) / 4),
+          (points, pick, heldAt) => {
+            const at = pick % points.length;
+            const found = points.map((f, i) => (i === at ? { ...f, distanceMm: heldAt } : f));
+            const held = found[at]!;
+            const outranked = found.some(
+              (f) => f.distanceMm <= TOL && rank(f.candidate.kind) < rank(held.candidate.kind),
+            );
+
+            const result = decide(found, [], holding(held.candidate)).point;
+
+            if (outranked) expect(result).toBe(expected(found));
+            else expect(result).toBe(held.candidate);
+          },
+        ),
+      );
+    });
+
+    it('lets go beyond 1.5 × tolerance', () => {
+      fc.assert(
+        fc.property(
+          arbPoints.filter((points) => points.length > 0),
+          fc.nat(),
+          (points, pick) => {
+            const at = pick % points.length;
+            const found = points.map((f, i) =>
+              i === at ? { ...f, distanceMm: 1.5 * TOL + 0.01 } : f,
+            );
+            expect(decide(found, [], holding(found[at]!.candidate)).point).toBe(expected(found));
+          },
+        ),
+      );
+    });
+
+    it('holds an axis value the same way, each axis on its own', () => {
+      const xHeld: Measured<AxisCandidate> = {
+        candidate: { kind: 'piece-edge', axis: 'x', value: 10 },
+        distanceMm: 1.4 * TOL,
+        order: 0,
+      };
+      const xNearer: Measured<AxisCandidate> = {
+        candidate: { kind: 'piece-edge', axis: 'x', value: 11 },
+        distanceMm: 0.1,
+        order: 1,
+      };
+      const xHigher: Measured<AxisCandidate> = {
+        candidate: { kind: 'guide-axis', axis: 'x', value: 12 },
+        distanceMm: TOL,
+        order: 2,
+      };
+      const held: Snapped = { point: null, x: { ...xHeld.candidate }, y: null };
+
+      expect(decide([], [xHeld, xNearer], held).x).toBe(xHeld.candidate);
+      expect(decide([], [xHeld, xNearer, xHigher], held).x).toBe(xHigher.candidate);
+      expect(decide([], [{ ...xHeld, distanceMm: 1.6 * TOL }, xNearer], held).x).toBe(
+        xNearer.candidate,
+      );
+    });
+
+    it('depends only on the previous result: the same inputs give the same answer', () => {
+      fc.assert(
+        fc.property(arbPoints, arbAxes, (points, axes) => {
+          const first = decide(points, axes);
+          expect(decide(points, axes, first)).toEqual(decide(points, axes, first));
+        }),
+      );
+    });
+  });
+
+  describe('in snap()', () => {
+    /** Two short lines going down from (0, 0) and (3, 0): two endpoints 3 mm apart. */
+    const twoEnds = () =>
+      resolvedOf(polyline([vec(0, 0), vec(0, -10)]), polyline([vec(3, 0), vec(3, -10)]));
+
+    it('stays on the endpoint it caught as the cursor moves nearer another, to 1.5 × tolerance', () => {
+      const resolved = twoEnds();
+      const index = buildSnapIndex(resolved);
+      const first = snap(index, resolved, vec(0.5, 0.5), options());
+      expect(first?.point).toEqual(vec(0, 0));
+
+      // Nearer (3, 0) now, and 2.65 mm from (0, 0): within 1.5 × 2 mm.
+      expect(snap(index, resolved, vec(2.6, 0.5), options({ held: first }))?.point).toEqual(
+        vec(0, 0),
+      );
+      // Without the previous result, it flips — the jitter this removes.
+      expect(snap(index, resolved, vec(2.6, 0.5), options())?.point).toEqual(vec(3, 0));
+      // 3.24 mm away: let go.
+      expect(snap(index, resolved, vec(3.2, 0.5), options({ held: first }))?.point).toEqual(
+        vec(3, 0),
+      );
+    });
+
+    it('keeps a point on the path it was caught on, following the cursor along it', () => {
+      const resolved = resolvedOf(
+        polyline([vec(-50, 0), vec(50, 0)]),
+        polyline([vec(-50, 1.5), vec(50, 1.5)]),
+      );
+      const index = buildSnapIndex(resolved);
+      const first = snap(index, resolved, vec(10, 0.2), options());
+      expect(first?.kind).toBe('on-path');
+
+      const next = snap(index, resolved, vec(12, 1.3), options({ held: first }));
+      expect(next?.kind).toBe('on-path');
+      expect(next?.point.x).toBeCloseTo(12, 9);
+      expect(next?.point.y).toBeCloseTo(0, 9);
+    });
+
+    it('lets a higher kind take over from what it holds', () => {
+      const resolved = twoEnds();
+      const index = buildSnapIndex(resolved);
+      const onPath = snap(index, resolved, vec(0.3, -8), options());
+      expect(onPath?.kind).toBe('on-path');
+
+      expect(snap(index, resolved, vec(0.3, -6.5), options({ held: onPath }))?.kind).toBe(
+        'midpoint',
+      );
+    });
+
+    it('holds nothing that is excluded now', () => {
+      const resolved = twoEnds();
+      const index = buildSnapIndex(resolved);
+      const first = snap(index, resolved, vec(0.5, 0.5), options())!;
+      const held = snap(index, resolved, vec(2.6, 0.5), {
+        ...options({ held: first }),
+        exclude: [first.featureId!],
+      });
+      expect(held?.point).toEqual(vec(3, 0));
+    });
+
+    it('breaks a tie in distance by document order, whichever bucket each is in', () => {
+      // (0, 0) and (40, 0) are equidistant from (20, 0), in different 20 mm cells.
+      const resolved = resolvedOf(
+        polyline([vec(40, 0), vec(40, -10)]),
+        polyline([vec(0, 0), vec(0, -10)]),
+      );
+      const hit = snap(
+        buildSnapIndex(resolved),
+        resolved,
+        vec(20, 0),
+        options({ toleranceMm: 25 }),
+      );
+      expect(hit?.point).toEqual(vec(40, 0));
+    });
+
+    it('names both features of a crossing, and excludes it when either is being dragged', () => {
+      const resolved = resolvedOf(
+        polyline([vec(0, 10), vec(20, 10)]),
+        polyline([vec(5, 0), vec(5, 30)]),
+      );
+      const [a, b] = resolved.parts[0]!.features.map((f) => f.feature.id);
+      const index = buildSnapIndex(resolved);
+      const hit = snap(index, resolved, vec(5.3, 10.3), options());
+      expect(hit).toMatchObject({ kind: 'intersection', featureId: a, otherFeatureId: b });
+
+      // Dragging the second line: the crossing moves with it, so it must not be caught.
+      expect(snap(index, resolved, vec(5.3, 10.3), options({ exclude: [b!] }))?.kind).not.toBe(
+        'intersection',
+      );
+    });
   });
 });

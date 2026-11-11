@@ -207,6 +207,13 @@ function General({ recentCount, onClearRecent, preferences, onPreferences }: Pro
         checked={preferences.keepUnsaved}
         onChange={(on) => onPreferences({ keepUnsaved: on })}
       />
+      <Toggle
+        id="smart-guides"
+        name={t('settings.smartGuides.name')}
+        note={t('settings.smartGuides.note')}
+        checked={preferences.smartGuides}
+        onChange={(on) => onPreferences({ smartGuides: on })}
+      />
       <div className="setting">
         <div className="setting-text">
           <span className="setting-name">{t('settings.recent.name')}</span>

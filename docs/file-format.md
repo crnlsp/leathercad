@@ -408,6 +408,7 @@ closes, such as the open tabs — and logs one that fails, the file before it st
   "version": 2,
   "legendOpen": true,
   "selectionBar": true,
+  "smartGuides": true,
   "toolRailCollapsed": false,
   "partsFolded": false,
   "propertiesFolded": false,
