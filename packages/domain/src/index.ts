@@ -151,3 +151,5 @@ export type { RunReport, StitchHole, StitchHoles } from './stitch.js';
 export { MIN_PITCH_MM, distributeHoles, splitAtCorners } from './stitch.js';
 
 export { checkProjectSize } from './resourceSize.js';
+
+export { pocketSize, type PocketSize } from './pocket.js';

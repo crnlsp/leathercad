@@ -4835,3 +4835,48 @@ button.problem-row,
     border-top: 1px solid var(--shell-line);
   }
 }
+
+/* Stitch-centre dimensions: paired labels and values stay legible in the narrow panel. */
+.pocket-dimensions {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  color: var(--text-dim);
+  font: var(--t-label);
+  white-space: normal;
+}
+
+.pocket-dimensions > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.pocket-dimensions dd {
+  flex: none;
+  margin: 0;
+  color: var(--text);
+  font: var(--t-num);
+  white-space: nowrap;
+}
+
+.pocket-summary .pocket-dimensions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.pocket-summary .pocket-dimensions > div {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  column-gap: var(--space-1);
+  row-gap: 0;
+}
+
+.selection-bar:has(.pocket-summary) {
+  white-space: normal;
+}
+
+.selection-bar:has(.pocket-summary) .selection-bar-line {
+  flex-wrap: wrap;
+}

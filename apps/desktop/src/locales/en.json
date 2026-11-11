@@ -436,6 +436,14 @@
       "name": "Name the marks in the canvas legend",
       "note": "Off, the legend folds to a chip until you open it."
     },
+    "pocket": {
+      "title": "Stitching dimensions",
+      "width": "Width between stitch lines",
+      "depth": "Stitch depth",
+      "value": "{{value}} mm",
+      "note": "Measured between stitch centres. Depth starts at the line joining the stitch ends; the pocket opening may extend above it. Leather thickness and stitching tension reduce usable space.",
+      "unavailable": "Dimensions need two straight side runs joined by a bottom, with the opening between the stitch ends."
+    },
     "selectionBar": {
       "name": "Show the selection bar under the selected piece",
       "note": "How its stitching came out, and the next step in one click. Off, nothing is shown under the piece, and its key does nothing."
@@ -1509,6 +1517,14 @@
       "width": "Width is less than its corners need ({{size}}). {{enter}} uses {{size}}.",
       "height": "Height is less than its corners need ({{size}}). {{enter}} uses {{size}}."
     }
+  },
+  "pocket": {
+    "title": "Stitching dimensions",
+    "width": "Width between stitch lines",
+    "depth": "Stitch depth",
+    "value": "{{value}} mm",
+    "note": "Measured between stitch centres. Depth starts at the line joining the stitch ends; the pocket opening may extend above it. Leather thickness and stitching tension reduce usable space.",
+    "unavailable": "Dimensions need two straight side runs joined by a bottom, with the opening between the stitch ends."
   },
   "selectionBar": {
     "title": "Stitching of {{piece}}",

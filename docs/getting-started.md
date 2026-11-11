@@ -124,6 +124,12 @@ makes it with your margin and default iron (*Settings → My tools*), and **Ctrl
 With nothing selected, **Properties** sums up the job: the pieces to cut, the holes to punch and the
 sheets to print.
 
+An open U-shaped stitch line with straight sides also shows **Width between stitch lines** and
+**Stitch depth** in Properties and on the selection bar. Stitch depth starts at the line joining
+the stitching's two ends: the leather opening can be higher. Leather thickness and stitching
+tension reduce usable room, so these measurements do not guarantee that a card fits. A shape
+without two unambiguous straight sides shows no numeric pocket reading.
+
 To stitch only some sides, as a pocket is, select its derived stitch line and choose
 *Stitched sides → Between corners* in Properties. Choose the outline corners the run follows;
 changing the outline keeps the stitching attached. Check the endpoint holes in Problems.
