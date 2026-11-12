@@ -17,6 +17,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
 import { ToolManager, type KeyInput, type PointerInput, type ToolKey } from './tool.js';
+import { createEditPointsTool } from './tools/editPointsTool.js';
 import { createRectangleTool } from './tools/rectangleTool.js';
 import { createSelectTool } from './tools/selectTool.js';
 import { Viewport } from './viewport.js';
@@ -42,7 +43,7 @@ function harness(): { manager: ToolManager; store: DocumentStore } {
   const manager = new ToolManager(
     { viewport, store, dispatch: (c) => store.dispatch(c), invalidate: () => {} },
     select,
-    [select, createRectangleTool(() => 'drawn')],
+    [select, createRectangleTool(() => 'drawn'), createEditPointsTool()],
   );
   return { manager, store };
 }
@@ -323,6 +324,19 @@ describe('nudging the selection with the arrow keys (3.14)', () => {
 
     expect(tap(manager, 'ArrowRight', 'nudgeRight')).toBe(true);
     expect(boxOf(project(store), 'pocket').minX).toBe(201);
+  });
+
+  it('moves nothing with Edit Points chosen, where an arrow is kept for the picked point', () => {
+    const { manager, store } = harness();
+    store.select(['pocket']);
+    manager.activate('points');
+    const before = store.getState().document;
+
+    // Claimed, so no other command the maker gave an arrow runs instead.
+    expect(tap(manager, 'ArrowRight', 'nudgeRight')).toBe(true);
+
+    expect(store.getState().document).toBe(before);
+    expect(store.inTransaction).toBe(false);
   });
 
   it('lands any run of steps on the storage quantum, exactly where their sum is', () => {

@@ -53,6 +53,9 @@ function stepOf(event: NudgePress): Vec2 | null {
   return key === undefined ? null : STEPS[key];
 }
 
+/** Whether a press is a nudge at all, whatever comes of it. */
+export const isNudge = (event: NudgePress): boolean => stepOf(event) !== null;
+
 type State =
   | {
       readonly kind: 'idle';
@@ -88,8 +91,6 @@ const IDLE: State = { kind: 'idle', refused: null };
  * whole, and `transformRefusal` says why a locked piece stays.
  */
 export interface Nudge {
-  /** Whether a press is a nudge at all, whatever comes of it. */
-  hears(event: NudgePress): boolean;
   /** A key down. True when it was a nudge and something is picked: the key is claimed. */
   keyDown(ctx: NudgeContext, event: NudgePress): boolean;
   /** A key up, by its place on the keyboard. The last one commits. */
@@ -124,8 +125,6 @@ export function createNudge(): Nudge {
   };
 
   return {
-    hears: (event) => stepOf(event) !== null,
-
     keyDown(ctx, event) {
       const step = stepOf(event);
       if (step === null) return false;

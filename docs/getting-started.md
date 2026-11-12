@@ -214,7 +214,8 @@ the size your software shows: it should be the size you drew.
   keys move what is selected 1 mm, **Shift** with an arrow 10 mm, and **Alt** with an arrow (**⌥**
   on macOS) 0.1 mm. One press is one Undo step, and so is a key held down. **Ctrl+A** selects every
   piece on the board that is neither hidden nor locked. A locked piece stays where it is, and the
-  board says why. In a field, the Parts list, a menu or the tabs, the same keys stay theirs. If you
+  board says why. In a field, the Parts list, a menu or the tabs, the same keys stay theirs, and
+  with **Edit points** chosen the arrows move nothing. If you
   had already given one of these keys to another command, yours is kept and the new one reads
   *Not assigned* in Settings.
 - **Keyboard:** each tool's key is on its button; **Ctrl+Z** and **Ctrl+Shift+Z** undo and redo;

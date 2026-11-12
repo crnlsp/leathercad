@@ -12,7 +12,7 @@ import {
 import { cssPxPerMm, type DisplayList } from '@leathercad/render';
 
 import { selectablePieces } from './hitTest.js';
-import { createNudge, type NudgeKey } from './nudge.js';
+import { createNudge, isNudge, type NudgeKey } from './nudge.js';
 import { buildSnapIndex, snap, snapGlyph, type SnapCandidate, type SnapIndex } from './snap.js';
 import type { Viewport } from './viewport.js';
 
@@ -467,14 +467,15 @@ export class ToolManager {
    * The board's own keys (3.14) are any tool's, since what is picked stays
    * picked when another tool is chosen: the arrows nudge the selection, and one
    * key picks every piece. They wait while a shape is under way — the keys are
-   * then the shape's — and a tool that wants an arrow takes it first.
+   * then the shape's — and a tool that wants an arrow takes it first, as Edit
+   * Points does.
    */
   key(event: KeyInput): boolean {
     if (event.key === 'Escape' && this.nudge.cancel(this.context)) return true;
     // Any other key ends a nudge still held, kept: a command it dispatches
     // would otherwise roll the move back. A modifier alone is no such key —
     // Shift added to a held arrow goes on with the same move, in bigger steps.
-    if (!this.nudge.hears(event) && !MODIFIER_KEYS.has(event.key)) {
+    if (!isNudge(event) && !MODIFIER_KEYS.has(event.key)) {
       this.nudge.release(this.context);
     }
     if (this.active.onKey?.(this.context, event) === true) return true;
