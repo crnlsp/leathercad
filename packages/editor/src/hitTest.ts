@@ -89,6 +89,17 @@ function drawnOutline(
 }
 
 /**
+ * Every piece a click on its body can take, in document order: what *Select
+ * all* picks (3.14). A piece whose outline is hidden or locked is left out, by
+ * the rule the click follows.
+ */
+export function selectablePieces(resolved: ResolvedProject): PartId[] {
+  return resolved.parts
+    .filter((part) => drawnOutline(part, {}) !== null)
+    .map((part) => part.part.id);
+}
+
+/**
  * Which feature is under a point.
  *
  * **Every comparison happens in millimetres.** The caller converts its pixel

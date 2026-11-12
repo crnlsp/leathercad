@@ -791,7 +791,7 @@ function Shortcuts({ preferences, onPreferences }: Props) {
       setListening(null);
       return;
     }
-    const taken = bindingFor(press, IS_MAC);
+    const taken = bindingFor(press, IS_MAC, id);
     if (taken === null) return;
     if (taken === 'reserved') {
       setListening({

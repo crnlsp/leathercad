@@ -45,9 +45,31 @@ const ALWAYS_RESERVED = new Set(['Escape', 'Tab', 'Enter', 'NumpadEnter']);
 /** A list's, a tree's, a menu's and a tab list's own keys, without a modifier. */
 const NAVIGATION = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End']);
 
-/** A key a binding may not take, whatever it is stored as. */
-function reserved(code: string, plain: boolean): boolean {
-  return ALWAYS_RESERVED.has(code) || (plain && NAVIGATION.has(code));
+/** Whether a binding is a navigation key with neither the command key nor Alt held. */
+function navigates(binding: Binding): boolean {
+  return (
+    'code' in binding &&
+    NAVIGATION.has(binding.code) &&
+    binding.mod !== true &&
+    binding.alt !== true
+  );
+}
+
+/**
+ * Whether a command is the board's own (3.14), heard only while the board has
+ * the focus: the one place a navigation key alone can be a shortcut, since no
+ * list, tree, menu or tab strip is there to want it.
+ */
+function onBoardOnly(id: CommandId | undefined): boolean {
+  return KEYMAP.some((command) => command.id === id && command.scope === 'board');
+}
+
+/** A key this command's binding may not take, whatever it is stored as. */
+function reserved(
+  binding: Binding & { readonly code: string },
+  id: CommandId | undefined,
+): boolean {
+  return ALWAYS_RESERVED.has(binding.code) || (navigates(binding) && !onBoardOnly(id));
 }
 
 function isModifier(code: string): boolean {
@@ -79,13 +101,20 @@ function sizeKey(binding: Binding): boolean {
  * what it types — and any other key by its place. The command key is Ctrl, or
  * ⌘ on macOS. Whatever comes out matches this same press, or the press is
  * refused: AltGr+A typing `ą` would otherwise bind the plain A. A digit, `.`
- * or `,` alone is a size typed on the board, never a shortcut.
+ * or `,` alone is a size typed on the board, never a shortcut. An arrow, Home
+ * or End alone is a list's — but for `id`, when it is one of the board's own
+ * commands (3.14), which no list hears.
  */
-export function bindingFor(press: KeyPress, isMac: boolean): Captured {
+export function bindingFor(press: KeyPress, isMac: boolean, id?: CommandId): Captured {
   if (isModifier(press.code) || MODIFIERS.has(press.key)) return null;
   const command = isMac ? press.metaKey : press.ctrlKey;
   const other = isMac ? press.ctrlKey : press.metaKey;
-  if (reserved(press.code, !command && !press.altKey)) return 'reserved';
+  const pressed = {
+    code: press.code,
+    ...(command ? { mod: true } : {}),
+    ...(press.altKey ? { alt: true } : {}),
+  };
+  if (reserved(pressed, id)) return 'reserved';
   if (other) return 'unusable';
   const typed = keyForTools(press);
   const letter = /^[a-z]$/i.test(typed) ? typed.toUpperCase() : null;
@@ -106,7 +135,8 @@ const HEARD_BY_MAIN: ReadonlySet<CommandId> = new Set(['fullScreen', 'quit']);
 
 /**
  * Where a command's keys must be its alone: what the maker sees as one place.
- * A Parts row and the board hear the window's keys, so those three are one;
+ * A Parts row and the board hear the window's keys, and the board its own
+ * (3.14), so those are one;
  * a field's keys are the field's; Full screen and Quit are heard in a field too.
  *
  * A tool under way shadows the window on purpose — the polyline's A is not the
@@ -122,8 +152,8 @@ export function clashScopes(id: CommandId): readonly Scope[] {
   const scope = KEYMAP.find((command) => command.id === id)?.scope ?? 'window';
   if (scope === 'polyline' || scope === 'points' || scope === 'field') return [scope];
   return HEARD_BY_MAIN.has(id)
-    ? ['window', 'canvas', 'tree', 'field']
-    : ['window', 'canvas', 'tree'];
+    ? ['window', 'canvas', 'board', 'tree', 'field']
+    : ['window', 'canvas', 'board', 'tree'];
 }
 
 /**
@@ -139,9 +169,12 @@ export function isChangeable(id: CommandId, isMac = false): boolean {
 /**
  * Whether a command may have this key. Full screen and Quit are heard by the
  * main process even in a text field, so they need a function key, or the
- * command key or Alt held: a bare letter there would never be typed.
+ * command key or Alt held: a bare letter there would never be typed. And a
+ * navigation key alone is the board's own commands', never one a swap may
+ * hand to a command a list would hear.
  */
 function allowed(id: CommandId, binding: Binding): boolean {
+  if (navigates(binding) && !onBoardOnly(id)) return false;
   if (!HEARD_BY_MAIN.has(id)) return true;
   return (
     'code' in binding &&
@@ -348,8 +381,8 @@ const CODE = /^[A-Z][A-Za-z0-9]*$/;
 const CHARACTER = /^[^\p{L}\p{N}\s]$/u;
 const MOST_KEYS = 4;
 
-/** One stored binding, tidied, or null when it is not one a key could be. */
-function readBinding(value: unknown): Binding | null {
+/** One stored binding, tidied, or null when it is not one a key of this command could be. */
+function readBinding(value: unknown, id: CommandId): Binding | null {
   if (typeof value !== 'object' || value === null) return null;
   const { code, char, mod, shift, alt } = value as Record<string, unknown>;
   const flag = (held: unknown): boolean | null =>
@@ -362,8 +395,8 @@ function readBinding(value: unknown): Binding | null {
     ...(isAlt ? { alt: true } : {}),
   };
   if (typeof code === 'string' && char === undefined) {
-    if (!CODE.test(code) || isModifier(code) || reserved(code, !isMod && !isAlt)) return null;
     const binding = { code, ...held };
+    if (!CODE.test(code) || isModifier(code) || reserved(binding, id)) return null;
     return sizeKey(binding) ? null : binding;
   }
   // A character is typed with whatever Shift the layout needs: only the command key is held.
@@ -400,7 +433,7 @@ export function readBindings(value: unknown, isMac = false): KeyBindings {
         !KEYMAP.some((command) => command.id === id && command.defaultYields === true))
     )
       continue;
-    const keys = list.map(readBinding);
+    const keys = list.map((entry) => readBinding(entry, id as CommandId));
     if (!keys.every((key) => key !== null && allowed(id as CommandId, key))) continue;
     kept = withKeys(kept, id as CommandId, keys as Binding[]);
   }

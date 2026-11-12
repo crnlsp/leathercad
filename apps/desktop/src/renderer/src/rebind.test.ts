@@ -350,7 +350,98 @@ describe('which keys can change', () => {
   });
 });
 
+describe('the board’s own commands and the arrow keys (3.14)', () => {
+  const left = at('ArrowLeft', 'ArrowLeft');
+
+  it('take an arrow alone, which no list is there to want, and with Shift', () => {
+    expect(bindingFor(left, false, 'nudgeLeft')).toEqual({ code: 'ArrowLeft' });
+    expect(bindingFor({ ...left, shiftKey: true }, false, 'nudgeRightBig')).toEqual({
+      code: 'ArrowLeft',
+      shift: true,
+    });
+    expect(bindingFor(left, false, 'selectAllPieces')).toEqual({ code: 'ArrowLeft' });
+  });
+
+  it('still refuse Esc, Tab and Enter', () => {
+    for (const code of ['Escape', 'Tab', 'Enter']) {
+      expect(bindingFor(at(code, code), false, 'nudgeLeft'), code).toBe('reserved');
+    }
+  });
+
+  it('are the only ones: the window’s, a tool’s and a Parts row’s commands are refused it', () => {
+    for (const id of ['save', 'delete', 'rename', 'tool.select', 'removePoint'] as const) {
+      expect(bindingFor(left, false, id), id).toBe('reserved');
+    }
+  });
+
+  it('go back to their arrows after being moved, by pressing them', () => {
+    const moved = changed(
+      apply(
+        {},
+        proposeKey('nudgeUp', { code: 'KeyK', alt: true }, at('KeyK', 'k', { altKey: true })),
+        false,
+      ),
+    );
+    const up = at('ArrowUp', 'ArrowUp');
+    const back = changed(apply(moved, proposeKey('nudgeUp', { code: 'ArrowUp' }, up), false));
+    expect(hears(back, 'nudgeUp', up, false)).toBe(true);
+  });
+
+  it('never hand an arrow alone to another command by a swap', () => {
+    // The big nudge wants Ctrl+S, Save's. A swap would hand Save Shift+Up, which a
+    // list hears, so none is offered.
+    const shiftUp = at('ArrowUp', 'ARROWUP', { shiftKey: true });
+    const nudgeTakesSave = proposeKey(
+      'nudgeUpBig',
+      { code: 'KeyS', mod: true },
+      at('KeyS', 's', { ctrlKey: true }),
+    );
+    expect(apply({}, nudgeTakesSave, false)).toEqual({ clash: 'save', canSwap: false });
+    expect(swap({}, nudgeTakesSave, false)).toEqual({});
+    expect(bindingFor(shiftUp, false, 'save')).toBe('reserved');
+  });
+
+  it('keep a stored arrow, and drop one stored for a command a list would hear', () => {
+    expect(
+      readBindings({ nudgeLeft: [{ code: 'ArrowDown' }], nudgeDown: [{ code: 'ArrowLeft' }] }),
+    ).toEqual({
+      nudgeLeft: [{ code: 'ArrowDown' }],
+      nudgeDown: [{ code: 'ArrowLeft' }],
+    });
+    expect(readBindings({ save: [{ code: 'ArrowLeft' }] })).toEqual({});
+    expect(readBindings({ save: [{ code: 'ArrowLeft', shift: true }] })).toEqual({});
+  });
+
+  it('are one place with the window: a key of the window’s is a clash, and theirs is too', () => {
+    expect(clashScopes('nudgeLeft')).toEqual(clashScopes('save'));
+    expect(
+      apply(
+        {},
+        proposeKey(
+          'save',
+          { code: 'ArrowLeft', alt: true },
+          at('ArrowLeft', 'ArrowLeft', { altKey: true }),
+        ),
+        false,
+      ),
+    ).toMatchObject({ clash: 'nudgeLeftFine' });
+  });
+});
+
 describe('reading the keys preferences.json holds', () => {
+  it('keeps a key a maker gave another command when 3.14 adds it as a default', () => {
+    // 1.6 let a tool be moved to Ctrl+A, and a command to Alt with an arrow.
+    const stored = {
+      'tool.arc': [{ code: 'KeyA', mod: true }],
+      fit: [{ code: 'ArrowLeft', alt: true }],
+    };
+    const bindings = readBindings(stored);
+    expect(bindings).toEqual({ ...stored, selectAllPieces: [], nudgeLeftFine: [] });
+    const map = withBindings(bindings);
+    expect(commandFor(at('KeyA', 'a', { ctrlKey: true }), false, map)).toBe('tool.arc');
+    expect(commandFor(at('ArrowLeft', 'ArrowLeft', { altKey: true }), false, map)).toBe('fit');
+  });
+
   it('keeps an existing F8 custom binding when problem navigation adds that default (9.15)', () => {
     const bindings = readBindings({ selectionBar: [{ code: 'F8' }] });
     expect(bindings).toEqual({ selectionBar: [{ code: 'F8' }], nextProblem: [] });
@@ -522,7 +613,7 @@ function afterSteps(steps: readonly Step[], swapIt: boolean): KeyBindings {
         }
       }
       if (press === null) continue;
-      const binding = bindingFor(press, isMac);
+      const binding = bindingFor(press, isMac, entry.id);
       if (binding === null || typeof binding === 'string') continue;
       proposal = proposeKey(entry.id, binding, press);
     }
@@ -537,7 +628,12 @@ function afterSteps(steps: readonly Step[], swapIt: boolean): KeyBindings {
 
 describe('properties of changing keys', () => {
   it('never lets one press be heard by two commands in the same place, after any steps (on review)', () => {
-    const PLACES = [['window', 'canvas', 'tree'], ['polyline'], ['points'], ['field']] as const;
+    const PLACES = [
+      ['window', 'canvas', 'board', 'tree'],
+      ['polyline'],
+      ['points'],
+      ['field'],
+    ] as const;
     fc.assert(
       fc.property(fc.array(arbitraryStep, { maxLength: 12 }), fc.boolean(), (steps, isMac) => {
         const keymap = withBindings(afterSteps(steps, true));
@@ -588,7 +684,7 @@ describe('properties of changing keys', () => {
   it('a key taken and given — or swapped — is the command’s, pressed again on that keyboard', () => {
     fc.assert(
       fc.property(arbitraryId, arbitraryPress, fc.boolean(), (id, { press, isMac }, swapIt) => {
-        const binding = bindingFor(press, isMac);
+        const binding = bindingFor(press, isMac, id);
         if (binding === null || typeof binding === 'string') return;
         const proposal = proposeKey(id, binding, press);
         const change = apply({}, proposal, isMac);

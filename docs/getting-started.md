@@ -210,6 +210,13 @@ the size your software shows: it should be the size you drew.
   holds *New project*, *Open…*, *Save as…*, *Rename…* and your recent projects, then whether it is
   saved. In the middle, **Design | Sheets**. At its right the paper, **Export PDF** (with **▾** for
   SVG and DXF) and **Print** (with the problems), then **⚙** Settings and **?** Help (**F1**).
+- **Moving by keyboard:** with the board focused — click it, or reach it with **Tab** — the arrow
+  keys move what is selected 1 mm, **Shift** with an arrow 10 mm, and **Alt** with an arrow (**⌥**
+  on macOS) 0.1 mm. One press is one Undo step, and so is a key held down. **Ctrl+A** selects every
+  piece on the board that is neither hidden nor locked. A locked piece stays where it is, and the
+  board says why. In a field, the Parts list, a menu or the tabs, the same keys stay theirs. If you
+  had already given one of these keys to another command, yours is kept and the new one reads
+  *Not assigned* in Settings.
 - **Keyboard:** each tool's key is on its button; **Ctrl+Z** and **Ctrl+Shift+Z** undo and redo;
   **Ctrl+1** and **Ctrl+2** switch between Design and Sheets. *Settings → Keyboard shortcuts*
   (**Ctrl+/** or **?**) lists every key. **F11** is full screen. On macOS, **Ctrl** is **⌘**. A key
