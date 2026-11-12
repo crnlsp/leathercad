@@ -37,7 +37,16 @@ export type KeyboardLayout = ReadonlyMap<string, string>;
 
 /** Its heading in the shortcut list is `shortcuts.group.<id>`. */
 export type ShortcutGroupId =
-  'file' | 'edit' | 'field' | 'view' | 'window' | 'tools' | 'drawing' | 'editingPoints' | 'parts';
+  | 'file'
+  | 'edit'
+  | 'nudge'
+  | 'field'
+  | 'view'
+  | 'window'
+  | 'tools'
+  | 'drawing'
+  | 'editingPoints'
+  | 'parts';
 
 /**
  * Where a key is heard. The window's commands are dispatched through
@@ -47,8 +56,15 @@ export type ShortcutGroupId =
  * moves moves for the tool too, and a sentence that names one takes it from here. `tree` is the Parts tree's
  * (U.8), heard only while a row has focus. `field` is a text field's own
  * editing (U.20), heard by the field itself and shown in its right-click menu.
+ * `board` is the board's own (3.14): the arrows that nudge and the key that
+ * picks every piece, heard only while the board itself has the focus — a
+ * tree, a menu, the tab strip and a field keep their arrows — and by whichever
+ * tool is active, once it has nothing under way.
  */
-export type Scope = 'window' | 'canvas' | 'polyline' | 'points' | 'tree' | 'field';
+export type Scope = 'window' | 'canvas' | 'board' | 'polyline' | 'points' | 'tree' | 'field';
+
+type NudgeDirection = 'Left' | 'Right' | 'Up' | 'Down';
+type NudgeStep = '' | 'Big' | 'Fine';
 
 export type CommandId =
   | 'newProject'
@@ -90,6 +106,8 @@ export type CommandId =
   | 'copy'
   | 'paste'
   | 'selectAll'
+  | 'selectAllPieces'
+  | `nudge${NudgeDirection}${NudgeStep}`
   | `tool.${ToolId}`
   | 'finishPolyline'
   | 'editSizes'
@@ -125,6 +143,28 @@ const mod = (code: string, shift = false): Binding =>
 const key = (code: string): Binding => ({ code });
 const shifted = (code: string): Binding => ({ code, shift: true });
 const modChar = (char: string): Binding => ({ char, mod: true });
+
+/**
+ * The arrows that move what is selected (3.14): 1 mm alone, 10 mm with Shift,
+ * 0.1 mm with Alt — Option on macOS. A command each, so each can be moved on
+ * its own, and the board acts on the command, never on the modifier held.
+ */
+const NUDGES: readonly Command[] = (
+  [
+    ['', {}],
+    ['Big', { shift: true }],
+    ['Fine', { alt: true }],
+  ] as const
+).flatMap(([step, held]) =>
+  (['Left', 'Right', 'Up', 'Down'] as const).map((direction): Command => ({
+    id: `nudge${direction}${step}`,
+    does: `shortcuts.nudge${direction}${step}`,
+    group: 'nudge',
+    scope: 'board',
+    keys: [{ code: `Arrow${direction}`, ...held }],
+    defaultYields: true,
+  })),
+);
 
 /**
  * Every key LeatherCAD answers to, in one place (U.3; the list was 8.2's).
@@ -196,6 +236,16 @@ export const KEYMAP: readonly Command[] = [
     keys: [key('Escape')],
     fixed: true,
   },
+  // On the board (3.14), where the same key in a field selects its text.
+  {
+    id: 'selectAllPieces',
+    does: 'shortcuts.selectAllPieces',
+    group: 'edit',
+    scope: 'board',
+    keys: [mod('KeyA')],
+    defaultYields: true,
+  },
+  ...NUDGES,
 
   {
     id: 'design',
@@ -695,6 +745,18 @@ export function meaningsForTools(
   keymap = current,
 ): ReadonlySet<CommandId> {
   return new Set(commandsHearing(event, TOOL_SCOPES, isMac, keymap));
+}
+
+/**
+ * What a press means to the board itself (3.14): its nudges and its *Select
+ * all*, for the board to hear only while it has the focus.
+ */
+export function meaningsOnBoard(
+  event: KeyPress,
+  isMac: boolean,
+  keymap = current,
+): readonly CommandId[] {
+  return commandsHearing(event, ['board'], isMac, keymap);
 }
 
 /** The window's command a key press asks for, if any. */

@@ -11,6 +11,8 @@ import {
 } from '@leathercad/domain';
 import { cssPxPerMm, type DisplayList } from '@leathercad/render';
 
+import { selectablePieces } from './hitTest.js';
+import { createNudge, isNudge, type NudgeKey } from './nudge.js';
 import { buildSnapIndex, snap, snapGlyph, type SnapCandidate, type SnapIndex } from './snap.js';
 import type { Viewport } from './viewport.js';
 
@@ -31,16 +33,29 @@ export interface PointerInput {
  * a key the maker moved in Settings moves here too. `ToolKey` names the
  * commands a tool answers to; their keys are the app's to show and change.
  */
-export type ToolKey = 'delete' | 'takeBack' | 'arc' | 'straight' | 'removePoint' | 'roundCorner';
+export type ToolKey =
+  | 'delete'
+  | 'takeBack'
+  | 'arc'
+  | 'straight'
+  | 'removePoint'
+  | 'roundCorner'
+  | 'selectAllPieces'
+  | NudgeKey;
 
 export interface KeyInput {
   /** The key's name, for Escape and Enter, whose roles no keymap changes. */
   readonly key: string;
+  /** Where the key is on the keyboard: what tells a held key coming up from another (3.14). */
+  readonly code: string;
   /** The commands this press is, by the keymap: a tool acts on these, not on `key`. */
   readonly means: ReadonlySet<string>;
   readonly shiftKey: boolean;
   readonly ctrlKey: boolean;
 }
+
+/** A modifier pressed on its own, by `KeyboardEvent.key`. */
+const MODIFIER_KEYS: ReadonlySet<string> = new Set(['Shift', 'Alt', 'Control', 'Meta', 'AltGraph']);
 
 /** Whether a press means this tool command. */
 export const means = (event: KeyInput, command: ToolKey): boolean => event.means.has(command);
@@ -267,6 +282,9 @@ export class ToolManager {
    */
   private readonly failing = new Set<'overlay' | 'notice'>();
 
+  /** The arrow keys' move of the selection (3.14): the board's, whichever tool is active. */
+  private readonly nudge = createNudge();
+
   constructor(
     private readonly context: ToolContext,
     initial: Tool,
@@ -282,7 +300,11 @@ export class ToolManager {
 
   /** The active tool's message, if it has one right now. */
   notice(): Problem | null {
-    return this.isolated('notice', () => this.active.notice?.(this.context) ?? null, null);
+    return this.isolated(
+      'notice',
+      () => this.active.notice?.(this.context) ?? this.nudge.notice(this.context),
+      null,
+    );
   }
 
   /**
@@ -324,6 +346,8 @@ export class ToolManager {
     const next = this.tools.find((tool) => tool.id === id);
     if (next === undefined || next === this.active) return;
 
+    // A nudge still held is kept first: deactivating rolls back what is open.
+    this.nudge.release(this.context);
     // Deactivating must close any open transaction, or a half-drawn shape
     // would survive into the next tool.
     this.active.onDeactivate?.(this.context);
@@ -344,6 +368,7 @@ export class ToolManager {
    * until the next pointer move (PERF-010).
    */
   reset(): void {
+    this.nudge.release(this.context);
     this.active.onDeactivate?.(this.context);
     this.caught = null;
     this.index = null;
@@ -351,6 +376,8 @@ export class ToolManager {
   }
 
   pointerDown(event: PointerInput): void {
+    // A press begins its own gesture, which would cancel a nudge still held.
+    this.nudge.release(this.context);
     this.active.onPointerDown?.(this.context, this.snapped(event));
   }
 
@@ -433,9 +460,48 @@ export class ToolManager {
     return this.index;
   }
 
-  /** Hands a key to the active tool; true when the tool claimed it. */
+  /**
+   * Hands a key to the active tool, and then to the board; true when either
+   * claimed it.
+   *
+   * The board's own keys (3.14) are any tool's, since what is picked stays
+   * picked when another tool is chosen: the arrows nudge the selection, and one
+   * key picks every piece. They wait while a shape is under way — the keys are
+   * then the shape's — and a tool that wants an arrow takes it first, as Edit
+   * Points does.
+   */
   key(event: KeyInput): boolean {
-    return this.active.onKey?.(this.context, event) === true;
+    if (event.key === 'Escape' && this.nudge.cancel(this.context)) return true;
+    // Any other key ends a nudge still held, kept: a command it dispatches
+    // would otherwise roll the move back. A modifier alone is no such key —
+    // Shift added to a held arrow goes on with the same move, in bigger steps.
+    if (!isNudge(event) && !MODIFIER_KEYS.has(event.key)) {
+      this.nudge.release(this.context);
+    }
+    if (this.active.onKey?.(this.context, event) === true) return true;
+    if (this.underway()) return false;
+    if (means(event, 'selectAllPieces')) {
+      const { store } = this.context;
+      store.selectParts(selectablePieces(evaluate(store.getState().document.project)));
+      this.context.invalidate();
+      return true;
+    }
+    return this.nudge.keyDown(this.context, event);
+  }
+
+  /** A key has come up, by its place on the keyboard: the last arrow held commits the nudge. */
+  keyUp(code: string): void {
+    this.nudge.keyUp(this.context, code);
+  }
+
+  /**
+   * The keys still down no longer count: the window lost the keyboard, so
+   * their key-ups will never arrive, or a press of the pointer anywhere in the
+   * window is about to start something else. What was nudged is kept, as if
+   * they had come up.
+   */
+  keysLost(): void {
+    this.nudge.release(this.context);
   }
 
   /** Whether the active tool has a shape under way (U.11). */

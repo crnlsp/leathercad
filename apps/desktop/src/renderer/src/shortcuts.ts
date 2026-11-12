@@ -40,6 +40,7 @@ export function shortcutGroups(keymap: readonly Command[] = currentKeymap()): Sh
   return [
     { id: 'file', shortcuts: listed('file') },
     { id: 'edit', shortcuts: listed('edit') },
+    { id: 'nudge', shortcuts: listed('nudge') },
     { id: 'field', shortcuts: listed('field') },
     {
       id: 'view',

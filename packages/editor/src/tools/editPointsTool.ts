@@ -19,6 +19,7 @@ import { PathOps, polyline, type Path, type Vec2 } from '@leathercad/geometry';
 import { CANVAS, dotsItem, pathItem, type DisplayItem, type DisplayList } from '@leathercad/render';
 
 import { hitTest } from '../hitTest.js';
+import { isNudge } from '../nudge.js';
 import { means, type Tool, type ToolContext } from '../tool.js';
 
 /** A handle's side, in screen pixels: big enough to grab, small beside a stitch hole. */
@@ -194,6 +195,11 @@ export function createEditPointsTool(
         ctx.invalidate();
         return busy;
       }
+
+      // The arrows are this tool's, and do nothing yet (3.14): with a corner
+      // picked they will move the corner, so they must not move the whole
+      // feature here — the maker editing a point would see the piece jump.
+      if (isNudge(event)) return true;
 
       // R reshapes the picked corner: rounds a sharp one to the work bar's
       // radius, sharpens a rounded one (3.9d). Only when a corner is picked —

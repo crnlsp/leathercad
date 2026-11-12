@@ -62,7 +62,15 @@ import { CanvasFrames } from './canvasFrames.js';
 import { observePixelRatio, pixelRatio, resizeBackingStore } from './canvasDensity.js';
 import { sheetPlanFor, sheetsPagesFor } from './sheets.js';
 import { IS_MAC } from './keyCaps.js';
-import { commandFor, keyForTools, keysOf, matches, meaningsForTools, typesSize } from './keymap.js';
+import {
+  commandFor,
+  keyForTools,
+  keysOf,
+  matches,
+  meaningsForTools,
+  meaningsOnBoard,
+  typesSize,
+} from './keymap.js';
 import { isTyping, pressesControl } from './shortcuts.js';
 import { ValueChips, type DrawnChips, type ValueChipsHandle } from './ValueChips.js';
 import { SelectionBar, type SelectionBarHandle } from './SelectionBar.js';
@@ -379,6 +387,7 @@ export function CanvasHost({
       cancel: () => {
         managerRef.current?.key({
           key: 'Escape',
+          code: 'Escape',
           means: new Set(),
           shiftKey: false,
           ctrlKey: false,
@@ -846,17 +855,15 @@ export function CanvasHost({
       // Ctrl on Linux and Windows, ⌘ on macOS: the keymap's (U.3).
       const command = commandFor(event, IS_MAC);
       const onSheets = viewRef.current === 'sheets';
+      // The board itself has the focus, or nothing has: where its own keys are
+      // heard (3.14, U.14). A button, a Parts row or a tab keeps its arrows.
+      const onBoard = event.target === document.body || event.target === canvasRef.current;
 
       // A number typed with the board focused while a rectangle is being drawn,
       // or about to be, goes into its first chip (U.16, R-13): the key lands
       // there, and Tab, Enter and Esc are the chips'. With no corner placed the
       // shape starts at the pointer.
-      if (
-        !onSheets &&
-        typesSize(event) &&
-        (event.target === document.body || event.target === canvasRef.current) &&
-        managerRef.current?.beginSizing() === true
-      ) {
+      if (!onSheets && typesSize(event) && onBoard && managerRef.current?.beginSizing() === true) {
         // The chips exist and are placed before the key goes to one of them.
         flushSync(() => setDrawing(managerRef.current?.sizing() ?? null));
         frames.paintNow();
@@ -872,8 +879,12 @@ export function CanvasHost({
         managerRef.current?.key({
           // The letter the keymap reads, so a tool claims the key the window would take.
           key: keyForTools(event),
-          // What the press means to the board's tools, by the keymap (U.12).
-          means: meaningsForTools(event, IS_MAC),
+          code: event.code,
+          // What the press means to the board's tools, by the keymap (U.12),
+          // and to the board itself while it has the focus (3.14).
+          means: onBoard
+            ? new Set([...meaningsForTools(event, IS_MAC), ...meaningsOnBoard(event, IS_MAC)])
+            : meaningsForTools(event, IS_MAC),
           shiftKey: event.shiftKey,
           ctrlKey: event.ctrlKey,
         }) === true;
@@ -894,7 +905,6 @@ export function CanvasHost({
 
       // Enter on the board opens the selected outline's sizes (U.14) — on the
       // board only: a focused button, field or Parts row keeps its own Enter.
-      const onBoard = event.target === document.body || event.target === canvasRef.current;
       if (
         onBoard &&
         keysOf('editSizes').some((binding) => matches(event, binding, IS_MAC)) &&
@@ -908,7 +918,24 @@ export function CanvasHost({
     // hears it before the app's shortcuts do, and a dialog that stops a key
     // still stops it before either.
     document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
+
+    // A held arrow's nudge ends when the key comes up (3.14). Heard as the
+    // event goes down, so a field that keeps its key-ups to itself cannot
+    // leave the move open. It is kept, too, when the window loses the keyboard
+    // with the key still down — its key-up never comes — and before a press of
+    // the pointer anywhere in the window: a button's command, or a guide pulled
+    // from a ruler, would otherwise roll the move back or be ended by its key-up.
+    const onKeyUp = (event: KeyboardEvent): void => managerRef.current?.keyUp(event.code);
+    const endNudge = (): void => managerRef.current?.keysLost();
+    window.addEventListener('keyup', onKeyUp, { capture: true });
+    window.addEventListener('blur', endNudge);
+    window.addEventListener('pointerdown', endNudge, { capture: true });
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp, { capture: true });
+      window.removeEventListener('blur', endNudge);
+      window.removeEventListener('pointerdown', endNudge, { capture: true });
+    };
   }, [store, frames]);
 
   const toInput = useCallback((event: React.PointerEvent<HTMLCanvasElement>): PointerInput => {

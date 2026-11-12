@@ -11,6 +11,7 @@ import {
   currentKeymap,
   keysInSentences,
   meaningsForTools,
+  meaningsOnBoard,
   subscribeKeymap,
   withBindings,
   keyForTools,
@@ -689,5 +690,75 @@ describe('no sentence in the catalogue names a key (U.3)', () => {
       ([path, text]) => !path.startsWith('keys.') && KEY_IN_A_SENTENCE.test(text),
     );
     expect(naming).toEqual([]);
+  });
+});
+
+describe('the board’s own keys: nudging, and picking every piece (3.14)', () => {
+  const arrow = (code: string, held: Partial<typeof NO_MODIFIERS> = {}): KeyPress => ({
+    ...NO_MODIFIERS,
+    code,
+    key: code,
+    ...held,
+  });
+
+  it.each(['Left', 'Right', 'Up', 'Down'] as const)(
+    'an arrow alone is the 1 mm step %s, with Shift the big one, with Alt the fine one',
+    (direction) => {
+      const code = `Arrow${direction}`;
+      for (const isMac of [false, true]) {
+        expect(meaningsOnBoard(arrow(code), isMac)).toEqual([`nudge${direction}`]);
+        expect(meaningsOnBoard(arrow(code, { shiftKey: true }), isMac)).toEqual([
+          `nudge${direction}Big`,
+        ]);
+        expect(meaningsOnBoard(arrow(code, { altKey: true }), isMac)).toEqual([
+          `nudge${direction}Fine`,
+        ]);
+      }
+    },
+  );
+
+  it('an arrow with the command key, or with two modifiers, is no nudge', () => {
+    expect(meaningsOnBoard(arrow('ArrowLeft', { ctrlKey: true }), false)).toEqual([]);
+    expect(meaningsOnBoard(arrow('ArrowLeft', { metaKey: true }), true)).toEqual([]);
+    expect(meaningsOnBoard(arrow('ArrowLeft', { shiftKey: true, altKey: true }), false)).toEqual(
+      [],
+    );
+  });
+
+  it('the command key with A picks every piece: Ctrl, and ⌘ on macOS', () => {
+    const a = { ...NO_MODIFIERS, code: 'KeyA', key: 'a' };
+    expect(meaningsOnBoard({ ...a, ctrlKey: true }, false)).toEqual(['selectAllPieces']);
+    expect(meaningsOnBoard({ ...a, metaKey: true }, true)).toEqual(['selectAllPieces']);
+    expect(meaningsOnBoard(a, false)).toEqual([]);
+  });
+
+  it('is the board’s alone: not the window’s, and not a tool’s wherever the focus is', () => {
+    for (const command of KEYMAP.filter((entry) => entry.scope === 'board')) {
+      for (const binding of command.keys) {
+        const made = press(binding, US);
+        expect(commandFor(made, false), command.id).toBeNull();
+        expect([...meaningsForTools(made, false)], command.id).toEqual([]);
+      }
+    }
+  });
+
+  it('follows a key the maker moved', () => {
+    const map = withBindings({ nudgeLeft: [{ code: 'KeyH', alt: true }] });
+    const altH = { ...NO_MODIFIERS, code: 'KeyH', key: 'h', altKey: true };
+    expect(meaningsOnBoard(altH, false, map)).toEqual(['nudgeLeft']);
+    expect(meaningsOnBoard(arrow('ArrowLeft'), false, map)).toEqual([]);
+  });
+
+  it('lists the twelve nudges under their own heading, and Select all under Edit', () => {
+    const groups = shortcutGroups(KEYMAP);
+    expect(groups.find((group) => group.id === 'nudge')?.shortcuts).toHaveLength(12);
+    expect(
+      groups.find((group) => group.id === 'edit')?.shortcuts.map((shortcut) => shortcut.id),
+    ).toContain('selectAllPieces');
+  });
+
+  it('shows an arrow as an arrow, with the platform’s modifiers', () => {
+    expect(keyLabel({ code: 'ArrowLeft', shift: true }, false, null, t)).toBe('Shift+←');
+    expect(keyLabel({ code: 'ArrowUp', alt: true }, true, null, t)).toBe('⌥↑');
   });
 });

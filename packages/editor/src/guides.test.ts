@@ -1,3 +1,4 @@
+import { keyInput } from './tools/keys.fixture.js';
 import { describe, expect, it } from 'vitest';
 import { evaluate } from '@leathercad/domain';
 import { addGuide, emptyDocument, DocumentStore } from '@leathercad/document';
@@ -58,7 +59,7 @@ describe('guide snapping and selection', () => {
     expect(tool.snapExclusions?.(context)).toEqual(['h']);
     tool.onPointerMove?.(context, event(100, 30));
     expect(store.getState().document.project.guides?.[0]?.origin.y).toBe(30);
-    tool.onKey?.(context, { key: 'Escape', means: new Set(), ctrlKey: false, shiftKey: false });
+    tool.onKey?.(context, keyInput('Escape'));
     expect(store.getState().document).toBe(before);
   });
 });

@@ -18,6 +18,8 @@ export function keyInput(key: string, means?: readonly ToolKey[]): KeyInput {
   const named = key.length === 1 ? key.toLowerCase() : key;
   return {
     key,
+    // Tools read what a press means; where the key is matters to the board's nudge alone.
+    code: key,
     means: new Set(means ?? DEFAULT_MEANS[named] ?? []),
     shiftKey: false,
     ctrlKey: false,
