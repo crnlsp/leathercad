@@ -377,7 +377,9 @@ export interface PocketRequirement {
   /**
    * The room the maker leaves beyond the content's size, theirs and never
    * invented: copied from Settings › My tools when set there, else 0.
-   * Leather thickness and the stitching's pull are not counted (9.1).
+   * Counted against the width only (D22): it is the leather wrapping the
+   * content's faces. Leather thickness and the stitching's pull are not
+   * counted otherwise (9.1).
    */
   readonly easeMm: Mm;
   /**

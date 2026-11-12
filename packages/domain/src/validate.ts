@@ -268,9 +268,10 @@ function onMaterial(
 /**
  * DR8: a pocket holds what the maker said it is for (9.14b).
  *
- * Asked only of stitching with a requirement. Width is always judged; depth
- * only when the content must go in fully (D15), and then from the opening the
- * outline makes, never from the stitch ends. A requirement the geometry gives
+ * Asked only of stitching with a requirement. Width is always judged, against
+ * the content and the ease; depth only when the content must go in fully
+ * (D15), against the content alone (D22), and from the opening the outline
+ * makes, never from the stitch ends. A requirement the geometry gives
  * no reading for is said to be unchecked rather than passed. Geometric only:
  * leather thickness and the stitching's pull are the maker's ease.
  */
@@ -310,16 +311,16 @@ function pocketFit(
     found.push(here(problem('POCKET_NOT_MEASURABLE', { ...about, reading: 'opening' })));
     return found;
   }
-  const neededDepthMm = needs.heightMm + easeMm;
-  if (!approxGte(depthMm, neededDepthMm, EPS_LENGTH)) {
+  // Depth against the content alone (D22): ease is the leather wrapping the
+  // content's faces, which costs width; the bottom of a pocket loses little.
+  if (!approxGte(depthMm, needs.heightMm, EPS_LENGTH)) {
     found.push(
       here(
         problem('POCKET_TOO_SHALLOW', {
           ...about,
           content: content.kind,
           depthMm,
-          neededMm: neededDepthMm,
-          easeMm,
+          neededMm: needs.heightMm,
         }),
       ),
     );

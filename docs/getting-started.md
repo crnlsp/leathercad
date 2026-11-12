@@ -134,7 +134,7 @@ Say what the pocket is for under **Holds**: a payment card or another size, and 
 room you leave for the leather and the stitching, which starts from *Settings → My tools → Pocket
 ease* when you set one there. Problems then warns *Pocket too narrow* when the stitch lines are
 closer than the content and its ease. Depth is shown, not judged — a card holder lets its cards
-stand proud — unless you tick **Holds it fully**: then the content must fit below the opening,
+stand proud — unless you tick **Holds it fully**: then the content itself must fit below the opening,
 which is read from the outline above the stitch ends. A geometric check: leather thickness and the
 stitching's pull are not counted, so leave ease for them.
 

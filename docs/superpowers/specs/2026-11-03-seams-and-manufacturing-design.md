@@ -212,8 +212,9 @@ there, never invented (product-roadmap decision 6). Kept on the stitch line as m
 **As built (9.14b).** Properties shows a *Holds* menu under the stitch line's reading — *Nothing
 stated*, *Payment card*, *Another size* — with the ease, *Holds it fully*, and how far what it holds
 stands above the opening or goes below it. The opening is found on the outline straight out from
-each stitch end, the lower side governing (plan D21), never at the stitch ends. The ease counts
-against the height as well as the width (D22). A requirement the stitching gives no reading for is
+each stitch end, the lower side governing (plan D21), never at the stitch ends; a slit cut into
+the piece is not read as an opening. The ease counts against the width only: held fully, the depth
+below the opening is compared with the content's height alone (D22). A requirement the stitching gives no reading for is
 `POCKET_NOT_MEASURABLE` rather than passed (D23). An ID-1 card with 4 mm ease flags the bifold
 (89.0 mm, needs 89.6) and not the card holder (99.0 mm).
 

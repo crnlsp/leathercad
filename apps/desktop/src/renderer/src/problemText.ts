@@ -190,7 +190,6 @@ const CATALOGUE: { readonly [K in ProblemCode]: Describe<K> } = {
     t(`problems.POCKET_TOO_SHALLOW.${f.content}`, {
       featureName: f.featureName,
       depth: shortOf(f.depthMm, f.neededMm),
-      ease: formatMm(f.easeMm),
       needed: formatMm(f.neededMm),
     }),
   POCKET_NOT_MEASURABLE: (f, t) =>

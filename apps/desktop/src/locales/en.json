@@ -1294,8 +1294,8 @@
     },
     "POCKET_TOO_SHALLOW": {
       "title": "Pocket too shallow",
-      "id-1": "{{featureName}} is {{depth}} deep below its opening; a payment card with {{ease}} of ease needs {{needed}} to go in fully.",
-      "size": "{{featureName}} is {{depth}} deep below its opening; what it holds, with {{ease}} of ease, needs {{needed}} to go in fully.",
+      "id-1": "{{featureName}} is {{depth}} deep below its opening; a payment card needs {{needed}} to go in fully.",
+      "size": "{{featureName}} is {{depth}} deep below its opening; what it holds needs {{needed}} to go in fully.",
       "fix": "Make the piece taller, or clear Holds it fully in Properties if the card is meant to stand proud."
     },
     "POCKET_NOT_MEASURABLE": {
@@ -1550,7 +1550,7 @@
       "fully": "Holds it fully",
       "proud": "What it holds stands {{value}} mm above the opening.",
       "below": "What it holds goes {{value}} mm below the opening.",
-      "note": "A geometric check of the stitching: leather thickness and the stitching's pull are not counted — leave ease for them. Without Holds it fully, depth is shown and not judged."
+      "note": "A geometric check of the stitching: leather thickness and the stitching's pull are not counted — leave ease for them across the pocket. Without Holds it fully, depth is shown and not judged; with it, what it holds must fit below the opening."
     }
   },
   "selectionBar": {

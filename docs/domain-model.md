@@ -1079,7 +1079,7 @@ The diagnostics themselves:
 | `TEXT_TOO_SMALL_TO_PRINT` | warning (capital height under 1.5 mm, from the vendored font's metrics at the label's em size) | rule | DR5 | built Q34 |
 | `EMPTY_PART` | info | rule | DR6 | built 4.12a (parts are kept since 4.2b) |
 | `POCKET_TOO_NARROW` | warning (width between stitch lines under the content's width plus the ease) | rule | DR8 | built 9.14b |
-| `POCKET_TOO_SHALLOW` | warning (with *Holds it fully*: depth below the opening under the content's height plus the ease) | rule | DR8 | built 9.14b |
+| `POCKET_TOO_SHALLOW` | warning (with *Holds it fully*: depth below the opening under the content's height; no ease, D22) | rule | DR8 | built 9.14b |
 | `POCKET_NOT_MEASURABLE` | warning (a requirement on stitching with no pocket reading, or held fully with no opening found) | rule | DR8 | built 9.14b |
 
 **Retired** from the earlier list, because the states they described are now unrepresentable rather
@@ -1156,8 +1156,9 @@ payment card (ID-1, 85.60 × 53.98 mm, `ID1_CARD`) or a typed width and height, 
 DR8 checks it on every evaluation and stores nothing it finds.
 
 - `POCKET_TOO_NARROW` when `pocketSize`'s width is under the content's width plus the ease.
-- With `fully`, `POCKET_TOO_SHALLOW` when `depthBelowOpening` is under the content's height plus
-  the ease. Without it, depth is not judged (D15).
+- With `fully`, `POCKET_TOO_SHALLOW` when `depthBelowOpening` is under the content's height. The
+  ease is not counted there (D22): it is the leather wrapping the content's faces, which costs
+  width. Without `fully`, depth is not judged (D15).
 - `POCKET_NOT_MEASURABLE` when there is a requirement and no reading to check it against: the
   stitching has no `pocketSize`, or, held fully, no opening is found. A requirement is never
   passed silently.
@@ -1166,8 +1167,9 @@ DR8 checks it on every evaluation and stores nothing it finds.
 from each stitch end, straight out of the pocket and square to the endpoint chord, to the part's
 outline, and the lower of the two. The card holder's is 3 mm above its stitch ends, so 44.3487 mm
 below it; the bifold's 4 mm, so 57 mm. A thumb scoop between the sides does not lower it; one that
-reaches over a side does. Cut-outs are not read. A stitch end off the outline, or an outline that is
-not closed, finds none. Ease is the maker's (*Settings › My tools*, or typed), copied into each new
+reaches over a side does. Cut-outs are not read, so a pocket entered through a slit cut into the
+piece reads its depth to the outer edge and overstates it (D21's limit). A stitch end off the
+outline, or an outline that is not closed, finds none. Ease is the maker's (*Settings › My tools*, or typed), copied into each new
 requirement and 0 when none is set; leather thickness is not counted until 9.1.
 
 ## 11. Where the model is going

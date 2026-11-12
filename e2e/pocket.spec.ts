@@ -106,14 +106,18 @@ test('a pocket says whether its card goes in, with the maker’s own ease (9.14b
     );
     await expect(problems).not.toContainText('Pocket too shallow');
 
-    await panel.getByTestId('pocket-fully').check();
-    await expect(problems).toContainText('Pocket too shallow');
-    await expectNoViolations(window, 'a pocket that says what it holds');
+    // Held fully, the card still fits: 57 mm below the opening for a 53.98 mm card,
+    // and the ease is room across the pocket, not under it (D22).
+    const fully = panel.getByTestId('pocket-fully');
+    await fully.check();
+    await expect(fully).toBeChecked();
+    await expect(problems).toContainText('Pocket too narrow');
+    await expect(problems).not.toContainText('Pocket too shallow');
 
     // Each change is one undo step; undoing them all leaves the pocket as it shipped.
     await window.getByTestId('editor-canvas').focus();
     await window.keyboard.press('ControlOrMeta+z');
-    await expect(problems).not.toContainText('Pocket too shallow');
+    await expect(fully).not.toBeChecked();
     await window.keyboard.press('ControlOrMeta+z');
     await expect(panel.getByTestId('pocket-holds')).toHaveValue('none');
     await expect(problems).toHaveCount(0);
@@ -129,7 +133,14 @@ test('a pocket says whether its card goes in, with the maker’s own ease (9.14b
     await expect(panel.getByTestId('pocket-proud')).toHaveText(
       'What it holds stands 9.63 mm above the opening.',
     );
-    await expect(panel.getByTestId('feature-problems')).toHaveCount(0);
+    const problems = panel.getByTestId('feature-problems');
+    await expect(problems).toHaveCount(0);
+
+    // Asked to hold it fully, the card holder says plainly that it cannot.
+    await panel.getByTestId('pocket-fully').check();
+    await expect(problems).toContainText('Pocket too shallow');
+    await expect(problems).toContainText('a payment card needs 53.98 mm to go in fully');
+    await expectNoViolations(cardHolder.window, 'a pocket that says what it holds');
   } finally {
     await closeApp(cardHolder.app);
   }

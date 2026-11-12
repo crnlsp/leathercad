@@ -140,7 +140,7 @@ const SAMPLES: { readonly [K in ProblemCode]: ProblemFacts[K] } = {
   OUTSIDE_PART: { ...named, what: 'holes' },
   HOLE_TOO_CLOSE_TO_EDGE: { ...named, clearanceMm: 0.8, minimumMm: 1.5 },
   POCKET_TOO_NARROW: { ...named, content: 'id-1', widthMm: 89, neededMm: 89.6, easeMm: 4 },
-  POCKET_TOO_SHALLOW: { ...named, content: 'size', depthMm: 44.3487, neededMm: 54.98, easeMm: 1 },
+  POCKET_TOO_SHALLOW: { ...named, content: 'size', depthMm: 44.3487, neededMm: 53.98 },
   POCKET_NOT_MEASURABLE: { ...named, reading: 'width' },
 };
 

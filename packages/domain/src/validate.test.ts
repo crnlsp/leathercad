@@ -1544,10 +1544,34 @@ describe('a pocket holds what it is for (DR8)', () => {
     const fully = pocketCodes(cardHolderPocket(card(1, true)));
     expect(fully).toHaveLength(1);
     expect(fully[0]?.code).toBe('POCKET_TOO_SHALLOW');
-    const facts = fully[0]?.facts as { depthMm: number; neededMm: number; easeMm: number };
+    const facts = fully[0]?.facts as { depthMm: number; neededMm: number };
     expect(Math.abs(facts.depthMm - 44.3487)).toBeLessThanOrEqual(EPS_LENGTH);
-    expect(facts.neededMm).toBeCloseTo(54.98, 10);
-    expect(facts.easeMm).toBe(1);
+    expect(facts.neededMm).toBe(53.98);
+  });
+
+  it('judges depth by the content alone: ease is room across the pocket, not under it (D22)', () => {
+    // The bifold's card sits 3.02 mm below its opening. A 4 mm ease is the leather
+    // wrapping the card's two faces, which costs width; counted on depth it would
+    // call a pocket that holds its card fully too shallow.
+    expect(
+      pocketCodes(
+        bifoldPocket({ ...card(4, true), content: { kind: 'size', widthMm: 80, heightMm: 53.98 } }),
+      ),
+    ).toEqual([]);
+    fc.assert(
+      fc.property(fc.integer({ min: 0, max: 200_000 }), (easeTicks) => {
+        const holds = (heightMm: number): PocketRequirement => ({
+          content: { kind: 'size', widthMm: 40, heightMm },
+          easeMm: easeTicks * QUANTUM_MM,
+          fully: true,
+        });
+        expect(pocketCodes(bifoldPocket(holds(57)))).toEqual([]);
+        expect(pocketCodes(bifoldPocket(holds(57 + QUANTUM_MM))).map((p) => p.code)).toEqual([
+          'POCKET_TOO_SHALLOW',
+        ]);
+      }),
+      { numRuns: 30 },
+    );
   });
 
   it('judges a full pocket from its opening, never from its stitch ends', () => {

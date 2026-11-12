@@ -328,14 +328,13 @@ export interface ProblemFacts {
     readonly neededMm: Mm;
     readonly easeMm: Mm;
   };
-  /** DR8, asked for by *Holds it fully*: the depth below the opening is less than the content's height and the ease. */
+  /** DR8, asked for by *Holds it fully*: the depth below the opening is less than the content's height (D22: no ease). */
   readonly POCKET_TOO_SHALLOW: About & {
     readonly content: PocketContent['kind'];
     /** From the opening the leather makes, not from the stitch ends. */
     readonly depthMm: Mm;
-    /** The content's height plus the ease. */
+    /** The content's height. */
     readonly neededMm: Mm;
-    readonly easeMm: Mm;
   };
   /**
    * DR8: the maker said what the pocket holds, and the stitching has no
