@@ -908,6 +908,7 @@ true, in one place. Each entry says what enforces it and the slice it lands in.
 | DR5 | Printed text is legible |
 | DR6 | A part disappears only when someone deletes it |
 | DR7 | Sewn stretches have paired holes whose travelled distances stay within 0.5 mm |
+| DR8 | A pocket holds what the maker says it is for |
 
 **Design rules are sampled, not proved** (4.3a). DR2's containment questions — is this line on the
 leather, is this cut-out inside the part — are asked at a finite number of points along a path, not
@@ -1077,6 +1078,9 @@ The diagnostics themselves:
 | `HOLE_COUNT_TOO_LOW` | warning (under 2 in a set) | rule | DR4 | built 4.12a — counted per set, because with a hole at every corner a short run legitimately contributes one |
 | `TEXT_TOO_SMALL_TO_PRINT` | warning (capital height under 1.5 mm, from the vendored font's metrics at the label's em size) | rule | DR5 | built Q34 |
 | `EMPTY_PART` | info | rule | DR6 | built 4.12a (parts are kept since 4.2b) |
+| `POCKET_TOO_NARROW` | warning (width between stitch lines under the content's width plus the ease) | rule | DR8 | built 9.14b |
+| `POCKET_TOO_SHALLOW` | warning (with *Holds it fully*: depth below the opening under the content's height; no ease, D22) | rule | DR8 | built 9.14b |
+| `POCKET_NOT_MEASURABLE` | warning (a requirement on stitching with no pocket reading, or held fully with no opening found) | rule | DR8 | built 9.14b |
 
 **Retired** from the earlier list, because the states they described are now unrepresentable rather
 than reportable: `PART_HAS_MULTIPLE_OUTER` (S5), `CONTOUR_NOT_CLOSED` (S6), `BROKEN_DERIVATION` (S2
@@ -1130,7 +1134,7 @@ reuse.
 | Evaluation with memoisation and per-feature failures | Built; typed 4.12a | |
 | Layer roles and export presets | Built | |
 | Corner policies `continuous` and `hole-at-corner` | Built | Radius-aware (*Also later*) |
-| Validation, the §8.6 catalogue | Built: 4.12a–4.12; text size (Q34), seam pairing (9.6b) | Pocket requirements (9.14b) |
+| Validation, the §8.6 catalogue | Built: 4.12a–4.12; text size (Q34), seam pairing (9.6b), pocket requirements (9.14b) | |
 | Templates as copies | Later: 9.7 (was 8.1) | Parameterised: *Exploring* |
 | `Seam` and assembly | Model, checks, creation, editing and deletion (9.6a–b) | Alignment marks (9.13) |
 | Material thickness compensation | Fields stored | 9.1 |
@@ -1144,6 +1148,30 @@ turns do not reduce the side width; rounded bottoms are supported. Ambiguous or 
 shapes return no measurement. No derived reading is saved. These dimensions describe stitching,
 not the actual pocket opening or usable capacity; see the [manufacturing spec §7](superpowers/specs/2026-11-03-seams-and-manufacturing-design.md#7-pockets-that-hold-what-they-must-914).
 
+### What a pocket holds (9.14b)
+
+A `StitchLine` may carry `holds: PocketRequirement` — what the maker says its pocket is for: a
+payment card (ID-1, 85.60 × 53.98 mm, `ID1_CARD`) or a typed width and height, an `easeMm`, and
+`fully`. It is the maker's statement, stored as metadata on the stitching that makes the pocket;
+DR8 checks it on every evaluation and stores nothing it finds.
+
+- `POCKET_TOO_NARROW` when `pocketSize`'s width is under the content's width plus the ease.
+- With `fully`, `POCKET_TOO_SHALLOW` when `depthBelowOpening` is under the content's height. The
+  ease is not counted there (D22): it is the leather wrapping the content's faces, which costs
+  width. Without `fully`, depth is not judged (D15).
+- `POCKET_NOT_MEASURABLE` when there is a requirement and no reading to check it against: the
+  stitching has no `pocketSize`, or, held fully, no opening is found. A requirement is never
+  passed silently.
+
+**The opening** (`depthBelowOpening`) is read from the leather, not assumed at the stitch ends:
+from each stitch end, straight out of the pocket and square to the endpoint chord, to the part's
+outline, and the lower of the two. The card holder's is 3 mm above its stitch ends, so 44.3487 mm
+below it; the bifold's 4 mm, so 57 mm. A thumb scoop between the sides does not lower it; one that
+reaches over a side does. Cut-outs are not read, so a pocket entered through a slit cut into the
+piece reads its depth to the outer edge and overstates it (D21's limit). A stitch end off the
+outline, or an outline that is not closed, finds none. Ease is the maker's (*Settings › My tools*, or typed), copied into each new
+requirement and 0 when none is set; leather thickness is not counted until 9.1.
+
 ## 11. Where the model is going
 
 The model's share of [product-roadmap.md](product-roadmap.md): what its next layers need, and the
@@ -1153,9 +1181,9 @@ decisions still open. No schema is fixed here before its slice.
   12 is retained (approved D2); seams on open lines can name their endpoints (approved D17).
 - **What the maker wants (9.14).** A requirement — "this pocket holds an ID-1 card" — is the maker's
   statement, stored as metadata on what it is about and checked by a design rule on every
-  evaluation; nothing the rule computes is stored. Open: whether it attaches to the open stitch line
-  that forms the pocket or to the part, and the ease it allows, which starts not set, as the
-  leather's thickness does (U.13).
+  evaluation; nothing the rule computes is stored. Built in 9.14b on the open stitch line that
+  forms the pocket, with the maker's ease, which starts not set, as the leather's thickness does
+  (U.13). A general requirements engine is not planned.
 - **Accepting a warning (9.16).** Kept in the project as a problem's code and the features it names,
   never words (ADR 0018). It has to find its problem again after an edit, which is Q4.
 - **Fixes (9.17).** A fix is an ordinary command made from a diagnostic, previewed through the

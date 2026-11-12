@@ -43,6 +43,14 @@ first and last pair, or every *n*th — so the pieces line up when glued and sti
 lies across the stitch line, into the leather, in the marking layer. Not a notch in the cut edge,
 and not a *registration mark*, which joins sheets of paper.
 
+**Pocket opening** — Where a pocket's content goes in: the edge of the leather above the stitching,
+not the line joining the stitch ends. The app finds it straight out from each stitch end to the
+outline, and takes the lower side (9.14b).
+
+**Ease** — The room a maker leaves beyond what a pocket holds, for the leather's thickness and the
+stitching's pull. Theirs, from *Settings › My tools* or typed on the requirement; never invented by
+the app. A pocket that **holds** something is checked against the content's size plus its ease.
+
 **Seam allowance** — The margin of material outside the stitch line, between the stitching and the
 cut edge. In this codebase it is modelled as a *derivation direction*: a cut contour derived
 outward from a stitch line by the allowance distance. (The inverse derivation — stitch line inward

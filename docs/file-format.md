@@ -183,6 +183,16 @@ edit and save. A seam whose hole set was removed in 1.6 loads unchanged and repo
 out-of-range anchors, endpoints on closed lines and whole stretches on open lines are refused.
 Seam ids share the feature/guide namespace.
 
+### 3.2b What a pocket holds — optional metadata (9.14b)
+
+A stitch line may carry `holds`, the maker's statement of what its pocket is for:
+`{ "content": { "kind": "id-1" } | { "kind": "size", "widthMm", "heightMm" }, "easeMm", "fully" }`.
+A payment card's size is the standard's and is not stored. Ease is a non-negative length, a typed
+size positive. Only the design rule DR8 reads it; the clear width, the depth below the opening and
+the verdict are recomputed on every evaluation and never stored. Nothing it says is drawn, cut or
+printed, so format 13 is kept (§4.5 rule 3), and the released 1.6 schema carries it through open,
+edit and save with its unknown fields (`pockets.test.ts`).
+
 ### 3.3 What is never stored
 
 | Never stored | Because |
@@ -430,6 +440,7 @@ closes, such as the open tabs — and logs one that fails, the file before it st
   "defaultIronId": "ks-3.85",
   "stitchMarginMm": 3.5,
   "leatherThicknessMm": null,
+  "pocketEaseMm": null,
   "keyBindings": { "save": [{ "code": "F5" }] },
   "exportRoles": ["cut", "hardware"],
   "recentFiles": ["/home/maker/Patterns/Wallet.lcp"],
@@ -485,7 +496,9 @@ written before My tools has no `irons`, and starts from the irons the Iron menu 
 the maker emptied stays empty. `defaultIronId` is always one of `irons`, the first when it names
 none, and `null` only with none. `stitchMarginMm` is a positive length (3.5 when not); and
 `leatherThicknessMm` is a positive length or `null`, which is the default — a thickness is a
-measurement of the maker's leather, and none is invented. **Nothing here reaches evaluation**: the
+measurement of the maker's leather, and none is invented. `pocketEaseMm` (9.14b) is the same: a
+positive length or `null`, copied into a new pocket requirement as its ease, which is 0 when none
+is set. **Nothing here reaches evaluation**: the
 app passes these values to the command that makes a stitch line, a hole set, a seam allowance or a
 fold, and that feature stores its own copy (a hole set its pitch and the iron's name), so a project
 evaluates the same on a machine with other tools. A project's own `settings.defaultStitchInsetMm`

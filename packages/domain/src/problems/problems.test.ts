@@ -132,6 +132,9 @@ const SAMPLES: { readonly [K in ProblemCode]: ProblemFacts[K] } = {
   CUT_OUT_OUTSIDE_PART: { featureId: 'f-1', featureName: 'Card slot' },
   OUTSIDE_PART: { ...named, what: 'holes' },
   HOLE_TOO_CLOSE_TO_EDGE: { ...named, clearanceMm: 0.8, minimumMm: 1.5 },
+  POCKET_TOO_NARROW: { ...named, content: 'id-1', widthMm: 89, neededMm: 89.6, easeMm: 4 },
+  POCKET_TOO_SHALLOW: { ...named, content: 'size', depthMm: 44.3487, neededMm: 53.98 },
+  POCKET_NOT_MEASURABLE: { ...named, reading: 'opening' },
 };
 
 const everyCode = Object.keys(SAMPLES) as ProblemCode[];

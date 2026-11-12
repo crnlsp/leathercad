@@ -15,7 +15,7 @@ import type { Iron, Preferences } from '@leathercad/platform';
  */
 export type MakerTools = Pick<
   Preferences,
-  'irons' | 'defaultIronId' | 'stitchMarginMm' | 'leatherThicknessMm'
+  'irons' | 'defaultIronId' | 'stitchMarginMm' | 'leatherThicknessMm' | 'pocketEaseMm'
 >;
 
 /** The stitch margin's floor and step, wherever it is typed: Settings › My tools, and Properties while drawing (U.18). */

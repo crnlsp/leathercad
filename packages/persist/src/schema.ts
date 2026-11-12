@@ -196,6 +196,19 @@ const geometrySource = z.discriminatedUnion('kind', [
   measureSource,
 ]);
 
+const positiveMm = nonNegativeMm.refine((value) => value > 0, {
+  message: 'must be greater than zero',
+});
+
+const pocketRequirement = z.looseObject({
+  content: z.discriminatedUnion('kind', [
+    z.looseObject({ kind: z.literal('id-1') }),
+    z.looseObject({ kind: z.literal('size'), widthMm: positiveMm, heightMm: positiveMm }),
+  ]),
+  easeMm: nonNegativeMm,
+  fully: z.boolean(),
+});
+
 const featureBase = {
   id: z.string().min(1),
   name: z.string(),
@@ -212,7 +225,13 @@ const feature = z.discriminatedUnion('kind', [
     kind: z.literal('cut-contour'),
     role: z.enum(['outer', 'inner']),
   }),
-  z.looseObject({ ...featureBase, kind: z.literal('stitch-line') }),
+  z.looseObject({
+    ...featureBase,
+    kind: z.literal('stitch-line'),
+    // What a pocket holds (9.14b): metadata, read only by a design rule, so
+    // the format version stays (§4.5 rule 3) and 1.6 carries it through.
+    holds: pocketRequirement.optional(),
+  }),
   z.looseObject({ ...featureBase, kind: z.literal('stitch-hole-set') }),
   z.looseObject({
     ...featureBase,

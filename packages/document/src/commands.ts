@@ -8,6 +8,7 @@ import type {
   FoldLine,
   HardwareHole,
   MarkingLine,
+  PocketRequirement,
   ParametricShape,
   GeometrySource,
   Part,
@@ -1771,6 +1772,17 @@ export function setFoldThickness(id: FeatureId, materialThicknessMm: Mm | undefi
       return rest;
     }
     return { ...fold, materialThicknessMm };
+  });
+}
+
+/** What a pocket holds (9.14b); undefined takes the requirement away. */
+export function setPocketRequirement(id: FeatureId, holds: PocketRequirement | undefined): Command {
+  return setFeatureField(id, 'stitch-line', { action: 'change-pocket-requirement' }, (stitch) => {
+    if (holds === undefined) {
+      const { holds: _dropped, ...rest } = stitch;
+      return rest;
+    }
+    return { ...stitch, holds };
   });
 }
 

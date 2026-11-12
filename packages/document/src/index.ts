@@ -74,6 +74,7 @@ export {
   setLabelSize,
   setLabelText,
   setMarkingPurpose,
+  setPocketRequirement,
   emptyDocument,
   flipFeatures,
   flipRefusal,

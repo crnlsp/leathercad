@@ -2,6 +2,7 @@ import { PathOps } from '@leathercad/geometry';
 import { describe, expect, it } from 'vitest';
 
 import {
+  addDrawnStitchLine,
   addFoldLine,
   addHardwareHole,
   addMarkingLine,
@@ -13,6 +14,7 @@ import {
   setFoldThickness,
   setHardwareType,
   setMarkingPurpose,
+  setPocketRequirement,
   shapePart,
 } from './commands.js';
 import type { Command } from './document.js';
@@ -152,5 +154,46 @@ describe("a feature's own parameters", () => {
 
     expect(feature(store, 'fold-1')).toEqual(before);
     expect(Object.keys(feature(store, 'fold-1')!)).not.toContain('hardwareType');
+  });
+});
+
+describe('what a pocket holds (9.14b)', () => {
+  const card = { content: { kind: 'id-1' }, easeMm: 4, fully: false } as const;
+  const storeWithStitching = () => {
+    const store = storeWithPanel();
+    store.dispatch(addDrawnStitchLine('part-1', 'stitch-1', spine));
+    return store;
+  };
+
+  it('says what a pocket holds, and changes it, each as one undoable step', () => {
+    const store = storeWithStitching();
+    store.dispatch(setPocketRequirement('stitch-1', card));
+    expect(feature(store, 'stitch-1')).toMatchObject({ holds: card });
+
+    const typed = {
+      content: { kind: 'size', widthMm: 160, heightMm: 80 },
+      easeMm: 2,
+      fully: true,
+    } as const;
+    store.dispatch(setPocketRequirement('stitch-1', typed));
+    expect(feature(store, 'stitch-1')).toMatchObject({ holds: typed });
+
+    expect(store.getState().undoLabel).toEqual({ action: 'change-pocket-requirement' });
+    store.undo();
+    expect(feature(store, 'stitch-1')).toMatchObject({ holds: card });
+  });
+
+  it('drops the key when the maker takes the requirement away', () => {
+    const store = storeWithStitching();
+    store.dispatch(setPocketRequirement('stitch-1', card));
+    store.dispatch(setPocketRequirement('stitch-1', undefined));
+    expect(Object.keys(feature(store, 'stitch-1')!)).not.toContain('holds');
+  });
+
+  it('puts a requirement on stitching only', () => {
+    const store = storeWithStitching();
+    store.dispatch(addFoldLine('part-1', 'fold-1', spine));
+    store.dispatch(setPocketRequirement('fold-1', card));
+    expect(Object.keys(feature(store, 'fold-1')!)).not.toContain('holds');
   });
 });

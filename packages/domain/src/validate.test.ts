@@ -1,4 +1,4 @@
-import { QUANTUM_MM } from '@leathercad/core';
+import { EPS_LENGTH, QUANTUM_MM } from '@leathercad/core';
 import { PathOps, uniformRadii, type Path, type Vec2 } from '@leathercad/geometry';
 import { FONT } from '@leathercad/typography';
 import fc from 'fast-check';
@@ -6,7 +6,14 @@ import { describe, expect, it } from 'vitest';
 
 import { diagnose } from './diagnose.js';
 import { evaluate, type ResolvedProject } from './evaluate.js';
-import { DEFAULT_SETTINGS, type Feature, type Part, type Project } from './feature.js';
+import {
+  DEFAULT_SETTINGS,
+  type Feature,
+  type ParametricShape,
+  type Part,
+  type PocketRequirement,
+  type Project,
+} from './feature.js';
 import type { Diagnostic } from './problems/index.js';
 import type { RunReport, StitchHoles } from './stitch.js';
 import { MIN_HOLE_EDGE_CLEARANCE_MM, validate } from './validate.js';
@@ -1433,3 +1440,201 @@ describe('validation reused across revisions (PERF-005)', () => {
     expect(reads.count).toBeLessThan(1000);
   });
 });
+
+// ——— Pocket requirements (DR8, 9.14b) ———————————————————————————————————————
+
+describe('a pocket holds what it is for (DR8)', () => {
+  /** The card holder's pocket (D19): 99.0 mm between stitch lines, its opening 44.3487 mm above the bottom stitching. */
+  const cardHolderPocket = (holds?: PocketRequirement): Feature[] => [
+    outlineOf({
+      ...rectShape(0, -60, 105, 47.3487),
+      radii: { bottomLeft: 4, bottomRight: 4, topLeft: 3, topRight: 3 },
+    }),
+    {
+      ...base('stitch-1', 'Stitch line'),
+      kind: 'stitch-line',
+      source: {
+        kind: 'derived',
+        sourceId: 'cut-1',
+        op: {
+          type: 'offset',
+          distanceMm: 3,
+          side: 'inward',
+          run: { kind: 'between', fromAnchor: 2, toAnchor: 1 },
+        },
+      },
+      ...(holds === undefined ? {} : { holds }),
+    },
+  ];
+  /** The bifold's card pocket (D20): 89.0 mm between drawn stitch lines, 53 mm deep, 4 mm under the opening. */
+  const bifoldPocket = (holds?: PocketRequirement, width = 89): Feature[] => [
+    outlineOf(rectShape(-3, -60, width + 6, 60)),
+    {
+      ...drawn(
+        'stitch-line',
+        [
+          { x: 0, y: -4 },
+          { x: 0, y: -57 },
+          { x: width, y: -57 },
+          { x: width, y: -4 },
+        ],
+        false,
+      ),
+      ...(holds === undefined ? {} : { holds }),
+    } as Feature,
+  ];
+  const card = (easeMm: number, fully = false): PocketRequirement => ({
+    content: { kind: 'id-1' },
+    easeMm,
+    fully,
+  });
+  const pocketCodes = (features: Feature[]) =>
+    diagnose(project(features))
+      .filter((d) => d.problem.code.startsWith('POCKET_'))
+      .map((d) => d.problem);
+
+  it('flags the bifold and not the card holder for an ID-1 card with 4 mm ease', () => {
+    expect(pocketCodes(cardHolderPocket(card(4)))).toEqual([]);
+    expect(pocketCodes(bifoldPocket(card(4)))).toEqual([
+      {
+        code: 'POCKET_TOO_NARROW',
+        facts: {
+          featureId: 'stitch-1',
+          featureName: 'Stitch line',
+          content: 'id-1',
+          widthMm: 89,
+          neededMm: 89.6,
+          easeMm: 4,
+        },
+      },
+    ]);
+  });
+
+  it('says nothing about a pocket whose maker said nothing about it', () => {
+    expect(pocketCodes(cardHolderPocket())).toEqual([]);
+    expect(pocketCodes(bifoldPocket(undefined, 50))).toEqual([]);
+  });
+
+  it('warns exactly when the width is under the content and the ease, by storage quanta', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 0, max: 100_000 }),
+        fc.integer({ min: -3, max: 3 }),
+        (easeTicks, offsetTicks) => {
+          // The bifold is 89 mm across; the content plus ease sits a few quanta either side.
+          const easeMm = easeTicks * QUANTUM_MM;
+          const widthMm = 89 - easeMm + offsetTicks * QUANTUM_MM;
+          if (widthMm <= 0) return;
+          const found = pocketCodes(
+            bifoldPocket({
+              content: { kind: 'size', widthMm, heightMm: 20 },
+              easeMm,
+              fully: false,
+            }),
+          );
+          expect(found.map((p) => p.code)).toEqual(offsetTicks > 0 ? ['POCKET_TOO_NARROW'] : []);
+        },
+      ),
+    );
+  });
+
+  it('reports depth without judging it unless the content goes in fully (D15)', () => {
+    // A 53.98 mm card stands 9.6313 mm proud of the card holder's opening, as it is meant to.
+    expect(pocketCodes(cardHolderPocket(card(0)))).toEqual([]);
+    const fully = pocketCodes(cardHolderPocket(card(1, true)));
+    expect(fully).toHaveLength(1);
+    expect(fully[0]?.code).toBe('POCKET_TOO_SHALLOW');
+    const facts = fully[0]?.facts as { depthMm: number; neededMm: number };
+    expect(Math.abs(facts.depthMm - 44.3487)).toBeLessThanOrEqual(EPS_LENGTH);
+    expect(facts.neededMm).toBe(53.98);
+  });
+
+  it('judges depth by the content alone: ease is room across the pocket, not under it (D22)', () => {
+    // The bifold's card sits 3.02 mm below its opening. A 4 mm ease is the leather
+    // wrapping the card's two faces, which costs width; counted on depth it would
+    // call a pocket that holds its card fully too shallow.
+    expect(
+      pocketCodes(
+        bifoldPocket({ ...card(4, true), content: { kind: 'size', widthMm: 80, heightMm: 53.98 } }),
+      ),
+    ).toEqual([]);
+    fc.assert(
+      fc.property(fc.integer({ min: 0, max: 200_000 }), (easeTicks) => {
+        const holds = (heightMm: number): PocketRequirement => ({
+          content: { kind: 'size', widthMm: 40, heightMm },
+          easeMm: easeTicks * QUANTUM_MM,
+          fully: true,
+        });
+        expect(pocketCodes(bifoldPocket(holds(57)))).toEqual([]);
+        expect(pocketCodes(bifoldPocket(holds(57 + QUANTUM_MM))).map((p) => p.code)).toEqual([
+          'POCKET_TOO_SHALLOW',
+        ]);
+      }),
+      { numRuns: 30 },
+    );
+  });
+
+  it('judges a full pocket from its opening, never from its stitch ends', () => {
+    // 53 mm of stitching, 57 mm below the opening: a 55 mm card goes in fully, a 57.0001 mm one does not.
+    const holds = (heightMm: number): PocketRequirement => ({
+      content: { kind: 'size', widthMm: 80, heightMm },
+      easeMm: 0,
+      fully: true,
+    });
+    expect(pocketCodes(bifoldPocket(holds(55)))).toEqual([]);
+    expect(pocketCodes(bifoldPocket(holds(57)))).toEqual([]);
+    expect(pocketCodes(bifoldPocket(holds(57 + QUANTUM_MM))).map((p) => p.code)).toEqual([
+      'POCKET_TOO_SHALLOW',
+    ]);
+  });
+
+  it('says a requirement cannot be checked rather than passing it silently', () => {
+    const all: Feature[] = [panel(), { ...stitchLine(), holds: card(4) } as Feature];
+    expect(pocketCodes(all)).toEqual([
+      {
+        code: 'POCKET_NOT_MEASURABLE',
+        facts: { featureId: 'stitch-1', featureName: 'Stitch line', reading: 'width' },
+      },
+    ]);
+  });
+
+  it('says a full pocket cannot be checked when its stitching is off the leather', () => {
+    const [, stitch] = bifoldPocket(card(4, true), 89);
+    const elsewhere = outlineOf(rectShape(500, 0, 50, 50));
+    const found = pocketCodes([elsewhere, stitch!]).filter((p) => p.code !== 'POCKET_TOO_NARROW');
+    expect(found).toEqual([
+      {
+        code: 'POCKET_NOT_MEASURABLE',
+        facts: { featureId: 'stitch-1', featureName: 'Stitch line', reading: 'opening' },
+      },
+    ]);
+  });
+
+  it('places the warning on the stitching it is about', () => {
+    const found = diagnose(project(bifoldPocket(card(4)))).find(
+      (d) => d.problem.code === 'POCKET_TOO_NARROW',
+    );
+    expect(found).toMatchObject({ severity: 'warning', partId: 'part-0', featureId: 'stitch-1' });
+    expect(found?.location?.kind).toBe('path');
+  });
+});
+
+function outlineOf(shape: ParametricShape): Feature {
+  return {
+    ...base('cut-1', 'Outline'),
+    kind: 'cut-contour',
+    role: 'outer',
+    source: { kind: 'shape', shape },
+  };
+}
+
+function rectShape(x: number, y: number, width: number, height: number) {
+  return {
+    type: 'rect' as const,
+    origin: { x, y },
+    width,
+    height,
+    radii: uniformRadii(0),
+    rotation: 0,
+  };
+}

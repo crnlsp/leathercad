@@ -432,6 +432,25 @@ function MyTools({ preferences, onPreferences, nextId }: Props) {
           />
         </span>
       </div>
+      <div className="setting">
+        <div className="setting-text">
+          <span className="setting-name">{t('settings.tools.pocketEase.name')}</span>
+          <span className="setting-note">{t('settings.tools.pocketEase.note')}</span>
+        </div>
+        <span className="setting-number" data-testid="setting-pocket-ease">
+          <NumberField
+            label={t('settings.tools.pocketEase.name')}
+            hideLabel
+            value={preferences.pocketEaseMm}
+            placeholder={t('editor.notSet')}
+            // An ease is the maker's: "none" is said by clearing, as a thickness is.
+            min={0.1}
+            step={0.5}
+            onCommit={(pocketEaseMm) => onPreferences({ pocketEaseMm })}
+            onClear={() => onPreferences({ pocketEaseMm: null })}
+          />
+        </span>
+      </div>
     </>
   );
 }

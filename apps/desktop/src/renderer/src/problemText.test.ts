@@ -139,6 +139,9 @@ const SAMPLES: { readonly [K in ProblemCode]: ProblemFacts[K] } = {
   CUT_OUT_OUTSIDE_PART: { featureId: 'f-1', featureName: 'Card slot' },
   OUTSIDE_PART: { ...named, what: 'holes' },
   HOLE_TOO_CLOSE_TO_EDGE: { ...named, clearanceMm: 0.8, minimumMm: 1.5 },
+  POCKET_TOO_NARROW: { ...named, content: 'id-1', widthMm: 89, neededMm: 89.6, easeMm: 4 },
+  POCKET_TOO_SHALLOW: { ...named, content: 'size', depthMm: 44.3487, neededMm: 53.98 },
+  POCKET_NOT_MEASURABLE: { ...named, reading: 'width' },
 };
 
 const everyCode = Object.keys(PROBLEM_CODES) as ProblemCode[];
@@ -193,6 +196,27 @@ describe('the message catalogue, in English', () => {
     expect(sentence).toContain('1.4999 mm');
     expect(sentence).toContain('1.50 mm');
     expect(sentence).toContain('Increase Size in Properties.');
+  });
+
+  it('says what a too-narrow pocket has and what a card with its ease needs (9.14b)', () => {
+    expect(describeProblem(sample('POCKET_TOO_NARROW'), t)).toContain(
+      'leaves 89.00 mm between its stitch lines; a payment card with 4.00 mm of ease needs 89.60 mm.',
+    );
+  });
+
+  it('never rounds a pocket that falls short up to what it needs', () => {
+    const sentence = describeProblem(
+      problem('POCKET_TOO_NARROW', {
+        ...named,
+        content: 'size',
+        widthMm: 89.59996,
+        neededMm: 89.6,
+        easeMm: 0,
+      }),
+      t,
+    );
+    expect(sentence).toContain('leaves 89.5999 mm');
+    expect(sentence).toContain('needs 89.60 mm');
   });
 
   it.each(everyCode)('describes %s in a sentence', (code) => {

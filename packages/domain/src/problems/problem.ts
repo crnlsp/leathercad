@@ -1,7 +1,7 @@
 import type { Mm } from '@leathercad/core';
 import type { Path, Vec2 } from '@leathercad/geometry';
 
-import type { FeatureId, PartId, SeamId, SeamAnchor, SeamSide } from '../feature.js';
+import type { FeatureId, PartId, PocketContent, SeamId, SeamAnchor, SeamSide } from '../feature.js';
 
 /**
  * What the domain knows about something being wrong — as facts, never as a
@@ -320,6 +320,29 @@ export interface ProblemFacts {
     readonly clearanceMm: Mm;
     readonly minimumMm: Mm;
   };
+  /** DR8: the width between the stitch lines is less than the content's width and the ease. */
+  readonly POCKET_TOO_NARROW: About & {
+    readonly content: PocketContent['kind'];
+    readonly widthMm: Mm;
+    /** The content's width plus the ease. */
+    readonly neededMm: Mm;
+    readonly easeMm: Mm;
+  };
+  /** DR8, asked for by *Holds it fully*: the depth below the opening is less than the content's height (D22: no ease). */
+  readonly POCKET_TOO_SHALLOW: About & {
+    readonly content: PocketContent['kind'];
+    /** From the opening the leather makes, not from the stitch ends. */
+    readonly depthMm: Mm;
+    /** The content's height. */
+    readonly neededMm: Mm;
+  };
+  /**
+   * DR8: the maker said what the pocket holds, and the stitching has no
+   * reading to check it against — no unambiguous U (`width`), or, held
+   * fully, no opening found on the outline (`opening`). Said, so a
+   * requirement is never silently unchecked.
+   */
+  readonly POCKET_NOT_MEASURABLE: About & { readonly reading: 'width' | 'opening' };
 }
 
 export type ProblemCode = keyof ProblemFacts;
@@ -401,6 +424,8 @@ function qualifierOf(p: Problem): string | number | undefined {
       return p.facts.what;
     case 'ANCHOR_MISSING':
       return p.facts.anchor;
+    case 'POCKET_NOT_MEASURABLE':
+      return p.facts.reading;
     default:
       return undefined;
   }

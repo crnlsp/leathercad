@@ -4861,6 +4861,16 @@ button.problem-row,
   white-space: nowrap;
 }
 
+/* What a pocket holds (9.14b), under its reading. A field's input fills the
+   row; a checkbox stays a box. */
+.pocket-requirement {
+  margin-top: var(--space-2);
+}
+
+.pocket-requirement .field input[type='checkbox'] {
+  width: auto;
+}
+
 .pocket-summary .pocket-dimensions {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-2);

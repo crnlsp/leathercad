@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { pocketSize } from '@leathercad/domain';
 import type { Path } from '@leathercad/geometry';
 
@@ -7,14 +7,27 @@ import { useI18n } from './i18n.js';
 /**
  * The same domain reading in Properties and beside the selected stitching.
  * Nothing at all for stitching that makes no pocket — a strap's straight run
- * is the commonest open line, and a note there would only be noise.
+ * is the commonest open line, and a note there would only be noise — unless
+ * the maker said what it holds (`stated`): then Properties keeps the section,
+ * with no reading, so the requirement can be seen and taken away (9.14b).
  */
-export function PocketReading({ path, compact = false }: { path: Path; compact?: boolean }) {
+export function PocketReading({
+  path,
+  compact = false,
+  stated = false,
+  children,
+}: {
+  path: Path;
+  compact?: boolean;
+  stated?: boolean;
+  /** What the pocket holds, under the reading in Properties. */
+  children?: ReactNode;
+}) {
   const { t, locale } = useI18n();
   const size = useMemo(() => pocketSize(path), [path]);
-  if (size === null) return null;
+  if (size === null && (compact || !stated)) return null;
   const number = new Intl.NumberFormat(locale, { maximumFractionDigits: 2 });
-  const reading = (
+  const reading = size !== null && (
     <dl className="pocket-dimensions">
       <div>
         <dt>{t('pocket.width')}</dt>
@@ -44,7 +57,8 @@ export function PocketReading({ path, compact = false }: { path: Path; compact?:
     >
       <div className="panel-heading">{t('pocket.title')}</div>
       {reading}
-      <p className="panel-note">{t('pocket.note')}</p>
+      {size !== null && <p className="panel-note">{t('pocket.note')}</p>}
+      {children}
     </section>
   );
 }

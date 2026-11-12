@@ -357,9 +357,43 @@ export interface CutContour extends FeatureBase {
   readonly role: 'outer' | 'inner';
 }
 
+/**
+ * What a pocket is for (9.14b): a payment card, whose size is the standard's
+ * and not stored, or a size the maker typed — width across the opening,
+ * height into the pocket.
+ */
+export type PocketContent =
+  | { readonly kind: 'id-1' }
+  | { readonly kind: 'size'; readonly widthMm: Mm; readonly heightMm: Mm };
+
+/**
+ * The maker's statement that this stitching makes a pocket for something
+ * (9.14b), checked by DR8 on every evaluation. Metadata: it changes nothing
+ * drawn, cut or printed, so it keeps the format version (file-format §4.5
+ * rule 3). Nothing the rule measures is stored.
+ */
+export interface PocketRequirement {
+  readonly content: PocketContent;
+  /**
+   * The room the maker leaves beyond the content's size, theirs and never
+   * invented: copied from Settings › My tools when set there, else 0.
+   * Counted against the width only (D22): it is the leather wrapping the
+   * content's faces. Leather thickness and the stitching's pull are not
+   * counted otherwise (9.1).
+   */
+  readonly easeMm: Mm;
+  /**
+   * Whether the content must go in below the opening. Off, depth is reported
+   * and not judged: a card holder lets its cards stand proud (D15).
+   */
+  readonly fully: boolean;
+}
+
 /** Where the thread runs, normally set in 3-4 mm from the edge. */
 export interface StitchLine extends FeatureBase {
   readonly kind: 'stitch-line';
+  /** Absent: the maker has said nothing about what it holds. */
+  readonly holds?: PocketRequirement;
 }
 
 /** Where the leather bends rather than being cut. */

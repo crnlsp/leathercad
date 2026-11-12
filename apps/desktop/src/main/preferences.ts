@@ -132,6 +132,7 @@ function fromRecord(record: Record<string, unknown>): StoredPreferences {
   // irons; a list the maker emptied stays empty.
   const irons = readIrons(record['irons']) ?? DEFAULT_PREFERENCES.irons;
   const thickness = record['leatherThicknessMm'];
+  const ease = record['pocketEaseMm'];
 
   return {
     version: 2,
@@ -163,6 +164,8 @@ function fromRecord(record: Record<string, unknown>): StoredPreferences {
     defaultIronId: defaultAmong(irons, record['defaultIronId']),
     stitchMarginMm: readLength(record['stitchMarginMm']) ?? DEFAULT_PREFERENCES.stitchMarginMm,
     leatherThicknessMm: thickness === null ? null : (readLength(thickness) ?? null),
+    // Absent before 9.14b: not set, so a new pocket requirement starts with none.
+    pocketEaseMm: ease === null ? null : (readLength(ease) ?? null),
     // Each key the maker changed, kept only if this version can use it (U.12).
     keyBindings: readBindings(record['keyBindings'], IS_MAC),
     // Absent before 6.4: every layer.
@@ -311,6 +314,10 @@ export function validChanges(changes: unknown): Partial<Preferences> {
   const thicknessMm = readLength(thickness);
   if (thickness === null) out.leatherThicknessMm = null;
   else if (thicknessMm !== undefined) out.leatherThicknessMm = thicknessMm;
+  const ease = record['pocketEaseMm'];
+  const easeMm = readLength(ease);
+  if (ease === null) out.pocketEaseMm = null;
+  else if (easeMm !== undefined) out.pocketEaseMm = easeMm;
   if (record['keyBindings'] !== undefined) {
     out.keyBindings = readBindings(record['keyBindings'], IS_MAC);
   }

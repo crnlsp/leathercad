@@ -26,6 +26,8 @@ import { followRefusal, isHolesAlongALine, type ResolvedFeature } from '@leather
 import type { ReactNode } from 'react';
 
 import { PocketReading } from './PocketReading.js';
+import { PocketRequirementEditor } from './PocketRequirementEditor.js';
+import { outlineOf } from './pocketRequirement.js';
 import type { Translate } from '../../shared/i18n.js';
 import { useI18n } from './i18n.js';
 import { KeyCap, useKeysInSentences } from './keyCaps.js';
@@ -255,10 +257,21 @@ export function PropertyPanel({
           <Measured project={project} feature={feature} resolved={resolved} />
         )}
 
-        {resolved?.ok === true &&
-          (feature.kind === 'stitch-line' || feature.kind === 'stitch-hole-set') && (
-            <PocketReading path={resolved.path} />
-          )}
+        {resolved?.ok === true && feature.kind === 'stitch-hole-set' && (
+          <PocketReading path={resolved.path} />
+        )}
+        {resolved?.ok === true && feature.kind === 'stitch-line' && (
+          // What it holds is the stitch line's, so it is said here and not on its holes.
+          <PocketReading path={resolved.path} stated={feature.holds !== undefined}>
+            <PocketRequirementEditor
+              store={store}
+              feature={feature}
+              path={resolved.path}
+              outline={outlineOf(resolvedFor(project).parts.find((p) => p.part.id === part.id))}
+              makerEaseMm={tools.pocketEaseMm}
+            />
+          </PocketReading>
+        )}
 
         <ProblemSection
           store={store}

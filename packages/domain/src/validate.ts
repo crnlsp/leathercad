@@ -14,6 +14,7 @@ import type { Feature, FeatureId, PartId } from './feature.js';
 import type { ResolvedFeature, ResolvedProject } from './evaluate.js';
 import { distanceToEdge, isOnMaterial, materialOf, type Material } from './material.js';
 import { hasOuterContour } from './partStructure.js';
+import { contentSize, depthBelowOpening, pocketSize } from './pocket.js';
 import type { StitchHoles } from './stitch.js';
 import {
   PROBLEM_CODES,
@@ -238,7 +239,7 @@ function findingsOf(
     outer: material.outer,
     cutOuts: material.holes,
     onMaterial: material.outer === null ? [] : onMaterial(entry, partId, material),
-    ownShape: ownShape(entry, partId),
+    ownShape: [...ownShape(entry, partId), ...pocketFit(entry, partId, material.outer)],
   };
   findingsCache.set(entry.feature, found);
   return found;
@@ -262,6 +263,69 @@ function onMaterial(
       p.code === 'OUTSIDE_PART' && p.facts.what === 'line' ? 'warning' : undefined,
     ),
   );
+}
+
+/**
+ * DR8: a pocket holds what the maker said it is for (9.14b).
+ *
+ * Asked only of stitching with a requirement. Width is always judged, against
+ * the content and the ease; depth only when the content must go in fully
+ * (D15), against the content alone (D22), and from the opening the outline
+ * makes, never from the stitch ends. A requirement the geometry gives
+ * no reading for is said to be unchecked rather than passed. Geometric only:
+ * leather thickness and the stitching's pull are the maker's ease.
+ */
+function pocketFit(
+  entry: Extract<ResolvedFeature, { ok: true }>,
+  partId: PartId,
+  outer: Path | null,
+): Diagnostic[] {
+  const { feature } = entry;
+  if (feature.kind !== 'stitch-line' || feature.holds === undefined) return [];
+  const { content, easeMm, fully } = feature.holds;
+  const about = { featureId: feature.id, featureName: feature.name };
+  const here = (p: Problem) => placed(p, partId, feature.id, { kind: 'path', path: entry.path });
+
+  const size = pocketSize(entry.path);
+  if (size === null)
+    return [here(problem('POCKET_NOT_MEASURABLE', { ...about, reading: 'width' }))];
+  const needs = contentSize(content);
+  const found: Diagnostic[] = [];
+  const neededWidthMm = needs.widthMm + easeMm;
+  if (!approxGte(size.widthMm, neededWidthMm, EPS_LENGTH)) {
+    found.push(
+      here(
+        problem('POCKET_TOO_NARROW', {
+          ...about,
+          content: content.kind,
+          widthMm: size.widthMm,
+          neededMm: neededWidthMm,
+          easeMm,
+        }),
+      ),
+    );
+  }
+  if (!fully) return found;
+  const depthMm = outer === null ? null : depthBelowOpening(entry.path, outer);
+  if (depthMm === null) {
+    found.push(here(problem('POCKET_NOT_MEASURABLE', { ...about, reading: 'opening' })));
+    return found;
+  }
+  // Depth against the content alone (D22): ease is the leather wrapping the
+  // content's faces, which costs width; the bottom of a pocket loses little.
+  if (!approxGte(depthMm, needs.heightMm, EPS_LENGTH)) {
+    found.push(
+      here(
+        problem('POCKET_TOO_SHALLOW', {
+          ...about,
+          content: content.kind,
+          depthMm,
+          neededMm: needs.heightMm,
+        }),
+      ),
+    );
+  }
+  return found;
 }
 
 /** The rules about a feature's own shape and holes, whatever leather it is on. */

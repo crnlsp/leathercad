@@ -1,6 +1,7 @@
-import { writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-import { expect, test } from '@playwright/test';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+import { expect, test, type Page } from '@playwright/test';
 import { resizeWindow } from './windowSize.js';
 import { closeApp } from './closeApp.js';
 import { expectNoViolations, openApp } from './launchApp.js';
@@ -66,3 +67,81 @@ for (const size of [
     }
   });
 }
+
+test('a pocket says whether its card goes in, with the maker’s own ease (9.14b)', async () => {
+  const configHome = mkdtempSync(join(tmpdir(), 'leathercad-e2e-pocket-'));
+  const launch = (name: string) =>
+    openApp({
+      args: [resolve(`fixtures/projects/${name}.lcp`)],
+      env: { XDG_CONFIG_HOME: configHome },
+      size: [1440, 900],
+    });
+  const holdACard = async (window: Page) => {
+    const row = window.getByTestId('feature-row-pocket-stitch');
+    if (!(await row.isVisible())) await window.getByTestId('toggle-parts').click();
+    await row.click();
+    const panel = window.getByTestId('property-panel');
+    await panel.getByTestId('pocket-holds').selectOption('id-1');
+    return panel;
+  };
+
+  const bifold = await launch('bifold-wallet');
+  try {
+    const { window } = bifold;
+    await window.getByTestId('settings').click();
+    await window.getByTestId('settings-tab-tools').click();
+    const ease = window.getByTestId('setting-pocket-ease').getByRole('textbox');
+    await ease.fill('4');
+    await ease.press('Enter');
+    await window.getByTestId('settings-close').click();
+
+    const panel = await holdACard(window);
+    // The first requirement takes its ease from My tools.
+    await expect(panel.getByRole('textbox', { name: 'Ease' })).toHaveValue('4');
+    const problems = panel.getByTestId('feature-problems');
+    await expect(problems).toContainText('Pocket too narrow');
+    await expect(problems).toContainText('a payment card with 4.00 mm of ease needs 89.60 mm');
+    await expect(panel.getByTestId('pocket-proud')).toHaveText(
+      'What it holds goes 3.02 mm below the opening.',
+    );
+    await expect(problems).not.toContainText('Pocket too shallow');
+
+    // Held fully, the card still fits: 57 mm below the opening for a 53.98 mm card,
+    // and the ease is room across the pocket, not under it (D22).
+    const fully = panel.getByTestId('pocket-fully');
+    await fully.check();
+    await expect(fully).toBeChecked();
+    await expect(problems).toContainText('Pocket too narrow');
+    await expect(problems).not.toContainText('Pocket too shallow');
+
+    // Each change is one undo step; undoing them all leaves the pocket as it shipped.
+    await window.getByTestId('editor-canvas').focus();
+    await window.keyboard.press('ControlOrMeta+z');
+    await expect(fully).not.toBeChecked();
+    await window.keyboard.press('ControlOrMeta+z');
+    await expect(panel.getByTestId('pocket-holds')).toHaveValue('none');
+    await expect(problems).toHaveCount(0);
+  } finally {
+    await closeApp(bifold.app);
+  }
+
+  const cardHolder = await launch('card-holder');
+  try {
+    const panel = await holdACard(cardHolder.window);
+    await expect(panel.getByRole('textbox', { name: 'Ease' })).toHaveValue('4');
+    // 99.0 mm across: the card goes in. It stands proud, as a card holder means it to (D15).
+    await expect(panel.getByTestId('pocket-proud')).toHaveText(
+      'What it holds stands 9.63 mm above the opening.',
+    );
+    const problems = panel.getByTestId('feature-problems');
+    await expect(problems).toHaveCount(0);
+
+    // Asked to hold it fully, the card holder says plainly that it cannot.
+    await panel.getByTestId('pocket-fully').check();
+    await expect(problems).toContainText('Pocket too shallow');
+    await expect(problems).toContainText('a payment card needs 53.98 mm to go in fully');
+    await expectNoViolations(cardHolder.window, 'a pocket that says what it holds');
+  } finally {
+    await closeApp(cardHolder.app);
+  }
+});

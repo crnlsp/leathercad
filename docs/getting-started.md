@@ -130,6 +130,14 @@ the stitching's two ends: the leather opening can be higher. Leather thickness a
 tension reduce usable room, so these measurements do not guarantee that a card fits. A shape
 without two unambiguous straight sides shows no numeric pocket reading.
 
+Say what the pocket is for under **Holds**: a payment card or another size, and an **Ease** — the
+room you leave for the leather and the stitching, which starts from *Settings → My tools → Pocket
+ease* when you set one there. Problems then warns *Pocket too narrow* when the stitch lines are
+closer than the content and its ease. Depth is shown, not judged — a card holder lets its cards
+stand proud — unless you tick **Holds it fully**: then the content itself must fit below the opening,
+which is read from the outline above the stitch ends. A geometric check: leather thickness and the
+stitching's pull are not counted, so leave ease for them.
+
 To stitch only some sides, as a pocket is, select its derived stitch line and choose
 *Stitched sides → Between corners* in Properties. Choose the outline corners the run follows;
 changing the outline keeps the stitching attached. Check the endpoint holes in Problems.
