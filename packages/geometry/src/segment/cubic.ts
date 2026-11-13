@@ -3,7 +3,20 @@ import { EPS_LENGTH, EPS_PARAM, approxEq, type Mm } from '@leathercad/core';
 import { apply, type Mat2x3 } from '../mat2x3.js';
 import { rootsInUnitInterval, solveQuadratic } from '../polynomial.js';
 import { fromPoints, type Rect } from '../rect.js';
-import { add, dot, lerp, negate, scale, sub, tryNormalise, vec, ZERO, type Vec2 } from '../vec2.js';
+import {
+  add,
+  cross,
+  dot,
+  len,
+  lerp,
+  negate,
+  scale,
+  sub,
+  tryNormalise,
+  vec,
+  ZERO,
+  type Vec2,
+} from '../vec2.js';
 import { cubic, type CubicSegment } from './types.js';
 
 export function pointAt(s: CubicSegment, t: number): Vec2 {
@@ -31,6 +44,22 @@ function secondDerivativeAt(s: CubicSegment, t: number): Vec2 {
   const a = scale(add(sub(s.p2, scale(s.p1, 2)), s.p0), 6 * (1 - t));
   const b = scale(add(sub(s.p3, scale(s.p2, 2)), s.p1), 6 * t);
   return add(a, b);
+}
+
+/**
+ * Signed curvature at `t`, in 1/mm — the reciprocal of the radius of the
+ * circle the curve is bending round there. Positive bends **left** of travel,
+ * as a counter-clockwise arc does.
+ *
+ * `null` where the curve is stationary (its derivative shorter than
+ * `EPS_LENGTH`): a retracted handle or a cusp, where the curvature has no
+ * finite value to give. Never `NaN` and never infinite.
+ */
+export function curvatureAt(s: CubicSegment, t: number): number | null {
+  const velocity = derivativeAt(s, t);
+  const speed = len(velocity);
+  if (speed < EPS_LENGTH) return null;
+  return cross(velocity, secondDerivativeAt(s, t)) / (speed * speed * speed);
 }
 
 /**

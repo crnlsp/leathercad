@@ -704,3 +704,52 @@ describe('degenerate input', () => {
     expect(() => arc(vec(0, 0), Number.NaN, 0, 1)).toThrow(RangeError);
   });
 });
+
+describe('cubic curvature', () => {
+  /** A quarter of a circle of radius 50, by the standard 4/3·tan(θ/4) handle. */
+  const quarter = cubic(vec(50, 0), vec(50, 27.614), vec(27.614, 50), vec(0, 50));
+
+  it('is the reciprocal of the radius on a cubic drawn as a circle', () => {
+    for (const t of [0, 0.25, 0.5, 0.75, 1]) {
+      // The cubic lies within 0.03% of the circle, but its bend wanders more:
+      // within 2.5% of 1/50, which is why an offset fits arcs to the curve
+      // itself rather than reading a radius off it.
+      const k = Seg.CubicOps.curvatureAt(quarter, t)!;
+      expect(Math.abs(k * 50 - 1)).toBeLessThan(0.025);
+    }
+  });
+
+  it('is zero along a straight cubic', () => {
+    const straight = cubic(vec(0, 0), vec(10, 5), vec(30, 15), vec(100, 50));
+
+    expect(Seg.CubicOps.curvatureAt(straight, 0.3)).toBeCloseTo(0, 12);
+  });
+
+  it('has no value where a retracted handle leaves the curve stationary', () => {
+    const retracted = cubic(vec(0, 0), vec(0, 0), vec(40, 30), vec(100, 0));
+
+    expect(Seg.CubicOps.curvatureAt(retracted, 0)).toBeNull();
+    expect(Seg.CubicOps.curvatureAt(retracted, 0.5)).not.toBeNull();
+  });
+
+  it('changes sign when the cubic is reversed or mirrored, and nothing else', () => {
+    fc.assert(
+      // t in 1024ths, so that 1 − t is exact: otherwise the reversed curve is
+      // read at a neighbouring point, and beside a retracted handle, where the
+      // curvature goes as 1/t, that rounding is all the difference shows.
+      fc.property(arbCubicSegment, fc.integer({ min: 0, max: 1024 }), (c, i) => {
+        const t = i / 1024;
+        const k = Seg.CubicOps.curvatureAt(c, t);
+        const reversed = Seg.CubicOps.curvatureAt(Seg.CubicOps.reverse(c), 1 - t);
+        const mirrored = Seg.CubicOps.curvatureAt(Seg.CubicOps.transform(c, fromScale(1, -1)), t);
+        if (k === null || reversed === null || mirrored === null) return;
+
+        // Relative: a curve bending on 6 µm has a curvature of 155 per mm.
+        const slack = 1e-6 * Math.max(1, Math.abs(k));
+        expect(Math.abs(reversed + k)).toBeLessThanOrEqual(slack);
+        expect(Math.abs(mirrored + k)).toBeLessThanOrEqual(slack);
+      }),
+      { numRuns: 500 },
+    );
+  });
+});

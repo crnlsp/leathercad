@@ -3,7 +3,7 @@
 **Package:** `packages/geometry`
 **Status:** Implemented in 1.0. Where the code and this document disagree, one of them is a bug:
 fix it in the same change.
-**Last updated:** 2026-10-17
+**Last updated:** 2026-11-13
 
 ---
 
@@ -413,8 +413,8 @@ The signature returns `Path[]`, not `Path`, because offsetting genuinely can pro
 shape collapsed) or several disjoint pieces (a narrow waist pinched apart). Callers must handle all
 three; the domain layer turns "zero results" into a validation error rather than a crash.
 
-**Tier 1 — analytic, exact.** When the path contains only lines and arcs and the offset does not
-self-intersect, offset analytically: a line becomes a parallel line, an arc becomes a concentric arc
+**Tier 1 — analytic, exact.** When the offset does not self-intersect, offset analytically — and a
+cubic through arcs fitted to it, below: a line becomes a parallel line, an arc becomes a concentric arc
 with radius `r ± d`. Arcs stay arcs, so a rounded rectangle's stitch line is still a rounded
 rectangle. Detect self-intersection afterwards; if any is found, fall through to Tier 2.
 
@@ -441,26 +441,64 @@ folds over itself is refused, with a validation error naming the shape rather th
 
 Tier 1 needs no dependency and produces better output anyway — arcs stay arcs.
 
-**Tier 1's scope: paths of lines and arcs, open or closed, concave corners included.** Each corner
-is judged on its own turn — where the offsets lean apart the gap is bridged with an arc, and where
-they overlap they are trimmed to their intersection. An open path's ends simply end: a stitch line
-along three sides of a pocket is an open offset, and it is the most common seam in leatherwork.
+**Tier 1's scope: paths of lines, arcs and cubics, open or closed, concave corners included.** Each
+corner is judged on its own turn — where the offsets lean apart the gap is bridged with an arc, and
+where they overlap they are trimmed to their intersection. An open path's ends simply end: a stitch
+line along three sides of a pocket is an open offset, and it is the most common seam in leatherwork.
+
+**A cubic is offset through arcs fitted to it (9.19).** The offset of a cubic is not a cubic, but the
+offset of an arc is an arc, so `fitArcs` (`ops/fitArcs.ts`) replaces each cubic, for the offset only,
+with lines and arcs that are tangent-continuous and within `EXPORT_TOLERANCE_MM` of it, and the
+offset of those is exact. **The stitch line is within 0.005 mm of the true offset**; the outline
+keeps its cubics. A circle squashed after 3.12, or a curve a later import or editor makes, is
+stitched this way.
+
+- **The fit.** Each piece of the cubic is matched by a biarc — two arcs from one end to the other,
+  leaving and arriving along the cubic's own direction and meeting tangent to each other, with equal
+  tangent lengths. Where it strays from the curve the piece is halved by parameter and each half
+  fitted again; a biarc's error goes as the cube of its length, so few halvings are needed. An
+  80 × 40 mm oval takes 88 arcs.
+- **Checked both ways.** The deviation is the furthest a point of the cubic lies from the arcs —
+  exact, since the distance to an arc is — and the furthest a point of the arcs lies from the
+  cubic, projected by Newton's method from where on the cubic it should be. A projection lands on
+  the curve, so it can only overstate. One way alone misses a biarc that overshoots a cusp and
+  comes back. Both are sampled and every local peak of the samples refined, because at a cusp the
+  curve slows to a stop and its tip falls between even parameters. A piece is accepted at half the
+  tolerance, as headroom for what the refinement still misses; the property tests hold the whole of
+  it at far higher density.
+- **Shared directions.** Each fitted piece carries the direction it starts and ends in, the same
+  value as its neighbour's, and is offset along the normals there. Consecutive offsets therefore
+  meet exactly, and the joins inside a cubic are never corners. An arc flatter than about 440 m
+  (`STRAIGHT_RADIUS_MM`, where its ends could no longer be placed exactly from its centre) is
+  stored as its chord, and the deviation check measures that like any other error.
+- **Refused where it bends too tightly.** Where the cubic bends on a radius at or below the offset
+  distance, on the side the offset goes, its true offset folds over itself, and arcs fitted to it
+  would make a smooth line that looks right and is not. The fit reports the sharpest bend it saw to
+  each side, read from the cubic's curvature at the points it checked, and the offset returns
+  nothing: `OFFSET_COLLAPSED`. An 80 × 40 mm oval turns on about 20 mm at its ends, so a 25 mm inset
+  is refused and a 15 mm one is not.
+- **The limit: a reversal shorter than the tolerance.** A cubic that turns back through a cusp for
+  less than the tolerance — 1.7 µm right, then 359 mm left, along one line — is fitted within the
+  tolerance as a set of points, but its brief reversal is below what the arcs can see, so the stitch
+  line keeps to one side of the long run where, for those micrometres, the curve's left is the
+  other. No drawing tool makes such a curve, and the outline itself is unchanged at that scale.
+
 It rejects, rather than guesses at:
 
-- **cubics**, which have no exact offset — the offset of a cubic is not a cubic. No drawing tool
-  makes one today, but a curve editor and an SVG import would, and so does a circle squashed after
-  3.12 converts it to a drawn path. Stitching along one is roadmap 9.19: arcs fitted to the cubic
-  within the flattening tolerance, or Tier 2;
+- **a curve bent tighter than the offset**, as above;
 - **overlaps where either side is an arc**, which the line-line intersection this tier uses cannot
-  solve;
+  solve — an arc fitted to a cubic included. So a curve meeting a straight side at a corner can be
+  stitched outside it, where the corner is bridged, but not inside, where it would be trimmed: the
+  same limit as the scooped pocket's tips, which waits for 9.11 (D8 of the 1.7 plan);
 - **a result that self-intersects.** This replaced an input convexity test in slice 4.2a. Asking
   whether the input was convex refused an ordinary thumb scoop for what concavity *could* do
   elsewhere; asking whether the output folded over itself answers the question actually being asked.
   *Pruning* those loops — computing the correct remaining outline — is still Tier 2's job.
 
-There is no tolerance parameter, because nothing is approximated. A line offsets to a parallel line
-and an arc to a concentric one with radius `r ∓ d`; corners are either tangent already, bridged with
-an exact arc, or trimmed at an exact intersection.
+There is no tolerance parameter. For lines and arcs nothing is approximated: a line offsets to a
+parallel line and an arc to a concentric one with radius `r ∓ d`; corners are either tangent already,
+bridged with an exact arc, or trimmed at an exact intersection. A cubic's fit uses the export
+tolerance, 0.005 mm, fixed by D7 of the 1.7 plan rather than offered as an option nobody sets.
 
 A corner arc consumed by the offset is a **corner, not a collapse** — it is dropped, and its
 neighbours are trimmed to where they meet. Offsetting a rounded rectangle outward and back must
@@ -645,6 +683,7 @@ packages/geometry/src/
 │   └── contains.ts
 └── ops/
     ├── offset.ts
+    ├── fitArcs.ts           # lines and arcs within a tolerance of a cubic, for offsetting (§6.2)
     ├── intersect.ts
     ├── distribute.ts
     ├── subPath.ts

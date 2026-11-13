@@ -270,7 +270,6 @@ export interface ProblemFacts {
     readonly distanceMm: Mm;
     readonly side: 'inward' | 'outward';
   };
-  readonly OFFSET_UNSUPPORTED: About;
   readonly OFFSET_SPLIT: About & { readonly droppedPieces: number };
   readonly ANCHOR_MISSING: About & {
     readonly anchor: SeamAnchor;
