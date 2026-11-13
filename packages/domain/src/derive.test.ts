@@ -212,7 +212,10 @@ describe('a derived stitch line', () => {
     expect(errors[0]?.location?.kind).toBe('path');
   });
 
-  it('reports an offset of a curve it cannot follow, rather than throwing', () => {
+  it('refuses by name a curve that meets its sides where the inset would trim it against them', () => {
+    // An inset follows a curve (9.19), but here the curve meets a side at a
+    // corner the inset must cut an arc against a line at, which Tier 1 does
+    // not do (D8): refused, as the scooped pocket's tips are, not guessed.
     const curvy: Feature = {
       ...panel(),
       source: {
@@ -226,7 +229,7 @@ describe('a derived stitch line', () => {
       },
     };
     const errors = evaluationErrors(evaluate(projectWith([curvy, stitchLine('cut-1')])));
-    expect(errors.map((e) => e.problem.code)).toEqual(['OFFSET_UNSUPPORTED']);
+    expect(errors.map((e) => e.problem.code)).toEqual(['OFFSET_COLLAPSED']);
   });
 
   it('reports an unusable pitch by name instead of letting distribution throw', () => {

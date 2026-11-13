@@ -367,17 +367,54 @@ describe('what converting makes possible (3.7’s refusals)', () => {
     );
   });
 
-  it('says, rather than guesses, that a stitch line cannot follow the squashed curve yet (9.19)', () => {
-    const store = stitchedPiece(circleShape({ x: 0, y: 0 }, 40));
-    store.dispatch(convertToPath('shape-1'));
+  describe('stitching the squashed curve (9.19)', () => {
+    const resolved = (store: DocumentStore, id: string): ResolvedFeature =>
+      evaluate(project(store))
+        .parts.flatMap((part) => part.features)
+        .find((entry) => entry.feature.id === id)!;
 
-    store.dispatch(transformFeatures(['shape-1'], MatOps.fromScale(2, 1), { action: 'scale' }));
+    /** How far the stitch line strays from 3.5 mm inside the outline, anywhere along it. */
+    function strayFromInset(store: DocumentStore): number {
+      const outline = resolved(store, 'shape-1');
+      const stitch = resolved(store, 'stitch-1');
+      if (!outline.ok || !stitch.ok) throw new Error('not resolved');
+      const along = PathOps.measure(stitch.path);
+      let worst = 0;
+      for (let i = 0; i <= 500; i++) {
+        const p = along.pointAtDistance((along.totalLength() * i) / 500);
+        worst = Math.max(worst, Math.abs(PathOps.distanceToPath(outline.path, p) - 3.5));
+      }
+      return worst;
+    }
 
-    const stitch = evaluate(project(store))
-      .parts.flatMap((part) => part.features)
-      .find((entry) => entry.feature.id === 'stitch-1');
-    expect(stitch?.ok).toBe(false);
-    expect(stitch?.ok === false && stitch.problem.code).toBe('OFFSET_UNSUPPORTED');
+    it('stitches a circle stretched into an oval 3.5 mm in, holes and all', () => {
+      const store = stitchedPiece(circleShape({ x: 0, y: 0 }, 40));
+      store.dispatch(convertToPath('shape-1'));
+      store.dispatch(transformFeatures(['shape-1'], MatOps.fromScale(2, 1), { action: 'scale' }));
+
+      const holes = resolved(store, 'holes-1');
+      expect(holes.ok && holes.holes!.count).toBeGreaterThan(80);
+      expect(strayFromInset(store)).toBeLessThanOrEqual(EXPORT_TOLERANCE_MM);
+    });
+
+    it('stitches a rounded rectangle stretched unevenly, its corners now curves', () => {
+      const store = stitchedPiece(rectShape({ x: 0, y: 0 }, 105, 75, 8, 0));
+      store.dispatch(convertToPath('shape-1'));
+      store.dispatch(transformFeatures(['shape-1'], MatOps.fromScale(1, 1.6), { action: 'scale' }));
+
+      expect(resolved(store, 'stitch-1').ok).toBe(true);
+      expect(strayFromInset(store)).toBeLessThanOrEqual(EXPORT_TOLERANCE_MM);
+    });
+
+    it('names the problem, rather than guessing, where the oval bends tighter than the inset', () => {
+      // A 20 mm circle squashed to 40 × 10 turns on 2.5 mm at its ends.
+      const store = stitchedPiece(circleShape({ x: 0, y: 0 }, 20));
+      store.dispatch(convertToPath('shape-1'));
+      store.dispatch(transformFeatures(['shape-1'], MatOps.fromScale(2, 0.5), { action: 'scale' }));
+
+      const stitch = resolved(store, 'stitch-1');
+      expect(stitch.ok === false && stitch.problem.code).toBe('OFFSET_COLLAPSED');
+    });
   });
 
   it('lets a converted circle be reshaped by its points, once it has a second one', () => {

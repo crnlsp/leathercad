@@ -905,9 +905,9 @@
     "arrange": "Rozmieść",
     "convertToPath": "Zamień na narysowaną ścieżkę",
     "convertToPathNote": {
-      "circle": "Przestanie być okręgiem: nie będzie można wpisać środka ani średnicy, ale będzie można rozciągnąć go do owalu i przesuwać punkty. Linia szycia nie może jeszcze podążać za owalem.",
+      "circle": "Przestanie być okręgiem: nie będzie można wpisać środka ani średnicy, ale będzie można rozciągnąć go do owalu i przesuwać punkty.",
       "arc": "Przestanie być łukiem: nie będzie można wpisać promienia ani kąta łuku, ale będzie można rozciągać go nierównomiernie i przesuwać punkty.",
-      "rect": "Przestanie być prostokątem: nie będzie można wpisać szerokości, wysokości ani narożników, ale będzie można go pochylać i przesuwać punkty. Linia szycia nie może jeszcze podążać za nierównomiernie rozciągniętymi zaokrągleniami."
+      "rect": "Przestanie być prostokątem: nie będzie można wpisać szerokości, wysokości ani narożników, ale będzie można go pochylać i przesuwać punkty."
     },
     "cut": "Wytnij",
     "cutSuffix": "szt.",
@@ -1240,10 +1240,6 @@
       "title": "Odsunięcie zanika",
       "inward": "Margines {{distance}} mm jest zbyt duży dla tej krawędzi.",
       "outward": "Nie można wyznaczyć zapasu {{distance}} mm na zewnątrz tej linii szycia."
-    },
-    "OFFSET_UNSUPPORTED": {
-      "title": "Nie można odsunąć krzywych",
-      "description": "Nie można wyznaczyć {{featureName}}: źródło zawiera krzywe swobodne, których odsuwanie nie jest jeszcze obsługiwane."
     },
     "OFFSET_SPLIT": {
       "title": "Odsunięcie rozdzieliło kontur",

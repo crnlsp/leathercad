@@ -875,9 +875,9 @@
     "arrange": "Disposer",
     "convertToPath": "Convertir en tracé dessiné",
     "convertToPathNote": {
-      "circle": "Ce n’est plus un cercle : son centre et son diamètre ne sont plus saisissables, mais il peut devenir ovale et ses points peuvent être déplacés. Une ligne de couture ne peut pas encore suivre un ovale.",
+      "circle": "Ce n’est plus un cercle : son centre et son diamètre ne sont plus saisissables, mais il peut devenir ovale et ses points peuvent être déplacés.",
       "arc": "Ce n’est plus un arc : son rayon et son angle balayé ne sont plus saisissables, mais il peut être déformé et ses points peuvent être déplacés.",
-      "rect": "Ce n’est plus un rectangle : ses dimensions et coins ne sont plus saisissables, mais il peut être cisaillé et ses points déplacés. Une ligne de couture ne peut pas encore suivre des coins arrondis déformés de façon inégale."
+      "rect": "Ce n’est plus un rectangle : ses dimensions et coins ne sont plus saisissables, mais il peut être cisaillé et ses points déplacés."
     },
     "cut": "Découper",
     "cutSuffix": "fois",
@@ -1204,10 +1204,6 @@
       "title": "Décalage impossible",
       "inward": "Un retrait de {{distance}} mm dépasse l’espace disponible dans ce bord.",
       "outward": "Impossible de construire une marge de {{distance}} mm à l’extérieur de cette ligne de couture."
-    },
-    "OFFSET_UNSUPPORTED": {
-      "title": "Courbes non décalables",
-      "description": "Impossible de construire {{featureName}} : sa source comporte des courbes libres, dont le décalage n’est pas encore pris en charge."
     },
     "OFFSET_SPLIT": {
       "title": "Décalage fragmenté",

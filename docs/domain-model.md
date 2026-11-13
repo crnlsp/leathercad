@@ -695,8 +695,9 @@ output. Nothing is drawn differently, and nothing is detached (X3):
 
 What goes is the parameters: the panel offers points rather than a radius or a width, and the
 feature now transforms as drawn geometry does (`geometry.md` §4.2 rule 2). So a squashed circle is
-made of cubics, and an offset refuses cubics until 9.19 — a stitch line round a converted, squashed
-circle reports `OFFSET_UNSUPPORTED`, and the note beside the button says so first.
+made of cubics, which an offset follows through arcs fitted to them (9.19, `geometry.md` §6.2): a
+stitch line round a converted, squashed circle is within 0.005 mm of the true inset, and one deeper
+than the oval's tightest bend reports `OFFSET_COLLAPSED`.
 
 Offered for `circle`, `arc` and `rect`, whatever the feature. Refused, with the reason under the
 button (`convertToPathRefusal`): a locked feature (S7); a hardware hole (`HOLE_STAYS_ROUND`), because
@@ -1056,7 +1057,6 @@ The diagnostics themselves:
 |---|---|---|---|---|
 | `PARAMETER_INVALID` | error | outcome | E1 | built 4.12a |
 | `OFFSET_COLLAPSED` | error | outcome | E1 | built 4.12a |
-| `OFFSET_UNSUPPORTED` | error | outcome | E1 | built 4.12a |
 | `GEOMETRY_FAILED` | error | outcome | E1 | built 4.12a — the fallback for a geometry throw the domain has no specific check for yet |
 | `OFFSET_SPLIT` | warning | outcome | E2 | built 4.12a; unreachable until Tier 2 offsetting |
 | `SOURCE_FAILED` | error | outcome | E3 | built 4.12a |
@@ -1085,6 +1085,9 @@ The diagnostics themselves:
 **Retired** from the earlier list, because the states they described are now unrepresentable rather
 than reportable: `PART_HAS_MULTIPLE_OUTER` (S5), `CONTOUR_NOT_CLOSED` (S6), `BROKEN_DERIVATION` (S2
 for a deleted source, `SOURCE_FAILED` for a failed one). `HOLES_OUTSIDE_PART` became `OUTSIDE_PART`.
+`OFFSET_UNSUPPORTED` (4.12a), raised for an offset of a curve, went in 9.19: a curve is offset
+through arcs fitted to it, and one it cannot follow — bent tighter than the inset, or met at a corner
+the inset would cut an arc against — is `OFFSET_COLLAPSED`, as any shape too small for its inset is.
 
 Since 4.3a the first two exist as **refusal** codes rather than diagnostics — `PART_ALREADY_HAS_OUTER`
 and `CONTOUR_NOT_CLOSED` — raised by the command and the loader that refuse them, never listed in the

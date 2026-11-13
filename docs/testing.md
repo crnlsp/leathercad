@@ -218,6 +218,10 @@ named test. It is a living checklist; the `geometry-review` skill walks it.
 - Offset with `miterLimit` exceeded
 - Offset of an open path (produces one path, not a closed loop)
 - Offset of a self-intersecting input
+- Offset of a cubic that bends tighter than the offset distance on the side it goes (refused), and
+  of one with a loop or a retracted handle (fitted, or refused — never a plausible wrong line); a
+  cusp whose reversal is shorter than the tolerance is the stated limit ([geometry.md](geometry.md)
+  §6.2)
 
 **Stitch distribution hazards**
 - Pitch larger than the path length
@@ -593,7 +597,8 @@ hole distribution.
 `packages/geometry/src/golden.test.ts` builds a corpus of real pieces — a wallet panel, a panel
 whose 3 mm corners an inset consumes, a strap with round ends, the three sewn sides of a card
 pocket, the pocket with a V thumb notch and with the sample project's scooped one, a stitch line
-drawn by hand with its seam allowance, and a pouch front of arcs and a cubic — sets each stitch line
+drawn by hand with its seam allowance, a pouch front of arcs and a cubic, and a circle squashed into
+an oval, its cubics stitched through fitted arcs (9.19) — sets each stitch line
 3 and 4 mm in from the edge, or its allowance 3 and 4 mm out, and places holes along it with a
 3.0 mm and a 3.85 mm iron, `fit-whole` as the app does. Each piece is one JSON file in
 `packages/geometry/__golden__/`, compared with Vitest's own `toMatchFileSnapshot`: no dependency.
@@ -602,9 +607,9 @@ drawn by hand with its seam allowance, and a pouch front of arcs and a cubic —
 per iron the number of `holes` and the `spacingMm` achieved (pitch is nominal, spacing achieved —
 [glossary](glossary.md)). Then come its segments, and every hole's position, one per line, so a
 moved hole is a one-line diff. `[]` is an offset that gave nothing back: the strap inset by its
-half-width collapses, and the scooped pocket's inset would trim an arc against a line at its tips,
-which Tier 1 does not do ([geometry.md](geometry.md) §6.2). `"refused"` is an offset that threw:
-a cubic has no exact one.
+half-width collapses, the scooped pocket's inset would trim an arc against a line at its tips,
+which Tier 1 does not do, and the oval inset by 25 mm would fold over itself where its ends turn on
+20 mm ([geometry.md](geometry.md) §6.2).
 
 **No float noise.** Every number is millimetres on the model's 0.1 µm grid (`quantise`). An arc's
 sweep is written as its length along the arc, signed like the sweep, so even that is a length. A
