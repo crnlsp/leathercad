@@ -20,7 +20,12 @@ export function mapAnchorsThroughOffset(
   sourcePath: Path,
   piece: OffsetPiece,
 ): readonly (Mm | null)[] {
-  if (sourcePath.segments.length === 0) return anchorsMm.map(() => null);
+  // No anchor to map, no measuring: the measure is the costly part on a curved
+  // source, where every length is a quadrature (9.19), and a converted circle
+  // has no corners at all.
+  if (sourcePath.segments.length === 0 || anchorsMm.every((anchor) => anchor === null)) {
+    return anchorsMm.map(() => null);
+  }
 
   const measure = PathOps.measure(sourcePath);
   return anchorsMm.map((anchor) =>
