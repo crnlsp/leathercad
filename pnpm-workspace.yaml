@@ -38,15 +38,19 @@ overrides:
   # Stryker uses only to upload to its dashboard, a reporter this project does
   # not enable. 6.16.1 fixes all four.
   'typed-rest-client>qs': 6.16.1
-  # GHSA-6j4f-fj2g-mc7p, GHSA-qhr7-859c-m2p7, GHSA-q2hr-2g5m-vwhr. minimatch
-  # 10.2.6, the newest 10.x, asks for ^5.0.8 and resolved 5.0.9; 5.0.12 fixes
-  # all three. This raises the floor inside the range minimatch already
-  # declares, so it runs against the API it expects. Only development tooling
-  # reaches it (ESLint, typescript-eslint, Stryker, electron-builder), and
-  # nothing in the shipped app. Scoped to minimatch 10 because the older
-  # minimatch lines use brace-expansion 1 and 2, whose fixed releases they
-  # already resolve.
-  'minimatch@10>brace-expansion': ^5.0.12
+  # GHSA-g3hv-75wg-m249, denial of service through globparts amplification.
+  # Only minimatch 11.0.1 and later are fixed, and no 9.x or 10.x backport
+  # came. This forces a major, which no other entry here does, so it holds
+  # only while what the dependents call is unchanged: 11 has 10's entry
+  # points and drops just `makeRe`, and @eslint/config-array,
+  # typescript-estree, Stryker, app-builder-lib and @electron/universal call
+  # only `minimatch()` and `Minimatch`'s `match`, `negate`, `set` and
+  # `hasMagic`. Check that again before raising it. Development and packaging
+  # tooling only; nothing in the shipped app imports minimatch. The 3.x and
+  # 5.x lines are not affected, and stay. Remove each line when its
+  # dependents ask for 11 themselves.
+  'minimatch@9': ^11.0.8
+  'minimatch@10': ^11.0.8
   # GHSA-68fv-2mgg-jv7q. postcss (Vite) and magicast (Vitest's coverage)
   # resolved 1.2.1; 1.2.2 is the fixed release. Development tooling only.
   source-map-js: ^1.2.2
