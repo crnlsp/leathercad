@@ -26,6 +26,10 @@ const LAYERS = {
   persist: ['core', 'geometry', 'domain'],
   render: ['core', 'geometry', 'typography', 'domain'],
   export: ['core', 'geometry', 'typography', 'domain', 'render'],
+  // Reserved until 9.20a creates it. Converts the plain tree the renderer's
+  // DOMParser hands it into geometry and pieces; parses no XML itself, so it
+  // needs nothing above domain. See ADR 0023.
+  import: ['core', 'geometry', 'domain'],
   print: ['core', 'geometry', 'typography', 'domain', 'render', 'export'],
   editor: ['core', 'geometry', 'typography', 'domain', 'document', 'render'],
   ui: [
@@ -40,6 +44,7 @@ const LAYERS = {
     'editor',
     'export',
     'print',
+    'import',
   ],
   cli: [
     'core',
@@ -52,6 +57,7 @@ const LAYERS = {
     'render',
     'export',
     'print',
+    'import',
   ],
 };
 
@@ -118,6 +124,17 @@ module.exports = {
         'It is pure millimetre maths. See docs/geometry.md §1.',
       severity: 'error',
       from: { path: '^packages/geometry/' },
+      to: { dependencyTypes: ['core'] },
+    },
+
+    {
+      name: 'import-stays-headless',
+      comment:
+        'packages/import converts the plain tree the renderer parses; it reads no file, reaches ' +
+        'no network and uses no Node built-in, so it runs in Node tests and a future CLI alike. ' +
+        'See ADR 0023.',
+      severity: 'error',
+      from: { path: '^packages/import/' },
       to: { dependencyTypes: ['core'] },
     },
 
