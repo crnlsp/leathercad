@@ -15,7 +15,8 @@ Violating any of these is a bug, even if tests pass.
 2. **Y is up.** The screen flip is defined in exactly one place — `worldToScreen` in
    `render/src/view.ts` — and applied by the two screen backends, `render/src/canvas2d/*` and
    `render/src/svg/*`, which never derive a flip of their own. `export/src/svg/*` has its own,
-   because a file has no viewport. PDF and DXF are Y-up already and need no flip.
+   because a file has no viewport, and so will `packages/import`, reading one (ADR 0023). PDF and
+   DXF are Y-up already and need no flip.
 3. **`packages/geometry` is pure.** No DOM, no canvas, no colour, no file formats, no state, no
    randomness, no clock. It may import only `packages/core`.
 4. **Derived geometry is never persisted.** Files store parameters; evaluation recomputes paths and
@@ -100,7 +101,9 @@ apps/desktop  Electron main/preload/renderer, React panels — the ONLY package 
 ```
 
 `print`, `ui` and `cli` are reserved in `.dependency-cruiser.cjs` but not created: pagination and
-tiling live in `export`, and the React UI in `apps/desktop/src/renderer`.
+tiling live in `export`, and the React UI in `apps/desktop/src/renderer`. So is `import`
+(→ domain, geometry), until SVG import (9.20a) creates it: headless, handed a plain tree by the
+renderer's `DOMParser`, with no XML dependency (ADR 0023).
 
 No package below them imports `ui`, `editor` or `apps/desktop`. `export` and `print` run headless.
 

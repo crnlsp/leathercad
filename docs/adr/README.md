@@ -34,3 +34,4 @@ an amendment in place — 0007, 0010, 0011 and 0013 — so read an ADR to its en
 | [0020](0020-update-discovery.md) | The update check: one request to GitHub as the app starts, and nothing installed |
 | [0021](0021-leathercad-draws-its-own-icons.md) | LeatherCAD draws all its own icons: a conventional outline, a leather detail |
 | [0022](0022-typescript-7-beside-typescript-6.md) | Typecheck with TypeScript 7; keep TypeScript 6 for the tools that read its API |
+| [0023](0023-svg-parsed-by-the-platform.md) | SVG is parsed by the platform's `DOMParser` and converted by a headless `packages/import`; no XML dependency |

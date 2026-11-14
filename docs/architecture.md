@@ -164,6 +164,7 @@ Strict, one-directional dependency graph. An arrow means "may import".
      domain   ──depends on──▶ typography, to ask whether a string can be printed (DR5)
      render   ──depends on──▶ typography, for document text and part captions
      export   ──depends on──▶ domain, geometry, render (captions, display-list types), typography
+     import   ──depends on──▶ domain, geometry   (headless: a plain tree in, pieces out — ADR 0023)
      print    ──depends on──▶ export
      ui, cli  ──depend on───▶ platform, for file and dialog access
      cli      ──depends on──▶ everything except ui/editor/desktop
@@ -173,10 +174,12 @@ Strict, one-directional dependency graph. An arrow means "may import".
 The React panels and dialogs live in `apps/desktop/src/renderer`; pagination, tiling and the sheet
 plan live in `export`; and there is no CLI yet. The rules below hold for them the day they exist.
 
-**Import has no package yet.** When SVG import arrives (roadmap 9.20) it is the mirror of `export`:
-headless, above `domain` and `geometry`, reading untrusted bytes at a boundary as the loader does,
-and with its own Y flip, as `export/svg` has. Its XML parser is a new dependency, so it begins with
-an ADR, and the layering rules gain a line for it then.
+**Import has no package yet.** SVG import (roadmap 9.20) creates it as the mirror of `export`:
+headless, above `domain` and `geometry`, reading untrusted input at a boundary as the loader does,
+and with its own Y flip, as `export/svg` has. It parses nothing itself: the renderer's `DOMParser`
+reads the XML and hands it a plain tree of elements and attributes, and no XML dependency is added
+([ADR 0023](adr/0023-svg-parsed-by-the-platform.md), which also sets the order the file crosses
+the boundary in). Its layering rule is in place before the package exists.
 
 ### The rules, enforced by dependency-cruiser in CI
 
@@ -193,6 +196,9 @@ an ADR, and the layering rules gain a line for it then.
 7. `platform` may import only `core`. It declares the OS boundary; it never implements it.
 8. `typography` may import only `core` and `geometry`, and parses no font at run time: its glyph data
    is generated and committed ([ADR 0011](adr/0011-one-vendored-typeface-outlined-on-paper.md)).
+9. `import` may import only `core`, `geometry` and `domain`, and no Node built-in; its TypeScript
+   configuration has no DOM library. It converts a plain tree and never parses XML itself
+   ([ADR 0023](adr/0023-svg-parsed-by-the-platform.md)).
 
 Not a dependency-cruiser rule, but held the same way: **no package speaks the interface's
 language.** A package reports facts; `apps/desktop` words them (ADR 0018). The locale files sit in
