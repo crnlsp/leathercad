@@ -876,9 +876,9 @@
     "arrange": "Arrange",
     "convertToPath": "Convert to drawn path",
     "convertToPathNote": {
-      "circle": "It stops being a circle: its centre and diameter can no longer be typed, but it can be stretched into an oval and its points moved. A stitch line cannot follow an oval yet.",
+      "circle": "It stops being a circle: its centre and diameter can no longer be typed, but it can be stretched into an oval and its points moved.",
       "arc": "It stops being an arc: its radius and sweep can no longer be typed, but it can be stretched unevenly and its points moved.",
-      "rect": "It stops being a rectangle: its width, height and corners can no longer be typed, but it can be sheared and its points moved. A stitch line cannot follow rounded corners stretched unevenly yet."
+      "rect": "It stops being a rectangle: its width, height and corners can no longer be typed, but it can be sheared and its points moved."
     },
     "cut": "Cut",
     "cutSuffix": "off",
@@ -1208,11 +1208,6 @@
       "inward": "A {{distance}} mm edge margin is deeper than this edge can hold, so no offset path can be built.",
       "outward": "A {{distance}} mm allowance cannot be built outside this stitch line, so the outline is missing.",
       "fix": "Reduce the inset or allowance in Properties, or give the source line more room."
-    },
-    "OFFSET_UNSUPPORTED": {
-      "title": "Cannot offset curves",
-      "description": "{{featureName}} cannot be built: what it follows has free-form curves, and an offset cannot follow those yet.",
-      "fix": "Use a source made of straight lines and circular arcs, or draw the stitch line independently."
     },
     "OFFSET_SPLIT": {
       "title": "Offset came apart",

@@ -834,12 +834,6 @@ function applyDerivation(
   const followed = runOf(feature, sourcePath, sourceAnchors, op.run);
   const at: ProblemLocation = { kind: 'path', path: followed };
 
-  // Checked here rather than left to `offsetPath` to throw: the analytic
-  // offset cannot take a cubic, and that is a state of the design to report.
-  if (followed.segments.some((segment) => segment.kind === 'cubic')) {
-    throw new Failure(problem('OFFSET_UNSUPPORTED', about(feature)), at);
-  }
-
   const inwardIsLeft = !sourcePath.closed || PathOps.signedArea(sourcePath) > 0;
   const towardsInside = op.side === 'inward' ? 1 : -1;
 

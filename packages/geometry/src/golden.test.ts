@@ -5,7 +5,7 @@ import { distributeAlongPath } from './ops/distribute.js';
 import { offsetPath } from './ops/offset.js';
 import { closed, length, measure, polyline, type Path } from './path/index.js';
 import { arc, cubic, end, line, start, type Segment } from './segment/index.js';
-import { arcThroughPoints, rect, roundedRect } from './shapes.js';
+import { arcThroughPoints, ellipse, rect, roundedRect } from './shapes.js';
 import { vec, type Vec2 } from './vec2.js';
 
 /**
@@ -71,21 +71,12 @@ function stitchLineRecord(stitchLine: Path): object {
 }
 
 /**
- * Every piece the offset produced — none when it gave nothing back, a collapse
- * or a join Tier 1 cannot make — or `'refused'` where it throws rather than
- * guess: a cubic (docs/geometry.md §6.2).
+ * Every piece the offset produced — none when it gave nothing back: a
+ * collapse, a curve bent tighter than the offset, or a join Tier 1 cannot
+ * make (docs/geometry.md §6.2).
  */
-function offsetRecord(
-  p: Path,
-  distanceMm: number,
-  each: (piece: Path) => object,
-): object[] | 'refused' {
-  try {
-    return offsetPath(p, distanceMm, { join: 'round' }).map(each);
-  } catch (e) {
-    if (e instanceof RangeError) return 'refused';
-    throw e;
-  }
+function offsetRecord(p: Path, distanceMm: number, each: (piece: Path) => object): object[] {
+  return offsetPath(p, distanceMm, { join: 'round' }).map(each);
 }
 
 const cutLineRecord = (cutLine: Path): object => ({
@@ -198,8 +189,17 @@ const CORPUS: readonly { name: string; shape: string; golden: () => object }[] =
     name: 'curved-flap',
     shape:
       'An 80 × 60 mm pouch front drawn as its own stitch line, with arcs and a cubic: holes ' +
-      'follow the curve, and the allowance is refused, because a cubic has no exact offset',
+      'follow the curve, and the allowance follows it too, through arcs fitted within ' +
+      '0.005 mm (9.19), its corners bridged',
     golden: () => drawn(curvedFlap()),
+  },
+  {
+    name: 'squashed-circle',
+    shape:
+      'A 40 mm circle converted to a drawn path and stretched to 80 × 40 mm, as the app makes ' +
+      'an oval: its cubics stitched inside through arcs fitted within 0.005 mm (9.19). Its ' +
+      'ends turn on about 20 mm, so a 25 mm inset would fold over itself there, and is refused',
+    golden: () => inset(ellipse(vec(0, 0), 80, 40, 0), [...MARGINS_MM, 25]),
   },
 ];
 

@@ -115,7 +115,6 @@ const SAMPLES: { readonly [K in ProblemCode]: ProblemFacts[K] } = {
   TARGET_SPANS_PARTS: { what: 'line' },
   PARAMETER_INVALID: { ...named, parameter: 'width', requirement: 'finite', value: Number.NaN },
   OFFSET_COLLAPSED: { ...named, distanceMm: 60, side: 'inward' },
-  OFFSET_UNSUPPORTED: named,
   OFFSET_SPLIT: { ...named, droppedPieces: 2 },
   ANCHOR_MISSING: { ...named, anchor: 9, available: 4 },
   SOURCE_FAILED: { ...named, sourceId: 'f-2', sourceName: 'Outline' },

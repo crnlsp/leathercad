@@ -109,7 +109,6 @@ const CATALOGUE: { readonly [K in ProblemCode]: Describe<K> } = {
   },
   OFFSET_COLLAPSED: (f, t) =>
     t(`problems.OFFSET_COLLAPSED.${f.side}`, { distance: formatEditable(f.distanceMm, 2) }),
-  OFFSET_UNSUPPORTED: (f, t) => t('problems.OFFSET_UNSUPPORTED.description', f),
   OFFSET_SPLIT: (f, t) =>
     t('problems.OFFSET_SPLIT.description', {
       featureName: f.featureName,
@@ -207,7 +206,6 @@ const FIXES: { readonly [K in ProblemCode]?: MessageKey | Describe<K> } = {
   SEAM_RUNS_OFF_THE_LINE: 'problems.SEAM_RUNS_OFF_THE_LINE.fix',
   PARAMETER_INVALID: 'problems.PARAMETER_INVALID.fix',
   OFFSET_COLLAPSED: 'problems.OFFSET_COLLAPSED.fix',
-  OFFSET_UNSUPPORTED: 'problems.OFFSET_UNSUPPORTED.fix',
   OFFSET_SPLIT: 'problems.OFFSET_SPLIT.fix',
   ANCHOR_MISSING: (f, t) =>
     t(

@@ -845,9 +845,9 @@
     "arrange": "Anordnen",
     "convertToPath": "In gezeichneten Pfad umwandeln",
     "convertToPathNote": {
-      "circle": "Der Kreis wird zum Pfad: Mittelpunkt und Durchmesser sind nicht mehr direkt editierbar, dafür lassen sich Punkte verschieben und die Form zum Oval dehnen. Eine Nahtlinie kann einem Oval noch nicht folgen.",
+      "circle": "Der Kreis wird zum Pfad: Mittelpunkt und Durchmesser sind nicht mehr direkt editierbar, dafür lassen sich Punkte verschieben und die Form zum Oval dehnen.",
       "arc": "Der Bogen wird zum Pfad: Radius und Bogenwinkel sind nicht mehr direkt editierbar, dafür lässt sich die Form ungleichmäßig dehnen und an Punkten bearbeiten.",
-      "rect": "Das Rechteck wird zum Pfad: Breite, Höhe und Ecken sind nicht mehr direkt editierbar, dafür lässt sich die Form scheren und an Punkten bearbeiten. Eine Nahtlinie kann ungleichmäßig gedehnten Rundungen noch nicht folgen."
+      "rect": "Das Rechteck wird zum Pfad: Breite, Höhe und Ecken sind nicht mehr direkt editierbar, dafür lässt sich die Form scheren und an Punkten bearbeiten."
     },
     "cut": "Zuschnitt",
     "cutSuffix": "Stk.",
@@ -1168,10 +1168,6 @@
       "title": "Versatz zusammengefallen",
       "inward": "Ein Randabstand von {{distance}} mm ist für diese Kante zu groß.",
       "outward": "Eine Zugabe von {{distance}} mm kann außerhalb dieser Nahtlinie nicht berechnet werden."
-    },
-    "OFFSET_UNSUPPORTED": {
-      "title": "Kurven können nicht versetzt werden",
-      "description": "{{featureName}} kann nicht berechnet werden: Die Quelle enthält Freiformkurven, deren Versatz noch nicht unterstützt wird."
     },
     "OFFSET_SPLIT": {
       "title": "Versatz aufgeteilt",

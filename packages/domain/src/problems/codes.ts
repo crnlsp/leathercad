@@ -99,7 +99,6 @@ export const PROBLEM_CODES: { readonly [K in ProblemCode]: CodeInfo } = {
 
   PARAMETER_INVALID: outcome('E1'),
   OFFSET_COLLAPSED: outcome('E1'),
-  OFFSET_UNSUPPORTED: outcome('E1'),
   OFFSET_SPLIT: outcome('E2', 'warning'),
   ANCHOR_MISSING: outcome('E4'),
   SOURCE_FAILED: outcome('E3'),

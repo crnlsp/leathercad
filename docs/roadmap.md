@@ -125,7 +125,7 @@ as any item that will not make it does.
 
 ### Stage 4 — Geometry and interoperability ([plan](superpowers/plans/2026-11-03-release-1.7.md#stage-4--geometry-and-interoperability))
 
-- ☐ **9.19 Curves that can be stitched** (P1) — arcs fitted to each cubic, for the offset only.
+- ✅ **9.19 Curves that can be stitched** (P1) — arcs fitted to each cubic, for the offset only: a squashed circle's stitch line within 0.005 mm of the true inset; a curve bent tighter than the inset, or trimmed against a side at a corner (D8), refused as `OFFSET_COLLAPSED`.
 - ☐ **ADR 0023 SVG read by the platform's parser** (P1) — no XML dependency; the trust boundary written down.
 - ☐ **9.20a SVG import: units and paths** (P1).
 - ☐ **9.20b SVG import: roles and preview** (P1).
@@ -291,8 +291,8 @@ release until it is moved into one.
   operating system, and the channels LeatherCAD ships through (AUR, `.deb`, Microsoft Store). Under
   way task by task, outside any release, in
   [the plan](superpowers/plans/2026-10-31-ci-cd-and-shipping.md).
-- **A general curve editor** (Béziers) on top of 3.9. An edge drawn with it can be stitched only
-  after 9.19.
+- **A general curve editor** (Béziers) on top of 3.9. An edge drawn with it can be stitched, since
+  9.19, where it meets its neighbours smoothly or the stitching runs outside it.
 - **Pieces gliding** between Design and Sheets.
 - **Radial, angular, chained and baseline dimensions,** and dimensions between parts.
 - **A screen-calibration step,** which would make 1:1 literal on screen too.

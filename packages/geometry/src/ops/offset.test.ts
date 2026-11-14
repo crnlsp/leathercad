@@ -1,11 +1,25 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
-import { area, bbox, length, polyline, signedArea, type Path } from '../path/index.js';
-import { cubic } from '../segment/index.js';
-import { circle, roundedRect } from '../shapes.js';
-import { vec } from '../vec2.js';
+import {
+  area,
+  bbox,
+  closed,
+  distanceToPath,
+  length,
+  open,
+  polyline,
+  reverse,
+  signedArea,
+  type Path,
+} from '../path/index.js';
+import * as SegmentOps from '../segment/index.js';
+import { cubic, line, tangentAt, type Segment } from '../segment/index.js';
+import { circle, ellipse, roundedRect } from '../shapes.js';
+import { EXPORT_TOLERANCE_MM } from '../tolerance.js';
+import { add, dot, perp, scale, vec, type Vec2 } from '../vec2.js';
 
+import { arbCubicSegment } from '../../test/arbitraries.js';
 import { selfIntersections } from './intersect.js';
 import { measure } from '../path/index.js';
 import { pointAt as pointOnSegment } from '../segment/index.js';
@@ -139,17 +153,6 @@ describe('offsetPath', () => {
 
       expect(inset).toBeDefined();
       expect(selfIntersections(inset!)).toHaveLength(0);
-    });
-
-    it('rejects a cubic, which has no analytic offset', () => {
-      // This test used to hold a *line* and passed only because the convexity
-      // gate rejected a single-segment path for having no turn. With that gate
-      // gone the test was vacuous, so it now holds the cubic its name claims.
-      const p = {
-        segments: [cubic(vec(0, 0), vec(3, 10), vec(7, 10), vec(10, 0))],
-        closed: true,
-      } as Path;
-      expect(() => offsetPath(p, 1, ROUND)).toThrow(/cubic/i);
     });
 
     it('rejects a non-finite distance', () => {
@@ -320,6 +323,253 @@ describe('offsetPath', () => {
           },
         ),
         { numRuns: 300 },
+      );
+    });
+  });
+});
+
+// ——— Curves: a cubic, offset through the arcs fitted to it (9.19) ——————————
+
+describe('offsetPath along curves', () => {
+  /** D7: the stitch line is within this of the true offset (docs/geometry.md §6.2). */
+  const TOLERANCE = EXPORT_TOLERANCE_MM;
+
+  /**
+   * The true offset of every segment, sampled: each point moved `d` along the
+   * left normal. Exact by definition, wherever the path has no corner for the
+   * joins to bridge or trim — which a smooth ring of cubics has not.
+   */
+  const trueOffset = (p: Path, d: number): Vec2[] =>
+    p.segments.flatMap((segment) =>
+      Array.from({ length: 101 }, (_, i) =>
+        add(pointOnSegment(segment, i / 100), scale(perp(tangentAt(segment, i / 100)), d)),
+      ),
+    );
+
+  /** How far the result strays from the true offset, measured both ways. */
+  function strayFromTrueOffset(source: Path, d: number, result: Path): number {
+    const missed = Math.max(...trueOffset(source, d).map((q) => distanceToPath(result, q)));
+    const along = measure(result);
+    const steps = 2000;
+    let wrongDistance = 0;
+    for (let i = 0; i <= steps; i++) {
+      const p = along.pointAtDistance((along.totalLength() * i) / steps);
+      wrongDistance = Math.max(wrongDistance, Math.abs(distanceToPath(source, p) - Math.abs(d)));
+    }
+    return Math.max(missed, wrongDistance);
+  }
+
+  /** A circle of 40 mm squashed to 80 × 40, as converting and stretching one makes it. */
+  const oval = (): Path => ellipse(vec(0, 0), 80, 40, 0);
+
+  /** Steiner's formula: an offset of a smooth convex ring, by its area and perimeter. */
+  const steiner = (p: Path, d: number): number => area(p) - length(p) * d + Math.PI * d * d;
+
+  it('gives a squashed circle a stitch line, made of arcs, within 0.005 mm of the true offset', () => {
+    const [inset] = offsetPath(oval(), 3.5, ROUND);
+
+    expect(inset).toBeDefined();
+    expect(inset!.closed).toBe(true);
+    expect(inset!.segments.every((segment) => segment.kind !== 'cubic')).toBe(true);
+    expect(strayFromTrueOffset(oval(), 3.5, inset!)).toBeLessThanOrEqual(TOLERANCE);
+  });
+
+  it('encloses the area Steiner gives an inset and an outset ring', () => {
+    for (const d of [3.5, -3.5, 10, -10]) {
+      const [result] = offsetPath(oval(), d, ROUND);
+
+      // Within the tolerance across the whole perimeter, and no looser.
+      expect(Math.abs(area(result!) - steiner(oval(), d))).toBeLessThanOrEqual(
+        TOLERANCE * length(oval()),
+      );
+    }
+  });
+
+  it('refuses, by returning nothing, an inset deeper than the curve can bend round', () => {
+    // The oval is tightest at its ends, where it turns on 20 mm. A deeper
+    // inset would fold over itself there: there is no stitch line to give,
+    // and a smooth line that looks plausible would be wrong.
+    expect(offsetPath(oval(), 25, ROUND)).toEqual([]);
+    expect(offsetPath(oval(), 15, ROUND)).toHaveLength(1);
+  });
+
+  it('offsets outward round a curve however tight it is', () => {
+    const [outset] = offsetPath(oval(), -25, ROUND);
+
+    expect(strayFromTrueOffset(oval(), -25, outset!)).toBeLessThanOrEqual(TOLERANCE);
+  });
+
+  it('follows the sign of travel round a clockwise ring', () => {
+    const clockwise = reverse(oval());
+    const [left] = offsetPath(clockwise, 3.5, ROUND);
+
+    // Left of travel is now outside.
+    expect(area(left!)).toBeGreaterThan(area(oval()));
+  });
+
+  it('offsets an open curve on either side, its ends simply ending', () => {
+    const flapEdge = open([cubic(vec(80, 60), vec(60, 85), vec(20, 85), vec(0, 60))]);
+
+    for (const d of [3.5, -3.5]) {
+      const [result] = offsetPath(flapEdge, d, ROUND);
+      expect(result!.closed).toBe(false);
+      expect(strayFromTrueOffset(flapEdge, d, result!)).toBeLessThanOrEqual(TOLERANCE);
+    }
+  });
+
+  it('bridges a corner where a curve meets a line and the offset leans away from it', () => {
+    // A pouch front's allowance: outward, so each corner of the flap is
+    // bridged with an arc about it, as a corner between lines is.
+    const front = closed([
+      line(vec(0, 0), vec(80, 0)),
+      line(vec(80, 0), vec(80, 60)),
+      cubic(vec(80, 60), vec(60, 85), vec(20, 85), vec(0, 60)),
+      line(vec(0, 60), vec(0, 0)),
+    ]);
+    const [allowance] = offsetPath(front, -3, ROUND);
+
+    expect(allowance).toBeDefined();
+    expect(selfIntersections(allowance!)).toHaveLength(0);
+  });
+
+  it('refuses a corner where the inset would have to trim the curve against a line', () => {
+    // The same front stitched inside: at each corner of the flap the offsets
+    // overlap, and cutting an arc against a line is the join Tier 1 does not
+    // make (D8), as at the scooped pocket's tips. Refused, not guessed.
+    const front = closed([
+      line(vec(0, 0), vec(80, 0)),
+      line(vec(80, 0), vec(80, 60)),
+      cubic(vec(80, 60), vec(60, 85), vec(20, 85), vec(0, 60)),
+      line(vec(0, 60), vec(0, 0)),
+    ]);
+
+    expect(offsetPath(front, 3, ROUND)).toEqual([]);
+  });
+
+  it('passes over a cubic of no length, as over a corner arc the offset consumes', () => {
+    // Four coincident control points at a corner of a square: nothing to fit,
+    // and the square's own inset either side of it.
+    const withPoint = closed([
+      line(vec(0, 0), vec(100, 0)),
+      cubic(vec(100, 0), vec(100, 0), vec(100, 0), vec(100, 0)),
+      line(vec(100, 0), vec(100, 100)),
+      line(vec(100, 100), vec(0, 100)),
+      line(vec(0, 100), vec(0, 0)),
+    ]);
+    const [inset] = offsetPath(withPoint, 10, ROUND);
+
+    expect(area(inset!)).toBeCloseTo(80 * 80, 6);
+  });
+
+  it('leaves the curve it follows exactly as it was', () => {
+    const before = oval();
+    const copy = structuredClone(before);
+    offsetPath(before, 3.5, ROUND);
+
+    expect(before).toEqual(copy);
+  });
+
+  describe('properties', () => {
+    /** Ovals of 20 to 200 mm a side, turned, and an offset the curve can take. */
+    const arbOvalAndOffset = fc
+      .tuple(
+        fc.double({ min: 20, max: 200, noNaN: true }),
+        fc.double({ min: 20, max: 200, noNaN: true }),
+        fc.double({ min: -Math.PI, max: Math.PI, noNaN: true }),
+        fc.double({ min: 0.5, max: 8, noNaN: true }),
+        fc.boolean(),
+      )
+      .filter(([rx, ry, , d]) => {
+        // Comfortably inside the tightest bend, b²/a, so the inset exists.
+        const tightest = Math.min(rx, ry) ** 2 / Math.max(rx, ry);
+        return d < 0.8 * tightest;
+      })
+      .map(([rx, ry, rotation, d, inward]) => ({
+        ring: ellipse(vec(0, 0), rx, ry, rotation),
+        d: inward ? d : -d,
+      }));
+
+    it('lies within 0.005 mm of the true offset, both ways', () => {
+      fc.assert(
+        fc.property(arbOvalAndOffset, ({ ring, d }) => {
+          const [result] = offsetPath(ring, d, ROUND);
+
+          expect(strayFromTrueOffset(ring, d, result!)).toBeLessThanOrEqual(TOLERANCE);
+        }),
+        { numRuns: 60 },
+      );
+    });
+
+    it('encloses the area Steiner gives it, not merely the right bounds', () => {
+      fc.assert(
+        fc.property(arbOvalAndOffset, ({ ring, d }) => {
+          const [result] = offsetPath(ring, d, ROUND);
+
+          expect(Math.abs(area(result!) - steiner(ring, d))).toBeLessThanOrEqual(
+            TOLERANCE * length(ring),
+          );
+          expect(selfIntersections(result!)).toHaveLength(0);
+        }),
+        { numRuns: 100 },
+      );
+    });
+
+    /**
+     * Whether the curve turns back on itself somewhere — a cusp, where its
+     * direction flips. Two neighbouring directions pointing apart is a flip.
+     */
+    const reverses = (c: Segment): boolean =>
+      Array.from({ length: 1000 }, (_, i) =>
+        dot(tangentAt(c, i / 1000), tangentAt(c, (i + 1) / 1000)),
+      ).some((alignment) => alignment < 0);
+
+    it('gives any cubic that keeps its direction nothing, or a line through every point of its true offset', () => {
+      // Loops, retracted handles and wild handles included: refused where the
+      // curve bends too tightly, and otherwise never a plausible wrong line.
+      // Only one way round: a loop's offset along one side legitimately passes
+      // nearer the other side than |d|, which is validation's to judge. A cusp
+      // is the limit below.
+      fc.assert(
+        fc.property(
+          arbCubicSegment,
+          fc.double({ min: 0.1, max: 8, noNaN: true }),
+          fc.boolean(),
+          (c, distance, right) => {
+            fc.pre(!reverses(c));
+            const run = open([c]);
+            const d = right ? -distance : distance;
+            const [result] = offsetPath(run, d, ROUND);
+            if (result === undefined) return;
+
+            const missed = Math.max(...trueOffset(run, d).map((q) => distanceToPath(result, q)));
+            expect(missed).toBeLessThanOrEqual(TOLERANCE);
+          },
+        ),
+        { numRuns: 150 },
+      );
+    });
+
+    it('limit: follows a curve that reverses for less than the tolerance in its overall direction', () => {
+      // LEATHERCAD_FC_SEED=404 found it. Along the x axis, this runs right for
+      // 1.7 µm, turns back through a cusp and runs 359 mm left. The arcs lie
+      // within the tolerance of it, but a reversal that short is below what
+      // they can see, so the stitch line keeps to the left of the long run the
+      // whole way, where over those 1.7 µm the curve's left is the other side.
+      const glitch = open([cubic(vec(0, 0), vec(-5e-324, 0), vec(3.85, 0), vec(-359, 0))]);
+      const [result] = offsetPath(glitch, 0.1, ROUND);
+
+      for (const segment of result!.segments) {
+        expect(SegmentOps.start(segment).y).toBeCloseTo(-0.1, 9);
+        expect(SegmentOps.end(segment).y).toBeCloseTo(-0.1, 9);
+      }
+    });
+
+    it('is deterministic', () => {
+      fc.assert(
+        fc.property(arbOvalAndOffset, ({ ring, d }) => {
+          expect(offsetPath(ring, d, ROUND)).toEqual(offsetPath(ring, d, ROUND));
+        }),
+        { numRuns: 100 },
       );
     });
   });
@@ -499,5 +749,28 @@ describe('offsetPathTraced', () => {
         },
       ),
     );
+  });
+
+  it('reports each cubic of a ring as one contiguous stretch, and each joint between them as a corner', () => {
+    const ring = ellipse(vec(0, 0), 80, 40, 0);
+    const [piece] = offsetPathTraced(ring, 3.5, ROUND);
+    const total = length(piece!.path);
+
+    // One entry per input cubic, end to end round the whole result.
+    expect(piece!.segments).toHaveLength(ring.segments.length);
+    expect(piece!.segments[0]!.startMm).toBeCloseTo(0, 9);
+    expect(piece!.segments.at(-1)!.endMm).toBeCloseTo(total, 6);
+    for (let i = 1; i < piece!.segments.length; i++) {
+      expect(piece!.segments[i]!.startMm).toBeCloseTo(piece!.segments[i - 1]!.endMm, 9);
+    }
+
+    // A joint between two cubics is where it was, moved 3.5 mm inward.
+    for (const [i, corner] of piece!.corners.entries()) {
+      const joint = SegmentOps.end(ring.segments[i]!);
+      const inward = perp(tangentAt(ring.segments[i]!, 1));
+      expect(
+        distanceBetween(pointAt(piece!.path, corner!), add(joint, scale(inward, 3.5))),
+      ).toBeLessThan(EXPORT_TOLERANCE_MM);
+    }
   });
 });

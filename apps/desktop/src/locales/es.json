@@ -875,9 +875,9 @@
     "arrange": "Organizar",
     "convertToPath": "Convertir en trazado dibujado",
     "convertToPathNote": {
-      "circle": "Deja de ser un círculo: ya no se pueden introducir su centro y diámetro, pero se puede estirar hasta formar un óvalo y mover sus puntos. Una línea de puntadas aún no puede seguir un óvalo.",
+      "circle": "Deja de ser un círculo: ya no se pueden introducir su centro y diámetro, pero se puede estirar hasta formar un óvalo y mover sus puntos.",
       "arc": "Deja de ser un arco: ya no se pueden introducir su radio y ángulo de barrido, pero se puede estirar de forma desigual y mover sus puntos.",
-      "rect": "Deja de ser un rectángulo: ya no se pueden introducir su anchura, altura y esquinas, pero se puede sesgar y mover sus puntos. Una línea de puntadas aún no puede seguir esquinas redondeadas estiradas de forma desigual."
+      "rect": "Deja de ser un rectángulo: ya no se pueden introducir su anchura, altura y esquinas, pero se puede sesgar y mover sus puntos."
     },
     "cut": "Cortar",
     "cutSuffix": "unidades",
@@ -1204,10 +1204,6 @@
       "title": "El desplazamiento colapsa",
       "inward": "Un margen de {{distance}} mm desde el borde supera el espacio disponible.",
       "outward": "No se puede generar un margen de {{distance}} mm por fuera de esta línea de puntadas."
-    },
-    "OFFSET_UNSUPPORTED": {
-      "title": "No se pueden desplazar curvas",
-      "description": "No se puede generar {{featureName}}: su origen tiene curvas libres que un desplazamiento aún no puede seguir."
     },
     "OFFSET_SPLIT": {
       "title": "El desplazamiento se ha dividido",

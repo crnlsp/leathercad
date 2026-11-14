@@ -8,6 +8,8 @@ import {
 } from '@leathercad/core';
 
 import { path as makePath, signedArea, type Path } from '../path/index.js';
+import { EXPORT_TOLERANCE_MM } from '../tolerance.js';
+import { fitArcs } from './fitArcs.js';
 import { selfIntersections } from './intersect.js';
 import {
   arc,
@@ -17,6 +19,7 @@ import {
   start,
   tangentAt,
   type ArcSegment,
+  type CubicSegment,
   type LineSegment,
   type Segment,
 } from '../segment/index.js';
@@ -77,23 +80,32 @@ export interface OffsetPiece {
  * a narrow waist pinching apart, can only happen on a non-convex path, which
  * this tier rejects.
  *
- * **This is Tier 1 from docs/geometry.md §6.2: analytic and exact.** A line
- * offsets to a parallel line and an arc to a concentric one, so a rounded
- * rectangle's stitch line is still a rounded rectangle rather than a polyline
- * approximation of one. Nothing is flattened and no tolerance is involved.
+ * **This is Tier 1 from docs/geometry.md §6.2: analytic, and exact for lines
+ * and arcs.** A line offsets to a parallel line and an arc to a concentric
+ * one, so a rounded rectangle's stitch line is still a rounded rectangle
+ * rather than a polyline approximation of one.
  *
- * It handles **closed paths of lines and arcs, concave corners included**.
- * Each corner is judged on its own turn: where the offsets lean apart the gap
- * is bridged with an arc, and where they overlap they are trimmed to their
+ * **A cubic is offset through arcs fitted to it** (`fitArcs`, 9.19): the
+ * offset of a cubic is not a cubic, but the offset of an arc is an arc, so the
+ * stitch line along a curve is an exact offset of something within
+ * `EXPORT_TOLERANCE_MM` of it — within 0.005 mm of the true offset. The input
+ * keeps its cubics; only the result is made of arcs.
+ *
+ * It handles **open and closed paths, concave corners included**. Each corner
+ * is judged on its own turn: where the offsets lean apart the gap is bridged
+ * with an arc, and where they overlap they are trimmed to their
  * intersection. A corner arc consumed by the offset — a 3 mm radius inset by
  * 3.5 mm — becomes a sharp corner, which is what insetting a rounded rectangle
  * past its radius actually produces.
  *
- * It refuses, rather than guessing:
+ * It refuses, returning nothing, rather than guessing:
  *
- * - a cubic, which has no exact offset (the offset of a cubic is not a cubic);
- * - an overlap where either side is an arc, which is not solvable by the
- *   line-line intersection this tier uses;
+ * - **a curve that bends tighter than the offset distance**, on the side the
+ *   offset goes. Its true offset folds over itself there, and arcs fitted to
+ *   the curve would give a smooth line that looks right and is not;
+ * - an overlap where either side is an arc — a fitted one included — which is
+ *   not solvable by the line-line intersection this tier uses (D8: a thumb
+ *   scoop stitched across its tips waits for 9.11);
  * - **a result that self-intersects**, which is the honest form of the old
  *   convexity test. Asking whether the input was convex refused an ordinary
  *   thumb scoop for what concavity *could* do; asking whether the output
@@ -118,28 +130,29 @@ export function offsetPathTraced(p: Path, distanceMm: Mm, opts: OffsetOptions): 
 
   if (p.segments.length === 0) return [];
 
-  const analytic: (LineSegment | ArcSegment)[] = [];
-  for (const s of p.segments) {
-    if (s.kind === 'cubic') {
-      throw new RangeError(
-        'offsetPath cannot offset a cubic analytically — the offset of a cubic is not a cubic. ' +
-          'Flatten it first, or wait for Tier 2. See docs/geometry.md §6.2.',
-      );
-    }
-    analytic.push(s);
-  }
-
-  // A zero offset returns the path itself, arcs and all — so every segment is
-  // its own image and every corner stays where it is.
+  // A zero offset returns the path itself, curves and all — so every segment
+  // is its own image and every corner stays where it is.
   if (approxZero(d, EPS_POINT)) return [identityTrace(p)];
 
   // Kept alongside `offsets` because a consumed arc is dropped, which would
-  // otherwise break the index correspondence the joins rely on.
+  // otherwise break the index correspondence the joins rely on. A cubic is
+  // several entries, one for each arc fitted to it.
   const sources: (LineSegment | ArcSegment)[] = [];
   const offsets: Segment[] = [];
   /** offsets index → input segment index, so the trace can speak in inputs. */
   const inputOf: number[] = [];
-  for (const [index, s] of analytic.entries()) {
+  for (const [index, s] of p.segments.entries()) {
+    if (s.kind === 'cubic') {
+      const fitted = offsetCubic(s, d);
+      if (fitted === undefined) return [];
+      for (const piece of fitted) {
+        sources.push(piece.source);
+        offsets.push(piece.offset);
+        inputOf.push(index);
+      }
+      continue;
+    }
+
     if (s.kind === 'arc') {
       // Travelling counter-clockwise the left normal points at the centre, so
       // offsetting left shrinks the radius; clockwise it grows.
@@ -248,18 +261,24 @@ function trace(
     if (before !== undefined) joinImage.set(j, before.endMm);
   }
 
+  // A cubic is offset as several arcs, so its range runs from the start of
+  // the first to the end of the last.
   const segments: (OffsetRange | null)[] = Array.from({ length: inputCount }, () => null);
   for (const [offsetIndex, inputIndex] of inputOf.entries()) {
-    segments[inputIndex] = rangeOf.get(offsetIndex) ?? null;
+    const range = rangeOf.get(offsetIndex);
+    if (range === undefined) continue;
+    const earlier = segments[inputIndex];
+    segments[inputIndex] = earlier ? { startMm: earlier.startMm, endMm: range.endMm } : range;
   }
 
-  // The corner at the end of input segment i is the join after whichever
-  // offset covers it — so a consumed corner arc reports the join its two
-  // neighbours now meet at, which is exactly where that corner went.
+  // The corner at the end of input segment i is the join after the last
+  // offset that covers it — so a consumed corner arc reports the join its two
+  // neighbours now meet at, which is exactly where that corner went, and a
+  // cubic's corner is after the last of its arcs, not between two of them.
   const corners: (Mm | null)[] = Array.from({ length: inputCount }, () => null);
   let offsetIndex = -1;
   for (let input = 0; input < inputCount; input++) {
-    const surviving = inputOf.indexOf(input);
+    const surviving = inputOf.lastIndexOf(input);
     if (surviving !== -1) offsetIndex = surviving;
     if (offsetIndex === -1) continue;
     corners[input] = joinImage.get(offsetIndex) ?? null;
@@ -280,6 +299,54 @@ function offsetLine(s: LineSegment, d: Mm): Segment {
 
   const n = scale(perp(u), d);
   return line(add(s.a, n), add(s.b, n));
+}
+
+/** One arc or line fitted to a cubic, and its offset. */
+interface FittedOffset {
+  readonly source: LineSegment | ArcSegment;
+  readonly offset: Segment;
+}
+
+/**
+ * A cubic's offset, through the arcs fitted to it — or `undefined` where the
+ * cubic bends tighter than `|d|` on the side the offset goes, and its true
+ * offset folds over itself.
+ *
+ * Each fitted piece is moved along the normals at its two ends, which it
+ * shares with its neighbours, so consecutive offsets meet exactly and the
+ * joins between them are never corners. An arc's ends move along its radius,
+ * which is the concentric arc; a line — an arc too flat to store — has its ends
+ * moved and is redrawn between them.
+ */
+function offsetCubic(c: CubicSegment, d: Mm): FittedOffset[] | undefined {
+  const { pieces, sharpestBend } = fitArcs(c, EXPORT_TOLERANCE_MM);
+
+  // Left of travel shrinks a curve that bends left, and right one that bends
+  // right; it fails where the radius it bends on reaches the distance.
+  const bend = d > 0 ? sharpestBend.left : sharpestBend.right;
+  if (bend * Math.abs(d) >= 1) return undefined;
+
+  const out: FittedOffset[] = [];
+  for (const { segment, startTangent, endTangent } of pieces) {
+    if (segment.kind === 'arc') {
+      const radius = segment.radius - Math.sign(segment.sweepAngle) * d;
+      // The fit bends where the samples did not see: the same refusal.
+      if (radius < EPS_POINT) return undefined;
+      out.push({
+        source: segment,
+        offset: arc(segment.centre, radius, segment.startAngle, segment.sweepAngle),
+      });
+      continue;
+    }
+    out.push({
+      source: segment,
+      offset: line(
+        add(segment.a, scale(perp(startTangent), d)),
+        add(segment.b, scale(perp(endTangent), d)),
+      ),
+    });
+  }
+  return out;
 }
 
 /**
