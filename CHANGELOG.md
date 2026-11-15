@@ -7,6 +7,14 @@ yet is listed in the open
 [release pull request](https://github.com/crnlsp/leathercad/pulls?q=is%3Apr+is%3Aopen+label%3A%22autorelease%3A+pending%22).
 Downloads are on the [releases page](https://github.com/crnlsp/leathercad/releases).
 
+## [1.6.1](https://github.com/crnlsp/leathercad/compare/leathercad-v1.6.0...leathercad-v1.6.1) (2026-11-14)
+
+
+### Bug Fixes
+
+* **deps:** minimatch 9 and 10 are forced to 11, which fixes GHSA-g3hv-75wg-m249 ([5fe98e0](https://github.com/crnlsp/leathercad/commit/5fe98e0345e061fd8f434f3fbfd77c3ada7adf7d))
+* **deps:** minimatch 9 and 10 are forced to 11, which fixes GHSA-g3hv-75wg-m249 ([14f60d6](https://github.com/crnlsp/leathercad/commit/14f60d6b10a44c4d0edc449e0077e268b801c700))
+
 ## [1.6.0](https://github.com/crnlsp/leathercad/compare/leathercad-v1.5.0...leathercad-v1.6.0) (2026-11-02)
 
 
