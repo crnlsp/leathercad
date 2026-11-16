@@ -30,7 +30,8 @@ While working:
   whole corpus opening, no shipped migration touched.
 - Every word on screen in `en.json` through `t()`; facts below `apps/desktop`, never sentences.
 - No new dependency without an ADR; no private data in commits, pull requests, docs, fixtures or
-  screenshots. Never press *Print* in a script: the preview lists real printers.
+  screenshots. Never press *Print* in a script: the preview lists real printers. A script that
+  launches the app runs as `pnpm hidden-screen node <script>`, never on the maintainer's screen.
 - Tick your slice's line in `docs/roadmap.md`'s 1.7 section in the pull request that finishes it,
   and update the plan's slice with an *As built* note of what the plan did not know. Never add a
   ☐ or ◐ line outside that section.

@@ -41,6 +41,7 @@ pnpm test             # unit + property + export + SVG snapshot + format fixture
 pnpm test locales     # structural integrity: keys, placeholders, plural forms (ADR 0018)
 pnpm locales:report   # informational logical-message coverage; missing translations never fail CI
 pnpm test:e2e         # builds, then Playwright drives the real Electron app (incl. the axe scan); hidden Xvfb on Linux, LEATHERCAD_E2E_HEADED=1 to watch
+pnpm hidden-screen <cmd>  # Linux: runs a command that launches the app on a hidden Xvfb screen, at low priority (needs Xvfb)
 pnpm test:visual      # pixel diffs in the pinned Playwright container; needs `pnpm build` and Docker
 pnpm test:packaged    # packages the app, then smoke-tests the packaged binary
 pnpm docs:media       # retakes the README's screenshots and demo from the real app, in the pinned Playwright container (needs Docker)
@@ -60,6 +61,12 @@ pnpm icons:generate   # render apps/desktop/build/icon.svg to .png/.ico/.icns (n
 `pnpm test:visual --update-snapshots` rewrites the pixel references. Look at every changed image
 before committing it. A baseline from `pnpm bench:baseline` only compares on the machine that
 recorded it.
+
+**Never open the app on the maintainer's screen from a script.** On Linux `pnpm test:e2e` and
+`pnpm test:packaged` hide their own windows. Anything else that launches Electron — a scratch
+screenshot script, a `tools/perf-*.mjs` run outside its container — runs as
+`pnpm hidden-screen node <script>`: plain `xvfb-run` is not enough on a Wayland session, where
+Electron ignores `DISPLAY`. Under it `page.screenshot()` works. Only `pnpm dev` is for watching.
 
 Two long-lived branches: **`main` is production** — what is released — and **`develop` is
 development**. Work lands on `develop`; `develop` reaches `main` through a pull request only when

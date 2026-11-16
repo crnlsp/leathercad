@@ -81,8 +81,9 @@ PWDEBUG=1 pnpm exec playwright test e2e/keys.spec.ts
 - *Xvfb exited before it was ready*: its own message follows. A stale lock in `/tmp/.X*-lock` from
   a killed server is harmless; Xvfb picks the next free display.
 - *A window still appears*: the run is headed — check `LEATHERCAD_E2E_HEADED` and `PWDEBUG` — or
-  it is one of the `tools/perf-*.mjs` scripts, which launch the app themselves; run those under
-  `xvfb-run -a -s '-screen 0 1920x1080x24'`.
+  it is a script that launches the app itself, such as a `tools/perf-*.mjs` run outside its
+  container. Run it as `pnpm hidden-screen node <script>`, which drops the Wayland session so
+  Electron cannot open there; plain `xvfb-run` is not enough under Wayland.
 - *A test passes headed and fails hidden*: it should not; Linux CI runs it under Xvfb too. Look at
   its trace (`--trace on`) rather than running it headed to get green.
 
