@@ -4,7 +4,7 @@ export class SvgImportError extends Error {
   }
 }
 
-const numberPattern = /^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?/;
+const numberPattern = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?/;
 /** SVG's number grammar, including adjacent signed numbers and exponents. */
 export class Numbers {
   private rest: string;

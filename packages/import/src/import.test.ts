@@ -245,3 +245,17 @@ it('copies a missing rounded rectangle radius before clamping each axis', () => 
   const vertical = p?.segments.filter((s) => s.kind === 'line')[1];
   expect(vertical && SegmentOps.start(vertical).y).toBeCloseTo(-50, 8);
 });
+
+it.each(['.0', '1', '1.', '1e2'])(
+  'refuses a whitespace-heavy malformed SVG length after %s',
+  (prefix) => {
+    const width = `${prefix}${' '.repeat(100_000)}!`;
+    expect(() => importSvg(root({ width, height: '100mm', viewBox: '0 0 100 100' }))).toThrow(
+      'UNSUPPORTED_SVG',
+    );
+  },
+);
+it.each([' 100 mm ', '\t1e2\nmm\r', '+100.mm'])('preserves SVG length grammar with %j', (width) => {
+  const p = importSvg(root({ width, height: '100mm', viewBox: '0 0 100 100' })).shapes[0]?.paths[0];
+  expect(p && PathOps.bbox(p)?.maxX).toBeCloseTo(100, 8);
+});

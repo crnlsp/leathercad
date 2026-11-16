@@ -50,8 +50,9 @@ const units: Readonly<Record<string, number>> = {
   pc: 25.4 / 6,
 };
 function length(text: string, dpi: number | undefined): number {
-  const match = /^\s*([+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)\s*(mm|cm|in|pt|pc|px)?\s*$/.exec(
-    text,
+  // Trim once so whitespace cannot be repartitioned across optional units.
+  const match = /^([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)\s*(mm|cm|in|pt|pc|px)?$/.exec(
+    text.trim(),
   );
   if (!match) throw new SvgImportError('UNSUPPORTED_SVG');
   const value = Number(match[1]),
