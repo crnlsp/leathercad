@@ -87,7 +87,7 @@ as any item that will not make it does.
 
 - ☐ **R11 1.6's printing, measured on paper** — arrowheads, hole rows, taped grids and calibration, exact readings in the log.
 - ☐ **PERF-018 Packaged baselines** — startup, idle, memory and a soak on the packaged app, and 1.7's workloads.
-- ☐ **U.21 The UX baseline** — every screen inspected, keyboard-only and with a screen reader; the [register](superpowers/specs/2026-11-03-1.7-ux-audit.md) complete.
+- ✅ **U.21 The UX baseline** — every screen inspected on Linux, keyboard-only and through the accessibility tree a screen reader reads; the [register](superpowers/specs/2026-11-03-1.7-ux-audit.md) complete, X19–X39 added. Orca's own speech, Windows and macOS wait for the candidate (R17).
 - ☐ **R13 The Windows installer, installed in CI** — install, upgrade from 1.6.0 and uninstall, with the maker's data checked.
 - ✅ **Q41 An opened project starts with Select** — every opening route, restored and recovered work included; new blank projects start in Rectangle and tab switches keep the chosen tool.
 
