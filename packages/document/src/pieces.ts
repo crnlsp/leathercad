@@ -1,4 +1,4 @@
-import { approxEq, EPS_ANGLE, quantise } from '@leathercad/core';
+import { approxEq, EPS_ANGLE, quantise, type Mm } from '@leathercad/core';
 import {
   evaluate,
   isHolesAlongALine,
@@ -13,9 +13,20 @@ import {
   type Seam,
   type SeamId,
 } from '@leathercad/domain';
-import { Vec2Ops, type Vec2 } from '@leathercad/geometry';
+import { Vec2Ops, type Path, type Vec2 } from '@leathercad/geometry';
 
-import { boxOfParts, moveClear, movePieces, relock, repointed } from './commands.js';
+import {
+  boxOfParts,
+  cutOut,
+  drawnStitchLine,
+  foldLine,
+  markingLine,
+  moveClear,
+  movePieces,
+  pathPart,
+  relock,
+  repointed,
+} from './commands.js';
 import { command, type Command } from './document.js';
 
 /**
@@ -280,4 +291,56 @@ function sameAxis(a: MirrorAxis, b: MirrorAxis): boolean {
 
 function allFeatures(parts: readonly Part[]): Feature[] {
   return parts.flatMap((part) => part.features);
+}
+
+/** A piece as drawn elsewhere — an imported file's (9.20) — its paths sorted by role. */
+export interface DrawnPiece {
+  readonly name: string;
+  readonly outline: Path;
+  readonly cutOuts: readonly Path[];
+  readonly stitchLines: readonly Path[];
+  readonly foldLines: readonly Path[];
+  readonly markings: readonly Path[];
+}
+
+/**
+ * Drawn pieces made parts, as one undo step (9.20): each outline a part, with
+ * its cut-outs, its stitch lines drawn as they were, its folds (valley, with
+ * the maker's leather thickness, as the fold tool makes them) and its markings
+ * (alignment, as an open drawn line is). Every feature is drawn geometry, so
+ * the parts are sound by construction: one outer contour each, every inner
+ * one closed. Into an empty project they keep their place; into one with a
+ * drawing they land clear of it, as a paste does.
+ */
+export function importPieces(
+  pieces: readonly DrawnPiece[],
+  nextId: () => string,
+  foldThicknessMm?: Mm,
+): { command: Command; partIds: readonly PartId[] } {
+  const parts = pieces.map((piece): Part => {
+    const outline = pathPart(nextId() as PartId, nextId() as FeatureId, piece.name, piece.outline);
+    const drawn = (path: Path) => ({ kind: 'path', path }) as const;
+    const id = () => nextId() as FeatureId;
+    return {
+      ...outline,
+      features: [
+        ...outline.features,
+        ...piece.cutOuts.map((p) => cutOut(id(), drawn(p))),
+        ...piece.stitchLines.map((p) => drawnStitchLine(id(), drawn(p))),
+        ...piece.foldLines.map((p) => foldLine(id(), drawn(p), 'valley', foldThicknessMm)),
+        ...piece.markings.map((p) => markingLine(id(), drawn(p), 'alignment')),
+      ],
+    };
+  });
+  const add = command({ action: 'import', count: parts.length }, (document) => {
+    if (parts.length === 0) return document;
+    const project: Project = {
+      ...document.project,
+      parts: [...document.project.parts, ...parts],
+    };
+    return {
+      project: document.project.parts.length === 0 ? project : moveClear(project, parts),
+    };
+  });
+  return { command: add, partIds: parts.map((part) => part.id) };
 }

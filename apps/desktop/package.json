@@ -25,6 +25,7 @@
     "@leathercad/editor": "workspace:*",
     "@leathercad/export": "workspace:*",
     "@leathercad/geometry": "workspace:*",
+    "@leathercad/import": "workspace:*",
     "@leathercad/persist": "workspace:*",
     "@leathercad/platform": "workspace:*",
     "@leathercad/render": "workspace:*",

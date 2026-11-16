@@ -22,6 +22,7 @@ export function ProjectMenu({
   onNew,
   onNewFromTemplate,
   onOpen,
+  onImportSvg,
   onSaveAs,
   onSaveAsTemplate,
   onRename,
@@ -39,6 +40,8 @@ export function ProjectMenu({
   /** *New project from template…* (8.12): the picker. */
   onNewFromTemplate: () => void;
   onOpen: () => void;
+  /** *Import SVG pattern…* (9.20). */
+  onImportSvg: () => void;
   onSaveAs: () => void;
   /** *Save as template…* (8.12). */
   onSaveAsTemplate: () => void;
@@ -65,6 +68,7 @@ export function ProjectMenu({
             newProject: onNew,
             newFromTemplate: onNewFromTemplate,
             open: onOpen,
+            importSvg: onImportSvg,
             saveAs: onSaveAs,
             saveAsTemplate: onSaveAsTemplate,
             // A keyboard's choice gives focus back to the menu once the name

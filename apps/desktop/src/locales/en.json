@@ -165,7 +165,9 @@
     "recentGone": "That project is no longer there",
     "recentGoneDetail": "It was moved, renamed or deleted, so it has been taken off the recent projects.",
     "newFromTemplate": "New project from template…",
-    "saveAsTemplate": "Save as template…"
+    "saveAsTemplate": "Save as template…",
+    "importSvg": "Import SVG pattern…",
+    "importSvgNote": "Inkscape or Illustrator drawings, at their true size"
   },
   "macMenu": {
     "edit": "Edit",
@@ -1476,6 +1478,8 @@
     "duplicate-part": "Duplicate part",
     "paste_one": "Paste piece",
     "paste_other": "Paste {{count}} pieces",
+    "import_one": "Import piece",
+    "import_other": "Import {{count}} pieces",
     "fix": "Fix {{name}}",
     "edit-derivation": "Edit derivation",
     "edit-dimension": "Edit dimension",
@@ -1800,5 +1804,51 @@
     "markedEnds": "Marked at the first and last pair",
     "markedEvery_one": "Marked at every pair",
     "markedEvery_other": "Marked every {{count}} pairs"
+  },
+  "svgImport": {
+    "openTitle": "Import an SVG pattern",
+    "fileType": "SVG drawing",
+    "title": "Import {{name}}",
+    "size": "Size",
+    "sizeValue": "{{width}} × {{height}} mm",
+    "scale": "Scale",
+    "scaleFile": "From the file’s own units",
+    "scale96": "96 pixels to the inch (Inkscape)",
+    "scale72": "72 pixels to the inch (Illustrator)",
+    "askDensity": "The drawing gives no unit, so its size depends on what drew it. How many pixels to the inch?",
+    "pieces": "Pieces",
+    "piecesValue_one": "{{count}} piece",
+    "piecesValue_other": "{{count}} pieces",
+    "contents": "In them",
+    "cutOuts_one": "{{count}} cut-out",
+    "cutOuts_other": "{{count}} cut-outs",
+    "stitchLines_one": "{{count}} stitch line",
+    "stitchLines_other": "{{count}} stitch lines",
+    "folds_one": "{{count}} fold",
+    "folds_other": "{{count}} folds",
+    "markings_one": "{{count}} marking",
+    "markings_other": "{{count}} markings",
+    "holes_one": "{{count}} small circle in a row, {{diameter}} mm across, looks like a hole to punch. It is not imported: a stitch line or a hole row makes it.",
+    "holes_other": "{{count}} small circles in a row, {{diameter}} mm across, look like holes to punch. They are not imported: a stitch line or a hole row makes them.",
+    "leftOutTitle": "Left out",
+    "leftOut": {
+      "element_one": "{{count}} “{{name}}” element",
+      "element_other": "{{count}} “{{name}}” elements",
+      "outside-piece_one": "{{count}} line outside every piece",
+      "outside-piece_other": "{{count}} lines outside every piece",
+      "open-on-cut-layer_one": "{{count}} open path on the cut layer, which cuts nothing",
+      "open-on-cut-layer_other": "{{count}} open paths on the cut layer, which cut nothing"
+    },
+    "rolesNote": "Closed paths are cut, open ones are markings. A layer named cut, stitch or fold says otherwise.",
+    "noPieces": "Nothing in this drawing is a closed outline, so it has no piece to import.",
+    "intoProject": "Import into this project",
+    "asNew": "Import as a new project",
+    "refusedTitle": "Could not import the drawing",
+    "refused": {
+      "INVALID_SVG": "This file could not be read as an SVG drawing.",
+      "UNSUPPORTED_SVG": "This drawing uses a length or a setting LeatherCAD cannot read yet.",
+      "SCALE_REQUIRED": "This drawing gives no size LeatherCAD can read.",
+      "tooBig": "This drawing is too large to import: it asks for more than {{limit}} elements or curve steps."
+    }
   }
 }

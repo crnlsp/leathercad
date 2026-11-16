@@ -96,6 +96,8 @@ export function projectMenu(
     /** A new project from one of the templates (8.12): the picker. */
     readonly newFromTemplate: () => void;
     readonly open: () => void;
+    /** An SVG pattern's pieces, previewed, into this project or a new one (9.20). */
+    readonly importSvg: () => void;
     readonly saveAs: () => void;
     /** Saves the project as one of the maker's templates (8.12). */
     readonly saveAsTemplate: () => void;
@@ -130,6 +132,13 @@ export function projectMenu(
       label: t('menu.open'),
       keys: 'openProject',
       onChoose: actions.open,
+    },
+    {
+      kind: 'item',
+      id: 'import-svg',
+      label: t('menu.importSvg'),
+      note: t('menu.importSvgNote'),
+      onChoose: actions.importSvg,
     },
     {
       kind: 'item',

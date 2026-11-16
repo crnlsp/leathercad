@@ -11,6 +11,7 @@ import {
 import { closeApp } from '../closeApp.js';
 import { fromProjectMenu } from '../projectMenu.js';
 import { drawAPanel } from '../launchApp.js';
+import { chooseSvg } from '../svgPatterns.js';
 
 /**
  * What the app looks like, pixel for pixel. See docs/testing.md §5.2.
@@ -233,6 +234,20 @@ test('the print test on its sheets (7.4c)', async () => {
     await expect(window.getByTestId('cursor-readout')).toHaveText('—');
 
     await expect(window.getByTestId('editor-canvas')).toHaveScreenshot('print-test-sheets.png');
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('an SVG pattern’s import preview (9.20b)', async () => {
+  const { app, window } = await launch();
+  try {
+    await chooseSvg(app, 'cardHolder');
+    await window.getByTestId('project-menu').click();
+    await window.getByTestId('import-svg').click();
+    const dialog = window.getByTestId('svg-import-dialog');
+    await expect(dialog.getByTestId('svg-import-size')).toHaveText('100.0 × 60.0 mm');
+    await expect(dialog).toHaveScreenshot('svg-import-preview.png');
   } finally {
     await closeApp(app);
   }

@@ -13,7 +13,9 @@ import {
 import { numbers, SvgImportError } from './numbers.js';
 import { readPath } from './path.js';
 import { readTransform } from './transform.js';
+import { LAYER_NAMES, type LayerName } from './roles.js';
 export { SvgImportError } from './numbers.js';
+export { assignRoles, type SvgPattern } from './roles.js';
 
 /** ADR 0023: data only; no DOM, text content, or executable objects. */
 export interface SvgAttribute {
@@ -33,14 +35,28 @@ export interface SvgOptions {
 export interface SvgShape {
   readonly element: SvgElement;
   readonly paths: readonly Path[];
+  /** The nearest enclosing group named `cut`, `stitch` or `fold` (9.20b). */
+  readonly layer?: LayerName;
 }
 export interface SvgGeometry {
   readonly shapes: readonly SvgShape[];
   readonly omitted: Readonly<Record<string, number>>;
 }
 const SVG = 'http://www.w3.org/2000/svg';
-function attr(node: SvgElement, name: string): string | undefined {
-  return node.attributes.find((a) => a.namespace === '' && a.localName === name)?.value;
+const INKSCAPE = 'http://www.inkscape.org/namespaces/inkscape';
+function attr(node: SvgElement, name: string, namespace = ''): string | undefined {
+  return node.attributes.find((a) => a.namespace === namespace && a.localName === name)?.value;
+}
+/**
+ * A group's layer name, if it is one of the roles: Inkscape's label, else
+ * Illustrator's `data-name`, else its id, which Illustrator sets to the
+ * layer's name.
+ */
+function layerName(group: SvgElement): LayerName | undefined {
+  const name = (attr(group, 'label', INKSCAPE) ?? attr(group, 'data-name') ?? attr(group, 'id'))
+    ?.trim()
+    .toLowerCase();
+  return LAYER_NAMES.find((layer) => layer === name);
 }
 const units: Readonly<Record<string, number>> = {
   mm: 1,
@@ -188,7 +204,9 @@ function convertSvg(root: SvgElement, options: SvgOptions): SvgGeometry {
     shapes: SvgShape[] = [],
     omitted = new Map<string, number>();
   const flip = compose(view.matrix, MatOps.fromScale(1, -1));
-  const stack = [{ node: root, matrix: flip }];
+  const stack: { node: SvgElement; matrix: Mat2x3; layer?: LayerName }[] = [
+    { node: root, matrix: flip },
+  ];
   while (stack.length) {
     const entry = stack.pop();
     if (!entry) break;
@@ -199,7 +217,9 @@ function convertSvg(root: SvgElement, options: SvgOptions): SvgGeometry {
       continue;
     }
     if (node.localName === 'g' || node === root) {
-      for (const child of [...node.children].reverse()) stack.push({ node: child, matrix });
+      const layer = (node === root ? undefined : layerName(node)) ?? entry.layer;
+      for (const child of [...node.children].reverse())
+        stack.push({ node: child, matrix, ...(layer === undefined ? {} : { layer }) });
       continue;
     }
     // Frobenius norm bounds the stretch of any direction under this matrix.
@@ -228,7 +248,11 @@ function convertSvg(root: SvgElement, options: SvgOptions): SvgGeometry {
         if (bounds === null || !Object.values(bounds).every(Number.isFinite))
           throw new SvgImportError('INVALID_SVG');
       }
-    shapes.push({ element: node, paths: transformed });
+    shapes.push({
+      element: node,
+      paths: transformed,
+      ...(entry.layer === undefined ? {} : { layer: entry.layer }),
+    });
   }
   return { shapes, omitted: Object.fromEntries(omitted) };
 }

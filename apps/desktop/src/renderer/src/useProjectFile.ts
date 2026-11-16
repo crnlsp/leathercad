@@ -1,5 +1,5 @@
 import { ResourceLimitError } from '@leathercad/core';
-import { setProjectName, type Document } from '@leathercad/document';
+import { setProjectName, type Command, type Document } from '@leathercad/document';
 import { exportReadiness, type ExportReadiness, type Project } from '@leathercad/domain';
 import { exportDxf, exportSvg, type ExportRole, type TiledPart } from '@leathercad/export';
 import {
@@ -155,6 +155,11 @@ export function useProjectFile(
   restoreKept: (data: Uint8Array, path: string | null, restore: TabRestore) => ProjectTab | null;
   /** Starts an empty, untitled project in a tab of its own. */
   newProject: () => void;
+  /**
+   * A new untitled project with `first` as its first undo step — an
+   * import's (9.20) — framed whole when shown.
+   */
+  newWith: (first: Command) => void;
   /**
    * A new project from a template (8.12), in a tab of its own: untitled and
    * unchanged, so Save asks where and closing it untouched asks nothing, and
@@ -432,6 +437,18 @@ export function useProjectFile(
     onStartError(null);
   }, [blank, onNewTab, onStartError, tabFor, tabs]);
 
+  const newWith = useCallback(
+    (first: Command) => {
+      const tab = tabFor(blank(), nextUntitled(tabs.tabs));
+      tab.store.dispatch(first);
+      tab.cameras.frameDrawing = true;
+      tabs.add(tab);
+      onNewTab(tab);
+      onStartError(null);
+    },
+    [blank, onNewTab, onStartError, tabFor, tabs],
+  );
+
   const adoptRecovered = useCallback(
     (project: Project) => {
       const tab = tabFor({ project });
@@ -543,6 +560,7 @@ export function useProjectFile(
     open,
     openPath,
     newProject,
+    newWith,
     adoptRecovered,
     exportPdfFile,
     exportDrawingFile,

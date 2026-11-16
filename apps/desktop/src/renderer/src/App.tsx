@@ -1,4 +1,4 @@
-import { createIdFactory, formatMm, formatNumber } from '@leathercad/core';
+import { createIdFactory, formatMm, formatNumber, ResourceLimitError } from '@leathercad/core';
 import {
   DocumentStore,
   deleteFeatures,
@@ -7,13 +7,16 @@ import {
   drawnBounds,
   duplicatePart,
   emptyDocument,
+  importPieces,
   isEmptySelection,
   selectedFeatureIds,
   planDelete,
   setProjectName,
   type DeleteResolution,
   type Document,
+  type DrawnPiece,
 } from '@leathercad/document';
+import { SvgImportError, type SvgElement } from '@leathercad/import';
 import {
   badgesOf,
   countBySeverity,
@@ -66,6 +69,9 @@ import {
   type PiecesClipboard,
 } from './piecesClipboard.js';
 import { listenForContextMenuKeys } from './keyboardContextMenu.js';
+import { refusalText, svgName } from './svgImport.js';
+import { SvgImportDialog, type ImportTarget } from './SvgImportDialog.js';
+import { svgTree } from './svgTree.js';
 import { DeleteDialog } from './DeleteDialog.js';
 import { ContextMenu } from './Menu.js';
 import { TextFieldMenu } from './TextFieldMenu.js';
@@ -669,6 +675,33 @@ export function App({
       })
       .catch(() => undefined);
   }, [storeState, tabs, t]);
+
+  /**
+   * An SVG pattern (9.20b): chosen in the app's own dialog, which grants the
+   * path, read by the main process, parsed here, and previewed before
+   * anything reaches a project. What cannot be read is said, and changes
+   * nothing.
+   */
+  const [svgImport, setSvgImport] = useState<{ tree: SvgElement; name: string } | null>(null);
+  const importSvg = useCallback(async () => {
+    try {
+      const host = getPlatformHost();
+      const path = await host.showOpenDialog({
+        title: t('svgImport.openTitle'),
+        filters: [{ name: t('svgImport.fileType'), extensions: ['svg'] }],
+      });
+      if (path === null) return;
+      setSvgImport({ tree: svgTree(await host.readFile(path)), name: svgName(path) });
+    } catch (error) {
+      setNotice({
+        title: t('svgImport.refusedTitle'),
+        text:
+          error instanceof SvgImportError || error instanceof ResourceLimitError
+            ? refusalText(error, i18n)
+            : fileErrorText(error, t),
+      });
+    }
+  }, [i18n, t]);
 
   // The templates (8.12): the picker, open with what the main process listed,
   // and the tab being saved as one.
@@ -1347,6 +1380,26 @@ export function App({
   );
 
   /**
+   * An import's pieces, as one undo step (9.20b): into the open project,
+   * selected and framed as a paste is, or as a new project's first step.
+   * Folds take the maker's leather, as the fold tool's do.
+   */
+  const importPiecesInto = useCallback(
+    (pieces: readonly DrawnPiece[], target: ImportTarget) => {
+      setSvgImport(null);
+      const made = importPieces(pieces, nextId, preferences.leatherThicknessMm ?? undefined);
+      if (target === 'new') {
+        file.newWith(made.command);
+        return;
+      }
+      store.dispatch(made.command);
+      store.selectParts(made.partIds);
+      runZoom('fitSelection');
+    },
+    [file, nextId, preferences.leatherThicknessMm, runZoom, store],
+  );
+
+  /**
    * The right-click menu (8.8), open at a point, or closed. One for the board
    * and the Parts list: both right-clicks come here. `boardAt` is where on the
    * board it was opened, for *Paste* (8.8b); `empty` when that was empty board.
@@ -1488,6 +1541,7 @@ export function App({
               onNew={newProject}
               onNewFromTemplate={showTemplates}
               onOpen={() => void openProject()}
+              onImportSvg={() => void importSvg()}
               onSaveAs={() => (active === null ? undefined : void file.save(active, true))}
               onSaveAsTemplate={() => setSavingTemplate(active)}
               onRename={setRenaming}
@@ -2103,6 +2157,16 @@ export function App({
               return { said: t('templates.invalid', { name: name.trim() }), taken: false };
             }}
             onClose={() => setSavingTemplate(null)}
+          />
+        )}
+
+        {svgImport !== null && (
+          <SvgImportDialog
+            tree={svgImport.tree}
+            name={svgImport.name}
+            canImportIntoOpen={hasProject}
+            onCancel={() => setSvgImport(null)}
+            onImport={importPiecesInto}
           />
         )}
 
