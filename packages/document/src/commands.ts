@@ -1140,14 +1140,12 @@ export function addDrawnStitchLine(
   featureId: FeatureId,
   source: GeometrySource,
 ): Command {
-  return addFeature(partId, {
-    id: featureId,
-    kind: 'stitch-line',
-    name: 'Stitch line',
-    visible: true,
-    locked: false,
-    source,
-  });
+  return addFeature(partId, drawnStitchLine(featureId, source));
+}
+
+/** A drawn stitch line's record, as `addDrawnStitchLine` adds it and an import makes it. */
+export function drawnStitchLine(id: FeatureId, source: GeometrySource): Feature {
+  return { id, kind: 'stitch-line', name: 'Stitch line', visible: true, locked: false, source };
 }
 
 /** Holes along a stitch line, at the pitch of a pricking iron. */
@@ -1349,8 +1347,18 @@ export function addFoldLine(
   // never reads a preference, so a file folds the same on every machine.
   materialThicknessMm?: Mm,
 ): Command {
-  return addFeature(partId, {
-    id: featureId,
+  return addFeature(partId, foldLine(featureId, source, direction, materialThicknessMm));
+}
+
+/** A fold's record, as `addFoldLine` adds it and an import makes it. */
+export function foldLine(
+  id: FeatureId,
+  source: GeometrySource,
+  direction: FoldLine['direction'],
+  materialThicknessMm?: Mm,
+): Feature {
+  return {
+    id,
     kind: 'fold-line',
     direction,
     name: `Fold (${direction})`,
@@ -1358,7 +1366,7 @@ export function addFoldLine(
     locked: false,
     source,
     ...(materialThicknessMm === undefined ? {} : { materialThicknessMm }),
-  });
+  };
 }
 
 /** How far a new dimension sits off what it measures, before anyone moves it. */
@@ -1578,15 +1586,20 @@ function allowanceFeature(featureId: FeatureId, stitchId: FeatureId, allowanceMm
  * nothing. `additionRefusal` is how the reason reaches the user.
  */
 export function addCutOut(partId: PartId, featureId: FeatureId, source: GeometrySource): Command {
-  return addFeature(partId, {
-    id: featureId,
+  return addFeature(partId, cutOut(featureId, source));
+}
+
+/** A cut-out's record, as `addCutOut` adds it and an import makes it. */
+export function cutOut(id: FeatureId, source: GeometrySource): Feature {
+  return {
+    id,
     kind: 'cut-contour',
     role: 'inner',
     name: 'Cut-out',
     visible: true,
     locked: false,
     source,
-  });
+  };
 }
 
 /** A printed guide — glue areas, alignment, logo placement. Never cut. */
@@ -1596,15 +1609,24 @@ export function addMarkingLine(
   source: GeometrySource,
   purpose: MarkingLine['purpose'] = 'alignment',
 ): Command {
-  return addFeature(partId, {
-    id: featureId,
+  return addFeature(partId, markingLine(featureId, source, purpose));
+}
+
+/** A marking's record, as `addMarkingLine` adds it and an import makes it. */
+export function markingLine(
+  id: FeatureId,
+  source: GeometrySource,
+  purpose: MarkingLine['purpose'],
+): Feature {
+  return {
+    id,
     kind: 'marking-line',
     purpose,
     name: MARKING_NAMES[purpose],
     visible: true,
     locked: false,
     source,
-  });
+  };
 }
 
 const MARKING_NAMES: Readonly<Record<MarkingLine['purpose'], string>> = {
