@@ -1714,6 +1714,13 @@
   "arrange": {
     "title": "Align and distribute",
     "help": "Arrange the selected bounding boxes. A piece moves whole. Distribution keeps the outer items fixed and makes the gaps equal.",
+    "position": "Position",
+    "left": "Left",
+    "bottom": "Bottom",
+    "moveBy": "Move by",
+    "right": "Right",
+    "up": "Up",
+    "move": "Move",
     "x": {
       "min": "Align left",
       "centre": "Centre horizontally",

@@ -97,7 +97,7 @@ as any item that will not make it does.
 - ✅ **3.13 A click on a piece's body selects it** — on its leather, not in a cut-out; a line or a guide within the pick radius still wins; the drag moves the piece whole, the hover halos its outline, and a right-click offers the piece's menu.
 - ☐ **U.22 Hover, selected, editing and locked read differently** (P1).
 - ✅ **3.14 Arrow keys nudge, Ctrl+A selects every piece** — on the focused board: 1 mm, 10 mm with Shift, 0.1 mm with Alt, each rebindable; a press or a held key is one undo step; a locked piece says why; a field, the Parts tree, a menu and the tabs keep their arrows.
-- ☐ **3.15 Typed position and Move by.**
+- ✅ **3.15 Typed position and Move by** — Properties › Arrange says where the selection's left and bottom edges are and takes a place or a distance, with sums and units; one undo step each; a locked piece says why.
 - ☐ **3.16 Smart guides while moving** — edges, centres and guides, exact to the storage quantum.
 - ☐ **3.18 Placing inside a piece** — a rivet on a flap's centre, a fold at the middle.
 - ☐ **3.17 Live distances and clearance** — the move in mm, and a hole's rim clearance as the rule measures it.
