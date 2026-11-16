@@ -169,6 +169,27 @@ describe('duplicatePart', () => {
     expect(diagnose(next.project).filter((d) => d.partId === B)).toEqual([]);
   });
 
+  it('keeps a slot mirrored about a captured line on the copy, beside its own original', () => {
+    // Only drawn features used to move with the copy, so a mirror whose axis
+    // was captured stayed mirrored about the original's line: the copy's
+    // mirrored slot landed at x −28…−22, outside the copy (8.8b).
+    let document = panel(emptyDocument('proj'), A, 'cut-a');
+    document = addCutOut(A, 'slot' as FeatureId, {
+      kind: 'shape',
+      shape: rectShape({ x: 17, y: 27 }, 6, 6),
+    }).apply(document);
+    document = mirrorFeatures(['slot'] as FeatureId[], ['slot-m'] as FeatureId[], {
+      origin: { x: 50, y: 0 },
+      angleRad: Math.PI / 2,
+    }).apply(document);
+
+    const next = duplicatePart(A, B, idsFor(document.project, A, 'copy')).apply(document);
+
+    const mirrored = evaluate(next.project).parts[1]!.features.at(-1)!;
+    expect(mirrored.ok && PathOps.bbox(mirrored.path)).toMatchObject({ minX: 182, maxX: 188 });
+    expect(diagnose(next.project).filter((d) => d.partId === B)).toEqual([]);
+  });
+
   it('places the copy clear of the original rather than exactly on top', () => {
     // A copy drawn on top of its original is invisible, and the first thing
     // anyone would do is drag it off.

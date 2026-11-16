@@ -34,7 +34,7 @@ import {
 } from '@leathercad/platform';
 import { rolesNamed } from '@leathercad/export';
 import type { Vec2 } from '@leathercad/geometry';
-import { loadProject } from '@leathercad/persist';
+import { InvalidProjectFileError, loadProject } from '@leathercad/persist';
 import { zoomPercent } from '@leathercad/render';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
@@ -53,7 +53,18 @@ import { defaultSide, SeamWorkflow, sewableIds } from './seams.js';
 import { SeamPanel } from './SeamPanel.js';
 import { CanvasHost, type CanvasHandle, type CanvasStatus, type CanvasView } from './CanvasHost.js';
 import { CanvasLegend } from './CanvasLegend.js';
-import { selectionForRightClick, selectionMenu, type RightClicked } from './contextMenu.js';
+import {
+  boardMenu,
+  selectionForRightClick,
+  selectionMenu,
+  type RightClicked,
+} from './contextMenu.js';
+import {
+  copyNotice,
+  copySelection,
+  pasteCommand,
+  type PiecesClipboard,
+} from './piecesClipboard.js';
 import { listenForContextMenuKeys } from './keyboardContextMenu.js';
 import { DeleteDialog } from './DeleteDialog.js';
 import { ContextMenu } from './Menu.js';
@@ -1304,17 +1315,67 @@ export function App({
   );
 
   /**
-   * The right-click menu (8.8), open at a point, or closed. One for the board
-   * and the Parts list: both right-clicks come here.
+   * Pieces copied in any tab, for *Paste* in any other (8.8b): the window's,
+   * not a tab's, so switching tabs keeps it.
    */
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const [piecesClipboard, setPiecesClipboard] = useState<PiecesClipboard | null>(null);
+  const copyPieces = useCallback(() => {
+    const { document, selection } = store.getState();
+    const copied = copySelection(document.project, selection);
+    if (copied === null) return;
+    setPiecesClipboard(copied.clipboard);
+    // What the paste will not bring as it was is said now, before it is pasted.
+    const said = copyNotice(copied, i18n);
+    if (said !== null) setNotice({ title: t('pieces.copiedTitle'), text: said });
+  }, [store, i18n, t]);
+  const pastePieces = useCallback(
+    (at: Vec2 | null) => {
+      if (piecesClipboard === null) return;
+      let pasted: ReturnType<typeof pasteCommand>;
+      try {
+        pasted = pasteCommand(piecesClipboard, nextId, at);
+      } catch (error) {
+        if (!(error instanceof InvalidProjectFileError)) throw error;
+        setNotice({ title: t('pieces.pasteFailedTitle'), text: t('pieces.pasteFailed') });
+        return;
+      }
+      store.dispatch(pasted.command);
+      // What was pasted is what you are now working on, as a duplicate is.
+      store.selectParts(pasted.partIds);
+    },
+    [piecesClipboard, nextId, store, t],
+  );
+
+  /**
+   * The right-click menu (8.8), open at a point, or closed. One for the board
+   * and the Parts list: both right-clicks come here. `boardAt` is where on the
+   * board it was opened, for *Paste* (8.8b); `empty` when that was empty board.
+   */
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    boardAt: Vec2 | null;
+    empty: boolean;
+  } | null>(null);
   const openContextMenu = useCallback(
-    (clicked: RightClicked, at: { x: number; y: number }) => {
+    (clicked: RightClicked, at: { x: number; y: number }, boardAt?: Vec2) => {
       store.setSelection(selectionForRightClick(store.getState().selection, clicked));
-      setContextMenu(at);
+      setContextMenu({ ...at, boardAt: boardAt ?? null, empty: false });
     },
     [store],
   );
+  const openBoardMenu = useCallback(
+    (at: { x: number; y: number }, boardAt: Vec2) =>
+      setContextMenu({ ...at, boardAt, empty: true }),
+    [],
+  );
+  const pasteChoice =
+    piecesClipboard === null || contextMenu === null
+      ? undefined
+      : {
+          count: piecesClipboard.count,
+          onChoose: () => pastePieces(contextMenu.boardAt),
+        };
 
   // What was under way on one tab is not the next one's (8.12): reset as the
   // window renders the next, like the store's mirror.
@@ -1342,7 +1403,8 @@ export function App({
       const at = canvasRef.current?.selectionPoint() ?? null;
       if (at === null) return;
       event.preventDefault();
-      setContextMenu(at);
+      // No point on the board was chosen: a paste from it lands as Duplicate places.
+      setContextMenu({ ...at, boardAt: null, empty: false });
     };
     window.addEventListener('contextmenu', onKeyboardMenu);
     return () => window.removeEventListener('contextmenu', onKeyboardMenu);
@@ -1715,6 +1777,9 @@ export function App({
                   requestDelete={requestDelete}
                   requestDeletePart={requestDeletePart}
                   onContextMenu={openContextMenu}
+                  onBoardContextMenu={openBoardMenu}
+                  onCopyPieces={copyPieces}
+                  onPastePieces={pastePieces}
                 >
                   {/* The legend explains the board's marks; the sheets are ink. */}
                   {view === 'design' && (
@@ -1949,22 +2014,31 @@ export function App({
         )}
 
         {/* A menu about nothing is not shown. */}
-        {contextMenu !== null && !isEmptySelection(storeState.selection) && (
-          <ContextMenu
-            key={`${String(contextMenu.x)},${String(contextMenu.y)}`}
-            at={contextMenu}
-            label={t('contextMenu.label')}
-            testId="context-menu"
-            entries={selectionMenu(i18n, storeState.document.project, storeState.selection, {
-              dispatch: (command) => store.dispatch(command),
-              sewTogether: startSewing,
-              duplicatePart: requestDuplicatePart,
-              deleteFeatures: requestDelete,
-              deletePart: requestDeletePart,
-            })}
-            onClose={() => setContextMenu(null)}
-          />
-        )}
+        {contextMenu !== null &&
+          (contextMenu.empty
+            ? pasteChoice !== undefined
+            : !isEmptySelection(storeState.selection)) && (
+            <ContextMenu
+              key={`${String(contextMenu.x)},${String(contextMenu.y)}`}
+              at={contextMenu}
+              label={t('contextMenu.label')}
+              testId="context-menu"
+              entries={
+                contextMenu.empty
+                  ? boardMenu(i18n, pasteChoice)
+                  : selectionMenu(i18n, storeState.document.project, storeState.selection, {
+                      dispatch: (command) => store.dispatch(command),
+                      sewTogether: startSewing,
+                      duplicatePart: requestDuplicatePart,
+                      copyPieces,
+                      paste: pasteChoice,
+                      deleteFeatures: requestDelete,
+                      deletePart: requestDeletePart,
+                    })
+              }
+              onClose={() => setContextMenu(null)}
+            />
+          )}
 
         {/* A text field's own (U.20): Cut, Copy, Paste and Select all. */}
         <TextFieldMenu />

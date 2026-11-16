@@ -226,6 +226,12 @@ the size your software shows: it should be the size you drew.
   with **Edit points** chosen the arrows move nothing. If you
   had already given one of these keys to another command, yours is kept and the new one reads
   *Not assigned* in Settings.
+- **Copy and paste pieces:** with the board focused, **Ctrl+C** copies the pieces the selection
+  is in, and **Ctrl+V** pastes them under the pointer — into this project or any other open tab,
+  with their stitching, holes, quantities and the seams between them. The right-click menu has
+  *Copy* and *Paste* too, and a right-click on empty board offers *Paste* alone. A mirrored piece
+  copied without the piece it mirrors pastes as the shape it is now, and a dimension to a piece
+  left behind is left out; the app says so when you copy. Each paste is one Undo step.
 - **Typing where it goes:** *Properties → Arrange* shows where the selection's **Left** and
   **Bottom** edges are, as the rulers read them; type a number there and it moves to it. **Move
   by** takes a distance **Right** and **Up** — **−12** goes 12 mm left — and **Move** moves it,

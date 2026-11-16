@@ -1982,8 +1982,7 @@ export function setPartVisible(partId: PartId, visible: boolean): Command {
  *
  * The copy is placed clear of the original, because a copy drawn exactly on
  * top of its original is invisible and the first thing anyone would do is drag
- * it off. Only the copy's **root** features are moved — the derived ones
- * follow on their own, which is both correct and why this costs nothing.
+ * it off, moved whole as dragging it would (`movePieces`).
  */
 export function duplicatePart(
   partId: PartId,
@@ -2007,57 +2006,19 @@ export function duplicatePart(
         part.features.map((feature, i) => [feature.id, featureIds[i]!] as const),
       );
 
-      const features = part.features.map((feature): Feature => {
-        const id = renamed.get(feature.id)!;
-        // Built unlocked, and locked again once it is in place. A copy of a
-        // locked outline is still locked — but the lock belongs to the
-        // finished copy, not to the act of making it, and leaving it on here
-        // would make the placement below refuse itself and drop the copy
-        // exactly on top of the original.
-        const unlocked = { locked: false };
-
-        // Inside the part: follow the copy. Outside it: unchanged, so the copy
-        // points where the original pointed and no reference is created into
-        // or out of the copy. **Every** reference, not only a derivation's
-        // source: a dimension's two ends and a fold mirror's fold once kept
-        // naming the original, so the copy measured the original and folded
-        // about the original's crease, 230 mm off the copy (Q10).
-        const into = (ref: FeatureId): FeatureId => renamed.get(ref) ?? ref;
-
-        // A label's source is its words, so it has nothing to re-point.
-        if (feature.kind === 'text-label') return { ...feature, ...unlocked, id };
-
-        if (feature.kind === 'measurement') {
-          const { a, b } = feature.source;
-          return {
-            ...feature,
-            ...unlocked,
-            id,
-            source: {
-              ...feature.source,
-              a: { ...a, featureId: into(a.featureId) },
-              b: { ...b, featureId: into(b.featureId) },
-            },
-          };
-        }
-
-        if (feature.source.kind !== 'derived') return { ...feature, ...unlocked, id };
-
-        const op = feature.source.op;
-        return {
-          ...feature,
-          ...unlocked,
-          id,
-          source: {
-            ...feature.source,
-            sourceId: into(feature.source.sourceId),
-            op:
-              op.type === 'mirror' && op.axis.kind === 'fold'
-                ? { ...op, axis: { ...op.axis, foldId: into(op.axis.foldId) } }
-                : op,
-          },
-        } as Feature;
-      });
+      // Inside the part: follow the copy. Outside it: unchanged, so the copy
+      // points where the original pointed and no reference is created into or
+      // out of the copy.
+      const into = (ref: FeatureId): FeatureId => renamed.get(ref) ?? ref;
+      // Built unlocked, and locked again once it is in place. A copy of a
+      // locked outline is still locked — but the lock belongs to the finished
+      // copy, not to the act of making it, and leaving it on here would make
+      // the placement below refuse itself and drop the copy exactly on top of
+      // the original.
+      const features = part.features.map((feature): Feature => ({
+        ...repointed(feature, renamed.get(feature.id)!, into),
+        locked: false,
+      }));
 
       const copy: Part = { ...part, id: newPartId, name: `${part.name} copy`, features };
       const withCopy: Project = { ...document.project, parts: [...document.project.parts, copy] };
@@ -2066,24 +2027,78 @@ export function duplicatePart(
         part.features.map((feature, i) => [featureIds[i]!, feature.locked] as const),
       );
 
-      return { project: relock(moveClear(withCopy, copy), newPartId, wasLocked) };
+      return { project: relock(moveClear(withCopy, [copy]), new Set([newPartId]), wasLocked) };
     },
   };
 }
 
-/** Puts the copies' locks back, once the copy has been placed. */
-function relock(
+/**
+ * A feature under a new id, every reference it makes passed through `into`.
+ *
+ * **Every** reference, not only a derivation's source: a dimension's two ends
+ * and a fold mirror's fold once kept naming the original, so the copy measured
+ * the original and folded about the original's crease, 230 mm off the copy
+ * (Q10). The one place that knows what a feature can point at, for each way of
+ * copying one.
+ */
+export function repointed(
+  feature: Feature,
+  id: FeatureId,
+  into: (ref: FeatureId) => FeatureId,
+): Feature {
+  // A label's source is its words, so it has nothing to re-point.
+  if (feature.kind === 'text-label') return { ...feature, id };
+
+  if (feature.kind === 'measurement') {
+    const { a, b } = feature.source;
+    return {
+      ...feature,
+      id,
+      source: {
+        ...feature.source,
+        a: { ...a, featureId: into(a.featureId) },
+        b: { ...b, featureId: into(b.featureId) },
+      },
+    };
+  }
+
+  if (feature.source.kind !== 'derived') return { ...feature, id };
+
+  const op = feature.source.op;
+  return {
+    ...feature,
+    id,
+    source: {
+      ...feature.source,
+      sourceId: into(feature.source.sourceId),
+      op:
+        op.type === 'mirror' && op.axis.kind === 'fold'
+          ? { ...op, axis: { ...op.axis, foldId: into(op.axis.foldId) } }
+          : op,
+    },
+  } as Feature;
+}
+
+/** Puts the copies' locks back, once the copies have been placed. */
+export function relock(
   project: Project,
-  partId: PartId,
+  partIds: ReadonlySet<PartId>,
   wasLocked: ReadonlyMap<FeatureId, boolean>,
 ): Project {
-  return mapPart(project, partId, (part) => ({
-    ...part,
-    features: part.features.map((feature) => ({
-      ...feature,
-      locked: wasLocked.get(feature.id) ?? feature.locked,
-    })),
-  }));
+  return {
+    ...project,
+    parts: project.parts.map((part) =>
+      partIds.has(part.id)
+        ? {
+            ...part,
+            features: part.features.map((feature) => ({
+              ...feature,
+              locked: wasLocked.get(feature.id) ?? feature.locked,
+            })),
+          }
+        : part,
+    ),
+  };
 }
 
 /**
@@ -2145,37 +2160,58 @@ function withCapturedAxis(
 /** How far a duplicate sits from the piece it was copied from. */
 const DUPLICATE_GAP_MM = 5;
 
-/**
- * Shifts a freshly made copy to the right of everything already drawn.
- *
- * Measured from the whole project rather than from the original alone, so
- * duplicating the same part twice does not stack two copies in one place.
- */
-function moveClear(project: Project, copy: Part): Project {
-  const resolved = evaluate(project);
-
-  const boxesIn = (partId: PartId): Rect[] =>
-    resolved.parts
-      .filter((entry) => entry.part.id === partId)
+/** The evaluated box of some parts' features, or `null` when they draw nothing. */
+export function boxOfParts(project: Project, partIds: ReadonlySet<PartId>): Rect | null {
+  return RectOps.unionAll(
+    evaluate(project)
+      .parts.filter((entry) => partIds.has(entry.part.id))
       .flatMap((entry) =>
         entry.features.flatMap((feature) => {
           const box = feature.ok ? PathOps.bbox(feature.path) : null;
           return box === null ? [] : [box];
         }),
-      );
-
-  const everything = RectOps.unionAll(
-    resolved.parts.flatMap((entry) => boxesIn(entry.part.id)).filter((box) => box !== null),
+      ),
   );
-  const mine = RectOps.unionAll(boxesIn(copy.id));
+}
+
+/**
+ * Shifts freshly made copies to the right of everything already drawn.
+ *
+ * Measured from the whole project rather than from the original alone, so
+ * duplicating the same part twice does not stack two copies in one place.
+ */
+export function moveClear(project: Project, copies: readonly Part[]): Project {
+  const everything = boxOfParts(project, new Set(project.parts.map((part) => part.id)));
+  const ids = new Set(copies.map((part) => part.id));
+  const mine = boxOfParts(project, ids);
   if (everything === null || mine === null) return project;
 
-  const deltaMm = { x: everything.maxX - mine.minX + DUPLICATE_GAP_MM, y: 0 };
-  // Only what was drawn: a derived feature is refused a move of its own
-  // (X3) and does not need one — it follows what it was built from.
-  const roots = copy.features.filter((f) => f.source.kind !== 'derived').map((f) => f.id);
+  return movePieces(project, ids, { x: everything.maxX - mine.minX + DUPLICATE_GAP_MM, y: 0 });
+}
 
-  return transformFeatures(roots, MatOps.fromTranslation(deltaMm)).apply({ project }).project;
+/**
+ * Moves whole pieces, as dragging them does: every feature in them, so a
+ * mirror whose original moves too carries its axis along (`transformFeature`).
+ * Moving only what was drawn left a mirrored slot's copy mirrored about the
+ * original's line, outside its own piece.
+ *
+ * What a whole-piece move refuses is left where it is — only a reference out
+ * of the pieces does that: a fold mirror folded about another piece's fold, or
+ * a file's derivation from another piece, both of which follow what they
+ * follow anyway.
+ */
+export function movePieces(project: Project, partIds: ReadonlySet<PartId>, deltaMm: Vec2): Project {
+  const matrix = MatOps.fromTranslation(deltaMm);
+  let ids = project.parts
+    .filter((part) => partIds.has(part.id))
+    .flatMap((part) => part.features.map((feature) => feature.id));
+  // Each pass leaves out at least one feature, so this ends.
+  for (;;) {
+    const refused = new Set(refusedTransforms(project, ids, matrix).map((r) => r.featureId));
+    if (refused.size === 0) break;
+    ids = ids.filter((id) => !refused.has(id));
+  }
+  return transformFeatures(ids, matrix).apply({ project }).project;
 }
 
 /**

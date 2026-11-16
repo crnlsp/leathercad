@@ -25,3 +25,6 @@ export {
   saveProject,
   stableJson,
 } from './lcp.js';
+
+export type { Pieces } from './pieces.js';
+export { readPieces, writePieces } from './pieces.js';

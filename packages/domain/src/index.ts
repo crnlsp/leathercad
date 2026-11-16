@@ -125,6 +125,7 @@ export {
   enclosesArea,
   followRefusal,
   graphProblems,
+  referencesOf,
 } from './graph.js';
 
 export { additionRefusal, hasOuterContour, partStructureProblems } from './partStructure.js';

@@ -227,9 +227,10 @@ describe('giving a command a key', () => {
   });
 
   it('offers only Cancel when the key is a fixed command’s', () => {
-    const copy = at('KeyC', 'c', { ctrlKey: true });
-    expect(apply({}, proposeKey('fullScreen', { code: 'KeyC', mod: true }, copy), false)).toEqual({
-      clash: 'copy',
+    // Ctrl+X: a field's Cut, and nothing else's (Ctrl+C is the board's Copy pieces too, 8.8b).
+    const cut = at('KeyX', 'x', { ctrlKey: true });
+    expect(apply({}, proposeKey('fullScreen', { code: 'KeyX', mod: true }, cut), false)).toEqual({
+      clash: 'cut',
       canSwap: false,
     });
   });

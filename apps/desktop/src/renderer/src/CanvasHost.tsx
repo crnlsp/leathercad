@@ -205,6 +205,9 @@ export function CanvasHost({
   requestDelete,
   requestDeletePart,
   onContextMenu,
+  onBoardContextMenu,
+  onCopyPieces,
+  onPastePieces,
   nextId,
   onStatus,
   cursor,
@@ -235,8 +238,18 @@ export function CanvasHost({
   requestDelete: (ids: readonly string[]) => void;
   /** The Delete key on a part picked by its heading (Q29). */
   requestDeletePart: (partId: string) => void;
-  /** A right-click on a feature (8.8): the app selects it, unless it already is, and opens the menu. */
-  onContextMenu?: (clicked: RightClicked, at: { x: number; y: number }) => void;
+  /**
+   * A right-click on a feature (8.8): the app selects it, unless it already
+   * is, and opens the menu. `boardAt` is the point clicked, in mm: where a
+   * paste from that menu lands (8.8b).
+   */
+  onContextMenu?: (clicked: RightClicked, at: { x: number; y: number }, boardAt?: Vec2) => void;
+  /** A right-click on empty board, at a point in mm: where *Paste* would put the pieces (8.8b). */
+  onBoardContextMenu?: (at: { x: number; y: number }, boardAt: Vec2) => void;
+  /** The board's Copy key (8.8b): the pieces the selection is in. */
+  onCopyPieces?: () => void;
+  /** The board's Paste key (8.8b), at the point under the pointer, or null off the board. */
+  onPastePieces?: (at: Vec2 | null) => void;
   nextId: () => string;
   onStatus?: (status: CanvasStatus) => void;
   /**
@@ -550,6 +563,12 @@ export function CanvasHost({
   requestDeletePartRef.current = requestDeletePart;
   const onContextMenuRef = useRef(onContextMenu);
   onContextMenuRef.current = onContextMenu;
+  const onBoardContextMenuRef = useRef(onBoardContextMenu);
+  onBoardContextMenuRef.current = onBoardContextMenu;
+  const onCopyPiecesRef = useRef(onCopyPieces);
+  onCopyPiecesRef.current = onCopyPieces;
+  const onPastePiecesRef = useRef(onPastePieces);
+  onPastePiecesRef.current = onPastePieces;
 
   const tools = useMemo(
     () => [
@@ -903,6 +922,23 @@ export function CanvasHost({
       }
       if (onSheets) return;
 
+      // Whole pieces (8.8b), on the board and with nothing under way: Copy
+      // takes the pieces the selection is in, Paste puts them under the
+      // pointer — or clear of the drawing, when the pointer is off the board.
+      if (onBoard && managerRef.current?.underway() !== true) {
+        const meant = meaningsOnBoard(event, IS_MAC);
+        if (meant.includes('copyPieces')) {
+          event.preventDefault();
+          onCopyPiecesRef.current?.();
+          return;
+        }
+        if (meant.includes('pastePieces')) {
+          event.preventDefault();
+          onPastePiecesRef.current?.(cursor.get());
+          return;
+        }
+      }
+
       // Enter on the board opens the selected outline's sizes (U.14) — on the
       // board only: a focused button, field or Parts row keeps its own Enter.
       if (
@@ -936,7 +972,7 @@ export function CanvasHost({
       window.removeEventListener('blur', endNudge);
       window.removeEventListener('pointerdown', endNudge, { capture: true });
     };
-  }, [store, frames]);
+  }, [store, frames, cursor]);
 
   const toInput = useCallback((event: React.PointerEvent<HTMLCanvasElement>): PointerInput => {
     const viewport = viewportRef.current;
@@ -1115,9 +1151,10 @@ export function CanvasHost({
    * A right-click on the board (8.8): what a click would pick, with any tool,
    * since the panels already run these commands whatever tool is active.
    * Nothing on the sheets — no tool acts there — and nothing mid-drag, or with
-   * Alt, which pans. On empty board there is no menu and the selection stays:
-   * a right-click that missed an edge must not undo a multi-selection. A
-   * locked piece is found, unlike by a click: this is where it is unlocked.
+   * Alt, which pans. On empty board the selection stays — a right-click that
+   * missed an edge must not undo a multi-selection — and the app offers what
+   * needs no selection: *Paste* (8.8b). A locked piece is found, unlike by a
+   * click: this is where it is unlocked.
    */
   const handleContextMenu = useCallback(
     (event: React.MouseEvent<HTMLCanvasElement>) => {
@@ -1132,11 +1169,17 @@ export function CanvasHost({
         viewport.pickToleranceMm(),
         { locked: true },
       );
+      const menuAt = { x: event.clientX, y: event.clientY };
+      if (pick === null) {
+        onBoardContextMenuRef.current?.(menuAt, at);
+        return;
+      }
       // A piece's body offers the piece's menu, as its heading in Parts does (3.13).
-      if (pick === null || pick.kind === 'guide') return;
+      if (pick.kind === 'guide') return;
       onContextMenuRef.current?.(
         pick.kind === 'part' ? { kind: 'part', id: pick.id } : { kind: 'feature', id: pick.id },
-        { x: event.clientX, y: event.clientY },
+        menuAt,
+        at,
       );
     },
     [store],

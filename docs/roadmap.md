@@ -102,7 +102,7 @@ as any item that will not make it does.
 - ☐ **3.18 Placing inside a piece** — a rivet on a flap's centre, a fold at the middle.
 - ☐ **3.17 Live distances and clearance** — the move in mm, and a hole's rim clearance as the rule measures it.
 - ☐ **3.19 Equal spacing** (P1).
-- ☐ **8.8b Copy and paste whole pieces, across tabs** (was *of features*: whole pieces first).
+- ✅ **8.8b Copy and paste whole pieces, across tabs** — Ctrl+C and Ctrl+V on the board, or the right-click menu (Paste alone on empty board); under the pointer, or clear of the drawing; new ids, every reference re-pointed, none dangling, seams between them kept; a mirrored piece without its original pastes as drawn geometry, said when copying; one undo step.
 - ☐ **8.8b Ctrl+D duplicates.**
 - ☐ **8.8b Step and repeat** (P1).
 - ☐ **8.8b Copy features into another piece** (P1) — frozen when their source stays behind.

@@ -40,9 +40,37 @@ export interface SelectionActions {
   sewTogether?: () => void;
   dispatch(command: Command): void;
   duplicatePart(partId: PartId): void;
+  /** Copies the pieces the selection is in, for any open project (8.8b). */
+  copyPieces(): void;
+  /** What was copied, when anything was: *Paste* puts it where the menu was opened. */
+  paste?: PasteChoice | undefined;
   /** Asks first when something depends on them (ADR 0009). */
   deleteFeatures(ids: readonly FeatureId[]): void;
   deletePart(partId: PartId): void;
+}
+
+/** The pieces waiting to be pasted, and the paste (8.8b). */
+export interface PasteChoice {
+  readonly count: number;
+  readonly onChoose: () => void;
+}
+
+function pasteItem({ t }: I18n, paste: PasteChoice): MenuEntry {
+  return {
+    kind: 'item',
+    id: 'context-paste-pieces',
+    label: t('contextMenu.paste', { count: paste.count }),
+    keys: 'pastePieces',
+    onChoose: paste.onChoose,
+  };
+}
+
+/**
+ * The menu of a right-click on empty board (8.8b): only what needs no
+ * selection, which is *Paste* — so there is none until something is copied.
+ */
+export function boardMenu(i18n: I18n, paste: PasteChoice | undefined): MenuEntry[] {
+  return paste === undefined ? [] : [pasteItem(i18n, paste)];
 }
 
 /**
@@ -55,11 +83,12 @@ export interface SelectionActions {
  * every feature in it.
  */
 export function selectionMenu(
-  { t }: I18n,
+  i18n: I18n,
   project: Project,
   selection: Selection,
   actions: SelectionActions,
 ): MenuEntry[] {
+  const { t } = i18n;
   const wholeParts = selection.parts.size > 0;
   const parts = project.parts.filter((part) =>
     wholeParts
@@ -111,6 +140,15 @@ export function selectionMenu(
         parts.length === 1 ? undefined : t('contextMenu.spansParts', { count: parts.length }),
       onChoose: () => actions.duplicatePart(parts[0]!.id),
     },
+    // Under the hand where Duplicate is, for this project or another (8.8b).
+    {
+      kind: 'item',
+      id: 'context-copy-pieces',
+      label: t('contextMenu.copy', { count: parts.length }),
+      keys: 'copyPieces',
+      onChoose: actions.copyPieces,
+    },
+    ...(actions.paste === undefined ? [] : [pasteItem(i18n, actions.paste)]),
     { kind: 'separator' },
     flip('horizontal'),
     flip('vertical'),

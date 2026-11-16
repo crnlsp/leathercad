@@ -56,8 +56,8 @@ export type ShortcutGroupId =
  * moves moves for the tool too, and a sentence that names one takes it from here. `tree` is the Parts tree's
  * (U.8), heard only while a row has focus. `field` is a text field's own
  * editing (U.20), heard by the field itself and shown in its right-click menu.
- * `board` is the board's own (3.14): the arrows that nudge and the key that
- * picks every piece, heard only while the board itself has the focus — a
+ * `board` is the board's own (3.14): the arrows that nudge, the key that
+ * picks every piece and the keys that copy and paste pieces (8.8b), heard only while the board itself has the focus — a
  * tree, a menu, the tab strip and a field keep their arrows — and by whichever
  * tool is active, once it has nothing under way.
  */
@@ -107,6 +107,8 @@ export type CommandId =
   | 'paste'
   | 'selectAll'
   | 'selectAllPieces'
+  | 'copyPieces'
+  | 'pastePieces'
   | `nudge${NudgeDirection}${NudgeStep}`
   | `tool.${ToolId}`
   | 'finishPolyline'
@@ -243,6 +245,24 @@ export const KEYMAP: readonly Command[] = [
     group: 'edit',
     scope: 'board',
     keys: [mod('KeyA')],
+    defaultYields: true,
+  },
+  // Whole pieces, into this project or any other tab (8.8b) — on the board,
+  // where a field's same keys copy and paste its text.
+  {
+    id: 'copyPieces',
+    does: 'shortcuts.copyPieces',
+    group: 'edit',
+    scope: 'board',
+    keys: [mod('KeyC')],
+    defaultYields: true,
+  },
+  {
+    id: 'pastePieces',
+    does: 'shortcuts.pastePieces',
+    group: 'edit',
+    scope: 'board',
+    keys: [mod('KeyV')],
     defaultYields: true,
   },
   ...NUDGES,
