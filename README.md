@@ -141,6 +141,17 @@ New to leathercraft words? The [glossary](docs/glossary.md) explains the ones th
 
 Found a security problem? Report it privately; see [SECURITY.md](SECURITY.md).
 
+## AI-assisted development
+
+LeatherCAD is an independent open-source project, led and maintained by
+[crnlsp](https://github.com/crnlsp). The maintainer sets its direction, makes its design
+decisions, decides which changes are accepted, and is responsible for every release.
+
+Claude Code (Anthropic) and Codex (OpenAI) help with implementation, refactoring, testing,
+documentation and review. Their work goes through the same review and checks as any other change,
+and commits made with their help say so in a trailer. Using these tools does not mean Anthropic or
+OpenAI own, maintain or endorse LeatherCAD.
+
 ## Licence
 
 [Apache-2.0](LICENSE). The interface and every printed word use IBM Plex Sans, under the
