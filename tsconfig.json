@@ -32,6 +32,12 @@
       "path": "./packages/editor"
     },
     {
+      "path": "./packages/import"
+    },
+    {
+      "path": "./packages/import"
+    },
+    {
       "path": "./apps/desktop"
     }
   ]

@@ -174,12 +174,12 @@ Strict, one-directional dependency graph. An arrow means "may import".
 The React panels and dialogs live in `apps/desktop/src/renderer`; pagination, tiling and the sheet
 plan live in `export`; and there is no CLI yet. The rules below hold for them the day they exist.
 
-**Import has no package yet.** SVG import (roadmap 9.20) creates it as the mirror of `export`:
+**Import exists from 9.20a** as the mirror of `export`:
 headless, above `domain` and `geometry`, reading untrusted input at a boundary as the loader does,
 and with its own Y flip, as `export/svg` has. It parses nothing itself: the renderer's `DOMParser`
 reads the XML and hands it a plain tree of elements and attributes, and no XML dependency is added
 ([ADR 0023](adr/0023-svg-parsed-by-the-platform.md), which also sets the order the file crosses
-the boundary in). Its layering rule is in place before the package exists.
+the boundary in). 9.20a converts the plain tree; the platform parser, preview and hostile-input checks follow in 9.20b/c.
 
 ### The rules, enforced by dependency-cruiser in CI
 

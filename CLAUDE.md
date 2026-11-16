@@ -108,9 +108,9 @@ apps/desktop  Electron main/preload/renderer, React panels — the ONLY package 
 ```
 
 `print`, `ui` and `cli` are reserved in `.dependency-cruiser.cjs` but not created: pagination and
-tiling live in `export`, and the React UI in `apps/desktop/src/renderer`. So is `import`
-(→ domain, geometry), until SVG import (9.20a) creates it: headless, handed a plain tree by the
-renderer's `DOMParser`, with no XML dependency (ADR 0023).
+tiling live in `export`, and the React UI in `apps/desktop/src/renderer`.
+`import` (→ core, geometry, domain) converts a plain SVG tree to millimetre paths, headlessly,
+with no XML dependency (9.20a, ADR 0023); the renderer parser and import preview follow in 9.20b/c.
 
 No package below them imports `ui`, `editor` or `apps/desktop`. `export` and `print` run headless.
 

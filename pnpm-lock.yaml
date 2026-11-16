@@ -368,6 +368,15 @@ importers:
         specifier: workspace:*
         version: link:../core
 
+  packages/import:
+    dependencies:
+      '@leathercad/core':
+        specifier: workspace:*
+        version: link:../core
+      '@leathercad/geometry':
+        specifier: workspace:*
+        version: link:../geometry
+
   packages/persist:
     dependencies:
       '@leathercad/core':
