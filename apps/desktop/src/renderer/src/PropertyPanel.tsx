@@ -35,7 +35,7 @@ import { MARGIN_MIN_MM, MARGIN_STEP_MM, type MakerTools } from './irons.js';
 import { allowanceCommand, derive, holesCommand, stitchLineCommand } from './nextSteps.js';
 import { NumberField } from './NumberField.js';
 import { GuidesPanel } from './GuidesPanel.js';
-import { ArrangePanel } from './ArrangePanel.js';
+import { ArrangePanel, PositionFields } from './ArrangePanel.js';
 import { ProblemSection } from './ProblemSection.js';
 import { jobTotals, trailOf } from './propertyFacts.js';
 import { ReasonedButton, ReasonedRow, type ReasonedButtonProps } from './ReasonedButton.js';
@@ -345,6 +345,7 @@ export function PropertyPanel({
 
       <section className="panel-group arrange" data-testid="arrange">
         <div className="panel-heading">{t('properties.arrange')}</div>
+        <PositionFields store={store} project={project} ids={[feature.id]} />
         {/*
           Flipping the piece itself, about its own centre — it stays where it
           is and faces the other way, and nothing is linked afterwards. Asked
@@ -577,6 +578,7 @@ function PartProperties({
       {ids.length > 0 && (
         <section className="panel-group arrange" data-testid="arrange">
           <div className="panel-heading">{t('properties.arrange')}</div>
+          <PositionFields store={store} project={project} ids={ids} />
           <ReasonedRow
             label={t('properties.flipLabel')}
             buttons={[

@@ -105,5 +105,12 @@ export {
 export type { PathPointEdit } from './pathPoints.js';
 export { editPathPoint, pathPointRefusal, pointEditingRefusal } from './pathPoints.js';
 export { addGuide, setGuide, deleteGuide } from './guides.js';
-export { arrangeFeatures, arrangementRefusal } from './arrange.js';
+export {
+  arrangeFeatures,
+  arrangementRefusal,
+  moveFeaturesBy,
+  moveRefusal,
+  placeFeatures,
+  selectionBox,
+} from './arrange.js';
 export type { ArrangeAxis, ArrangeMode, ArrangementRefusal } from './arrange.js';

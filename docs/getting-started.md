@@ -226,6 +226,11 @@ the size your software shows: it should be the size you drew.
   with **Edit points** chosen the arrows move nothing. If you
   had already given one of these keys to another command, yours is kept and the new one reads
   *Not assigned* in Settings.
+- **Typing where it goes:** *Properties → Arrange* shows where the selection's **Left** and
+  **Bottom** edges are, as the rulers read them; type a number there and it moves to it. **Move
+  by** takes a distance **Right** and **Up** — **−12** goes 12 mm left — and **Move** moves it,
+  again each time you press it. Both take a sum or a unit, such as `95-2*3.5` or `2cm`, and each
+  move is one Undo step.
 - **Keyboard:** each tool's key is on its button; **Ctrl+Z** and **Ctrl+Shift+Z** undo and redo;
   **Ctrl+1** and **Ctrl+2** switch between Design and Sheets. *Settings → Keyboard shortcuts*
   (**Ctrl+/** or **?**) lists every key. **F11** is full screen. On macOS, **Ctrl** is **⌘**. A key

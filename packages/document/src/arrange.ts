@@ -1,6 +1,6 @@
-import { QUANTUM_MM, approxCmp, approxZero, quantise } from '@leathercad/core';
-import { evaluate, type Project, type Problem } from '@leathercad/domain';
-import { MatOps, PathOps, RectOps, type Rect } from '@leathercad/geometry';
+import { approxCmp, approxZero, quantise } from '@leathercad/core';
+import { evaluate, type FeatureId, type Project, type Problem } from '@leathercad/domain';
+import { MatOps, PathOps, RectOps, type Rect, type Vec2 } from '@leathercad/geometry';
 
 import { pieceScope, transformRefusal, translateFeatures } from './commands.js';
 import { command, type Command } from './document.js';
@@ -128,13 +128,64 @@ export function arrangeFeatures(
     if (items === null) return document;
     let next = document;
     for (const { ids: targets, delta } of movesFor(items, axis, mode)) {
-      if (approxZero(delta, QUANTUM_MM)) continue;
+      // Quantised first, then asked: a delta of one quantum is a move to make.
       const offset = quantise(delta);
+      if (approxZero(offset)) continue;
       next = translateFeatures(
         targets,
         axis === 'x' ? { x: offset, y: 0 } : { x: 0, y: offset },
       ).apply(next);
     }
     return next;
+  });
+}
+
+/**
+ * Where the selection is (3.15): the box whose left and bottom Properties
+ * shows, in world millimetres, Y up, as the rulers read them. A piece is boxed by its
+ * outline, as align boxes it (Q30); `null` when nothing named draws.
+ */
+export function selectionBox(project: Project, ids: readonly FeatureId[]): Rect | null {
+  const items = itemsFor(project, ids);
+  return items === null ? null : RectOps.unionAll(items.map((item) => item.box));
+}
+
+/**
+ * Why the selection cannot be moved, or `null` — asked before Properties
+ * offers its position and Move by. Every translation is refused alike — a lock, a
+ * counterpart its fold places, a derived line picked without what it follows —
+ * whatever the distance, so one step stands for all of them.
+ */
+export function moveRefusal(project: Project, ids: readonly FeatureId[]): Problem | null {
+  return transformRefusal(
+    project,
+    pieceScope(project, ids).features,
+    MatOps.fromTranslation({ x: 1, y: 0 }),
+  );
+}
+
+/** The selection, each piece in it made whole, moved by a typed distance (3.15). */
+export function moveFeaturesBy(ids: readonly FeatureId[], deltaMm: Vec2): Command {
+  return command({ action: 'move' }, (document) =>
+    approxZero(deltaMm.x) && approxZero(deltaMm.y)
+      ? document
+      : translateFeatures(pieceScope(document.project, ids).features, deltaMm).apply(document),
+  );
+}
+
+/**
+ * The selection moved so its box's left (`x`) or bottom (`y`) edge is at `mm`
+ * (3.15). The move is quantised, so what is stored stays on the grid; the edge
+ * then lands within half a quantum of the number typed.
+ */
+export function placeFeatures(ids: readonly FeatureId[], axis: ArrangeAxis, mm: number): Command {
+  return command({ action: 'move' }, (document) => {
+    const box = selectionBox(document.project, ids);
+    if (box === null) return document;
+    const delta = quantise(mm - (axis === 'x' ? box.minX : box.minY));
+    if (approxZero(delta)) return document;
+    return moveFeaturesBy(ids, axis === 'x' ? { x: delta, y: 0 } : { x: 0, y: delta }).apply(
+      document,
+    );
   });
 }
