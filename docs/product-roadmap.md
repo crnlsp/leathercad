@@ -3,7 +3,7 @@
 **What this is:** where LeatherCAD is going, in what order, and what each step depends on — drawn.
 What LeatherCAD is and is not is [`product-spec.md`](product-spec.md); each item's scope, status and
 slices are [`roadmap.md`](roadmap.md). This page owns neither: it owns the direction.
-**Released:** v1.6.0 · **Next:** 1.7 — Design & Construct, [its plan](superpowers/plans/2026-11-03-release-1.7.md) · **Last updated:** 2026-11-03
+**Released:** v1.6.1 · **Next:** 1.7 — Design & Construct, [its plan](superpowers/plans/2026-11-03-release-1.7.md) · **Last updated:** 2026-11-03
 
 ---
 
