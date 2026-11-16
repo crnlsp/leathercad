@@ -221,7 +221,11 @@ describe('fitArcs', () => {
         }),
         HEAVY_RUNS,
       );
-    });
+      // The same hundred cases every CI run (the seed is pinned), measured at
+      // about 4 s on a desktop and past the package's 30 s on CI's coverage
+      // runner, whose speed varies run to run. The work is fixed; only the
+      // clock was too tight.
+    }, 120_000);
 
     it('runs end to end from the first control point to the last', () => {
       fc.assert(
