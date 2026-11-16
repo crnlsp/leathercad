@@ -318,10 +318,15 @@ function outlineMotion(project: Project, id: FeatureId, shape: ParametricShape):
  * Moves features by a millimetre delta.
  *
  * The translation case of `transformFeatures`, kept because moving is the
- * common thing and a matrix is a poor way to ask for it.
+ * common thing and a matrix is a poor way to ask for it. The delta is
+ * quantised (invariant 8): a drag's is the pointer's, and a smart guide's
+ * *target − reference* (3.16) is then a whole number of quanta, so what was
+ * on the storage grid stays on it and an edge lined up lands exactly.
  */
 export function translateFeatures(ids: Iterable<FeatureId>, deltaMm: Vec2): Command {
-  return transformFeatures(ids, MatOps.fromTranslation(deltaMm), { action: 'move' });
+  return transformFeatures(ids, MatOps.fromTranslation(Vec2Ops.quantiseVec(deltaMm)), {
+    action: 'move',
+  });
 }
 
 /**

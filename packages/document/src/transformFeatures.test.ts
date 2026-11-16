@@ -10,6 +10,7 @@ import {
   refusedTransforms,
   shapePart,
   transformFeatures,
+  translateFeatures,
 } from './commands.js';
 import { DocumentStore } from './store.js';
 
@@ -25,6 +26,18 @@ function shapeOf(store: DocumentStore, index: number): unknown {
   const source = store.getState().document.project.parts[index]?.features[0]?.source;
   return source?.kind === 'shape' ? source.shape : null;
 }
+
+describe('translateFeatures', () => {
+  it('stores a move on the storage grid, as every user input is (invariant 8)', () => {
+    const store = storeWith([rectShape({ x: 10, y: 20 }, 40, 30)]);
+
+    store.dispatch(translateFeatures(['feat-0'], { x: 1.23456789, y: -0.00004 }));
+
+    const shape = shapeOf(store, 0) as { origin: { x: number; y: number } };
+    expect(shape.origin.x).toBeCloseTo(11.2346, 12);
+    expect(shape.origin.y).toBeCloseTo(20, 12);
+  });
+});
 
 describe('transformFeatures', () => {
   it('rotates a rectangle through its rotation parameter', () => {
