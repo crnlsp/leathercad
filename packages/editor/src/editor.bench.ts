@@ -8,7 +8,8 @@ import {
 import { PathOps, uniformRadii } from '@leathercad/geometry';
 import { test, type Bench } from 'vitest';
 
-import { buildSnapIndex, snap } from './snap.js';
+import { alignMove, collectAlignTargets } from './align.js';
+import { buildSnapIndex, snap, type Snapped } from './snap.js';
 
 /**
  * What one pointer move of a drag pays for snapping (PERF-004). A preview makes
@@ -78,15 +79,15 @@ function tracedPart(id: string, points: number, nudgeMm: number): Part {
   return { id, name: 'Traced', quantity: 1, features };
 }
 
-/** A 60 × 40 mm tab at `x`, its outline only. */
-function tabPart(x: number): Part {
+/** A 60 × 40 mm tab with its lower left at (`x`, `y`), its outline only. */
+function tabPart(x: number, y = 280, id = 'tab'): Part {
   return {
-    id: 'tab',
+    id,
     name: 'Tab',
     quantity: 1,
     features: [
       {
-        id: 'tab-cut',
+        id: `${id}-cut`,
         kind: 'cut-contour',
         role: 'outer',
         name: 'Outline',
@@ -96,7 +97,7 @@ function tabPart(x: number): Part {
           kind: 'shape',
           shape: {
             type: 'rect',
-            origin: { x, y: 280 },
+            origin: { x, y },
             width: 60,
             height: 40,
             radii: uniformRadii(4),
@@ -161,4 +162,37 @@ test('hover round a 1000-point traced outline: one snap per move', ({ bench }) =
     const at = { x: 300 + 291 * Math.cos(angle), y: 300 + 291 * Math.sin(angle) };
     held = snap(hoverIndex, hovered, at, { toleranceMm: 2.6, held });
     return held;
+  }));
+
+/**
+ * Smart guides (3.16): a piece carried among 200 others, 30 mm apart in rows
+ * of 20, their edges level. The targets are collected once when a drag begins
+ * (`collectAlignTargets`, its own case), and each move is one `alignMove` —
+ * a binary search per reference — the previous result held as the tool holds
+ * it. The 10 px pick radius at 100 % is 2.6 mm.
+ */
+const board = evaluate(
+  project(
+    Array.from({ length: 200 }, (_, i) =>
+      tabPart((i % 20) * 90, Math.floor(i / 20) * 70, `tab-${i}`),
+    ),
+  ),
+);
+const nothingMoving = new Set<string>();
+test('begin a drag among 200 pieces: collect the smart-guide targets', ({ bench }) =>
+  measure(bench, 'align-collect-200-pieces', () => collectAlignTargets(board, nothingMoving)));
+
+const boardTargets = collectAlignTargets(board, nothingMoving);
+const carried = { minX: 0, minY: 0, maxX: 60, maxY: 40 };
+let alignStep = 0;
+let aligned: Snapped | null = null;
+test('carry a piece among 200: one alignment per move', ({ bench }) =>
+  measure(bench, 'align-drag-200-pieces', () => {
+    alignStep = (alignStep + 1) % 3600;
+    const raw = { x: alignStep * 0.5, y: (alignStep % 140) * 0.5 };
+    aligned = alignMove(carried, raw, boardTargets, aligned, {
+      toleranceMm: 2.6,
+      smartGuides: true,
+    }).snapped;
+    return aligned;
   }));

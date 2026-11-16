@@ -101,7 +101,7 @@ export interface Snapped {
  * How far past the tolerance a caught target holds, as a multiple of it.
  * Without it, a cursor between two targets flips between them on every move.
  */
-const HOLD = 1.5;
+export const HOLD = 1.5;
 
 export interface SnapOptions {
   /**

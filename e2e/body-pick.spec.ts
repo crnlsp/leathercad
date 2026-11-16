@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { readoutAt } from './cursorReadout.js';
+import { boardMap } from './boardMap.js';
 import { openSample, withApp } from './launchApp.js';
 
 /**
@@ -8,32 +8,6 @@ import { openSample, withApp } from './launchApp.js';
  * the sample bifold: the outer is 200 × 95 mm at the origin, folded at x = 100;
  * the lining below it has two 64 × 3 mm card slots, one at (18, −45).
  */
-
-/** Where a board point in millimetres is in the window, read from the cursor readout. */
-async function boardMap(window: Page): Promise<
-  (mm: { x: number; y: number }) => {
-    x: number;
-    y: number;
-  }
-> {
-  const box = (await window.getByTestId('editor-canvas').boundingBox())!;
-  const read = async (x: number, y: number) => {
-    const [mx = NaN, my = NaN] =
-      (await readoutAt(window, x, y))
-        .replace(/−/g, '-')
-        .match(/-?\d+(?:\.\d+)?/g)
-        ?.map(Number) ?? [];
-    return { mx, my };
-  };
-  const a = { x: box.x + box.width * 0.4, y: box.y + box.height * 0.4 };
-  const b = { x: box.x + box.width * 0.6, y: box.y + box.height * 0.6 };
-  const at = await read(a.x, a.y);
-  const bt = await read(b.x, b.y);
-  // Y is up on the board and down in the window: the map carries the sign.
-  const sx = (b.x - a.x) / (bt.mx - at.mx);
-  const sy = (b.y - a.y) / (bt.my - at.my);
-  return (mm) => ({ x: a.x + (mm.x - at.mx) * sx, y: a.y + (mm.y - at.my) * sy });
-}
 
 /** Room for the whole bifold, framed as it opens. */
 const ROOM = { size: [1600, 1000] } as const;

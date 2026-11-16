@@ -26,6 +26,11 @@ export interface PointerInput {
   readonly shiftKey: boolean;
   readonly altKey: boolean;
   readonly ctrlKey: boolean;
+  /**
+   * The snap `at` was moved onto, set by `ToolManager` when it caught one:
+   * how a tool tells a press on a corner from a press beside it (3.16).
+   */
+  readonly snap?: SnapCandidate;
 }
 
 /**
@@ -164,6 +169,14 @@ export interface Tool {
    * `SnapOptions.exclude` exists. A tool that moves nothing omits this.
    */
   snapExclusions?(ctx: ToolContext): readonly FeatureId[];
+
+  /**
+   * Whether the pointer is snapped to points now. A move of a piece grabbed by
+   * its body has no point of its own to put on one, so it lines up by smart
+   * guides alone (3.16), and the router then offers no point and draws no
+   * glyph. Absent means yes.
+   */
+  snapsPoints?(ctx: ToolContext): boolean;
 
   /**
    * Something the user needs to read, for as long as it is true.
@@ -417,14 +430,15 @@ export class ToolManager {
     exclude: readonly string[] = this.active.snapExclusions?.(this.context) ?? NOTHING_EXCLUDED,
   ): PointerInput {
     const before = this.caught;
-    this.caught = event.ctrlKey ? null : this.findSnap(event, exclude, before);
+    const offered = !event.ctrlKey && this.active.snapsPoints?.(this.context) !== false;
+    this.caught = offered ? this.findSnap(event, exclude, before) : null;
 
     // A hovering pointer changes no document, and an idle tool asks for no
     // repaint — so without this the glyph is computed and never drawn until
     // the canvas happens to be dirtied by something else.
     if (!sameSnap(before, this.caught)) this.context.invalidate();
 
-    return this.caught === null ? event : { ...event, at: this.caught.point };
+    return this.caught === null ? event : { ...event, at: this.caught.point, snap: this.caught };
   }
 
   /**
