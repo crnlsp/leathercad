@@ -127,7 +127,15 @@ export function loadProject(bytes: Uint8Array): LoadedProject {
   // migrations exist to rescue.
   const migrated = migrate(rawDocument, manifest.formatVersion);
 
-  const result = ProjectSchema.safeParse(migrated);
+  return { project: checkedProject(migrated), manifest };
+}
+
+/**
+ * The checks every project the app holds has passed: the schema, then its
+ * reference graph. What a file is refused for, and a pasted piece too.
+ */
+export function checkedProject(raw: unknown): Project {
+  const result = ProjectSchema.safeParse(raw);
   if (!result.success) {
     throw new InvalidProjectFileError(`document.json is not valid: ${describe(result.error)}`);
   }
@@ -149,8 +157,7 @@ export function loadProject(bytes: Uint8Array): LoadedProject {
       problems,
     );
   }
-
-  return { project: result.data as Project, manifest };
+  return result.data as Project;
 }
 
 /** A problem for the log: its code, and the feature or part it is about. */

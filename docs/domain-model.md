@@ -566,6 +566,7 @@ that names it fails with `ANCHOR_MISSING`.
 | Operation | Result | Relationship afterwards |
 |---|---|---|
 | **Duplicate part** | A new part beside the original | None. Derivations inside the part re-point to the copies; derivations to other parts keep pointing there |
+| **Copy and paste pieces** (8.8b) | New parts, in any open project, with fresh ids | None, and nothing pointing out. References among the copied pieces re-point to the copies; one out of them is resolved when copying, as a delete would: a feature following a piece left behind is frozen to its geometry, a mirrored hole set follows the copy's own frozen line, a dimension to another piece is dropped. Seams come when both hole sets do |
 | **Flip** | The selected geometry, reflected in place; a piece's outline takes the whole piece with it | None |
 | **Mirror** | A new feature or part, reflected | Linked ([ADR 0012](adr/0012-mirror-is-a-derivation.md)) |
 

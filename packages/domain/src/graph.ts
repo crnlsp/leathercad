@@ -34,7 +34,7 @@ import { seamChangeRefusal } from './seams.js';
  * graph must be acyclic **across both**. Reading them from one function is what
  * keeps that true without each caller remembering the second kind exists.
  */
-function edgesFrom(feature: Feature): FeatureId[] {
+export function referencesOf(feature: Feature): FeatureId[] {
   if (feature.kind === 'text-label') return [];
 
   // A measurement is the second **references** user: it names two places it
@@ -80,7 +80,7 @@ export function dependentsOf(project: Project, ids: Iterable<FeatureId>): Featur
       // Either kind of edge makes this a dependent: a counterpart folded about
       // a fold depends on that fold as surely as on what it mirrors, and
       // deleting the fold has to show it.
-      if (edgesFrom(feature).some((id) => reached.has(id))) {
+      if (referencesOf(feature).some((id) => reached.has(id))) {
         reached.add(feature.id);
         grew = true;
       }
@@ -192,7 +192,7 @@ export function graphProblems(project: Project): Problem[] {
     // graph is sound.
     if (feature.source.kind === 'measurement') {
       const about = { featureId: feature.id, featureName: feature.name };
-      const missing = edgesFrom(feature).find((id) => !byId.has(id));
+      const missing = referencesOf(feature).find((id) => !byId.has(id));
       if (missing !== undefined) problems.push(problem('MEASURE_REF_MISSING', about));
       else if (looped.has(feature.id)) problems.push(problem('CYCLE', about));
       continue;
@@ -369,7 +369,7 @@ function wouldLoop(
     seen.add(at);
 
     const feature = byId.get(at);
-    if (feature !== undefined) frontier.push(...edgesFrom(feature));
+    if (feature !== undefined) frontier.push(...referencesOf(feature));
   }
   return false;
 }
@@ -396,7 +396,7 @@ export function featuresOnCycles(byId: ReadonlyMap<FeatureId, Feature>): Set<Fea
   const walk: { id: FeatureId; edges: FeatureId[]; next: number }[] = [];
   /** Starts walking from a feature, unless it has no edges and so is on no cycle. */
   const enter = (id: FeatureId, feature: Feature): void => {
-    const edges = edgesFrom(feature);
+    const edges = referencesOf(feature);
     if (edges.length === 0) return;
     order.set(id, order.size);
     lowest.set(id, order.get(id)!);

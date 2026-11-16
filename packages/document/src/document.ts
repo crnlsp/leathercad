@@ -138,6 +138,7 @@ export type HistoryAction =
   | 'mirror-across-fold'
   | 'duplicate'
   | 'duplicate-part'
+  | 'paste'
   | 'follow'
   | 'follow-another'
   | 'edit-shape'

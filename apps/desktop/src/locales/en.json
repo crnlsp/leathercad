@@ -374,6 +374,8 @@
     "nudgeUpFine": "Move what is selected 0.1 mm up",
     "nudgeDownFine": "Move what is selected 0.1 mm down",
     "selectAllPieces": "Select every piece on the board",
+    "copyPieces": "Copy the pieces the selection is in, for any open project",
+    "pastePieces": "Paste the copied pieces under the pointer",
     "arc": "Polyline: the next segment is an arc",
     "straight": "Polyline: the next segment is straight",
     "cancel": "Cancel what the tool is doing, clear the selection, or leave focus mode",
@@ -1359,12 +1361,26 @@
       "fix": "Adjust the stretch length or stitching spacing so paired holes stay within {{limit}}."
     }
   },
+  "pieces": {
+    "copiedTitle": "Copied",
+    "lossName": "{{feature}} in {{part}}",
+    "frozen_one": "{{names}} follows a piece you did not copy, so it will paste as the shape it is now.",
+    "frozen_other": "{{names}} follow pieces you did not copy, so they will paste as the shapes they are now.",
+    "dropped_one": "{{names}} points at a piece you did not copy, so it will be left out.",
+    "dropped_other": "{{names}} point at pieces you did not copy, so they will be left out.",
+    "pasteFailedTitle": "Could not paste",
+    "pasteFailed": "The copied pieces could not be read back. Copy them again."
+  },
   "contextMenu": {
     "emptyPart": "The part is empty",
     "hideNote": "Also left off the PDF until shown again",
     "label": "Selection",
     "spansParts_one": "The selection is in {{count}} part; duplicate one at a time",
     "spansParts_other": "The selection is in {{count}} parts; duplicate one at a time",
+    "copy_one": "Copy piece",
+    "copy_other": "Copy {{count}} pieces",
+    "paste_one": "Paste piece",
+    "paste_other": "Paste {{count}} pieces",
     "flip": {
       "horizontal": "Flip horizontally",
       "vertical": "Flip vertically"
@@ -1458,6 +1474,8 @@
     "deleteWithDependentsKeepFrozen_other": "Delete {{what}} and {{count}} dependents, keep {{frozen}} frozen",
     "duplicate": "Duplicate {{name}}",
     "duplicate-part": "Duplicate part",
+    "paste_one": "Paste piece",
+    "paste_other": "Paste {{count}} pieces",
     "fix": "Fix {{name}}",
     "edit-derivation": "Edit derivation",
     "edit-dimension": "Edit dimension",

@@ -15,7 +15,12 @@ import {
 import { describe, expect, it, vi } from 'vitest';
 
 import { createI18n } from '../../shared/i18n.js';
-import { selectionForRightClick, selectionMenu, type SelectionActions } from './contextMenu.js';
+import {
+  boardMenu,
+  selectionForRightClick,
+  selectionMenu,
+  type SelectionActions,
+} from './contextMenu.js';
 import type { MenuEntry, MenuItem } from './menus.js';
 
 /** Two panels, the first with a stitch line following its outline, and an empty part. */
@@ -37,6 +42,7 @@ function actions(): SelectionActions & { dispatched: Command[] } {
     dispatched,
     dispatch: (command) => dispatched.push(command),
     duplicatePart: vi.fn(),
+    copyPieces: vi.fn(),
     deleteFeatures: vi.fn(),
     deletePart: vi.fn(),
   };
@@ -85,6 +91,7 @@ describe('the right-click menu (8.8)', () => {
       entries.map((entry) => (entry.kind === 'item' ? entry.id : entry.kind));
     const expected = [
       'context-duplicate-part',
+      'context-copy-pieces',
       'separator',
       'context-flip-horizontal',
       'context-flip-vertical',
@@ -174,6 +181,26 @@ describe('the right-click menu (8.8)', () => {
     ).toBeDefined();
   });
 
+  it('copies the pieces a selection is in, however many, named by count (8.8b)', () => {
+    const { entries, on } = menu(selectionOf(['cut-a', 'cut-b']));
+
+    expect(item(entries, 'context-copy-pieces').label).toBe('Copy 2 pieces');
+    item(entries, 'context-copy-pieces').onChoose();
+    expect(on.copyPieces).toHaveBeenCalledOnce();
+  });
+
+  it('offers Paste beside Copy once something is copied, and not before (8.8b)', () => {
+    const onChoose = vi.fn();
+    const on = { ...actions(), paste: { count: 1, onChoose } };
+
+    const { entries } = menu(selectionOf(['cut-a']), project(), on);
+    item(entries, 'context-paste-pieces').onChoose();
+
+    expect(item(entries, 'context-paste-pieces').label).toBe('Paste piece');
+    expect(onChoose).toHaveBeenCalledOnce();
+    expect(() => item(menu(selectionOf(['cut-a'])).entries, 'context-paste-pieces')).toThrow();
+  });
+
   it('deletes selected features through the one delete path, and a part as a part', () => {
     const features = menu(selectionOf(['cut-b']));
     item(features.entries, 'context-delete').onChoose();
@@ -204,5 +231,16 @@ describe('the right-click menu (8.8)', () => {
     for (const id of ['context-flip-horizontal', 'context-lock', 'context-visible']) {
       expect(item(entries, id).refusal).toBe('The part is empty');
     }
+  });
+});
+
+describe('the right-click menu on empty board (8.8b)', () => {
+  it('is Paste alone, once something is copied, and nothing before', () => {
+    const paste = { count: 3, onChoose: vi.fn() };
+
+    expect(boardMenu(createI18n('en'), paste).map((e) => e.kind === 'item' && e.label)).toEqual([
+      'Paste 3 pieces',
+    ]);
+    expect(boardMenu(createI18n('en'), undefined)).toEqual([]);
   });
 });
