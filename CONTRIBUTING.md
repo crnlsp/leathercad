@@ -62,8 +62,8 @@ The scripts set the rest themselves: `LEATHERCAD_BENCH`, `LEATHERCAD_PACKAGE_FOR
 
 `pnpm test:e2e` and `pnpm test:packaged` never show a window on Linux, so the suite can run
 while you work: `e2e/virtualScreen.ts`, the configs' global setup, starts an Xvfb screen of its
-own (2560 x 1600, 24-bit, larger than any window a test asks for), points the run at it in place of your X11 or Wayland session, and lowers
-the run's priority to niceness 10. It needs Xvfb: `xorg-server-xvfb` on Arch, `xvfb` on Debian and
+own (2560 x 1600, 24-bit, larger than any window a test asks for), points the run at it in
+place of your X11 or Wayland session, and lowers the run's priority to niceness 10. It needs Xvfb: `xorg-server-xvfb` on Arch, `xvfb` on Debian and
 Ubuntu, `xorg-x11-server-Xvfb` on Fedora. Windows and macOS have no such screen and show their
 windows as before; GitHub Actions brings its own `xvfb-run`.
 
