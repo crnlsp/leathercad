@@ -234,3 +234,14 @@ it('keeps a scaled ellipse within the export tolerance in millimetres', () => {
 it('refuses curves whose subdivision would exceed the node resource ceiling', () => {
   expect(() => readPath('M0 0A1e100 2e100 0 1 0 1e100 1e100')).toThrow();
 });
+
+it('copies a missing rounded rectangle radius before clamping each axis', () => {
+  const p = importSvg(
+    root(
+      { width: '100mm', height: '100mm', viewBox: '0 0 100 100' },
+      element('rect', { width: '10', height: '100', rx: '100' }),
+    ),
+  ).shapes[0]?.paths[0];
+  const vertical = p?.segments.filter((s) => s.kind === 'line')[1];
+  expect(vertical && SegmentOps.start(vertical).y).toBeCloseTo(-50, 8);
+});

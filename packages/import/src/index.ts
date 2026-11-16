@@ -134,8 +134,10 @@ function shape(
       if (!w || !h) return [];
       const x = value('x'),
         y = value('y');
-      const rx = Math.min(positive('rx', value('ry')), w / 2),
-        ry = Math.min(positive('ry', rx), h / 2);
+      const requestedRx = positive('rx', value('ry'));
+      const requestedRy = positive('ry', requestedRx);
+      const rx = Math.min(requestedRx, w / 2),
+        ry = Math.min(requestedRy, h / 2);
       if (!rx || !ry) return [Shapes.rect({ x, y }, w, h)];
       return readPath(
         `M${x + rx} ${y}H${x + w - rx}A${rx} ${ry} 0 0 1 ${x + w} ${y + ry}V${y + h - ry}A${rx} ${ry} 0 0 1 ${x + w - rx} ${y + h}H${x + rx}A${rx} ${ry} 0 0 1 ${x} ${y + h - ry}V${y + ry}A${rx} ${ry} 0 0 1 ${x + rx} ${y}Z`,
