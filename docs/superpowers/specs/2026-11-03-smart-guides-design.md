@@ -1,7 +1,7 @@
 # Smart guides, nudging and exact placement — design for 1.7 (3.13 – 3.20)
 
 **Status:** design, for the 1.7 plan ([`2026-11-03-release-1.7.md`](../plans/2026-11-03-release-1.7.md)).
-Nothing here is built. Where this and the code disagree once a slice lands, the slice updates this
+Built so far: §3 (3.13), §4 (3.14, 3.15), §5 (3.20) and §6 for whole pieces (3.16). Where this and the code disagree once a slice lands, the slice updates this
 file in the same pull request.
 
 **What it covers:** picking a piece by its body (3.13), keyboard movement (3.14), typed position
@@ -177,6 +177,21 @@ So:
 replaces that axis's delta with *target − reference*, exactly. `translateFeatures` quantises the
 committed delta to the storage quantum, so alignment holds to 1e-4 mm — the precision Align already
 promises. The preview goes through the store's gesture; nothing reaches history until release.
+
+**A point snap and the guides (as built in 3.16).** A point the cursor catches moves the *grabbed*
+point onto it, so it means something only when the press itself caught a fixed point of what moves
+— a corner, a midpoint, an arc's centre, a crossing. Then a caught point wins both axes, as §5
+says, and without one the guides decide each axis. A piece grabbed anywhere else (its body, or
+along an edge) has no point of its own to put on a target: during that drag no point is offered and
+no glyph drawn (`Tool.snapsPoints`), so a stitch line or a corner passing under the pointer cannot
+override the alignment. What moves is excluded from snapping from the press on, not from the first
+move after it.
+
+*As built, also:* `packages/editor/src/align.ts` holds the matching (`collectAlignTargets`,
+`alignMove`, `alignmentOverlay`). Pieces level at one value are one target, the first in document
+order — the one a tie would choose — so a row of level pieces costs a move one comparison. Not yet
+built: dropping targets far outside the visible board (§5), and any label on an alignment line;
+the words for them arrive with 3.17's readout.
 
 **Locks and refusals.** A move that `transformRefusal` refuses shows its notice and no guides,
 because nothing would move to them. Linked features move with their piece as today; a derived line

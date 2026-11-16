@@ -98,7 +98,7 @@ as any item that will not make it does.
 - ☐ **U.22 Hover, selected, editing and locked read differently** (P1).
 - ✅ **3.14 Arrow keys nudge, Ctrl+A selects every piece** — on the focused board: 1 mm, 10 mm with Shift, 0.1 mm with Alt, each rebindable; a press or a held key is one undo step; a locked piece says why; a field, the Parts tree, a menu and the tabs keep their arrows.
 - ✅ **3.15 Typed position and Move by** — Properties › Arrange says where the selection's left and bottom edges are and takes a place or a distance, with sums and units; one undo step each; a locked piece says why.
-- ☐ **3.16 Smart guides while moving** — edges, centres and guides, exact to the storage quantum.
+- ✅ **3.16 Smart guides while moving** — a piece dragged by its body lines its edges and centre up with other pieces' and with guides, exact to the storage quantum; Ctrl suspends; one undo step.
 - ☐ **3.18 Placing inside a piece** — a rivet on a flap's centre, a fold at the middle.
 - ☐ **3.17 Live distances and clearance** — the move in mm, and a hole's rim clearance as the rule measures it.
 - ☐ **3.19 Equal spacing** (P1).

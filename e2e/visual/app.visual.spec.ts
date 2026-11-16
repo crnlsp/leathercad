@@ -169,6 +169,44 @@ test('a stitched panel on the canvas', async () => {
   }
 });
 
+test('a piece moved into line with another, its smart guide drawn (3.16)', async () => {
+  const { app, window } = await launch();
+  try {
+    // Two panels drawn level, 150 px wide and 210 px apart.
+    for (const left of [60, 420]) await drawAPanel(window, { left });
+    const canvas = window.getByTestId('editor-canvas');
+    const box = await canvas.boundingBox();
+    if (box === null) throw new Error('canvas is missing');
+    await window.getByTestId('tool-select').click();
+    // The second, grabbed by its body and carried a little left and 4 px down:
+    // still within the pick radius of level, so the guide holds it there and
+    // draws its line, held mid-drag.
+    await window.mouse.move(box.x + 495, box.y + 205);
+    await window.mouse.down();
+    await window.mouse.move(box.x + 470, box.y + 209, { steps: 5 });
+    // Electron's own capture, once: a locator screenshot taken while the
+    // button is held moved the drag in the container, so the piece was pictured
+    // somewhere the pointer never took it.
+    const png = await app.evaluate(
+      async ({ BrowserWindow }, rect) => {
+        const page = BrowserWindow.getAllWindows()[0];
+        if (page === undefined) throw new Error('app window required');
+        return (await page.webContents.capturePage(rect)).toPNG().toString('base64');
+      },
+      {
+        x: Math.round(box.x),
+        y: Math.round(box.y),
+        width: Math.round(box.width),
+        height: Math.round(box.height),
+      },
+    );
+    expect(Buffer.from(png, 'base64')).toMatchSnapshot('smart-guide-move.png');
+    await window.mouse.up();
+  } finally {
+    await closeApp(app);
+  }
+});
+
 test('the print test on its sheets (7.4c)', async () => {
   const { app, window } = await launch();
   try {

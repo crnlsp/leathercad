@@ -4,17 +4,20 @@ import {
   isEmptySelection,
   pieceScope,
   selectedFeatureIds,
+  selectionBox,
   transformRefusal,
   translateFeatures,
   setGuide,
   deleteGuide,
 } from '@leathercad/document';
 import type { FeatureId } from '@leathercad/domain';
-import { evaluate, type Guide, type PartId, type Problem } from '@leathercad/domain';
-import { MatOps, RectOps, Shapes, type Vec2 } from '@leathercad/geometry';
-import { CANVAS, pathItem, type DisplayList } from '@leathercad/render';
+import { evaluate, type Guide, type PartId, type Problem, type Project } from '@leathercad/domain';
+import { MatOps, RectOps, Shapes, type Rect, type Vec2 } from '@leathercad/geometry';
+import { CANVAS, cssPxPerMm, pathItem, type DisplayList } from '@leathercad/render';
 
+import { alignMove, alignmentOverlay, collectAlignTargets, type AlignTargets } from '../align.js';
 import { featuresWithin, pickAt } from '../hitTest.js';
+import type { SnapCandidate, Snapped } from '../snap.js';
 import { means, type Tool, type ToolContext } from '../tool.js';
 import { isDrag } from './gesture.js';
 
@@ -22,20 +25,45 @@ type State =
   | { readonly kind: 'guide'; readonly guide: Guide; readonly startMm: Vec2 }
   | { readonly kind: 'idle' }
   /** Pressed on a feature; becomes a move once the pointer actually travels. */
-  | { readonly kind: 'maybe-move'; readonly startMm: { x: number; y: number } }
-  | {
+  | ({ readonly kind: 'maybe-move' } & Grab)
+  | ({
       readonly kind: 'moving';
-      readonly startMm: { x: number; y: number };
-      /** The selection, each piece in it made whole (Q30): what the drag moves. */
-      readonly moving: readonly FeatureId[];
       /** Why the selection is not moving, while it is not (X3). */
       readonly refusal: Problem | null;
-    }
+      /** The extent being moved and what it lines up with; null unless whole pieces move (3.16). */
+      readonly guides: { readonly box: Rect; readonly targets: AlignTargets } | null;
+      /** What the last move lined up, held by the next (hysteresis). */
+      readonly aligned: Snapped | null;
+      readonly delta: Vec2;
+    } & Grab)
   | {
       readonly kind: 'band';
       readonly startMm: { x: number; y: number };
       readonly currentMm: { x: number; y: number };
     };
+
+/** What a press took hold of, from the press to the release. */
+interface Grab {
+  readonly startMm: Vec2;
+  /** The selection, each piece in it made whole (Q30): what the drag moves. */
+  readonly moving: readonly FeatureId[];
+  /**
+   * Whether the press caught a fixed point of what moves — a corner, a
+   * midpoint, a centre. Only then does a point the cursor catches move that
+   * point onto it, winning both axes (smart-guides spec §6); a piece grabbed
+   * anywhere else has no point of its own to put there, and lines up by its
+   * extent alone (3.16).
+   */
+  readonly byPoint: boolean;
+}
+
+/** The kinds that name one point of a feature, rather than wherever the cursor is along it. */
+const FIXED: ReadonlySet<SnapCandidate['kind']> = new Set([
+  'endpoint',
+  'midpoint',
+  'centre',
+  'intersection',
+]);
 
 export function createSelectTool(): Tool {
   let state: State = { kind: 'idle' };
@@ -85,7 +113,21 @@ export function createSelectTool(): Tool {
         ctx.store.select([pick.id]);
       }
 
-      state = { kind: 'maybe-move', startMm: event.at };
+      // What moves is known at the press, so the moves before the drag
+      // begins already skip its own geometry when they snap.
+      const after = ctx.store.getState();
+      const { features } = pieceScope(
+        after.document.project,
+        selectedFeatureIds(after.document.project, after.selection),
+      );
+      const caught = event.snap;
+      const byPoint =
+        caught !== undefined &&
+        FIXED.has(caught.kind) &&
+        [caught.featureId, caught.otherFeatureId].some(
+          (id) => id !== undefined && features.includes(id),
+        );
+      state = { kind: 'maybe-move', startMm: event.at, moving: features, byPoint };
       ctx.invalidate();
     },
 
@@ -115,15 +157,20 @@ export function createSelectTool(): Tool {
 
       if (state.kind === 'maybe-move') {
         if (!isDrag(ctx, state.startMm, event.at)) return;
-        const { document, selection } = ctx.store.getState();
         ctx.store.begin({ action: 'move' });
         // A piece's outline carries the piece (Q30), hidden features and all —
         // and a piece picked by its body or its heading is its features (3.13).
-        const { features } = pieceScope(
-          document.project,
-          selectedFeatureIds(document.project, selection),
-        );
-        state = { kind: 'moving', startMm: state.startMm, moving: features, refusal: null };
+        // Its targets come from the document as it was, once: nothing else
+        // moves during a move.
+        const project = ctx.store.committedDocument.project;
+        state = {
+          ...state,
+          kind: 'moving',
+          refusal: null,
+          guides: guidesFor(project, state.moving),
+          aligned: null,
+          delta: { x: 0, y: 0 },
+        };
       }
 
       // Undo, or a command, cancelled the move under the pointer.
@@ -134,15 +181,34 @@ export function createSelectTool(): Tool {
       }
 
       if (state.kind === 'moving') {
-        const delta = { x: event.at.x - state.startMm.x, y: event.at.y - state.startMm.y };
+        const raw = { x: event.at.x - state.startMm.x, y: event.at.y - state.startMm.y };
+        // A point caught by a grabbed corner wins both axes; Ctrl suspends
+        // every guide, as it does every snap.
+        const pointCaught = state.byPoint && event.snap !== undefined;
+        const alignment =
+          state.guides === null || pointCaught || event.ctrlKey
+            ? null
+            : alignMove(state.guides.box, raw, state.guides.targets, state.aligned, {
+                toleranceMm: ctx.viewport.pickToleranceMm(),
+                smartGuides: ctx.smartGuides?.() ?? true,
+              });
+        const delta = alignment?.delta ?? raw;
         const { document } = ctx.store.getState();
 
         // The same check the command makes, asked first so the user is told why
         // nothing moves: a stitch line dragged on its own, or a locked rivet in
-        // the piece being dragged.
+        // the piece being dragged. A refused move shows no guides: nothing
+        // would move to them.
+        const refusal = transformRefusal(
+          document.project,
+          state.moving,
+          MatOps.fromTranslation(delta),
+        );
         state = {
           ...state,
-          refusal: transformRefusal(document.project, state.moving, MatOps.fromTranslation(delta)),
+          refusal,
+          aligned: refusal === null ? (alignment?.snapped ?? null) : null,
+          delta,
         };
 
         ctx.store.preview(translateFeatures(state.moving, delta));
@@ -224,16 +290,32 @@ export function createSelectTool(): Tool {
     snapExclusions() {
       return state.kind === 'guide'
         ? [state.guide.id]
-        : state.kind === 'moving'
+        : state.kind === 'moving' || state.kind === 'maybe-move'
           ? state.moving
           : [];
+    },
+
+    snapsPoints() {
+      return state.kind === 'moving' || state.kind === 'maybe-move' ? state.byPoint : true;
     },
 
     notice() {
       return state.kind === 'moving' ? state.refusal : null;
     },
 
-    buildOverlay(): DisplayList {
+    buildOverlay(ctx): DisplayList {
+      if (state.kind === 'moving' && state.guides !== null && state.aligned !== null) {
+        const { box, targets } = state.guides;
+        const moved = {
+          minX: box.minX + state.delta.x,
+          maxX: box.maxX + state.delta.x,
+          minY: box.minY + state.delta.y,
+          maxY: box.maxY + state.delta.y,
+        };
+        return {
+          items: alignmentOverlay(moved, state.aligned, targets, cssPxPerMm(ctx.viewport.toView())),
+        };
+      }
       if (state.kind !== 'band') return { items: [] };
 
       const band = RectOps.fromCorners(state.startMm, state.currentMm);
@@ -274,4 +356,27 @@ function pickPiece(ctx: ToolContext, partId: PartId, outline: FeatureId, shift: 
   if (own.every((id) => next.has(id))) for (const id of own) next.delete(id);
   else for (const id of own) next.add(id);
   ctx.store.select(next);
+}
+
+/**
+ * The extent a move lines up and the targets it lines up with — for whole
+ * pieces only. Features moved inside a piece line up with that piece (3.18),
+ * not with the board.
+ */
+function guidesFor(
+  project: Project,
+  moving: readonly FeatureId[],
+): { box: Rect; targets: AlignTargets } | null {
+  const { about } = pieceScope(project, moving);
+  const outlines = new Set(
+    project.parts.flatMap((part) =>
+      part.features
+        .filter((feature) => feature.kind === 'cut-contour' && feature.role === 'outer')
+        .map((feature) => feature.id),
+    ),
+  );
+  if (about.length === 0 || !about.every((id) => outlines.has(id))) return null;
+  const box = selectionBox(project, about);
+  if (box === null) return null;
+  return { box, targets: collectAlignTargets(evaluate(project), new Set(moving)) };
 }
