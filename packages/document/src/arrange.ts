@@ -1,4 +1,4 @@
-import { QUANTUM_MM, approxCmp, approxZero, quantise } from '@leathercad/core';
+import { approxCmp, approxZero, quantise } from '@leathercad/core';
 import { evaluate, type Project, type Problem } from '@leathercad/domain';
 import { MatOps, PathOps, RectOps, type Rect } from '@leathercad/geometry';
 
@@ -128,8 +128,9 @@ export function arrangeFeatures(
     if (items === null) return document;
     let next = document;
     for (const { ids: targets, delta } of movesFor(items, axis, mode)) {
-      if (approxZero(delta, QUANTUM_MM)) continue;
+      // Quantised first, then asked: a delta of one quantum is a move to make.
       const offset = quantise(delta);
+      if (approxZero(offset)) continue;
       next = translateFeatures(
         targets,
         axis === 'x' ? { x: offset, y: 0 } : { x: 0, y: offset },

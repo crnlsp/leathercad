@@ -94,6 +94,14 @@ describe('align and distribute', () => {
     expect(arrangeFeatures(['stitch', 'b'], 'x', 'min').apply(linked)).toBe(linked);
   });
 
+  it('closes a gap of one quantum, rather than calling it aligned', () => {
+    const original = addPart(
+      rectanglePart('part-d', 'd', 'd', rectShape({ x: 200, y: QUANTUM_MM }, 10, 10)),
+    ).apply(drawing());
+    const aligned = bounds(arrangeFeatures(['a', 'd'], 'y', 'min').apply(original));
+    expect(aligned.map((box) => box.minY)).toEqual([0, 20, 50, 0]);
+  });
+
   it('does nothing when there are too few independent items', () => {
     const original = drawing();
     expect(arrangeFeatures(['a'], 'x', 'min').apply(original)).toBe(original);
