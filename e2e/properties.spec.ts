@@ -50,6 +50,9 @@ test('a hole set reads in the order of the work, and says how its spacing came o
       'mirror-horizontal',
       'delete-feature',
     ];
+    // Scrolled to its end, so the sticky Delete footer sits where it falls in
+    // the panel rather than at the window's foot, over whatever is beneath.
+    await panel.evaluate((el) => (el.scrollTop = el.scrollHeight));
     const tops = [];
     for (const id of order) tops.push(await top(window, id));
     expect(tops).toEqual([...tops].sort((a, b) => a - b));
