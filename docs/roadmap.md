@@ -127,7 +127,7 @@ as any item that will not make it does.
 
 - ✅ **9.19 Curves that can be stitched** (P1) — arcs fitted to each cubic, for the offset only: a squashed circle's stitch line within 0.005 mm of the true inset; a curve bent tighter than the inset, or trimmed against a side at a corner (D8), refused as `OFFSET_COLLAPSED`.
 - ✅ **ADR 0023 SVG read by the platform's parser** (P1) — no XML dependency; the trust boundary written down: bytes bounded, entities checked before parsing (a 200 kB file froze Chromium's parser for 12.5 s), the parsed document never adopted, a plain tree into a headless `packages/import`.
-- ☐ **9.20a SVG import: units and paths** (P1).
+- ✅ **9.20a SVG import: units and paths** (P1) — headless plain-tree conversion, physical units and confirmed pixel density, all path commands, primitives, groups and transforms; Y flipped once.
 - ☐ **9.20b SVG import: roles and preview** (P1).
 - ☐ **9.20c SVG import: untrusted files** (P1).
 - ☐ **9.7 The part library, through templates** (P1) — *Save piece as template*, *Insert piece from…*.
