@@ -590,9 +590,13 @@ function build(
               ? undefined
               : {
                   ...holes,
+                  // The vertex order is kept (see `anchors` below), so a hole
+                  // keeps its arc length, run and ordinal; only where it is and
+                  // which way the line runs there change.
                   holes: holes.holes.map((hole) => ({
                     ...hole,
                     point: MatOps.apply(m, hole.point),
+                    tangent: MatOps.applyDirection(m, hole.tangent),
                   })),
                 },
           text: undefined,

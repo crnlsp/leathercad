@@ -5,7 +5,14 @@ import { describe, expect, it } from 'vitest';
 
 import { alignmentMarks, markedPairs } from './alignmentMarks.js';
 import { evaluate } from './evaluate.js';
-import { DEFAULT_SETTINGS, type Part, type Project, type Seam, type SeamMarks } from './feature.js';
+import {
+  DEFAULT_SETTINGS,
+  type Feature,
+  type Part,
+  type Project,
+  type Seam,
+  type SeamMarks,
+} from './feature.js';
 import { distanceToEdge, materialOf } from './material.js';
 import { resolveSeam } from './seams.js';
 
@@ -279,6 +286,84 @@ describe('alignment marks (9.13)', () => {
     expect(marks[0]!.inward.y).toBeCloseTo(0, 9);
     expect(marks[2]!.inward.x).toBeCloseTo(-Math.SQRT1_2, 9);
     expect(marks[2]!.inward.y).toBeCloseTo(-Math.SQRT1_2, 9);
+  });
+
+  it('point into a mirrored, turned piece, square to its own stitch line', () => {
+    // A turned card and its mirror image about a slanted axis, as Mirror
+    // makes them: the image's features are mirrors of the card's, in a part
+    // of their own. Its right side runs at 2·axis − turn − 90°, not where the
+    // card's does, so a mark squared to the card's tangent would lean.
+    fc.assert(
+      fc.property(
+        fc.double({ min: 0.1, max: 1.4, noNaN: true }),
+        fc.double({ min: 0, max: Math.PI, noNaN: true }),
+        (turnRad, axisRad) => {
+          const card = panel(0, { x: 0, y: 0, width: 105, height: 70 });
+          const turned: Part = {
+            ...card,
+            features: card.features.map((f) =>
+              f.source.kind === 'shape' && f.source.shape.type === 'rect'
+                ? ({
+                    ...f,
+                    source: { ...f.source, shape: { ...f.source.shape, rotation: turnRad } },
+                  } as Feature)
+                : f,
+            ),
+          };
+          const image: Part = {
+            id: 'part-1',
+            name: 'Panel mirrored',
+            quantity: 1,
+            features: turned.features.map((f) => ({
+              ...f,
+              id: `${f.id.replace('-0', '')}-m`,
+              source: {
+                kind: 'derived',
+                sourceId: f.id,
+                op: {
+                  type: 'mirror',
+                  axis: { kind: 'line', origin: { x: 150, y: 20 }, angleRad: axisRad },
+                  glideMm: 0,
+                },
+              },
+            })) as Feature[],
+          };
+          const side = { kind: 'between', fromAnchor: 0, toAnchor: 1 } as const;
+          const project: Project = {
+            id: 'project',
+            name: 'Marks',
+            settings: DEFAULT_SETTINGS,
+            parts: [turned, image],
+            seams: [
+              {
+                id: 'seam',
+                a: { holeSetId: 'holes-0', stretch: side },
+                b: { holeSetId: 'holes-m', stretch: side },
+                marks: { kind: 'every', n: 2 },
+              },
+            ],
+          };
+          const resolved = evaluate(project);
+          const seam = resolveSeam(project, project.seams![0]!);
+          if (!seam.ok) throw new Error('the seam must resolve');
+          const sideAngle = 2 * axisRad - turnRad - Math.PI / 2;
+          const along = { x: Math.cos(sideAngle), y: Math.sin(sideAngle) };
+          const material = materialOf(resolved.parts.find((p) => p.part.id === 'part-1')!);
+          const marks = alignmentMarks(resolved).filter(
+            // The last pair can be the corner hole, where the leather lies diagonally in.
+            (mark) => mark.partId === 'part-1' && mark.pair < seam.b.holes.length,
+          );
+          expect(marks.length).toBeGreaterThan(3);
+          for (const mark of marks) {
+            expect(Math.abs(Vec2Ops.dot(mark.inward, along))).toBeLessThanOrEqual(EPS_LENGTH);
+            const inside = Vec2Ops.add(mark.point, Vec2Ops.scale(mark.inward, 1));
+            expect(distanceToEdge(material, inside)).toBeGreaterThan(
+              distanceToEdge(material, mark.point),
+            );
+          }
+        },
+      ),
+    );
   });
 
   it('is the same list for the same evaluation, so the board and paper share it', () => {

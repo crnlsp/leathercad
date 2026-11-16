@@ -1,10 +1,13 @@
+import { EPS_ANGLE, EPS_POINT } from '@leathercad/core';
 import {
+  MatOps,
   PathOps,
   SegmentOps,
   Shapes,
   decomposeGlide,
   glideMatrix,
   uniformRadii,
+  Vec2Ops,
 } from '@leathercad/geometry';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
@@ -220,6 +223,56 @@ describe('a mirrored hole set', () => {
           const image = entryOf(p, 'holes-m');
           if (!source.ok || !image.ok) return true;
           return image.holes?.count === source.holes?.count;
+        },
+      ),
+    );
+  });
+  it('turns every hole’s tangent with the reflection, so it lies along the mirrored line', () => {
+    // A disc mirrored about any axis: the image's stitch line is the circle
+    // about the reflected centre, so a hole's tangent there is square to the
+    // radius. Alignment marks and link ticks are drawn square to it (9.13).
+    fc.assert(
+      fc.property(
+        fc.double({ min: -200, max: 200, noNaN: true }),
+        fc.double({ min: -200, max: 200, noNaN: true }),
+        fc.double({ min: 0, max: Math.PI, noNaN: true }),
+        fc.double({ min: -50, max: 50, noNaN: true }),
+        (ox, oy, angleRad, glideMm) => {
+          const centre = { x: 40, y: 30 };
+          const disc = {
+            ...panel(),
+            source: { kind: 'shape', shape: { type: 'circle', centre, radius: 35 } },
+          } as Feature;
+          const axis = { kind: 'line' as const, origin: { x: ox, y: oy }, angleRad };
+          const image: Feature = {
+            ...base('holes-m', 'Mirrored'),
+            kind: 'stitch-hole-set',
+            source: {
+              kind: 'derived',
+              sourceId: 'holes-1',
+              op: { type: 'mirror', axis, glideMm },
+            },
+          };
+          const p = project(disc, stitchLine(), holes(), image);
+          const m = glideMatrix(axis.origin, angleRad, glideMm);
+          const mirroredCentre = MatOps.apply(m, centre);
+
+          const source = okEntry(p, 'holes-1').holes!.holes;
+          const mirrored = okEntry(p, 'holes-m').holes!.holes;
+          expect(mirrored).toHaveLength(source.length);
+          for (const [i, hole] of mirrored.entries()) {
+            const reflected = MatOps.applyDirection(m, source[i]!.tangent);
+            expect(Vec2Ops.len(Vec2Ops.sub(hole.tangent, reflected))).toBeLessThanOrEqual(
+              EPS_POINT,
+            );
+            const radial = Vec2Ops.normalise(Vec2Ops.sub(hole.point, mirroredCentre));
+            expect(Math.abs(Vec2Ops.dot(hole.tangent, radial))).toBeLessThanOrEqual(EPS_ANGLE);
+            // A reflection keeps the vertex order, so a hole keeps its place
+            // along the line, its run and its number.
+            expect(hole.alongMm).toBe(source[i]!.alongMm);
+            expect(hole.runIndex).toBe(source[i]!.runIndex);
+            expect(hole.ordinal).toBe(source[i]!.ordinal);
+          }
         },
       ),
     );
