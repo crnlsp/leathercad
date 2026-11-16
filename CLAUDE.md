@@ -40,7 +40,7 @@ pnpm check            # typecheck + lint + format:check + depcruise + knip + tes
 pnpm test             # unit + property + export + SVG snapshot + format fixtures
 pnpm test locales     # structural integrity: keys, placeholders, plural forms (ADR 0018)
 pnpm locales:report   # informational logical-message coverage; missing translations never fail CI
-pnpm test:e2e         # builds, then Playwright drives the real Electron app (incl. the axe scan)
+pnpm test:e2e         # builds, then Playwright drives the real Electron app (incl. the axe scan); hidden Xvfb on Linux, LEATHERCAD_E2E_HEADED=1 to watch
 pnpm test:visual      # pixel diffs in the pinned Playwright container; needs `pnpm build` and Docker
 pnpm test:packaged    # packages the app, then smoke-tests the packaged binary
 pnpm docs:media       # retakes the README's screenshots and demo from the real app, in the pinned Playwright container (needs Docker)

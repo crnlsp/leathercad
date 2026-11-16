@@ -30,7 +30,7 @@ directory of its own — on Linux, `XDG_CONFIG_HOME=/tmp/lc-dev pnpm dev`.
 |---|---|
 | `pnpm check` | Typecheck, lint, format, layering, dead code, tests with coverage, performance ceilings, in a minute or two. **Run it before every push** — the pre-push hook does |
 | `pnpm test` | Unit, property, golden, export and snapshot tests. The print checks among them need poppler (`poppler-utils` in most Linux distributions, `poppler` in Homebrew, pacman and Chocolatey); without it they skip, which CI does not allow |
-| `pnpm test:e2e` | Builds, then Playwright drives the real Electron app (with an accessibility scan). Needs a display: on Linux without one, `xvfb-run -a pnpm test:e2e` |
+| `pnpm test:e2e` | Builds, then Playwright drives the real Electron app (with an accessibility scan). On Linux its windows open on a hidden Xvfb screen, at low CPU priority — see [Running E2E on Linux](#running-e2e-on-linux) |
 | `pnpm test:visual` | Pixel diffs in the pinned Playwright container. Needs Docker and `pnpm build` |
 | `pnpm test:packaged` | Packages the app, then smoke-tests the packaged binary |
 | `pnpm package` | This platform's installer, in `apps/desktop/release/` |
@@ -52,10 +52,39 @@ run:
 | `UPDATE_FIXTURES=1` | Rewrites a committed fixture from the code that builds it: the current format version's, the sample project, the print test. Read the diff before committing it |
 | `LEATHERCAD_TEST_TIMEOUT` | Every test's timeout, in milliseconds. Mutation testing sets it ([`docs/testing.md`](docs/testing.md) §3.4) |
 | `LEATHERCAD_RECOVERY_INTERVAL_MS` | How often the app writes a crash-recovery copy. The E2E tests shorten it |
+| `LEATHERCAD_E2E_HEADED=1` | On Linux, the E2E windows open on your own screen instead of a hidden Xvfb one, at normal priority. Playwright's `PWDEBUG` does the same |
 | `LEATHERCAD_RELEASES_URL` | Where the update check asks for the latest release, in place of GitHub ([ADR 0020](docs/adr/0020-update-discovery.md)). The Playwright configs point it at a port nothing listens on |
 
 The scripts set the rest themselves: `LEATHERCAD_BENCH`, `LEATHERCAD_PACKAGE_FOR_E2E` and
 `LEATHERCAD_IN_CONTAINER`.
+
+### Running E2E on Linux
+
+`pnpm test:e2e` and `pnpm test:packaged` never show a window on Linux, so the suite can run
+while you work: `e2e/virtualScreen.ts`, the configs' global setup, starts an Xvfb screen of its
+own (2560 x 1600, 24-bit, larger than any window a test asks for), points the run at it in place of your X11 or Wayland session, and lowers
+the run's priority to niceness 10. It needs Xvfb: `xorg-server-xvfb` on Arch, `xvfb` on Debian and
+Ubuntu, `xorg-x11-server-Xvfb` on Fedora. Windows and macOS have no such screen and show their
+windows as before; GitHub Actions brings its own `xvfb-run`.
+
+To watch a test, or step through it:
+
+```bash
+LEATHERCAD_E2E_HEADED=1 pnpm exec playwright test e2e/keys.spec.ts
+```
+
+```bash
+PWDEBUG=1 pnpm exec playwright test e2e/keys.spec.ts
+```
+
+- *Xvfb could not start (spawn Xvfb ENOENT)*: it is not installed. Install it, or run headed.
+- *Xvfb exited before it was ready*: its own message follows. A stale lock in `/tmp/.X*-lock` from
+  a killed server is harmless; Xvfb picks the next free display.
+- *A window still appears*: the run is headed — check `LEATHERCAD_E2E_HEADED` and `PWDEBUG` — or
+  it is one of the `tools/perf-*.mjs` scripts, which launch the app themselves; run those under
+  `xvfb-run -a -s '-screen 0 1920x1080x24'`.
+- *A test passes headed and fails hidden*: it should not; Linux CI runs it under Xvfb too. Look at
+  its trace (`--trace on`) rather than running it headed to get green.
 
 **Translating?** You need none of the rest of this page beyond setting up: the
 [translation guide](docs/localization.md) is the whole path, and

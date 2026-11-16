@@ -26,6 +26,8 @@ export default defineConfig({
   // build (`pnpm test:packaged`), and the README's pictures are taken on
   // demand (`pnpm docs:media`).
   testIgnore: ['**/visual/**', '**/packaged/**', '**/media/**'],
+  // Off the developer's screen on Linux. See e2e/virtualScreen.ts.
+  globalSetup: './e2e/virtualScreen.ts',
   timeout: 60_000,
   expect: { timeout: 10_000 },
   // Electron instances are heavyweight and contend for the display; one at a time.
