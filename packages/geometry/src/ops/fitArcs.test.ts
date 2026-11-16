@@ -5,7 +5,16 @@ import { describe, expect, it } from 'vitest';
 import { arbCubicSegment, arbRigidTransform } from '../../test/arbitraries.js';
 import { fromScale } from '../mat2x3.js';
 import { distanceToPath, unsafePath, type Path } from '../path/index.js';
-import { CubicOps, cubic, end, pointAt, start, tangentAt, type Segment } from '../segment/index.js';
+import {
+  CubicOps,
+  cubic,
+  end,
+  pointAt,
+  start,
+  tangentAt,
+  type CubicSegment,
+  type Segment,
+} from '../segment/index.js';
 import { ellipse } from '../shapes.js';
 import { EXPORT_TOLERANCE_MM } from '../tolerance.js';
 import { dist, dot, len, vec, type Vec2 } from '../vec2.js';
@@ -30,11 +39,15 @@ const samplesOf = (s: Segment): Vec2[] =>
   Array.from({ length: SAMPLES + 1 }, (_, i) => pointAt(s, i / SAMPLES));
 
 /** The furthest any point of the cubic lies from the fit. */
-const cubicToFit = (c: Segment, fit: ArcFit): number =>
+const cubicToFit = (c: Segment, fit: ArcFit): number => {
   // A cubic of four coincident points is fitted by nothing, and is nothing to miss.
-  fit.pieces.length === 0
-    ? 0
-    : Math.max(...samplesOf(c).map((p) => distanceToPath(asPath(fit), p)));
+  if (fit.pieces.length === 0) return 0;
+  const fitted = asPath(fit);
+  return Math.max(...samplesOf(c).map((p) => distanceToPath(fitted, p)));
+};
+
+/** Samples to a chunk of the reference sweep, which is skipped whole when it is too far to matter. */
+const CHUNK = 32;
 
 /**
  * Distance to the cubic, accurate where the curve runs back over itself.
@@ -44,32 +57,73 @@ const cubicToFit = (c: Segment, fit: ArcFit): number =>
  * settles on the wrong branch and overstates the distance. Here every local
  * minimum of 1024 samples is refined by ternary search, and the nearest kept.
  */
-function distanceToCubic(c: Segment): (p: Vec2) => number {
+function distanceToCubic(c: CubicSegment): (p: Vec2) => number {
   const n = 1024;
-  const points = Array.from({ length: n + 1 }, (_, i) => pointAt(c, i / n));
+  const xs = new Float64Array(n + 1);
+  const ys = new Float64Array(n + 1);
+  for (let i = 0; i <= n; i++) {
+    const q = pointAt(c, i / n);
+    xs[i] = q.x;
+    ys[i] = q.y;
+  }
+
+  // The sweep is most of the property's time — it runs for every point of
+  // every fit, and swept whole it took the property past 30 s under coverage
+  // on CI — so the samples are taken in chunks, and a chunk too far away to
+  // hold the nearest point is skipped. That changes no answer: the curve never
+  // moves faster than three times its longest control leg, so every point a
+  // chunk's samples or refinements can reach lies within `reach` of one of its
+  // samples, and so within its circle. Checked against the whole sweep on
+  // 250 000 points, on and off the curve: equal to the bit.
+  const reach = (3 * Math.max(dist(c.p0, c.p1), dist(c.p1, c.p2), dist(c.p2, c.p3))) / n;
+  const chunks = Array.from({ length: n / CHUNK }, (_, k) => {
+    const from = k * CHUNK;
+    const to = from + CHUNK;
+    const x = xs.subarray(from, to + 1);
+    const y = ys.subarray(from, to + 1);
+    const [minX, maxX, minY, maxY] = [
+      Math.min(...x),
+      Math.max(...x),
+      Math.min(...y),
+      Math.max(...y),
+    ];
+    const centre = vec((minX + maxX) / 2, (minY + maxY) / 2);
+    return { from, to, centre, radius: Math.hypot(maxX - minX, maxY - minY) / 2 + reach };
+  });
+  const sampled = new Float64Array(n + 1);
 
   return (p) => {
-    const sampled = points.map((q) => dist(q, p));
+    const near = chunks
+      .map((chunk) => ({ chunk, bound: dist(chunk.centre, p) - chunk.radius }))
+      .sort((a, b) => a.bound - b.bound);
     let best = Number.POSITIVE_INFINITY;
-    for (let i = 0; i <= n; i++) {
-      const here = sampled[i]!;
-      if ((i > 0 && sampled[i - 1]! < here) || (i < n && sampled[i + 1]! < here)) continue;
-      let lo = Math.max(0, i - 1) / n;
-      let hi = Math.min(n, i + 1) / n;
-      for (let step = 0; step < 40; step++) {
-        const a = lo + (hi - lo) / 3;
-        const b = hi - (hi - lo) / 3;
-        if (dist(pointAt(c, a), p) < dist(pointAt(c, b), p)) hi = b;
-        else lo = a;
+    for (const { chunk, bound } of near) {
+      if (bound >= best) break;
+      for (let i = Math.max(0, chunk.from - 1); i <= Math.min(n, chunk.to + 1); i++) {
+        sampled[i] = Math.hypot(xs[i]! - p.x, ys[i]! - p.y);
       }
-      best = Math.min(best, here, dist(pointAt(c, (lo + hi) / 2), p));
+      // Each sample is weighed in one chunk only; the last also takes the end.
+      const last = chunk.to === n ? n : chunk.to - 1;
+      for (let i = chunk.from; i <= last; i++) {
+        const here = sampled[i]!;
+        if ((i > 0 && sampled[i - 1]! < here) || (i < n && sampled[i + 1]! < here)) continue;
+        let lo = Math.max(0, i - 1) / n;
+        let hi = Math.min(n, i + 1) / n;
+        for (let step = 0; step < 40; step++) {
+          const a = lo + (hi - lo) / 3;
+          const b = hi - (hi - lo) / 3;
+          if (dist(pointAt(c, a), p) < dist(pointAt(c, b), p)) hi = b;
+          else lo = a;
+        }
+        best = Math.min(best, here, dist(pointAt(c, (lo + hi) / 2), p));
+      }
     }
     return best;
   };
 }
 
 /** The furthest any point of the fit lies from the cubic, 10 intervals to a piece. */
-const fitToCubic = (c: Segment, fit: ArcFit): number => {
+const fitToCubic = (c: CubicSegment, fit: ArcFit): number => {
   const toCurve = distanceToCubic(c);
   return Math.max(
     0,
@@ -221,10 +275,11 @@ describe('fitArcs', () => {
         }),
         HEAVY_RUNS,
       );
-      // The same hundred cases every CI run (the seed is pinned), measured at
-      // about 4 s on a desktop and past the package's 30 s on CI's coverage
-      // runner, whose speed varies run to run. The work is fixed; only the
-      // clock was too tight.
+      // The same hundred cases every CI run (the seed is pinned). Under coverage
+      // they took about 10 s on a desktop and past the package's 30 s on CI's
+      // runner, whose speed varies run to run; skipping far samples in the
+      // reference brought the desktop to about 3.7 s. The 120 s stays as
+      // headroom for a slow runner, not because the work needs it.
     }, 120_000);
 
     it('runs end to end from the first control point to the last', () => {
