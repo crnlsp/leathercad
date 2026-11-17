@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { extname, isAbsolute, sep } from 'node:path';
 
 import { quantise } from '@leathercad/core';
-import { LAYER_ROLES } from '@leathercad/domain';
+import { IRON_STYLES, LAYER_ROLES } from '@leathercad/domain';
 import {
   DEFAULT_PREFERENCES,
   type Iron,
@@ -267,12 +267,19 @@ function readIrons(value: unknown): Iron[] | undefined {
   const irons: Iron[] = [];
   for (const entry of value) {
     if (typeof entry !== 'object' || entry === null) continue;
-    const { id, name, pitchMm } = entry as Record<string, unknown>;
+    const { id, name, pitchMm, style } = entry as Record<string, unknown>;
     const pitch = readLength(pitchMm);
     if (typeof id !== 'string' || id === '' || seen.has(id)) continue;
     if (typeof name !== 'string' || name.trim() === '' || pitch === undefined) continue;
     seen.add(id);
-    irons.push({ id, name: name.trim(), pitchMm: pitch });
+    // A style this version does not know is let go, and the iron reads as French.
+    const known = IRON_STYLES.find((each) => each === style);
+    irons.push({
+      id,
+      name: name.trim(),
+      pitchMm: pitch,
+      ...(known === undefined ? {} : { style: known }),
+    });
   }
   return irons;
 }

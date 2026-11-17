@@ -158,3 +158,47 @@ describe('deleting a source', () => {
     expect(featureIds(store)).toEqual(['cut-2']);
   });
 });
+
+describe('a hole set’s tooth (9.26)', () => {
+  const opOf = (store: DocumentStore) => {
+    const feature = store
+      .getState()
+      .document.project.parts.flatMap((p) => p.features)
+      .find((f) => f.id === 'holes-1');
+    return feature?.source.kind === 'derived' ? feature.source.op : undefined;
+  };
+
+  it('is given by a new hole set’s iron', () => {
+    const store = new DocumentStore(emptyDocument('doc', 'Untitled'));
+    store.dispatch(
+      addPart(shapePart('part-1', 'cut-1', 'Panel', rectShape({ x: 0, y: 0 }, 50, 30, 0))),
+    );
+    store.dispatch(addStitchLine('part-1', 'stitch-1', 'cut-1', 3.5));
+    store.dispatch(
+      addStitchHoles('part-1', 'holes-1', 'stitch-1', {
+        tooth: { kind: 'round', diameterMm: 1.2 },
+      }),
+    );
+    expect(opOf(store)).toMatchObject({ tooth: { kind: 'round', diameterMm: 1.2 } });
+  });
+
+  it('is changed in one undoable step, keeping fields this version does not know', () => {
+    const store = storeWithChain();
+    const before = opOf(store);
+    if (before?.type !== 'stitch-holes') throw new Error('holes-1 is a hole set');
+    const known = { ...before, future: 'kept' } as typeof before;
+    store.dispatch(setDerivation('holes-1', known));
+    const withFuture = opOf(store);
+
+    store.dispatch(
+      setDerivation('holes-1', {
+        ...known,
+        tooth: { kind: 'slit', lengthMm: 2.387, widthMm: 0.4, slantDeg: -45 },
+      }),
+    );
+    expect(opOf(store)).toMatchObject({ future: 'kept', tooth: { slantDeg: -45 } });
+
+    store.undo();
+    expect(opOf(store)).toEqual(withFuture);
+  });
+});

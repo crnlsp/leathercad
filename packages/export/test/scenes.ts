@@ -6,6 +6,7 @@ import {
   type Part,
   type Project,
   type SeamMarks,
+  type Tooth,
 } from '@leathercad/domain';
 import {
   PathOps,
@@ -168,6 +169,31 @@ export function sewnProject(marks?: SeamMarks): Project {
     seams: [
       { id: 'seam', a: side('h2'), b: side('h1'), ...(marks === undefined ? {} : { marks }) },
     ],
+  };
+}
+
+/**
+ * `sewnProject` with its irons said (9.26): the panel's holes pricked by an
+ * inverse Japanese iron, a slit, and the pocket's by a round prong.
+ */
+export function toothedProject(): Project {
+  const teeth: Readonly<Record<string, Tooth>> = {
+    h1: { kind: 'slit', lengthMm: 2.387, widthMm: 0.4, slantDeg: -45 },
+    h2: { kind: 'round', diameterMm: 1.2 },
+  };
+  const sewn = sewnProject();
+  return {
+    ...sewn,
+    parts: sewn.parts.map((part) => ({
+      ...part,
+      features: part.features.map((feature) => {
+        const tooth = teeth[feature.id];
+        if (tooth === undefined || feature.kind !== 'stitch-hole-set') return feature;
+        const { source } = feature;
+        if (source.kind !== 'derived' || source.op.type !== 'stitch-holes') return feature;
+        return { ...feature, source: { ...source, op: { ...source.op, tooth } } };
+      }),
+    })),
   };
 }
 

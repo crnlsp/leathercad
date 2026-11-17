@@ -3,6 +3,7 @@ import {
   LAYER_ROLES,
   alignmentMarks,
   draftDimensionLine,
+  toothOutline,
   type Feature,
   type LayerRole,
   type ResolvedPart,
@@ -69,6 +70,14 @@ export const PRINT_STYLES: Readonly<Record<LayerRole, PrintStyle>> = Object.from
  * of the design, and nothing in the workflow yet asks to change it.
  */
 export const STITCH_HOLE_MARKER_DIAMETER_MM = 1;
+
+/**
+ * How a stitch hole is written (9.26, D27): as its centre mark, which paper
+ * keeps — a hand maker pricks with the iron itself — or as the outline its
+ * iron's tooth cuts, which SVG and DXF carry for a laser. A hole set whose
+ * iron was not said (D26) keeps its centre marks either way.
+ */
+export type StitchHoleMarks = 'centres' | 'outlines';
 
 export interface ExportPath {
   readonly role: LayerRole;
@@ -141,6 +150,7 @@ export function buildExportScene(
   resolved: ResolvedProject,
   projectName: string,
   roles: readonly LayerRole[] = LAYER_ROLES,
+  holeMarks: StitchHoleMarks = 'centres',
 ): ExportScene {
   const wanted = new Set(roles);
   const parts: ExportPart[] = [];
@@ -153,7 +163,7 @@ export function buildExportScene(
   }
 
   for (const resolvedPart of resolved.parts) {
-    const ink = inkOf(resolvedPart);
+    const ink = inkOf(resolvedPart, holeMarks);
 
     // A part with only labels on it has nothing to cut, and a template page
     // full of captions with no pieces is not a template. Asked of the part as
@@ -232,20 +242,23 @@ interface PartInk {
  * outline leaves this array as it was — so an entry is only reused while
  * `drawnFrom` is the same, object for object, as evaluation's cache does.
  */
-const inks = new WeakMap<readonly Feature[], PartInk>();
+const inks: Readonly<Record<StitchHoleMarks, WeakMap<readonly Feature[], PartInk>>> = {
+  centres: new WeakMap(),
+  outlines: new WeakMap(),
+};
 
 /** The last part printed whole from an ink, so an unchanged part is the same object. */
 const printed = new WeakMap<PartInk, ExportPart>();
 
-function inkOf(resolvedPart: ResolvedPart): PartInk {
+function inkOf(resolvedPart: ResolvedPart, holeMarks: StitchHoleMarks): PartInk {
   const drawnFrom = resolvedPart.features.flatMap((entry) =>
     entry.ok ? [entry.path, entry.holes, entry.text] : [undefined, undefined, undefined],
   );
-  const known = inks.get(resolvedPart.part.features);
+  const known = inks[holeMarks].get(resolvedPart.part.features);
   if (known !== undefined && sameObjects(known.drawnFrom, drawnFrom)) return known;
 
-  const ink = drawInk(resolvedPart, drawnFrom);
-  inks.set(resolvedPart.part.features, ink);
+  const ink = drawInk(resolvedPart, drawnFrom, holeMarks);
+  inks[holeMarks].set(resolvedPart.part.features, ink);
   return ink;
 }
 
@@ -253,7 +266,11 @@ function sameObjects(a: readonly unknown[], b: readonly unknown[]): boolean {
   return a.length === b.length && a.every((item, i) => item === b[i]);
 }
 
-function drawInk(resolvedPart: ResolvedPart, drawnFrom: readonly unknown[]): PartInk {
+function drawInk(
+  resolvedPart: ResolvedPart,
+  drawnFrom: readonly unknown[],
+  holeMarks: StitchHoleMarks,
+): PartInk {
   const paths: ExportPath[] = [];
   const texts: ExportText[] = [];
 
@@ -290,13 +307,18 @@ function drawInk(resolvedPart: ResolvedPart, drawnFrom: readonly unknown[]): Par
     // size the renderer felt like. Its path is the stitch line the holes sit
     // on, and that line draws itself. A stitch hole is a centre mark for the
     // awl; a row's hole (4.14) is punched, so it prints at the punch's size,
-    // in the hardware layer a cutter takes.
+    // in the hardware layer a cutter takes. In a file for a cutter, a stitch
+    // hole whose iron is known is the hole its tooth cuts (9.26, D27).
     if (entry.holes !== undefined) {
+      const { tooth } = entry.holes;
       const radiusMm = entry.holes.radiusMm ?? STITCH_HOLE_MARKER_DIAMETER_MM / 2;
       for (const hole of entry.holes.holes) {
         paths.push({
           role: entry.role,
-          path: Shapes.circle(hole.point, radiusMm),
+          path:
+            holeMarks === 'outlines' && tooth !== undefined
+              ? toothOutline(hole, tooth)
+              : Shapes.circle(hole.point, radiusMm),
           style: PRINT_STYLES[entry.role],
         });
       }

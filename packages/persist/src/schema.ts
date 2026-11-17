@@ -31,6 +31,10 @@ const mm = z
 
 const nonNegativeMm = mm.min(0, { message: 'must not be negative' });
 
+const positiveMm = nonNegativeMm.refine((value) => value > 0, {
+  message: 'must be greater than zero',
+});
+
 const vec2 = z.looseObject({ x: mm, y: mm });
 
 const cornerRadii = z.looseObject({
@@ -118,6 +122,19 @@ const derivation = z.discriminatedUnion('type', [
     startOffsetMm: nonNegativeMm.optional(),
     endOffsetMm: nonNegativeMm.optional(),
     ironLabel: z.string().optional(),
+    // Version 14 (9.26): the iron's tooth, as values. A size that cuts nothing
+    // is refused here; a slit longer than the pitch is evaluation's to name.
+    tooth: z
+      .discriminatedUnion('kind', [
+        z.looseObject({
+          kind: z.literal('slit'),
+          lengthMm: positiveMm,
+          widthMm: positiveMm,
+          slantDeg: z.number().finite(),
+        }),
+        z.looseObject({ kind: z.literal('round'), diameterMm: positiveMm }),
+      ])
+      .optional(),
   }),
   // Version 11 (4.14): a row of punched holes along a marking line. The pitch
   // and the radius, never the holes — evaluation places them. Both are checked
@@ -195,10 +212,6 @@ const geometrySource = z.discriminatedUnion('kind', [
   z.looseObject({ kind: z.literal('derived'), sourceId: z.string().min(1), op: derivation }),
   measureSource,
 ]);
-
-const positiveMm = nonNegativeMm.refine((value) => value > 0, {
-  message: 'must be greater than zero',
-});
 
 const pocketRequirement = z.looseObject({
   content: z.discriminatedUnion('kind', [

@@ -582,6 +582,13 @@ export interface Iron {
   readonly id: string;
   readonly name: string;
   readonly pitchMm: number;
+  /**
+   * What its teeth are (9.26): the style that fills a new hole set's tooth at
+   * this pitch. Absent is French, as every iron was before styles existed and
+   * as the starter irons are. The domain's `IronStyle`, restated here because
+   * the platform sits below the domain.
+   */
+  readonly style?: 'french' | 'japanese' | 'round';
 }
 
 /**

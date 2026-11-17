@@ -1,6 +1,7 @@
 import fc from 'fast-check';
 import { PathOps, Shapes, Vec2Ops, type Vec2 } from '@leathercad/geometry';
 import { describe, expect, it } from 'vitest';
+import { IRON_STYLES, toothOfStyle } from '@leathercad/domain';
 
 import {
   foldTickShape,
@@ -8,6 +9,8 @@ import {
   hatchLines,
   linkTickOn,
   linkTickShape,
+  nominalTooth,
+  roundHoleRadiusMm,
   slitsFor,
 } from './leather.js';
 import { CANVAS, NOMINAL_IRON, ROLE_STYLES } from './theme/index.js';
@@ -28,41 +31,55 @@ const drawnZoom = fc.double({ min: OVERVIEW, max: 60, noNaN: true });
 const unit = (radians: number): Vec2 => ({ x: Math.cos(radians), y: Math.sin(radians) });
 const lengthOf = ([a, b]: readonly [Vec2, Vec2]): number => Vec2Ops.dist(a, b);
 
-describe('slitsFor — a hole as a pricking iron makes it', () => {
+// Each slit style a maker can pick, standard or inverse (9.26), and the
+// nominal French slit a set with no tooth is drawn with (D26).
+const slitTooth = fc
+  .record({
+    style: fc.constantFrom(...IRON_STYLES.filter((style) => style !== 'round')),
+    pitch,
+    inverse: fc.boolean(),
+  })
+  .map(({ style, pitch: p, inverse }) => {
+    const tooth = toothOfStyle(style, p);
+    if (tooth.kind !== 'slit') throw new Error(`${style} is not a slit`);
+    return { pitch: p, tooth: { ...tooth, slantDeg: inverse ? -tooth.slantDeg : tooth.slantDeg } };
+  });
+
+describe('slitsFor — a hole as a pricking iron makes it, for every slit style', () => {
   it('centres every slit on its hole', () => {
     fc.assert(
-      fc.property(point, angle, pitch, drawnZoom, (at, a, p, zoom) => {
-        const [slit] = slitsFor([{ point: at, tangent: unit(a) }], p, zoom).slits;
+      fc.property(point, angle, slitTooth, drawnZoom, (at, a, { tooth }, zoom) => {
+        const [slit] = slitsFor([{ point: at, tangent: unit(a) }], tooth, zoom).slits;
         const mid = Vec2Ops.midpoint(slit![0], slit![1]);
         return Vec2Ops.dist(mid, at) < 1e-9;
       }),
     );
   });
 
-  it('leans at the iron’s slant to the line, the same way on every side of a piece', () => {
+  it('leans at the tooth’s slant to the line, the same way on every side of a piece', () => {
     // Measured from the tangent, counter-clockwise: `/` on a line drawn left to
-    // right, and turned with the line as the iron is turned round a corner.
+    // right for a standard iron, `\` for an inverse one, and turned with the
+    // line as the iron is turned round a corner.
     fc.assert(
-      fc.property(point, angle, pitch, drawnZoom, (at, a, p, zoom) => {
+      fc.property(point, angle, slitTooth, drawnZoom, (at, a, { tooth }, zoom) => {
         const t = unit(a);
-        const [[from, to]] = slitsFor([{ point: at, tangent: t }], p, zoom).slits as [
+        const [[from, to]] = slitsFor([{ point: at, tangent: t }], tooth, zoom).slits as [
           readonly [Vec2, Vec2],
         ];
         const d = Vec2Ops.normalise(Vec2Ops.sub(to, from));
-        // The angle between a line and the tangent, folded into [0, π): a slit
-        // has no direction of its own.
-        let between = Math.atan2(Vec2Ops.cross(t, d), Vec2Ops.dot(t, d));
-        if (between < 0) between += Math.PI;
-        return Math.abs(between - NOMINAL_IRON.slantRad) < 1e-9;
+        // A slit has no direction of its own: the angle is the slant up to a
+        // half turn.
+        const between = Math.atan2(Vec2Ops.cross(t, d), Vec2Ops.dot(t, d));
+        return Math.abs(Math.sin(between - (tooth.slantDeg * Math.PI) / 180)) < 1e-9;
       }),
     );
   });
 
   it('is the same slit whichever way the line was drawn', () => {
     fc.assert(
-      fc.property(point, angle, pitch, drawnZoom, (at, a, p, zoom) => {
-        const [one] = slitsFor([{ point: at, tangent: unit(a) }], p, zoom).slits;
-        const [other] = slitsFor([{ point: at, tangent: unit(a + Math.PI) }], p, zoom).slits;
+      fc.property(point, angle, slitTooth, drawnZoom, (at, a, { tooth }, zoom) => {
+        const [one] = slitsFor([{ point: at, tangent: unit(a) }], tooth, zoom).slits;
+        const [other] = slitsFor([{ point: at, tangent: unit(a + Math.PI) }], tooth, zoom).slits;
         const same = (u: Vec2, v: Vec2) => Vec2Ops.dist(u, v) < 1e-9;
         return (
           (same(one![0], other![0]) && same(one![1], other![1])) ||
@@ -74,15 +91,18 @@ describe('slitsFor — a hole as a pricking iron makes it', () => {
 
   it('is drawn true in the detail band — the tooth’s length and the blade’s thickness', () => {
     fc.assert(
-      fc.property(angle, pitch, fc.double({ min: DETAIL, max: 60, noNaN: true }), (a, p, zoom) => {
-        const drawn = slitsFor([{ point: { x: 0, y: 0 }, tangent: unit(a) }], p, zoom);
-        const trueLength = NOMINAL_IRON.toothPerPitch * p;
-        return (
-          Math.abs(lengthOf(drawn.slits[0]!) - trueLength) < 1e-9 &&
-          drawn.widthPx ===
-            Math.max(ROLE_STYLES['stitch-holes'].widthPx, NOMINAL_IRON.bladeMm * zoom)
-        );
-      }),
+      fc.property(
+        angle,
+        slitTooth,
+        fc.double({ min: DETAIL, max: 60, noNaN: true }),
+        (a, { tooth }, zoom) => {
+          const drawn = slitsFor([{ point: { x: 0, y: 0 }, tangent: unit(a) }], tooth, zoom);
+          return (
+            Math.abs(lengthOf(drawn.slits[0]!) - tooth.lengthMm) < 1e-9 &&
+            drawn.widthPx === Math.max(ROLE_STYLES['stitch-holes'].widthPx, tooth.widthMm * zoom)
+          );
+        },
+      ),
     );
   });
 
@@ -91,11 +111,11 @@ describe('slitsFor — a hole as a pricking iron makes it', () => {
     fc.assert(
       fc.property(
         angle,
-        pitch,
+        slitTooth,
         fc.double({ min: OVERVIEW, max: DETAIL, maxExcluded: true, noNaN: true }),
-        (a, p, zoom) => {
-          const drawn = slitsFor([{ point: { x: 0, y: 0 }, tangent: unit(a) }], p, zoom);
-          const expected = Math.max(NOMINAL_IRON.toothPerPitch * p, CANVAS.slit.minLengthPx / zoom);
+        (a, { tooth }, zoom) => {
+          const drawn = slitsFor([{ point: { x: 0, y: 0 }, tangent: unit(a) }], tooth, zoom);
+          const expected = Math.max(tooth.lengthMm, CANVAS.slit.minLengthPx / zoom);
           return (
             Math.abs(lengthOf(drawn.slits[0]!) - expected) < 1e-9 &&
             drawn.widthPx === ROLE_STYLES['stitch-holes'].widthPx
@@ -107,9 +127,9 @@ describe('slitsFor — a hole as a pricking iron makes it', () => {
 
   it('drawn true, spans less than half the pitch along the line, so neighbours never meet', () => {
     fc.assert(
-      fc.property(angle, pitch, (a, p) => {
+      fc.property(angle, slitTooth, (a, { pitch: p, tooth }) => {
         const t = unit(a);
-        const [slit] = slitsFor([{ point: { x: 0, y: 0 }, tangent: t }], p, DETAIL).slits;
+        const [slit] = slitsFor([{ point: { x: 0, y: 0 }, tangent: t }], tooth, DETAIL).slits;
         const along = Math.abs(Vec2Ops.dot(Vec2Ops.sub(slit![1], slit![0]), t));
         return along < p / 2;
       }),
@@ -122,11 +142,55 @@ describe('slitsFor — a hole as a pricking iron makes it', () => {
         { point: { x: 0, y: 0 }, tangent: { x: 1, y: 0 } },
         { point: { x: 4, y: 0 }, tangent: { x: 0, y: 0 } },
       ],
-      3.85,
+      nominalTooth(3.85),
       4,
     );
     expect(drawn.slits).toHaveLength(2);
     expect(drawn.slits.every((s) => Number.isFinite(s[0].x) && lengthOf(s) > 0)).toBe(true);
+  });
+});
+
+describe('nominalTooth — the slit of an iron not said (D26)', () => {
+  it('is F.7’s nominal iron, which is the domain’s French tooth', () => {
+    fc.assert(
+      fc.property(pitch, (p) => {
+        const nominal = nominalTooth(p);
+        const french = toothOfStyle('french', p);
+        if (french.kind !== 'slit') return false;
+        // The French style quantises its length to the storage grid.
+        return (
+          Math.abs(nominal.lengthMm - french.lengthMm) <= 5e-5 &&
+          nominal.widthMm === french.widthMm &&
+          Math.abs(nominal.slantDeg - french.slantDeg) < 1e-9 &&
+          nominal.lengthMm === NOMINAL_IRON.toothPerPitch * p
+        );
+      }),
+    );
+  });
+});
+
+describe('roundHoleRadiusMm — a round prong’s hole', () => {
+  it('is drawn at its true radius in the detail band', () => {
+    fc.assert(
+      fc.property(
+        fc.double({ min: 0.1, max: 5, noNaN: true }),
+        fc.double({ min: DETAIL, max: 60, noNaN: true }),
+        (d, zoom) => roundHoleRadiusMm(d, zoom) === d / 2,
+      ),
+    );
+  });
+
+  it('is floored at the slit’s few pixels across in the working band, never shrunk', () => {
+    fc.assert(
+      fc.property(
+        fc.double({ min: 0.1, max: 5, noNaN: true }),
+        fc.double({ min: OVERVIEW, max: DETAIL, maxExcluded: true, noNaN: true }),
+        (d, zoom) => {
+          const r = roundHoleRadiusMm(d, zoom);
+          return r >= d / 2 && r * 2 * zoom >= CANVAS.slit.minLengthPx - 1e-9;
+        },
+      ),
+    );
   });
 });
 

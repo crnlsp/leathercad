@@ -1,11 +1,12 @@
 /**
- * The pricking iron a slit is drawn from, until the model knows the maker's own
- * (UI Foundations §8.1, §9.3; F.7).
+ * The pricking iron a slit is drawn from when a hole set's iron was not said
+ * (UI Foundations §8.1, §9.3; F.7; 9.26, D26), and the slant the stitch icons
+ * take.
  *
- * A hole set stores only its pitch and a cosmetic label, so the shape of the
- * slit is **nominal**: a standard French-style iron, from what makers publish.
- * The iron library is where a preset will carry its own tooth width and angle,
- * and the renderer will read those instead. See the F.7 design, §3.1.
+ * A hole set given a tooth is drawn from its tooth (`slitsFor`). One without
+ * stores only its pitch, so its slit is **nominal**: a standard French-style
+ * iron, from what makers publish — the same values as the domain's French
+ * style, which `leather.test.ts` holds them to.
  *
  * A **rendering convention, never model data**: worked out from the stored
  * pitch while drawing, never persisted, and never exported — paper keeps its

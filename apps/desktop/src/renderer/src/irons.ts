@@ -1,5 +1,8 @@
-import { EPS_LENGTH, approxEq } from '@leathercad/core';
+import { EPS_LENGTH, approxEq, approxLte } from '@leathercad/core';
+import { toothOfStyle, type Derivation, type Tooth } from '@leathercad/domain';
 import type { Iron, Preferences } from '@leathercad/platform';
+
+import { chipNumber, type Refusal, type RefusalWords } from './outlineSizes.js';
 
 /**
  * Pricking irons, by the pitch stamped on them — the maker's own, from
@@ -44,4 +47,47 @@ export function withoutIron(
   const irons = tools.irons.filter((iron) => iron.id !== id);
   const kept = irons.some((iron) => iron.id === tools.defaultIronId);
   return { irons, defaultIronId: kept ? tools.defaultIronId : (irons[0]?.id ?? null) };
+}
+
+type HolesOp = Extract<Derivation, { type: 'stitch-holes' }>;
+
+/** The tooth a hole set made with this iron takes (9.26): its style's, at its pitch. */
+export function toothOfIron(iron: Iron): Tooth {
+  return toothOfStyle(iron.style ?? 'french', iron.pitchMm);
+}
+
+/** What the Iron menu writes when the maker picks an iron: its pitch, its tooth and its name, together. */
+export function withIron(op: HolesOp, iron: Iron): HolesOp {
+  return { ...op, pitchMm: iron.pitchMm, tooth: toothOfIron(iron), ironLabel: iron.name };
+}
+
+/**
+ * The tooth Properties shows: the set's own, or — where the iron was not said
+ * (D26) — the French slit the board draws for it.
+ */
+export function shownTooth(op: HolesOp): Tooth {
+  return op.tooth ?? toothOfStyle('french', op.pitchMm);
+}
+
+/**
+ * A typed tooth (9.26). Like a typed pitch, it is no longer that iron's, so
+ * the iron's name goes with it rather than lying about where it came from.
+ */
+export function withTypedTooth(op: HolesOp, tooth: Tooth): HolesOp {
+  const { ironLabel: _dropped, ...rest } = op;
+  return { ...rest, tooth };
+}
+
+/**
+ * A slit longer than the pitch, which would run into the next hole on a
+ * straight line: refused, as evaluation refuses it, offering the pitch.
+ */
+export function slitRefusal(
+  lengthMm: number,
+  pitchMm: number,
+  { t, enter }: RefusalWords,
+): Refusal | null {
+  if (approxLte(lengthMm, pitchMm, EPS_LENGTH)) return null;
+  const size = chipNumber(pitchMm);
+  return { reason: t('editor.tooth.longerThanPitch', { size, enter }), use: pitchMm };
 }

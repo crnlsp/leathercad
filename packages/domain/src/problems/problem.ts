@@ -55,7 +55,11 @@ export type ParameterName =
   | 'mirror angle'
   | 'pitch'
   | 'start offset'
-  | 'end offset';
+  | 'end offset'
+  | 'tooth length'
+  | 'tooth width'
+  | 'tooth slant'
+  | 'tooth diameter';
 
 /** A contour still being drawn, by what it is being drawn as: it has no name yet. */
 export type DrawnContour = 'outline' | 'seam' | 'cut-out';
@@ -265,6 +269,8 @@ export interface ProblemFacts {
       | { readonly requirement: 'finite' | 'positive' | 'non-negative' }
       /** Under a floor the editor enforces too — a pitch finer than any iron (5.6). */
       | { readonly requirement: 'at-least'; readonly minimum: Mm }
+      /** Over a ceiling the editor enforces too — a slit longer than the pitch (9.26). */
+      | { readonly requirement: 'at-most'; readonly maximum: Mm }
     );
   readonly OFFSET_COLLAPSED: About & {
     readonly distanceMm: Mm;

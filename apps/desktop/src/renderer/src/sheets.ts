@@ -94,7 +94,9 @@ function sceneFor(project: Project): ExportScene {
  * `sheetPlanFor`'s, whole, so the Sheets view and the paper stay one thing.
  */
 export function drawingSceneFor(project: Project, roles: readonly ExportRole[]): ExportScene {
-  return buildExportScene(resolvedFor(project), project.name, roles);
+  // A file for a cutter: each stitch hole whose iron is known is the hole its
+  // tooth cuts. Paper keeps its centre marks (9.26, D27).
+  return buildExportScene(resolvedFor(project), project.name, roles, 'outlines');
 }
 
 /**

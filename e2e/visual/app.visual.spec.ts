@@ -180,6 +180,59 @@ test('a stitched panel on the canvas', async () => {
   }
 });
 
+test('a hole set’s holes as each style of iron cuts them, close up (9.26)', async () => {
+  const { app, window } = await launch();
+  try {
+    const canvas = window.getByTestId('editor-canvas');
+    const box = await canvas.boundingBox();
+    expect(box).not.toBeNull();
+
+    // A small panel, fitted to the window: the detail band, where a slit is
+    // drawn at its tooth's true length and a round hole at its diameter.
+    await window.getByTestId('tool-rectangle').click();
+    await window.mouse.move(box!.x + 250, box!.y + 200);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 400, box!.y + 300, { steps: 5 });
+    await window.mouse.up();
+    const panel = window.getByTestId('property-panel');
+    await panel.getByTestId('add-stitch-line').click();
+    await panel.getByTestId('add-stitch-holes').click();
+    await expect(window.getByTestId('feature-count')).toHaveText('3');
+    await window.getByTestId('zoom-fit').click();
+
+    const holeSet = window.locator('[data-testid^="feature-row-"]', { hasText: 'Stitch holes' });
+    const length = panel.getByRole('textbox', { name: /^Length/ });
+    const scenes: [string, () => Promise<void>][] = [
+      // The starter iron, a French one: F.7's slit.
+      ['tooth-french.png', async () => {}],
+      // A Japanese tooth is longer, at the same slant; an inverse one leans `\`.
+      [
+        'tooth-japanese-inverse.png',
+        async () => {
+          await length.fill('2.387');
+          await length.press('Enter');
+          await panel.getByTestId('tooth-lean').selectOption('inverse');
+        },
+      ],
+      ['tooth-round.png', () => panel.getByTestId('tooth-shape').selectOption('round').then()],
+    ];
+    for (const [name, choose] of scenes) {
+      await holeSet.click();
+      await choose();
+      // Nothing selected, the pointer off the canvas: the drawing alone.
+      // The panel fills the board, so Esc lets the selection go (U.5).
+      await window.getByTestId('tool-select').click();
+      await canvas.focus();
+      await window.keyboard.press('Escape');
+      await expect(window.getByTestId('selected-count')).toHaveText('0');
+      await pointerAway(window);
+      await expect(canvas).toHaveScreenshot(name);
+    }
+  } finally {
+    await closeApp(app);
+  }
+});
+
 test('a piece moved into line with another, its smart guide drawn (3.16)', async () => {
   const { app, window } = await launch();
   try {

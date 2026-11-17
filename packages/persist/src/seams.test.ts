@@ -310,7 +310,7 @@ describe('a seam’s alignment marks, format 13 (9.13)', () => {
     ]) {
       const bytes = saveProject({ ...fixtureProjectV12(), seams: [{ ...seam, marks }] }, options);
       const loaded = loadProject(bytes);
-      expect(loaded.manifest.formatVersion).toBe(13);
+      expect(loaded.manifest.formatVersion).toBeGreaterThanOrEqual(13);
       expect(loaded.project.seams).toEqual([{ ...seam, marks }]);
       expect(saveProject(loaded.project, options)).toEqual(bytes);
     }

@@ -18,10 +18,21 @@ import {
   translateFeatures,
   type Command,
 } from '@leathercad/document';
-import { diagnose, evaluate, exportReadiness, seamVerdict, type Project } from '@leathercad/domain';
+import {
+  IRON_STYLES,
+  diagnose,
+  evaluate,
+  exportReadiness,
+  seamVerdict,
+  toothOfStyle,
+  toothOutline,
+  type Project,
+  type Tooth,
+} from '@leathercad/domain';
 import { EPS_LENGTH } from '@leathercad/core';
 import fc from 'fast-check';
-import { PathOps, type Path, type Vec2 } from '@leathercad/geometry';
+import { PathOps, intersectPaths, type Path, type Vec2 } from '@leathercad/geometry';
+import { STARTER_IRONS } from '@leathercad/platform';
 import { loadProject, saveProject } from '@leathercad/persist';
 import { describe, expect, it } from 'vitest';
 
@@ -271,5 +282,68 @@ describe('templates checked as leatherwork (8.14b)', () => {
       for (const seam of loaded.seams ?? [])
         expect(seamVerdict(loaded, seam)).toMatchObject({ ok: true, severity: 'info' });
     }
+  });
+});
+
+describe('the iron’s tooth on the built-in templates (9.26)', () => {
+  /** Every hole set of the project pricked by this iron: its pitch and its tooth. */
+  function prickedBy(project: Project, pitchMm: number, tooth: Tooth): Project {
+    return {
+      ...project,
+      parts: project.parts.map((part) => ({
+        ...part,
+        features: part.features.map((feature) => {
+          if (feature.kind !== 'stitch-hole-set') return feature;
+          const { source } = feature;
+          if (source.kind !== 'derived' || source.op.type !== 'stitch-holes') return feature;
+          return { ...feature, source: { ...source, op: { ...source.op, pitchMm, tooth } } };
+        }),
+      })),
+    };
+  }
+
+  /** How far a tooth's outline reaches from its hole, at most: half its longest size. */
+  const reach = (tooth: Tooth): number =>
+    (tooth.kind === 'round' ? tooth.diameterMm : Math.max(tooth.lengthMm, tooth.widthMm)) / 2;
+
+  // Whether a laser would join two holes, which decides whether
+  // STITCH_HOLES_TOUCH is needed. Two outlines can meet only where their holes
+  // are closer than the two reaches added; on every template, at every starter
+  // iron, in every style — either lean, since the bound is the slant's own — the closest two holes — a corner
+  // hole and its neighbour included — are further apart than that.
+  it('keeps every two holes further apart than their teeth reach, so no outlines touch', () => {
+    const pitches = [...new Set(STARTER_IRONS.map((iron) => iron.pitchMm))];
+    let tightest = Number.POSITIVE_INFINITY;
+    for (const template of BUILT_IN_TEMPLATES) {
+      const loaded = loadProject(readFileSync(resolve(FIXTURES, template.id + '.lcp'))).project;
+      for (const pitchMm of pitches) {
+        for (const style of IRON_STYLES) {
+          const tooth = toothOfStyle(style, pitchMm);
+          for (const part of evaluate(prickedBy(loaded, pitchMm, tooth)).parts) {
+            for (const entry of part.features) {
+              if (!entry.ok || entry.holes === undefined) continue;
+              const points = entry.holes.holes.map((hole) => hole.point);
+              const outlines = entry.holes.holes.map((hole) => toothOutline(hole, tooth));
+              for (let i = 0; i < points.length; i++) {
+                for (let j = i + 1; j < points.length; j++) {
+                  const apart = Math.hypot(
+                    points[i]!.x - points[j]!.x,
+                    points[i]!.y - points[j]!.y,
+                  );
+                  tightest = Math.min(tightest, apart / (2 * reach(tooth)));
+                  if (apart > 2 * reach(tooth)) continue;
+                  // Never reached on the templates today; the check a closer
+                  // pair would need, so the claim does not rest on the bound.
+                  expect(intersectPaths(outlines[i]!, outlines[j]!), template.id).toEqual([]);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    // Measured 1.54 on 2026-11-17: the closest two holes are half as far again
+    // as the distance at which their teeth could first meet.
+    expect(tightest).toBeGreaterThan(1.5);
   });
 });

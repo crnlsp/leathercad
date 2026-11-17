@@ -1176,6 +1176,7 @@ export function addStitchHoles(
             mode: op?.mode ?? 'fit-whole',
             corners: op?.corners ?? 'hole-at-corner',
             ...(op?.ironLabel === undefined ? {} : { ironLabel: op.ironLabel }),
+            ...(op?.tooth === undefined ? {} : { tooth: op.tooth }),
             ...(op?.startOffsetMm === undefined ? {} : { startOffsetMm: op.startOffsetMm }),
             ...(op?.endOffsetMm === undefined ? {} : { endOffsetMm: op.endOffsetMm }),
           },

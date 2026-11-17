@@ -1,4 +1,4 @@
-import { MIN_PITCH_MM } from '@leathercad/domain';
+import { IRON_STYLES, MIN_PITCH_MM } from '@leathercad/domain';
 import type { Iron, Preferences, UpdateStatus } from '@leathercad/platform';
 import {
   useEffect,
@@ -318,6 +318,7 @@ function MyTools({ preferences, onPreferences, nextId }: Props) {
               <th scope="col">{t('settings.tools.default')}</th>
               <th scope="col">{t('settings.tools.name')}</th>
               <th scope="col">{t('settings.tools.pitch')}</th>
+              <th scope="col">{t('settings.tools.style')}</th>
               <th scope="col">
                 <span className="visually-hidden">{t('settings.tools.actions')}</span>
               </th>
@@ -356,6 +357,24 @@ function MyTools({ preferences, onPreferences, nextId }: Props) {
                     step={0.05}
                     onCommit={(pitchMm) => change(iron.id, { pitchMm })}
                   />
+                </td>
+                <td className="iron-style">
+                  {/* Fills a new hole set's tooth at this iron's pitch (9.26). */}
+                  <select
+                    data-testid={`iron-style-${iron.id}`}
+                    aria-label={t('settings.tools.styleOf', { name: iron.name })}
+                    value={iron.style ?? 'french'}
+                    onChange={(event) => {
+                      const style = IRON_STYLES.find((each) => each === event.target.value);
+                      if (style !== undefined) change(iron.id, { style });
+                    }}
+                  >
+                    {IRON_STYLES.map((style) => (
+                      <option key={style} value={style}>
+                        {t(`settings.tools.styles.${style}`)}
+                      </option>
+                    ))}
+                  </select>
                 </td>
                 <td>
                   <MenuButton

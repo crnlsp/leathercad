@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, evaluate } from '@leathercad/domain';
+import { DEFAULT_SETTINGS, evaluate, toothOfStyle } from '@leathercad/domain';
 import type {
   Diagnostic,
   Feature,
@@ -7,6 +7,7 @@ import type {
   Project,
   ResolvedPart,
   ResolvedProject,
+  Tooth,
 } from '@leathercad/domain';
 import { PathOps, SegmentOps, Shapes, uniformRadii, type Path } from '@leathercad/geometry';
 import { FONT, layoutText, placedText } from '@leathercad/typography';
@@ -913,6 +914,21 @@ describe('leather-specific treatment (F.7)', () => {
     measurement: 'annotation',
   };
 
+  /** What evaluation carries on a hole set's holes: its iron's pitch and tooth (9.26). */
+  const ironOf = (feature: Feature) =>
+    feature.source.kind === 'derived' && feature.source.op.type === 'stitch-holes'
+      ? {
+          pitchMm: feature.source.op.pitchMm,
+          ...(feature.source.op.tooth === undefined ? {} : { tooth: feature.source.op.tooth }),
+        }
+      : {};
+
+  /** `holeSet`, pricked by this tooth. */
+  const toothed = (tooth: Tooth): Feature =>
+    holeSet.source.kind === 'derived' && holeSet.source.op.type === 'stitch-holes'
+      ? { ...holeSet, source: { ...holeSet.source, op: { ...holeSet.source.op, tooth } } }
+      : holeSet;
+
   /** Each feature resolved to the path given, as evaluation would hand it over. */
   function scene(entries: [Feature, Path][], name = 'Panel'): ResolvedProject {
     const features = entries.map(([feature]) => feature);
@@ -951,6 +967,8 @@ describe('leather-specific treatment (F.7)', () => {
                     count: 88,
                     achievedPitchMm: 3.84,
                     runs: [],
+                    // The iron rides on the holes, as evaluation hands it over.
+                    ...ironOf(feature),
                   },
                 }
               : {}),
@@ -988,6 +1006,80 @@ describe('leather-specific treatment (F.7)', () => {
       expect(Math.hypot(b.x - a.x, b.y - a.y)).toBeCloseTo(NOMINAL_IRON.toothPerPitch * 3.85, 9);
       // Detail band: as wide as the blade.
       expect(slits!.stroke.widthPx).toBeCloseTo(NOMINAL_IRON.bladeMm * 10, 9);
+    });
+
+    it('draws a Japanese tooth at its length and slant, and an inverse one leaning the other way (9.26)', () => {
+      const slitOf = (tooth: Tooth) => {
+        const list = buildDisplayList(
+          scene([
+            [drawnOutline, outlinePath],
+            [followingStitch, stitchPath],
+            [toothed(tooth), stitchPath],
+          ]),
+          { pxPerMm: 10 },
+        );
+        const [a, b] = ofKind(list.items, 'slits')[0]!.slits[0]!;
+        return { length: Math.hypot(b.x - a.x, b.y - a.y), rise: (b.y - a.y) * (b.x - a.x) };
+      };
+      const japanese = toothOfStyle('japanese', 3.85);
+      if (japanese.kind !== 'slit') throw new Error('a Japanese tooth is a slit');
+
+      expect(slitOf(japanese).length).toBeCloseTo(2.387, 9);
+      // The first hole runs along +X: `/` rises, `\\` falls.
+      expect(slitOf(japanese).rise).toBeGreaterThan(0);
+      expect(slitOf({ ...japanese, slantDeg: -45 }).rise).toBeLessThan(0);
+    });
+
+    it('draws a round tooth as a circle of its diameter at each hole, and no slits (9.26)', () => {
+      const list = buildDisplayList(
+        scene([
+          [drawnOutline, outlinePath],
+          [followingStitch, stitchPath],
+          [toothed({ kind: 'round', diameterMm: 1.2 }), stitchPath],
+        ]),
+        { pxPerMm: 10 },
+      );
+      expect(ofKind(list.items, 'slits')).toEqual([]);
+      const circles = ofKind(list.items, 'path').filter((item) => item.role === 'stitch-holes');
+      expect(circles).toHaveLength(3);
+      for (const circle of circles) {
+        const box = PathOps.bbox(circle.path)!;
+        expect(box.maxX - box.minX).toBeCloseTo(1.2, 9);
+      }
+    });
+
+    it('sizes a mirrored set’s slits from its source’s pitch, which its holes carry (9.26)', () => {
+      const mirroredSet: Feature = {
+        ...holeSet,
+        source: {
+          kind: 'derived',
+          sourceId: 'holes',
+          op: {
+            type: 'mirror',
+            axis: { kind: 'line', origin: at(0, 0), angleRad: Math.PI / 2 },
+            glideMm: 0,
+          },
+        },
+      };
+      const resolved = scene([
+        [drawnOutline, outlinePath],
+        [followingStitch, stitchPath],
+        [mirroredSet, stitchPath],
+      ]);
+      const carried: ResolvedProject = {
+        ...resolved,
+        parts: resolved.parts.map((part) => ({
+          ...part,
+          features: part.features.map((entry) =>
+            entry.ok && entry.holes !== undefined
+              ? { ...entry, holes: { ...entry.holes, pitchMm: 3.85 } }
+              : entry,
+          ),
+        })),
+      };
+      const [slits] = ofKind(buildDisplayList(carried, { pxPerMm: 10 }).items, 'slits');
+      const [a, b] = slits!.slits[0]!;
+      expect(Math.hypot(b.x - a.x, b.y - a.y)).toBeCloseTo(NOMINAL_IRON.toothPerPitch * 3.85, 9);
     });
   });
 

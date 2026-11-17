@@ -129,7 +129,10 @@ The parameters live in the op (§4):
   mode: 'fit-whole' | 'exact-pitch';
   corners: 'continuous' | 'hole-at-corner';
   startOffsetMm?: Mm; endOffsetMm?: Mm;
-  ironLabel?: string }                // cosmetic, never read as geometry
+  ironLabel?: string;                 // cosmetic, never read as geometry
+  tooth?:                             // the iron's tooth, as values (9.26, D25)
+    | { kind: 'slit'; lengthMm: Mm; widthMm: Mm; slantDeg: number }
+    | { kind: 'round'; diameterMm: Mm } }
 ```
 
 Evaluates to holes `{ point, tangent, runIndex, ordinal, alongMm }` and a report: the count, the achieved
@@ -139,12 +142,25 @@ position, because there is no correct answer to which of the old 84 holes is thi
 **The pitch has a floor, `MIN_PITCH_MM` = 0.5 mm,** shared by the editor's field and evaluation
 (5.6). Distribution places `length / pitch` holes, so a pitch nearer zero than any iron makes the
 count unbounded. A file that holds one still opens, and the hole set alone fails with
-`PARAMETER_INVALID` (`at-least`), naming the floor. The canvas draws each hole as a slit (F.7):
-the slit's length and slant are a rendering convention worked out from the pitch, not part of the
-hole.
+`PARAMETER_INVALID` (`at-least`), naming the floor.
 
-**Later:** slot and diamond hole shapes, and suppressing individual holes, expressed as a list of
-ordinals on the set (roadmap *Also later*).
+**The tooth** (9.26) is what each tooth of the iron cuts: a slit — its length, the blade's width
+across it, and its slant to the stitch line, counter-clockwise from the direction of travel, so
+positive is a standard iron (`/` on a line drawn left to right) and negative an inverse one — or a
+round prong's diameter. It is stored as values, as the pitch is, never as a style's name: *French*,
+*Japanese* and *Round* are styles in My tools that fill it (`toothOfStyle`, sizes from the
+[glossary](glossary.md) *Stitch hole*). A set with no tooth is an iron not said (D26): the board
+draws F.7's nominal French slit from the pitch, and every file keeps its centre marks. A size
+that cuts nothing, or a slit longer than the pitch, is `PARAMETER_INVALID` (`positive`,
+`at-most`). `toothOutline(hole, tooth)` is the hole one tooth cuts — a lozenge centred on the
+hole, its long axis at the slant to the hole's tangent, or a circle — which SVG and DXF write for
+a laser (D27). The holes carry the iron's pitch and tooth, as a row's carry its radius, so a
+mirrored set reads its source's iron rather than its own achieved spacing; its tooth stays
+**unmirrored** (D28), because the same iron pricks both pieces from their faces. Seams, counts,
+the production summary and alignment marks read holes, not teeth.
+
+**Later:** suppressing individual holes, expressed as a list of ordinals on the set (roadmap
+*Also later*); checking that two stacked pieces' slits do not cross, which needs layers.
 
 ### 3.4 `FoldLine` — built
 

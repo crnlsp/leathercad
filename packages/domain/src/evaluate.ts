@@ -5,6 +5,7 @@ import {
   EPS_LENGTH,
   EPS_POINT,
   approxGte,
+  approxLte,
   approxZero,
   formatNumber,
   type Mm,
@@ -621,7 +622,7 @@ function build(
           path: sourcePath,
           holes:
             source.op.type === 'stitch-holes'
-              ? distributeHoles(sourcePath, source.op, usedHoles)
+              ? withIron(distributeHoles(sourcePath, source.op, usedHoles), source.op)
               : rowOfHoles(sourcePath, source.op, usedHoles),
           text: undefined,
           anchors: sourceAnchors,
@@ -1040,6 +1041,19 @@ function parameterProblem(feature: Feature): Problem | null {
         if (op.endOffsetMm !== undefined) {
           checks.push(['end offset', op.endOffsetMm, 'non-negative']);
         }
+        // A tooth that cuts nothing, or a slit longer than the pitch — which
+        // runs into the next hole along a straight line — is refused, as the
+        // editor refuses it (9.26).
+        if (op.tooth?.kind === 'slit') {
+          checks.push(
+            ['tooth length', op.tooth.lengthMm, 'positive'],
+            ['tooth length', op.tooth.lengthMm, { atMost: op.pitchMm }],
+            ['tooth width', op.tooth.widthMm, 'positive'],
+            ['tooth slant', op.tooth.slantDeg, 'finite'],
+          );
+        } else if (op.tooth?.kind === 'round') {
+          checks.push(['tooth diameter', op.tooth.diameterMm, 'positive']);
+        }
       }
       break;
     }
@@ -1059,12 +1073,14 @@ function parameterProblem(feature: Feature): Problem | null {
   return null;
 }
 
-/** What a parameter must be: a kind of number, or at least a floor. */
-type Requirement = 'finite' | 'positive' | 'non-negative' | { readonly atLeast: Mm };
+/** What a parameter must be: a kind of number, at least a floor, or at most a ceiling. */
+type Requirement =
+  'finite' | 'positive' | 'non-negative' | { readonly atLeast: Mm } | { readonly atMost: Mm };
 
 type Unmet =
   | { readonly requirement: 'finite' | 'positive' | 'non-negative' }
-  | { readonly requirement: 'at-least'; readonly minimum: Mm };
+  | { readonly requirement: 'at-least'; readonly minimum: Mm }
+  | { readonly requirement: 'at-most'; readonly maximum: Mm };
 
 /**
  * Which requirement `value` fails, or null.
@@ -1080,6 +1096,11 @@ type Unmet =
 function unmetRequirement(value: number, requirement: Requirement): Unmet | null {
   if (!Number.isFinite(value)) return { requirement: 'finite' };
   if (typeof requirement === 'object') {
+    if ('atMost' in requirement) {
+      return approxLte(value, requirement.atMost, EPS_LENGTH)
+        ? null
+        : { requirement: 'at-most', maximum: requirement.atMost };
+    }
     return approxGte(value, requirement.atLeast, EPS_LENGTH)
       ? null
       : { requirement: 'at-least', minimum: requirement.atLeast };
@@ -1180,4 +1201,17 @@ export function evaluationErrors(
     }
   }
   return errors;
+}
+
+/**
+ * A hole set's holes, with the iron that pricks them: its pitch, and its tooth
+ * when the maker said (9.26). Carried on the holes, as a row's radius is, so a
+ * mirrored set — whose op is its mirror — reads its source's iron, not its own
+ * achieved spacing.
+ */
+function withIron(
+  holes: StitchHoles,
+  op: Extract<Derivation, { type: 'stitch-holes' }>,
+): StitchHoles {
+  return { ...holes, pitchMm: op.pitchMm, ...(op.tooth === undefined ? {} : { tooth: op.tooth }) };
 }

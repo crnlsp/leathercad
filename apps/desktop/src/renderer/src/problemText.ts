@@ -105,7 +105,9 @@ const CATALOGUE: { readonly [K in ProblemCode]: Describe<K> } = {
     // "0" here, and a positive number must not be called zero.
     return f.requirement === 'at-least'
       ? t('problems.PARAMETER_INVALID.at-least', { ...about, minimum: formatMm(f.minimum) })
-      : t(`problems.PARAMETER_INVALID.${f.requirement}`, { ...about, value: typed(f.value) });
+      : f.requirement === 'at-most'
+        ? t('problems.PARAMETER_INVALID.at-most', { ...about, maximum: formatMm(f.maximum) })
+        : t(`problems.PARAMETER_INVALID.${f.requirement}`, { ...about, value: typed(f.value) });
   },
   OFFSET_COLLAPSED: (f, t) =>
     t(`problems.OFFSET_COLLAPSED.${f.side}`, { distance: formatEditable(f.distanceMm, 2) }),

@@ -56,6 +56,7 @@ export type {
   TextLabel,
   TextSource,
   FeatureSource,
+  Tooth,
 } from './feature.js';
 export {
   DEFAULT_SETTINGS,
@@ -160,6 +161,8 @@ export { PROBLEM_CODES, problem, problemKey, sameProblem, subjectOf } from './pr
 
 export type { RunReport, StitchHole, StitchHoles } from './stitch.js';
 export { MIN_PITCH_MM, distributeHoles, splitAtCorners } from './stitch.js';
+export type { IronStyle } from './tooth.js';
+export { IRON_STYLES, toothOfStyle, toothOutline } from './tooth.js';
 
 export { checkProjectSize } from './resourceSize.js';
 

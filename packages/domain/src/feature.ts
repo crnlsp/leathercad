@@ -84,6 +84,24 @@ export type ParametricShape =
     };
 
 /**
+ * What one tooth of an iron cuts (9.26, D25): a slit — a French or Japanese
+ * iron's blade, or a diamond chisel's — or a round prong's hole.
+ *
+ * A slit's `slantDeg` is its long axis's angle to the stitch line,
+ * counter-clockwise from the direction of travel: positive is a standard iron
+ * (`/` along a line drawn left to right), negative an inverse one (D28).
+ * `widthMm` is the blade's thickness across the slit.
+ */
+export type Tooth =
+  | {
+      readonly kind: 'slit';
+      readonly lengthMm: Mm;
+      readonly widthMm: Mm;
+      readonly slantDeg: number;
+    }
+  | { readonly kind: 'round'; readonly diameterMm: Mm };
+
+/**
  * How a derived feature is built from the one it follows.
  *
  * One source, one operation. The chain in this product is two links deep —
@@ -113,6 +131,13 @@ export type Derivation =
       readonly endOffsetMm?: Mm;
       /** Cosmetic, so the panel can say "KS Blade 3.85". Never read as geometry. */
       readonly ironLabel?: string;
+      /**
+       * The shape each tooth of the iron leaves (9.26, D25): values, as the
+       * pitch is, never a style's name. Absent means the iron was not said
+       * (D26): the board draws the nominal French slit and every file keeps
+       * its centre marks.
+       */
+      readonly tooth?: Tooth;
     }
   | {
       /**

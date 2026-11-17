@@ -36,7 +36,13 @@ import {
   type DisplayList,
 } from './displayList.js';
 import { alignmentTick } from './alignmentTick.js';
-import { foldTicksAlong, linkTickOn, slitsFor } from './leather.js';
+import {
+  foldTicksAlong,
+  linkTickOn,
+  nominalTooth,
+  roundHoleRadiusMm,
+  slitsFor,
+} from './leather.js';
 import { CANVAS, DIMENSION_MARKS, GROUND, ROLE_STYLES, STATE } from './theme/index.js';
 import { TRUE_SIZE_CSS_PX_PER_MM, cssPxPerMm, visibleBoundsMm, type ViewportView } from './view.js';
 
@@ -239,15 +245,20 @@ export function buildDisplayList(
             }),
           );
         } else {
-          // Each hole a slit, sized from the iron — the nominal pitch, not the
-          // spacing achieved — and slanted as the iron cuts (F.7).
-          const { source } = feature;
-          const pitchMm =
-            source.kind === 'derived' && source.op.type === 'stitch-holes'
-              ? source.op.pitchMm
-              : entry.holes.achievedPitchMm;
-          const { slits, widthPx } = slitsFor(entry.holes.holes, pitchMm, zoom);
-          items.push(slitsItem(slits, widthPx));
+          // Each hole as the iron's tooth cuts it (9.26), or, where the iron
+          // was not said, F.7's nominal slit sized from the iron's pitch — not
+          // the spacing achieved (D26). A mirrored set carries its source's.
+          const { holes, tooth, pitchMm, achievedPitchMm } = entry.holes;
+          if (tooth?.kind === 'round') {
+            const radius = roundHoleRadiusMm(tooth.diameterMm, zoom);
+            for (const hole of holes) {
+              items.push(pathItem(entry.role, Shapes.circle(hole.point, radius)));
+            }
+          } else {
+            const slit = tooth ?? nominalTooth(pitchMm ?? achievedPitchMm);
+            const { slits, widthPx } = slitsFor(holes, slit, zoom);
+            items.push(slitsItem(slits, widthPx));
+          }
         }
         continue;
       }

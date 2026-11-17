@@ -227,6 +227,38 @@ describe('a mirrored hole set', () => {
       ),
     );
   });
+  it('is pricked by its source’s iron: the pitch and the tooth, unmirrored (9.26, D28)', () => {
+    // The board sized a mirrored set's slits from its achieved spacing,
+    // because only a stitch-holes op names a pitch; the holes carry it now.
+    const tooth = { kind: 'slit', lengthMm: 2.387, widthMm: 0.4, slantDeg: -45 } as const;
+    const toothed: Feature = {
+      ...base('holes-1', 'Stitch holes'),
+      kind: 'stitch-hole-set',
+      source: {
+        kind: 'derived',
+        sourceId: 'stitch-1',
+        op: {
+          type: 'stitch-holes',
+          pitchMm: 3.85,
+          mode: 'fit-whole',
+          corners: 'continuous',
+          tooth,
+        },
+      },
+    };
+    const p = project(
+      panel(),
+      stitchLine(),
+      toothed,
+      mirrored('holes-1', 'holes-m', 'stitch-hole-set'),
+    );
+
+    const image = okEntry(p, 'holes-m').holes!;
+    expect(image.pitchMm).toBe(3.85);
+    expect(image.achievedPitchMm).not.toBe(3.85);
+    expect(image.tooth).toEqual(tooth);
+  });
+
   it('turns every hole’s tangent with the reflection, so it lies along the mirrored line', () => {
     // A disc mirrored about any axis: the image's stitch line is the circle
     // about the reflected centre, so a hole's tangent there is square to the

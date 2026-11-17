@@ -10,6 +10,7 @@ import {
   type Feature,
   type Part,
   type Project,
+  type Tooth,
 } from './feature.js';
 import { MIN_PITCH_MM } from './stitch.js';
 
@@ -304,6 +305,35 @@ describe('a derived stitch line', () => {
       }),
       { numRuns: 50 },
     );
+  });
+
+  it('refuses a slit longer than the pitch, and accepts one up to it (9.26)', () => {
+    const withTooth = (tooth: Tooth): Feature => {
+      const set = holeSet('stitch-1');
+      if (set.kind !== 'stitch-hole-set' || set.source.kind !== 'derived') return set;
+      if (set.source.op.type !== 'stitch-holes') return set;
+      return { ...set, source: { ...set.source, op: { ...set.source.op, tooth } } };
+    };
+    const refused = (tooth: Tooth) =>
+      evaluationErrors(evaluate(projectWith([panel(), stitchLine('cut-1'), withTooth(tooth)])))[0]
+        ?.problem;
+    const slit = { kind: 'slit', lengthMm: 1.925, widthMm: 0.4, slantDeg: 45 } as const;
+
+    expect(refused(slit)).toBeUndefined();
+    expect(refused({ ...slit, lengthMm: 3.85 })).toBeUndefined();
+    expect(refused({ ...slit, lengthMm: 3.9 })).toMatchObject({
+      code: 'PARAMETER_INVALID',
+      facts: { parameter: 'tooth length', requirement: 'at-most', maximum: 3.85 },
+    });
+    expect(refused({ ...slit, widthMm: 0 })).toMatchObject({
+      facts: { parameter: 'tooth width', requirement: 'positive' },
+    });
+    expect(refused({ ...slit, slantDeg: Number.NaN })).toMatchObject({
+      facts: { parameter: 'tooth slant', requirement: 'finite' },
+    });
+    expect(refused({ kind: 'round', diameterMm: -1 })).toMatchObject({
+      facts: { parameter: 'tooth diameter', requirement: 'positive' },
+    });
   });
 
   it('refuses a negative or non-numeric pitch by the same check', () => {

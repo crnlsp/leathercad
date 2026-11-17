@@ -781,7 +781,6 @@
       "stitch": "Lignes de couture",
       "stitch-holes": "Trous de couture"
     },
-    "stitchHolesNote": "Chaque trou est un cercle de {{size}} repérant son centre, pas un trou dimensionné pour le fil",
     "title": "Exporter en {{format}}"
   },
   "exportNotice": {
