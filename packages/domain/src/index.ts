@@ -110,6 +110,14 @@ export {
 export { diagnosticTarget, MIN_FRAME_MM, type DiagnosticTarget } from './diagnosticTarget.js';
 export { exportReadiness, type ExportReadiness, type OmittedFeature } from './exportReadiness.js';
 export { overlappingParts } from './overlappingParts.js';
+export {
+  THREAD_ROUND_MM,
+  THREAD_STITCH_FACTOR,
+  productionSummary,
+  type HardwareLine,
+  type ProductionPiece,
+  type ProductionSummary,
+} from './productionSummary.js';
 
 export type { CornerSite } from './anchors.js';
 export { anchorsOf, cornerDistances, cornerSites, cornersThroughEdit } from './anchors.js';

@@ -266,6 +266,10 @@ puts the summary on the clipboard as plain text, in the interface's language.
 if both pockets are sewn to the outer as seams (the outer's 324.3 mm of stitching once), about
 2.7 m if they are not; leather about 168 cm² net.
 
+*As built (9.12):* the figures above were written before 8.14b's taller pocket. The shipped card
+holder reads 3 to cut, 184 holes (86 + 2 × 49), no hardware, about 1.3 m sewn or 2.8 m unsewn, and
+about 173 cm² net; the thread rule is in the plan's *As built* note.
+
 ## 11. Cutting a pair (Q21)
 
 A piece cut twice is either two identical pieces or a left and a right. Today the sheet says
