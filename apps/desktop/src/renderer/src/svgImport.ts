@@ -99,6 +99,20 @@ export function contentsText(pieces: readonly DrawnPiece[], { t, list }: I18n): 
   return said.length === 0 ? null : list(said);
 }
 
+/** The left-out kinds said in words, each with what became of it (9.20c); others by name. */
+const KINDS = [
+  'text',
+  'image',
+  'use',
+  'foreignObject',
+  'script',
+  'filter',
+  'clipPath',
+  'mask',
+] as const;
+const isKind = (name: string): name is (typeof KINDS)[number] =>
+  (KINDS as readonly string[]).includes(name);
+
 /** What was left out, by kind and count, one line each. */
 export function leftOutLines(
   reading: Extract<SvgReading, { kind: 'read' }>,
@@ -106,7 +120,9 @@ export function leftOutLines(
 ): string[] {
   return [
     ...Object.entries(reading.omitted).map(([name, count]) =>
-      t('svgImport.leftOut.element', { name, count }),
+      isKind(name)
+        ? t(`svgImport.leftOut.kinds.${name}`, { count })
+        : t('svgImport.leftOut.element', { name, count }),
     ),
     ...Object.entries(reading.pattern.leftOut).map(([reason, count]) =>
       t(`svgImport.leftOut.${reason as keyof SvgPattern['leftOut']}`, { count }),
@@ -116,7 +132,18 @@ export function leftOutLines(
 
 /** Why a drawing could not be imported, in the maker's words. */
 export function refusalText(error: SvgImportError | ResourceLimitError, { t }: I18n): string {
-  return error instanceof SvgImportError
-    ? t(`svgImport.refused.${error.code}`)
-    : t('svgImport.refused.tooBig', { limit: error.limit });
+  if (error instanceof SvgImportError) return t(`svgImport.refused.${error.code}`);
+  const megabytes = error.limit / 2 ** 20;
+  switch (error.resource) {
+    case 'svgBytes':
+      return t('svgImport.refused.svgBytes', { limit: megabytes });
+    case 'svgExpandedBytes':
+      return t('svgImport.refused.svgExpandedBytes', { limit: megabytes });
+    case 'segments':
+      return t('svgImport.refused.segments', { limit: error.limit });
+    case 'svgShapeTests':
+      return t('svgImport.refused.svgShapeTests');
+    default:
+      return t('svgImport.refused.tooBig', { limit: error.limit });
+  }
 }

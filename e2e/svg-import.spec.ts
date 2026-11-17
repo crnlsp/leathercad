@@ -36,7 +36,7 @@ test('a card holder imports as one piece with its cut-out and a marking, its hol
       '12 small circles in a row, 1.2 mm across',
     );
     await expect(dialog(window).getByTestId('svg-import-left-out')).toContainText(
-      '1 “text” element',
+      '1 piece of text',
     );
     await expectNoViolations(window, 'the SVG import preview');
 

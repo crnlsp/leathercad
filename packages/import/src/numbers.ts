@@ -1,5 +1,5 @@
 export class SvgImportError extends Error {
-  constructor(readonly code: 'INVALID_SVG' | 'SCALE_REQUIRED' | 'UNSUPPORTED_SVG') {
+  constructor(readonly code: 'INVALID_SVG' | 'SCALE_REQUIRED' | 'UNSUPPORTED_SVG' | 'UNSAFE_SVG') {
     super(code);
   }
 }

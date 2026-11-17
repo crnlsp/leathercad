@@ -12,6 +12,12 @@ export const RESOURCE_LIMITS = {
   characters: 20_000,
   holes: 250_000,
   pages: 1000,
+  /** An SVG file's bytes, as the archive's (ADR 0023 step 2). */
+  svgBytes: 32 * 1024 * 1024,
+  /** An SVG document's length with its entities expanded (ADR 0023 step 4). */
+  svgExpandedBytes: 32 * 1024 * 1024,
+  /** Shape against shape, and point against path segment, sorting an SVG's paths into pieces. */
+  svgShapeTests: 500_000_000,
 } as const;
 
 export type Resource = keyof typeof RESOURCE_LIMITS;

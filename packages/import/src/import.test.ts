@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
-import { EPS_POINT } from '@leathercad/core';
+import { EPS_POINT, RESOURCE_LIMITS } from '@leathercad/core';
 import {
   PathOps,
   SegmentOps,
@@ -298,5 +298,89 @@ describe('layer names (9.20b)', () => {
     expect(
       layerOf(group([{ namespace: '', localName: 'id', value: 'cutting' }], [rect()])),
     ).toEqual([undefined]);
+  });
+});
+
+describe('untrusted content is left out and counted, never followed (9.20c)', () => {
+  const XHTML = 'http://www.w3.org/1999/xhtml';
+  const kept = element('rect', { width: '10', height: '10' });
+  const read = (children: SvgElement[]) =>
+    importSvg(
+      element('svg', { width: '100mm', height: '100mm', viewBox: '0 0 100 100' }, children),
+    );
+
+  it('text, images, clones, embedded content, scripts, filters, clips and masks are listed by kind, even inside defs', () => {
+    const result = read([
+      element('defs', {}, [
+        element('clipPath', { id: 'c' }, [element('rect', { width: '5', height: '5' })]),
+        element('mask', { id: 'm' }),
+        element('filter', { id: 'f' }),
+        element('linearGradient', { id: 'g' }),
+      ]),
+      element('text', {}, [element('tspan')]),
+      element('image', { href: 'file:///etc/passwd' }),
+      element('use', { href: 'http://example.com/other.svg#shape' }),
+      element('foreignObject', {}, [
+        { namespace: XHTML, localName: 'iframe', attributes: [], children: [] },
+      ]),
+      element('script', {}, [element('script')]),
+      element('a', { href: 'javascript:alert(1)' }, [element('rect', { width: '5', height: '5' })]),
+      {
+        ...kept,
+        attributes: [...kept.attributes, { namespace: '', localName: 'onload', value: 'x()' }],
+      },
+    ]);
+    expect(result.shapes).toHaveLength(1);
+    expect(result.omitted).toEqual({
+      defs: 1,
+      clipPath: 1,
+      mask: 1,
+      filter: 1,
+      text: 1,
+      image: 1,
+      use: 1,
+      foreignObject: 1,
+      script: 2,
+      a: 1,
+    });
+  });
+
+  it('a number too large for a millimetre is refused, never carried as infinity', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 300, max: 400 }),
+        fc.constantFrom('d', 'transform', 'width'),
+        (exponent, where) => {
+          const huge = `9e${String(exponent)}`;
+          const child =
+            where === 'd'
+              ? element('path', { d: `M0 0L${huge} 1` })
+              : where === 'transform'
+                ? element('rect', { width: '1', height: '1', transform: `scale(${huge})` })
+                : element('rect', { width: huge, height: '1' });
+          try {
+            const result = read([element('g', { transform: 'scale(1e10)' }, [child])]);
+            for (const s of result.shapes)
+              for (const p of s.paths)
+                expect(Object.values(PathOps.bbox(p) ?? {}).every(Number.isFinite)).toBe(true);
+          } catch (error) {
+            expect(error).toMatchObject({ code: 'INVALID_SVG' });
+          }
+        },
+      ),
+    );
+  });
+
+  it('groups nested a hundred thousand deep are read without exhausting the stack', () => {
+    let tree = kept;
+    for (let i = 0; i < 100_000; i++) tree = element('g', {}, [tree]);
+    expect(read([tree]).shapes).toHaveLength(1);
+  });
+
+  it('more path segments than a project holds are refused before they are transformed', () => {
+    const d = `M0 0${'h0.001'.repeat(RESOURCE_LIMITS.segments + 1)}`;
+    expect(() => read([element('path', { d })])).toThrow(
+      expect.objectContaining({ name: 'ResourceLimitError', resource: 'segments' }),
+    );
   });
 });

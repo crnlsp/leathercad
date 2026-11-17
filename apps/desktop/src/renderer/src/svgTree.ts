@@ -1,27 +1,21 @@
 import { checkResourceLimit } from '@leathercad/core';
-import { SvgImportError, type SvgElement } from '@leathercad/import';
+import { SvgImportError, svgText, type SvgElement } from '@leathercad/import';
 
 const SVG = 'http://www.w3.org/2000/svg';
 
 /**
  * An SVG file's bytes as the plain tree `packages/import` converts (ADR 0023,
- * steps 3, 5–7). Decoded strictly — invalid UTF-8 is refused, never replaced —
- * and parsed by the platform. The parsed document is walked once, never
- * adopted into the window or shown, and dropped: only elements and their
- * attributes cross, each counted against PERF-012's node ceiling.
+ * steps 2–7). Bounded, decoded strictly and its entities checked by
+ * `svgText` before the platform's parser sees it. The parsed document is
+ * walked once, never adopted into the window or shown, and dropped: only
+ * elements and their attributes cross, each counted against PERF-012's node
+ * ceiling.
  *
- * The byte ceiling and the entity check before parsing (steps 2 and 4) are
- * 9.20c's, with the hostile-file corpus that tests them.
- *
- * Tested end to end: `DOMParser` is not in Node (`e2e/svg-import.spec.ts`).
+ * Tested end to end, with the hostile-file corpus: `DOMParser` is not in Node
+ * (`e2e/svg-import.spec.ts`, `e2e/svg-untrusted.spec.ts`).
  */
 export function svgTree(bytes: Uint8Array): SvgElement {
-  let text: string;
-  try {
-    text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-  } catch {
-    throw new SvgImportError('INVALID_SVG');
-  }
+  const text = svgText(bytes);
   const document = new DOMParser().parseFromString(text, 'image/svg+xml');
   const root = document.documentElement;
   if (
