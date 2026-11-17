@@ -9,7 +9,7 @@ import {
 } from '@leathercad/document';
 import { evaluate, type Feature, type Part, type Problem, type Project } from '@leathercad/domain';
 
-import { defaultIron, type MakerTools } from './irons.js';
+import { defaultIron, toothOfIron, type MakerTools } from './irons.js';
 
 /**
  * What a piece's stitching takes, in the order the work goes (R-14): a stitch
@@ -180,7 +180,7 @@ export function stitchLineCommand(
   return addStitchLine(partId, id, sourceId, tools.stitchMarginMm);
 }
 
-/** Holes from the maker's default iron, its pitch and its name; with no irons, the project's. */
+/** Holes from the maker's default iron, its pitch, its tooth and its name; with no irons, the project's pitch. */
 export function holesCommand(
   partId: string,
   stitchId: string,
@@ -191,7 +191,9 @@ export function holesCommand(
   return addStitchHoles(partId, id, stitchId, {
     mode: 'fit-whole',
     corners: 'hole-at-corner',
-    ...(iron === undefined ? {} : { pitchMm: iron.pitchMm, ironLabel: iron.name }),
+    ...(iron === undefined
+      ? {}
+      : { pitchMm: iron.pitchMm, ironLabel: iron.name, tooth: toothOfIron(iron) }),
   });
 }
 

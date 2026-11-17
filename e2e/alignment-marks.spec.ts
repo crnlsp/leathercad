@@ -39,7 +39,8 @@ test('mark a seam every 6th pair from Properties, in one undo step, and save it 
     await window.getByTestId('save').click();
     await expect(window.getByTestId('save-state')).toHaveText('Saved');
     const bytes = readFileSync(saved);
-    expect(readManifest(bytes).formatVersion).toBe(13);
+    // Saved in a format that holds marks: 13, or any later one.
+    expect(readManifest(bytes).formatVersion).toBeGreaterThanOrEqual(13);
     expect(loadProject(bytes).project.seams?.[0]).toMatchObject({
       id: 'pocket-left-seam',
       marks: { kind: 'every', n: 6 },

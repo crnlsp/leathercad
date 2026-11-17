@@ -10,7 +10,7 @@ import {
 } from '@leathercad/geometry';
 
 import { cornerDistances } from './anchors.js';
-import type { Derivation } from './feature.js';
+import type { Derivation, Tooth } from './feature.js';
 
 /**
  * What distribution reads of a hole set's op: the pitch and the policy, not
@@ -92,6 +92,13 @@ export interface StitchHoles {
    * mirrored row's op is its mirror, not the row's.
    */
   readonly radiusMm?: Mm;
+  /**
+   * The iron's nominal pitch, on a stitch hole set and its mirrors: what the
+   * board sizes a nominal slit from. Carried for the same reason as `radiusMm`.
+   */
+  readonly pitchMm?: Mm;
+  /** The iron's tooth, on a stitch hole set given one and its mirrors (9.26, D26). */
+  readonly tooth?: Tooth;
 }
 
 /**

@@ -804,7 +804,6 @@
       "stitch": "Linie szycia",
       "stitch-holes": "Otwory do szycia"
     },
-    "stitchHolesNote": "Każdy otwór to okrąg o średnicy {{size}}, oznaczający środek, a nie rzeczywisty rozmiar otworu na nić",
     "title": "Eksportuj {{format}}"
   },
   "exportNotice": {

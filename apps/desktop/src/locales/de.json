@@ -758,7 +758,6 @@
       "stitch": "Nahtlinien",
       "stitch-holes": "Nahtlöcher"
     },
-    "stitchHolesNote": "Jedes Loch wird als Kreis mit {{size}} Durchmesser für den Mittelpunkt dargestellt, nicht in der tatsächlichen Größe für den Faden",
     "title": "{{format}} exportieren"
   },
   "exportNotice": {

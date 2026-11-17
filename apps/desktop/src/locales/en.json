@@ -483,6 +483,13 @@
       "pitch": "Pitch",
       "pitchOf": "Pitch of {{name}}",
       "rename": "Rename",
+      "style": "Teeth",
+      "styleOf": "Teeth of {{name}}",
+      "styles": {
+        "french": "French",
+        "japanese": "Japanese",
+        "round": "Round"
+      },
       "margin": {
         "name": "Stitch margin",
         "note": "How far in from the edge a new stitch line starts, and how far out a new seam allowance goes."
@@ -796,7 +803,7 @@
       "stitch": "Stitch lines",
       "stitch-holes": "Stitch holes"
     },
-    "stitchHolesNote": "Each is a {{size}} circle marking the centre, not a hole sized for the thread",
+    "stitchHolesNote": "Each is cut as its iron’s tooth, set on the hole set; a hole set with no tooth set is a {{size}} circle marking the centre",
     "title": "Export {{format}}"
   },
   "exportNotice": {
@@ -1212,6 +1219,7 @@
       "finite": "{{featureName}}'s {{parameter}} is not a usable number.",
       "non-negative": "{{featureName}}'s {{parameter}} is {{value}}, and it must not be negative.",
       "positive": "{{featureName}}'s {{parameter}} is {{value}}, and it must be more than zero.",
+      "at-most": "{{featureName}}'s {{parameter}} is longer than {{maximum}}, the iron's pitch, so it would run into the next hole.",
       "parameter": {
         "allowance": "allowance",
         "corner radius": "corner radius",
@@ -1229,6 +1237,10 @@
         "start offset": "start offset",
         "sweep": "sweep",
         "text size": "text size",
+        "tooth diameter": "tooth diameter",
+        "tooth length": "tooth length",
+        "tooth slant": "tooth angle",
+        "tooth width": "blade width",
         "width": "width"
       },
       "fix": "In Properties, enter a finite number that meets the stated limit."
@@ -1450,6 +1462,19 @@
       "exact-pitch": "Exactly this pitch",
       "fit-whole": "Even, whole number",
       "hole-at-corner": "A hole on each corner"
+    },
+    "tooth": {
+      "angle": "Angle",
+      "blade": "Blade",
+      "holes": "Holes",
+      "inverse": "Inverse",
+      "lean": "Lean",
+      "length": "Length",
+      "longerThanPitch": "A slit longer than the pitch ({{size}}) runs into the next hole. {{enter}} uses {{size}}.",
+      "round": "Round",
+      "slit": "Slit",
+      "stacked": "Laser-cutting two pieces stacked face to face? Choose Inverse on one of them, so their slits do not cross.",
+      "standard": "Standard"
     },
     "lengthError": {
       "mixed": "Give every number in a sum its unit, as in 10cm + 5mm. For 3½ inches, type 3.5in",

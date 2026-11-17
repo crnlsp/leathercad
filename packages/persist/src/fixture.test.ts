@@ -21,6 +21,7 @@ import {
   fixtureProjectV11,
   fixtureProjectV12,
   fixtureProjectV13,
+  fixtureProjectV14,
 } from './makeFixture.js';
 import { CURRENT_FORMAT_VERSION } from './migrations/index.js';
 
@@ -37,6 +38,7 @@ const FIXTURE_V9 = resolve(import.meta.dirname, '../../../fixtures/format/v9.lcp
 const FIXTURE_V11 = resolve(import.meta.dirname, '../../../fixtures/format/v11.lcp');
 const FIXTURE_V12 = resolve(import.meta.dirname, '../../../fixtures/format/v12.lcp');
 const FIXTURE_V13 = resolve(import.meta.dirname, '../../../fixtures/format/v13.lcp');
+const FIXTURE_V14 = resolve(import.meta.dirname, '../../../fixtures/format/v14.lcp');
 
 // Fixed, so regenerating an unchanged fixture produces no diff and a real
 // change to the format is visible in review.
@@ -63,9 +65,9 @@ describe('the format baseline fixture', () => {
       // Only the *current* version's fixture is ever regenerated. v1 to v4 are
       // real old files, and rewriting any of them would delete the only proof
       // that a file from that version still opens.
-      mkdirSync(dirname(FIXTURE_V13), { recursive: true });
-      writeFileSync(FIXTURE_V13, saveProject(fixtureProjectV13(), OPTIONS));
-      expect(existsSync(FIXTURE_V13)).toBe(true);
+      mkdirSync(dirname(FIXTURE_V14), { recursive: true });
+      writeFileSync(FIXTURE_V14, saveProject(fixtureProjectV14(), OPTIONS));
+      expect(existsSync(FIXTURE_V14)).toBe(true);
     });
   }
 
@@ -465,7 +467,10 @@ it('holds a piece’s overall size in the version 12 fixture', () => {
 });
 
 it('holds a seam’s alignment marks in the version 13 fixture', () => {
-  expect(readManifest(readFileSync(FIXTURE_V13)).formatVersion).toBe(CURRENT_FORMAT_VERSION);
+  // v13 stopped being current when the iron's tooth arrived (9.26). Never
+  // regenerated: it is the proof a file from before teeth still opens.
+  expect(readManifest(readFileSync(FIXTURE_V13)).formatVersion).toBe(13);
+  expect(CURRENT_FORMAT_VERSION).toBeGreaterThan(13);
   const project = loadProject(readFileSync(FIXTURE_V13)).project;
   expect(project).toEqual(fixtureProjectV13());
   // The seam walks, and its marks fall at every fifth pair on both pieces.
@@ -489,6 +494,34 @@ it('stores which pairs are marked, never where the marks are (§3.3)', () => {
       marks: { kind: 'every', n: 5 },
     },
   ]);
+});
+
+it('holds a slit and a round tooth in the version 14 fixture', () => {
+  expect(readManifest(readFileSync(FIXTURE_V14)).formatVersion).toBe(CURRENT_FORMAT_VERSION);
+  const project = loadProject(readFileSync(FIXTURE_V14)).project;
+  expect(project).toEqual(fixtureProjectV14());
+  const teeth = evaluate(project)
+    .parts.flatMap((part) => part.features)
+    .flatMap((entry) =>
+      entry.ok && entry.holes?.tooth !== undefined ? [entry.holes.tooth.kind] : [],
+    );
+  expect(teeth.sort()).toEqual(['round', 'slit']);
+});
+
+it('stores a tooth as its values, never its outlines or a style (§3.3, D25)', () => {
+  const raw = strFromU8(unzipSync(new Uint8Array(readFileSync(FIXTURE_V14)))['document.json']!);
+  const ops = (JSON.parse(raw) as { parts: { features: { source: { op?: unknown } }[] }[] }).parts
+    .flatMap((part) => part.features)
+    .flatMap((feature) => {
+      const op = feature.source.op as { type?: string } | undefined;
+      return op?.type === 'stitch-holes' ? [op] : [];
+    });
+
+  expect(ops.map((op) => (op as { tooth?: unknown }).tooth)).toEqual([
+    { kind: 'slit', lengthMm: 2.387, slantDeg: -45, widthMm: 0.4 },
+    { diameterMm: 1.2, kind: 'round' },
+  ]);
+  expect(raw).not.toMatch(/japanese|french|style/i);
 });
 
 it('stores an overall dimension as which corners of the box, never its size (§3.3)', () => {

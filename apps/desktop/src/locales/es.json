@@ -781,7 +781,6 @@
       "stitch": "Líneas de puntadas",
       "stitch-holes": "Agujeros de puntadas"
     },
-    "stitchHolesNote": "Cada círculo de {{size}} indica el centro; no es un agujero dimensionado para el hilo",
     "title": "Exportar {{format}}"
   },
   "exportNotice": {

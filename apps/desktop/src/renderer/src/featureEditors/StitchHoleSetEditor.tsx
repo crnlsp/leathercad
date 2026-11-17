@@ -1,14 +1,17 @@
 import {
   MIN_HOLES_IN_A_SET,
   MIN_PITCH_MM,
+  toothOfStyle,
   type Derivation,
   type Severity,
   type StitchHoles,
+  type Tooth,
 } from '@leathercad/domain';
 import type { Iron } from '@leathercad/platform';
 
 import { NumberField } from '../NumberField.js';
-import { ironOf } from '../irons.js';
+import { ironOf, shownTooth, slitRefusal, withIron, withTypedTooth } from '../irons.js';
+import { useKeysInSentences } from '../keyCaps.js';
 import { useI18n } from '../i18n.js';
 import { Icon } from '../icons/Icon.js';
 import { SeverityGlyph } from '../SeverityGlyph.js';
@@ -67,7 +70,7 @@ export function StitchHoleSetEditor({
             onChange={(event) => {
               const chosen = irons.find((each) => each.id === event.target.value);
               if (chosen === undefined) return;
-              onChange({ ...op, pitchMm: chosen.pitchMm, ironLabel: chosen.name });
+              onChange(withIron(op, chosen));
             }}
           >
             {irons.map((each) => (
@@ -98,6 +101,8 @@ export function StitchHoleSetEditor({
           onChange({ ...rest, pitchMm });
         }}
       />
+
+      <ToothFields op={op} onChange={onChange} />
 
       <label className="field">
         <span className="field-label">{t('editor.fit')}</span>
@@ -161,6 +166,95 @@ export function StitchHoleSetEditor({
               reported={reported}
             />
           )}
+        </>
+      )}
+    </>
+  );
+}
+
+/**
+ * The *Holes* row (9.26): the shape each tooth cuts — a slit's length, blade,
+ * angle and lean, or a round prong's diameter — shown for every set, and typed
+ * as a pitch is: a typed tooth is no longer the iron's. A set whose iron was
+ * not said shows the French slit the board draws for it, and keeps no tooth
+ * until one is typed (D26).
+ */
+function ToothFields({ op, onChange }: { op: HolesOp; onChange: (op: HolesOp) => void }) {
+  const { t } = useI18n();
+  const keys = useKeysInSentences();
+  const words = { t, enter: keys['enter'] ?? '' };
+  const tooth = shownTooth(op);
+  const type = (next: Tooth): void => onChange(withTypedTooth(op, next));
+
+  return (
+    <>
+      <label className="field">
+        <span className="field-label">{t('editor.tooth.holes')}</span>
+        <span className="field-input">
+          <select
+            data-testid="tooth-shape"
+            value={tooth.kind}
+            onChange={(event) =>
+              type(toothOfStyle(event.target.value === 'round' ? 'round' : 'french', op.pitchMm))
+            }
+          >
+            <option value="slit">{t('editor.tooth.slit')}</option>
+            <option value="round">{t('editor.tooth.round')}</option>
+          </select>
+        </span>
+      </label>
+      {tooth.kind === 'round' ? (
+        <NumberField
+          label={t('editor.diameter')}
+          value={tooth.diameterMm}
+          min={0.05}
+          step={0.1}
+          onCommit={(diameterMm) => type({ ...tooth, diameterMm })}
+        />
+      ) : (
+        <>
+          <NumberField
+            label={t('editor.tooth.length')}
+            value={tooth.lengthMm}
+            min={0.05}
+            step={0.05}
+            refuse={(lengthMm) => slitRefusal(lengthMm, op.pitchMm, words)}
+            onCommit={(lengthMm) => type({ ...tooth, lengthMm })}
+          />
+          <NumberField
+            label={t('editor.tooth.blade')}
+            value={tooth.widthMm}
+            min={0.05}
+            step={0.05}
+            onCommit={(widthMm) => type({ ...tooth, widthMm })}
+          />
+          <NumberField
+            label={t('editor.tooth.angle')}
+            value={Math.abs(tooth.slantDeg)}
+            min={0}
+            step={1}
+            suffix="°"
+            precision={1}
+            onCommit={(angle) => type({ ...tooth, slantDeg: tooth.slantDeg < 0 ? -angle : angle })}
+          />
+          <label className="field">
+            <span className="field-label">{t('editor.tooth.lean')}</span>
+            <span className="field-input">
+              <select
+                data-testid="tooth-lean"
+                value={tooth.slantDeg < 0 ? 'inverse' : 'standard'}
+                onChange={(event) => {
+                  const angle = Math.abs(tooth.slantDeg);
+                  type({ ...tooth, slantDeg: event.target.value === 'inverse' ? -angle : angle });
+                }}
+              >
+                <option value="standard">{t('editor.tooth.standard')}</option>
+                <option value="inverse">{t('editor.tooth.inverse')}</option>
+              </select>
+            </span>
+          </label>
+          {/* No check that stacked pieces' slits cross: that needs layers (D28). */}
+          <p className="panel-note">{t('editor.tooth.stacked')}</p>
         </>
       )}
     </>

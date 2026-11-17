@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, type Project } from '@leathercad/domain';
+import { DEFAULT_SETTINGS, type Project, type Tooth } from '@leathercad/domain';
 import { polyline, uniformRadii } from '@leathercad/geometry';
 
 /**
@@ -763,5 +763,35 @@ export function fixtureProjectV13(): Project {
         marks: { kind: 'every', n: 5 },
       },
     ],
+  };
+}
+
+/**
+ * Version 14 — the iron's tooth (9.26).
+ *
+ * The panel's holes are pricked by an inverse Japanese iron, a slit, and the
+ * pocket's by a round prong. What the file holds is the tooth's values; the
+ * outlines a laser cuts are drawn from them on every export.
+ */
+export function fixtureProjectV14(): Project {
+  const previous = fixtureProjectV13();
+  const teeth: Readonly<Record<string, Tooth>> = {
+    'holes-1': { kind: 'slit', lengthMm: 2.387, widthMm: 0.4, slantDeg: -45 },
+    'holes-2': { kind: 'round', diameterMm: 1.2 },
+  };
+  return {
+    ...previous,
+    id: 'fixture-v14',
+    name: 'Format baseline v14',
+    parts: previous.parts.map((part) => ({
+      ...part,
+      features: part.features.map((feature) => {
+        const tooth = teeth[feature.id];
+        if (tooth === undefined || feature.kind !== 'stitch-hole-set') return feature;
+        const { source } = feature;
+        if (source.kind !== 'derived' || source.op.type !== 'stitch-holes') return feature;
+        return { ...feature, source: { ...source, op: { ...source.op, tooth } } };
+      }),
+    })),
   };
 }

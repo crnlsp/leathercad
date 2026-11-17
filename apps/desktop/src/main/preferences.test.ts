@@ -248,6 +248,24 @@ describe('My tools (U.13)', () => {
     expect(parsed.defaultIronId).toBe('e');
   });
 
+  it('keeps an iron’s style, and lets a style it does not know go, so the iron reads as French (9.26)', () => {
+    const parsed = parsePreferences(
+      JSON.stringify({
+        irons: [
+          { ...iron('a', 'Japanese 3.0', 3), style: 'japanese' },
+          { ...iron('b', 'Round 4', 4), style: 'round' },
+          { ...iron('c', 'From a later version', 3.85), style: 'olive' },
+        ],
+        defaultIronId: 'a',
+      }),
+    );
+    expect(parsed.irons).toEqual([
+      { ...iron('a', 'Japanese 3.0', 3), style: 'japanese' },
+      { ...iron('b', 'Round 4', 4), style: 'round' },
+      iron('c', 'From a later version', 3.85),
+    ]);
+  });
+
   it('makes the first iron the default when the default names none of them', () => {
     const irons = [iron('a', 'Diamond 3.85', 3.85), iron('b', 'Diamond 2.7', 2.7)];
     expect(parsePreferences(JSON.stringify({ irons, defaultIronId: 'gone' })).defaultIronId).toBe(

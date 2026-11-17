@@ -1,4 +1,5 @@
 import { EPS_LENGTH, approxZero, type Mm } from '@leathercad/core';
+import type { Tooth } from '@leathercad/domain';
 import {
   PathOps,
   SegmentOps,
@@ -29,34 +30,52 @@ export interface Slits {
   readonly widthPx: number;
 }
 
+/** A tooth that cuts a slit: what `slitsFor` draws. */
+export type SlitTooth = Extract<Tooth, { kind: 'slit' }>;
+
+/**
+ * The slit the board draws for a hole set whose iron was not said (D26): F.7's
+ * nominal French iron at the set's pitch. The same values as the domain's
+ * French style, which a test holds them to.
+ */
+export function nominalTooth(pitchMm: Mm): SlitTooth {
+  return {
+    kind: 'slit',
+    lengthMm: NOMINAL_IRON.toothPerPitch * pitchMm,
+    widthMm: NOMINAL_IRON.bladeMm,
+    slantDeg: (NOMINAL_IRON.slantRad * 180) / Math.PI,
+  };
+}
+
 /**
  * Each hole as a pricking iron makes it: a slit centred on the hole, leaning at
- * the iron's slant to the line (§9.3).
+ * the tooth's slant to the line (§9.3, 9.26).
  *
  * Measured from the hole's tangent, so the slant turns with the line round a
  * corner, as a maker turns the iron. A slit is a line through its centre, so a
  * line drawn the other way gives the same slit.
  *
- * - **Detail band:** true length and the blade's true thickness.
+ * - **Detail band:** the tooth's true length and the blade's true thickness.
  * - **Working band:** the length floored at a few pixels, never the slant.
  *
  * The overview band draws no slits; the caller draws the set as its line.
  */
 export function slitsFor(
   holes: readonly { readonly point: Vec2; readonly tangent: Vec2 }[],
-  pitchMm: Mm,
+  tooth: SlitTooth,
   pxPerMm: number,
 ): Slits {
   const detail = pxPerMm >= CANVAS.bands.detailFromPxPerMm;
-  const trueLength = NOMINAL_IRON.toothPerPitch * pitchMm;
+  const trueLength = tooth.lengthMm;
   const lengthMm = detail ? trueLength : Math.max(trueLength, CANVAS.slit.minLengthPx / pxPerMm);
   const roleWidth = ROLE_STYLES['stitch-holes'].widthPx;
-  const widthPx = detail ? Math.max(roleWidth, NOMINAL_IRON.bladeMm * pxPerMm) : roleWidth;
+  const widthPx = detail ? Math.max(roleWidth, tooth.widthMm * pxPerMm) : roleWidth;
 
   // Hundreds of holes, on every frame: the rotation is worked out once.
   const half = lengthMm / 2;
-  const cos = Math.cos(NOMINAL_IRON.slantRad) * half;
-  const sin = Math.sin(NOMINAL_IRON.slantRad) * half;
+  const slant = (tooth.slantDeg * Math.PI) / 180;
+  const cos = Math.cos(slant) * half;
+  const sin = Math.sin(slant) * half;
   const slits = holes.map(({ point, tangent }): SlitEnds => {
     // Unit already, from the distribution; divided through in case. A hole
     // with no direction — a degenerate run — still gets a slit, along X.
@@ -72,6 +91,16 @@ export function slitsFor(
     ];
   });
   return { slits, widthPx };
+}
+
+/**
+ * The radius a round tooth's hole is drawn at (9.26): its true size in the
+ * detail band; in the working band floored, as a slit's length is, so it stays
+ * a hole rather than a speck.
+ */
+export function roundHoleRadiusMm(diameterMm: Mm, pxPerMm: number): Mm {
+  const detail = pxPerMm >= CANVAS.bands.detailFromPxPerMm;
+  return detail ? diameterMm / 2 : Math.max(diameterMm, CANVAS.slit.minLengthPx / pxPerMm) / 2;
 }
 
 /**

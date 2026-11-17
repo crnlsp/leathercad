@@ -297,9 +297,26 @@ fall, and which way they point, are read from the holes on every load (§3.3).
 
 The v12→v13 migration is an identity: no older seam has marks, and none are invented on open. The
 version increases because marks print (§4.5 rule 2): a 1.6 build would carry the field through as
-unknown data and print the pattern without them. So every file 1.7 saves is format 13, which 1.6
+unknown data and print the pattern without them. So every file 1.7 saved was format 13 (14 from §4.1f), which 1.6
 refuses with its *update LeatherCAD* sentence. `fixtures/format/v13.lcp` sews the v12 pocket's new
 hole set to the panel's with a mark at every fifth pair.
+
+### 4.1f Version 14 — the iron's tooth
+
+A stitch-holes op may carry `tooth`: `{ "kind": "slit", "lengthMm": 1.925, "widthMm": 0.4,
+"slantDeg": 45 }` or `{ "kind": "round", "diameterMm": 1.2 }` (9.26, D25,
+[domain-model.md](domain-model.md) §3.3). Values, never a style's name or a preset id. The schema
+refuses a size that is not more than zero and a slant that is not a finite number; a slit longer
+than the pitch loads and is evaluation's to name (`PARAMETER_INVALID`, `at-most`). Unknown fields
+on a tooth are kept (§4.3). The outline a laser cuts is drawn from it on every export, never
+stored (§3.3).
+
+The v13→v14 migration is an identity: no older hole set has a tooth, and none is invented on open
+(D26). The version increases because SVG and DXF cut it (§4.5 rule 2): a format-13 build would
+carry the field through as unknown data and cut 1 mm centre marks. So every file saved from here
+on is format 14, which an older build refuses with its *update LeatherCAD* sentence.
+`fixtures/format/v14.lcp` gives the v13 panel's hole set an inverse Japanese slit and the pocket's
+a round prong.
 
 ### 4.2 The rules
 

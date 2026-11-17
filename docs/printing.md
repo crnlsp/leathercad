@@ -687,10 +687,14 @@ and their holes share the canvas's blue, so a laser operator separates those two
 
 **What is a circle, an arc, a curve.**
 
-- A **stitch hole is a `<circle>`**, stroked and unfilled like the PDF's, at the 1 mm size the scene
-  gives a hole marker, in the `stitch-holes` group. (The hole size a laser wants is not the
-  template's marker; 6.4 left the size alone: what it added is which layers go in, and a laser
-  that wants the holes at the awl's size is a size nobody has asked for.)
+- A **stitch hole whose iron is said** (9.26, D27) is the outline its tooth cuts, in the
+  `stitch-holes` group: a slit as a closed four-point `<path>`, a lozenge as long as the tooth and
+  as wide as its blade, leaning at its slant; a round prong as a `<circle>` of its diameter. The
+  scene draws it (`buildExportScene(…, 'outlines')`, `toothOutline`), and the writer only
+  translates. **The PDF keeps the centre marks** — a hand maker pricks with the iron itself — so
+  paper is unchanged and byte-identical for the same project.
+- A **stitch hole whose iron was not said** (D26) is a `<circle>`, stroked and unfilled like the
+  PDF's, at the 1 mm size the scene gives a hole marker, in the `stitch-holes` group.
 - Any path that is one whole turn of an arc is a `<circle>`: a hardware hole is one, and so is each
   hole of a row of holes (4.14), at its true diameter in the `hardware` group — a row is punched,
   not pricked, so it has no marker size.
@@ -720,9 +724,9 @@ dimension under the panel. Rendered by librsvg at 254 dpi (2026-10-07), the prin
 dialog: the three intents as radio buttons, each with a line saying what it holds; the layers — the
 domain's roles, `construction` aside, which no feature has — as checkboxes, ticked as the intent
 says and adjustable from there (*Laser cut*, then *Stitch holes* is the "plus stitch holes if
-lasered" of the domain model, and says under it that each is a 1 mm circle marking the centre —
-`STITCH_HOLE_MARKER_DIAMETER_MM` — not a hole sized for the thread, since a cutter would cut it at
-that size; a mix that is no intent says *Your own mix of layers*); and a line
+lasered" of the domain model, and says under it that each is cut as its iron's tooth, and that a
+hole set with no tooth set is a 1 mm circle marking the centre — `STITCH_HOLE_MARKER_DIAMETER_MM` —
+since a cutter would cut it at that size; a mix that is no intent says *Your own mix of layers*); and a line
 that **reports the page** the file will have, from `drawingBoundsOf` — the box of what the chosen
 layers draw, which §10 already defines, so a laser cut's page is the cut outline's box and not the
 captions' — or says there is nothing to export and greys *Export…*. It reports and does not
@@ -788,7 +792,8 @@ variables added, and a minimal `AC1015` file:
   out, and a sweep a hair short of a whole turn is a `CIRCLE`, because written to six decimals the
   two have the same start and end, which a reader draws as a whole circle.
 - A **stitch hole is a `CIRCLE`** at the 1 mm size the scene gives it, not a `POINT`: laser software
-  ignores points. (The first draft offered either by an option; nothing asks for the option, and
+  ignores points. A hole whose iron is said is its tooth's outline instead (9.26): a slit as its
+  four `LINE`s, a round prong as a `CIRCLE` of its diameter. (The first draft offered either by an option; nothing asks for the option, and
   6.4 did not add it.) A hardware hole, a row's hole at its true diameter on the `hardware` layer (4.14), or any
   whole turn of an arc, is one too.
 - **Cubics are `POLYLINE`s**: consecutive cubics are one open polyline, and a closed loop of cubics

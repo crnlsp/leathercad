@@ -26,9 +26,21 @@ Sometimes called the "stitch groove" line when it is physically grooved into the
 
 **Stitch hole** — One hole in the leather through which thread passes. Round for an awl or round
 punch; for a pricking iron or diamond chisel, a narrow slot slanted at roughly 40–45° to the stitch
-line and about half the pitch long (makers publish cutting angles of 40–43°, and tooth widths of
-1.6 mm at 3.0, 1.9 mm at 3.85). The canvas draws a hole this way, from a nominal iron: the model
-records the pitch but not the tooth.
+line. A hole set records its iron's **tooth** (9.26): a slit's length, blade width and slant, or a
+round prong's diameter, filled from a style the maker picks in My tools and editable after. What
+makers publish, and what each style fills (checked 2026-11-17):
+
+- **French** — half the pitch long, a 0.4 mm blade, at 45°. Pro Atelier Plus lists tooth widths of
+  1.6 mm at 3.0, 1.75 at 3.38 and 1.9 at 3.85, and a 43° cutting angle; F.7's sources agree.
+- **Japanese** (diamond) — 0.62 of the pitch long. Sinabroks lists 2.1 mm at 3.0 and 3.38 and
+  2.4 mm at 3.85 and above (0.62 of 3.85); Craft-sha sizes its irons by the blade, half the
+  pitch, as the Phoenix leather shop explains. They disagree; Sinabroks' 3.85 is the commoner
+  pitch's figure. No Japanese maker found publishes a slant or a blade width, so French's 45°
+  and 0.4 mm are kept.
+- **Round** — a 1.2 mm prong at every pitch: WUTA lists its round heads at about 1.0–1.3 mm,
+  KemovanCraft at 1.2–1.4 mm, tapered.
+
+A **standard** iron leans `/` along a line drawn left to right; an **inverse** one leans `\`.
 
 **Saddle stitch** — The hand stitch used in most leatherwork: two needles, one thread, passing
 through the same hole from both sides. Relevant because both mating pieces must have *the same

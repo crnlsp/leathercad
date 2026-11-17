@@ -1,8 +1,18 @@
-import { MIN_PITCH_MM } from '@leathercad/domain';
+import { MIN_PITCH_MM, toothOfStyle } from '@leathercad/domain';
 import { STARTER_IRONS } from '@leathercad/platform';
 import { describe, expect, it } from 'vitest';
 
-import { defaultIron, ironOf, withoutIron, type MakerTools } from './irons.js';
+import {
+  defaultIron,
+  ironOf,
+  shownTooth,
+  slitRefusal,
+  toothOfIron,
+  withIron,
+  withTypedTooth,
+  withoutIron,
+  type MakerTools,
+} from './irons.js';
 
 const iron = (id: string, name: string, pitchMm: number) => ({ id, name, pitchMm });
 const tools = (irons: MakerTools['irons'], defaultIronId: string | null): MakerTools => ({
@@ -40,5 +50,55 @@ describe('the maker’s irons (U.13)', () => {
     expect(withoutIron(tools(two, 'a'), 'a')).toEqual({ irons: [two[1]], defaultIronId: 'b' });
     expect(withoutIron(tools(two, 'a'), 'b')).toEqual({ irons: [two[0]], defaultIronId: 'a' });
     expect(withoutIron(tools([two[0]!], 'a'), 'a')).toEqual({ irons: [], defaultIronId: null });
+  });
+});
+
+describe('an iron’s tooth (9.26)', () => {
+  const op = {
+    type: 'stitch-holes' as const,
+    pitchMm: 3.0,
+    mode: 'fit-whole' as const,
+    corners: 'hole-at-corner' as const,
+    ironLabel: 'KS Blade 3.0 mm',
+  };
+  const words = { t: (key: string) => key, enter: 'Enter' } as Parameters<typeof slitRefusal>[2];
+
+  it('takes its style’s tooth at its pitch, French when no style is said', () => {
+    expect(toothOfIron(iron('a', 'Old', 3.85))).toEqual(toothOfStyle('french', 3.85));
+    expect(toothOfIron({ ...iron('b', 'Kemovan', 3.85), style: 'round' })).toEqual({
+      kind: 'round',
+      diameterMm: 1.2,
+    });
+  });
+
+  it('sets the pitch, the tooth and the name together when picked from the Iron menu', () => {
+    const japanese = { ...iron('j', 'Sinabroks 3.85', 3.85), style: 'japanese' as const };
+    expect(withIron(op, japanese)).toEqual({
+      ...op,
+      pitchMm: 3.85,
+      ironLabel: 'Sinabroks 3.85',
+      tooth: toothOfStyle('japanese', 3.85),
+    });
+  });
+
+  it('shows the French slit the board draws for a set whose iron was not said (D26)', () => {
+    expect(shownTooth(op)).toEqual(toothOfStyle('french', 3.0));
+  });
+
+  it('makes the iron Custom when a tooth is typed, keeping everything else on the op', () => {
+    const typed = withTypedTooth({ ...op, future: 'kept' } as typeof op, {
+      kind: 'round',
+      diameterMm: 1,
+    });
+    expect(typed).toMatchObject({ future: 'kept', tooth: { kind: 'round', diameterMm: 1 } });
+    expect('ironLabel' in typed).toBe(false);
+  });
+
+  it('refuses a slit longer than the pitch, offering the pitch, and takes one up to it', () => {
+    expect(slitRefusal(3.0, 3.0, words)).toBeNull();
+    expect(slitRefusal(3.1, 3.0, words)).toEqual({
+      reason: 'editor.tooth.longerThanPitch',
+      use: 3.0,
+    });
   });
 });
