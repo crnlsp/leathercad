@@ -303,6 +303,11 @@ release until it is moved into one.
 - **A radius-aware corner policy,** and **leaving single holes out**
   ([domain-model](domain-model.md) §3.3, §6.1). Hole shapes moved into 1.7 as 9.26 (2026-11-17).
 - **`.lcp.json`,** a project as plain JSON for version control ([file-format](file-format.md) §8).
+- **Windows installer options a maker might ask for:** a page to choose the desktop shortcut and
+  the `.lcp` association, and a Wine build (`pnpm package:win`) for trying installer changes without
+  a Windows PC. Both rejected for now, with their code and reasoning kept in
+  [the installer spec](superpowers/specs/2026-11-03-windows-installer-and-distribution-design.md#10-the-deleted-branch-kept-for-later);
+  revisit with a request.
 
 ### Exploring — neither planned nor rejected
 
