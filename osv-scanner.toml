@@ -3,3 +3,18 @@
 # `overrides` whenever one exists inside the version range the dependent
 # asks for. An entry here says why none does, expires on its own within 14
 # days, and has an issue that removes it.
+
+# GHSA-fc5q-39xc-vjpf, picomatch regular expression denial of service through
+# single-branch repeated extglobs such as `+(*)`, published 2026-10-19. The
+# advisory covers every release through 4.0.7, which is the newest there is
+# and the only picomatch in the lockfile, so no override has a fixed version
+# to point at. Every dependent is development or packaging tooling
+# (dependency-cruiser, knip, tinyglobby, typescript-eslint, Vite, Vitest,
+# Stryker, electron-builder); nothing in the shipped app imports picomatch,
+# and the app ships no node_modules. Remove this entry, and add the fixed
+# release to `overrides` if the dependents' ranges do not take it, once
+# picomatch publishes one.
+[[IgnoredVulns]]
+id = "GHSA-fc5q-39xc-vjpf"
+ignoreUntil = 2026-12-01T00:00:00Z
+reason = "picomatch: no fixed release exists (4.0.7 is the latest and affected); development and packaging tooling only; remove when a fixed release ships"
