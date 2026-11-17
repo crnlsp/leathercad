@@ -2752,6 +2752,13 @@ body {
   font: var(--t-num);
 }
 
+.production-detail {
+  padding-left: 8px;
+  color: var(--text-dim);
+  font: var(--t-label);
+  overflow-wrap: anywhere;
+}
+
 .badge {
   /* A glyph and a count, always on one line: a badge that wraps reads as two. */
   display: inline-flex;

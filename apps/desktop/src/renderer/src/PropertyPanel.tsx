@@ -37,6 +37,7 @@ import { NumberField } from './NumberField.js';
 import { GuidesPanel } from './GuidesPanel.js';
 import { ArrangePanel, PositionFields } from './ArrangePanel.js';
 import { ProblemSection } from './ProblemSection.js';
+import { ProductionSummary } from './ProductionSummary.js';
 import { jobTotals, trailOf } from './propertyFacts.js';
 import { ReasonedButton, ReasonedRow, type ReasonedButtonProps } from './ReasonedButton.js';
 import { resolvedFor } from './sheets.js';
@@ -169,7 +170,12 @@ export function PropertyPanel({
         {sizing === null &&
           selected.size === 0 &&
           parts.length === 0 &&
-          project.parts.length > 0 && <JobTotals project={project} />}
+          project.parts.length > 0 && (
+            <>
+              <JobTotals project={project} />
+              <ProductionSummary project={project} />
+            </>
+          )}
       </aside>
     );
   }
