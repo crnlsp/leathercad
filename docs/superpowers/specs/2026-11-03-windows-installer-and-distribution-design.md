@@ -147,7 +147,7 @@ installer is checked for its pages and registry alone.
    command line, as a double-click does.
 3. **Second launch.** Start the installed app twice with two projects: one process, two tabs
    (8.11), as the existing single-instance test checks on the unpacked app.
-4. **Uninstall** (`Uninstall LeatherCAD.exe /S`). Assert: the install folder, shortcuts, uninstall
+4. **Uninstall** (`Uninstall leathercad.exe /currentuser /S`, as one-click names it; R13). Assert: the install folder, shortcuts, uninstall
    entry and `.lcp` keys are gone; `%APPDATA%\leathercad` is untouched.
 5. **Unsafe folder.** Create a folder holding a dummy `.lcp`; install with `/S /D=<it>`. Assert exit
    code 2, nothing installed, the dummy still there. (Fails until R12's guard lands: R13 records it
