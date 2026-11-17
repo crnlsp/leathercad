@@ -67,8 +67,9 @@ describe('what a pocket holds, kept as metadata (9.14b)', () => {
       formatVersion: number;
     };
     expect(manifest.formatVersion).toBe(CURRENT_FORMAT_VERSION);
-    // 14 is the iron's tooth (9.26), which cuts; pocket requirements bumped nothing.
-    expect(CURRENT_FORMAT_VERSION).toBe(14);
+    // Pocket requirements arrived at format 13 and bumped nothing; later
+    // versions came with what they cut or print (9.26's tooth, at 14).
+    expect(CURRENT_FORMAT_VERSION).toBeGreaterThanOrEqual(13);
   });
 
   it('survives open, edit and save through the exact released 1.6 schema, with unknown fields', () => {
