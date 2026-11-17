@@ -20,7 +20,7 @@ test('the card pocket copied from the wallet pastes into a new project, one undo
     // Nothing in the pocket points at another piece, so nothing is said.
     await expect(window.getByTestId('file-notice')).toHaveCount(0);
 
-    await window.keyboard.press('Control+N');
+    await window.keyboard.press('ControlOrMeta+N');
     await expect(tabs(window)).toHaveCount(2);
     await expect(window.getByTestId('part-count')).toHaveText('0');
 
@@ -29,7 +29,7 @@ test('the card pocket copied from the wallet pastes into a new project, one undo
     const box = (await canvas.boundingBox())!;
     await canvas.focus();
     await window.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-    await window.keyboard.press('Control+V');
+    await window.keyboard.press('ControlOrMeta+V');
 
     await expect(window.getByTestId('part-count')).toHaveText('1');
     await expect(window.getByTestId('feature-count')).toHaveText('4');
