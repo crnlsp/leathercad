@@ -180,8 +180,9 @@ and with its own Y flip, as `export/svg` has. It parses nothing itself: the rend
 reads the XML and hands it a plain tree of elements and attributes, and no XML dependency is added
 ([ADR 0023](adr/0023-svg-parsed-by-the-platform.md), which also sets the order the file crosses
 the boundary in). 9.20a converts the plain tree; 9.20b sorts it into pieces by role (`assignRoles`), and the renderer
-parses (`svgTree.ts`) and previews it before one command imports it. The byte ceiling, the entity
-check and the hostile-file corpus follow in 9.20c.
+parses (`svgTree.ts`) and previews it before one command imports it. 9.20c bounds the bytes, decodes
+them strictly and checks the entities before the parser sees them (`svgText`), and tests a
+hostile-file corpus against Electron's own parser (`e2e/svg-untrusted.spec.ts`).
 
 ### The rules, enforced by dependency-cruiser in CI
 

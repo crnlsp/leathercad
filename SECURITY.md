@@ -38,6 +38,10 @@ up to date. See
 The things most worth reporting are:
 
 - **Opening a file.** A `.lcp` project that crashes the app, hangs it, or gets anything to run.
+  An SVG drawing imported through *Import SVG pattern…* too: one that hangs the window, gets a
+  script to run, makes the app fetch or read anything, or brings in more than its paths. The
+  boundary it crosses, step by step, is
+  [ADR 0023](docs/adr/0023-svg-parsed-by-the-platform.md#decision).
 - **The renderer boundary.** A way for the renderer to reach the operating system beyond the typed
   platform bridge. That includes reading, writing or opening a file the user didn't choose in one of
   the app's own dialogs, or getting a second window or a navigation. One exception is by design: a

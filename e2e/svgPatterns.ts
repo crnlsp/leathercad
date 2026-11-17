@@ -49,8 +49,17 @@ export async function chooseSvg(
   app: ElectronApplication,
   pattern: keyof typeof SVG_PATTERNS,
 ): Promise<void> {
-  const path = join(mkdtempSync(join(tmpdir(), 'leathercad-svg-')), `${pattern}.svg`);
-  writeFileSync(path, SVG_PATTERNS[pattern]);
+  await chooseSvgFile(app, pattern, SVG_PATTERNS[pattern]);
+}
+
+/** Writes `contents` to `<name>.svg` in a folder of its own and has the next open dialog choose it. */
+export async function chooseSvgFile(
+  app: ElectronApplication,
+  name: string,
+  contents: string | Uint8Array,
+): Promise<void> {
+  const path = join(mkdtempSync(join(tmpdir(), 'leathercad-svg-')), `${name}.svg`);
+  writeFileSync(path, contents);
   await app.evaluate(({ dialog }, chosen) => {
     dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [chosen] });
   }, path);

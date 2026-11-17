@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
-import { MatOps, PathOps, Shapes, type Path } from '@leathercad/geometry';
+import { MatOps, PathOps, polyline, Shapes, type Path } from '@leathercad/geometry';
 import { assignRoles, LIKELY_HOLE_MAX_DIAMETER_MM, type LayerName } from './roles.js';
 
 const shape = (paths: Path[], layer?: LayerName) => ({
@@ -211,5 +211,73 @@ describe('likely holes (9.20b)', () => {
     const pattern = assignRoles([shape([square(0, 0, 100)]), ...holes.map((c) => shape([c]))]);
     expect(pattern.likelyHoles).toEqual([{ count: 3, diameterMm: expect.closeTo(1, 9) }]);
     expect(pattern.pieces[0]?.cutOuts).toHaveLength(2);
+  });
+});
+
+describe('the passes that sort shapes are bounded (9.20c, PERF-012)', () => {
+  it('ten thousand shapes side by side are refused by the work they ask for, before any of it', () => {
+    // Each is compared with every larger one: 50 million pairs, about four seconds unbounded.
+    const many = Array.from({ length: 10_000 }, (_, i) =>
+      shape([square((i % 100) * 10, Math.floor(i / 100) * 10, 5)]),
+    );
+    expect(() => assignRoles(many)).toThrow(
+      expect.objectContaining({ name: 'ResourceLimitError', resource: 'svgShapeTests' }),
+    );
+  });
+
+  it('forty traced pieces, each with its cut-outs, a row of holes and markings, sort within the bound', () => {
+    // A traced outline: 500 straight segments round a 240 mm circle.
+    const traced = (cx: number, cy: number): Path =>
+      polyline(
+        Array.from({ length: 500 }, (_, i) => ({
+          x: cx + 120 * Math.cos((2 * Math.PI * i) / 500),
+          y: cy + 120 * Math.sin((2 * Math.PI * i) / 500),
+        })),
+        true,
+      );
+    const shapes = Array.from({ length: 40 }, (_, p) => {
+      const cx = (p % 8) * 300,
+        cy = Math.floor(p / 8) * 300;
+      return [
+        shape([traced(cx, cy)]),
+        ...Array.from({ length: 30 }, (_, k) =>
+          shape([square(cx - 60 + (k % 6) * 20, cy - 50 + Math.floor(k / 6) * 20, 5)]),
+        ),
+        ...row(60, { x: cx - 90, y: cy + 90 }, 3, 1.2).map((c) => shape([c])),
+        ...Array.from({ length: 10 }, (_, k) =>
+          shape([Shapes.line({ x: cx, y: cy }, { x: cx + 10, y: cy + k })]),
+        ),
+      ];
+    }).flat();
+    const pattern = assignRoles(shapes);
+    expect(pattern.pieces).toHaveLength(40);
+    expect(pattern.likelyHoles).toHaveLength(40);
+  });
+
+  it('shapes inside an outline of very many segments are refused by the point tests they ask for, before any of them', () => {
+    // 400 squares, each probed at 8 points against 200,000 segments: 640 million tests.
+    const outline = polyline(
+      Array.from({ length: 200_000 }, (_, i) => ({
+        x: 1000 * Math.cos((2 * Math.PI * i) / 200_000),
+        y: 1000 * Math.sin((2 * Math.PI * i) / 200_000),
+      })),
+      true,
+    );
+    const inside = Array.from({ length: 400 }, (_, i) =>
+      shape([square((i % 20) * 20 - 200, Math.floor(i / 20) * 20 - 200, 5)]),
+    );
+    expect(() => assignRoles([shape([outline]), ...inside])).toThrow(
+      expect.objectContaining({ name: 'ResourceLimitError', resource: 'svgShapeTests' }),
+    );
+  });
+
+  it('circles stacked in one column are refused by the comparisons they ask for, before any of them', () => {
+    // 8,000 small circles 10 mm apart in one column: 32 million comparisons in the sweep.
+    const column = Array.from({ length: 8_000 }, (_, i) =>
+      shape([Shapes.circle({ x: 0, y: 10 * i }, 0.5)]),
+    );
+    expect(() => assignRoles(column)).toThrow(
+      expect.objectContaining({ name: 'ResourceLimitError', resource: 'svgShapeTests' }),
+    );
   });
 });

@@ -683,6 +683,9 @@ export function App({
    * nothing.
    */
   const [svgImport, setSvgImport] = useState<{ tree: SvgElement; name: string } | null>(null);
+  // The file being parsed: the parser holds the window, about two seconds
+  // at the byte ceiling, and sorting into pieces up to as long again (ADR 0023).
+  const [svgReading, setSvgReading] = useState<string | null>(null);
   const importSvg = useCallback(async () => {
     try {
       const host = getPlatformHost();
@@ -691,7 +694,13 @@ export function App({
         filters: [{ name: t('svgImport.fileType'), extensions: ['svg'] }],
       });
       if (path === null) return;
-      setSvgImport({ tree: svgTree(await host.readFile(path)), name: svgName(path) });
+      const name = svgName(path);
+      const bytes = await host.readFile(path);
+      setSvgReading(name);
+      // After the next paint, so the window says it is working before it stops.
+      await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve)));
+      // Cleared in the same render that previews it, which sorts the pieces.
+      setSvgImport({ tree: svgTree(bytes), name });
     } catch (error) {
       setNotice({
         title: t('svgImport.refusedTitle'),
@@ -700,6 +709,8 @@ export function App({
             ? refusalText(error, i18n)
             : fileErrorText(error, t),
       });
+    } finally {
+      setSvgReading(null);
     }
   }, [i18n, t]);
 
@@ -2158,6 +2169,14 @@ export function App({
             }}
             onClose={() => setSavingTemplate(null)}
           />
+        )}
+
+        {svgReading !== null && (
+          <div className="dialog-backdrop">
+            <p className="dialog" role="status" data-testid="svg-import-reading">
+              {t('svgImport.reading', { name: svgReading })}
+            </p>
+          </div>
         )}
 
         {svgImport !== null && (

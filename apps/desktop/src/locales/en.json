@@ -614,7 +614,10 @@
       "segments": "path segments",
       "characters": "text characters",
       "holes": "holes",
-      "pages": "sheets"
+      "pages": "sheets",
+      "svgBytes": "bytes in an SVG file",
+      "svgExpandedBytes": "characters in an SVG file, its entities expanded",
+      "svgShapeTests": "shape comparisons sorting an SVG drawing into pieces"
     }
   },
   "hardware": {
@@ -1807,6 +1810,7 @@
   },
   "svgImport": {
     "openTitle": "Import an SVG pattern",
+    "reading": "Reading {{name}}…",
     "fileType": "SVG drawing",
     "title": "Import {{name}}",
     "size": "Size",
@@ -1834,6 +1838,24 @@
     "leftOut": {
       "element_one": "{{count}} “{{name}}” element",
       "element_other": "{{count}} “{{name}}” elements",
+      "kinds": {
+        "text_one": "{{count}} piece of text",
+        "text_other": "{{count}} pieces of text",
+        "image_one": "{{count}} image, not loaded",
+        "image_other": "{{count}} images, not loaded",
+        "use_one": "{{count}} clone or linked shape, not followed",
+        "use_other": "{{count}} clones or linked shapes, not followed",
+        "foreignObject_one": "{{count}} piece of embedded web content, not loaded",
+        "foreignObject_other": "{{count}} pieces of embedded web content, not loaded",
+        "script_one": "{{count}} script, not run",
+        "script_other": "{{count}} scripts, not run",
+        "filter_one": "{{count}} filter effect",
+        "filter_other": "{{count}} filter effects",
+        "clipPath_one": "{{count}} clip, not applied: what it hid arrives whole",
+        "clipPath_other": "{{count}} clips, not applied: what they hid arrives whole",
+        "mask_one": "{{count}} mask, not applied",
+        "mask_other": "{{count}} masks, not applied"
+      },
       "outside-piece_one": "{{count}} line outside every piece",
       "outside-piece_other": "{{count}} lines outside every piece",
       "open-on-cut-layer_one": "{{count}} open path on the cut layer, which cuts nothing",
@@ -1848,7 +1870,12 @@
       "INVALID_SVG": "This file could not be read as an SVG drawing.",
       "UNSUPPORTED_SVG": "This drawing uses a length or a setting LeatherCAD cannot read yet.",
       "SCALE_REQUIRED": "This drawing gives no size LeatherCAD can read.",
-      "tooBig": "This drawing is too large to import: it asks for more than {{limit}} elements or curve steps."
+      "UNSAFE_SVG": "This drawing declares entities that could reach other files or rewrite it, so LeatherCAD does not read it.",
+      "tooBig": "This drawing is too large to import: it asks for more than {{limit}} elements or curve steps.",
+      "svgBytes": "This file is larger than {{limit}} MB, the most LeatherCAD imports.",
+      "svgExpandedBytes": "This drawing’s entities would expand it past {{limit}} MB, so LeatherCAD does not read it.",
+      "segments": "This drawing has more than {{limit}} path segments, more than a project holds.",
+      "svgShapeTests": "This drawing has too many shapes to sort into pieces."
     }
   }
 }

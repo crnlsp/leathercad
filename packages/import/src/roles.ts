@@ -1,5 +1,13 @@
-import { approxEq, EPS_ANGLE, EPS_LENGTH, EPS_POINT } from '@leathercad/core';
-import { dist, PathOps, RectOps, SegmentOps, type Path, type Vec2 } from '@leathercad/geometry';
+import { approxEq, checkResourceLimit, EPS_ANGLE, EPS_LENGTH, EPS_POINT } from '@leathercad/core';
+import {
+  dist,
+  PathOps,
+  RectOps,
+  SegmentOps,
+  type Path,
+  type Rect,
+  type Vec2,
+} from '@leathercad/geometry';
 
 /** The layer names that decide a shape's role over its shape (9.20b). */
 export type LayerName = 'cut' | 'stitch' | 'fold';
@@ -74,10 +82,25 @@ function circleOf(p: Path): Circle | null {
  * Returns the rows and the circles that made none, which are cut like any
  * other closed path.
  */
-function likelyHoleRows(circles: readonly Circle[]): { rows: Circle[][]; rest: Circle[] } {
+function likelyHoleRows(
+  circles: readonly Circle[],
+  spend: Spend,
+): { rows: Circle[][]; rest: Circle[] } {
   // ponytail: a sweep along x, quadratic only for circles stacked in one
-  // column; the hostile-file corpus (9.20c) bounds the input before here.
+  // column, planned against `spend`; a grid of cells if a real file ever needs more.
   const sorted = [...circles].sort((a, b) => a.centre.x - b.centre.x);
+  // The comparisons the sweep makes, counted before it makes them: each
+  // circle against those within a pitch to its right, and the one that ends its run.
+  let pairs = 0;
+  for (let i = 0, end = 0; i < sorted.length; i++) {
+    while (
+      end < sorted.length &&
+      sorted[end]!.centre.x - sorted[i]!.centre.x <= LIKELY_HOLE_MAX_PITCH_MM
+    )
+      end++;
+    pairs += end - i;
+  }
+  spend(pairs * PAIR_WORK);
   const parent = sorted.map((_, i) => i);
   const root = (i: number): number => {
     let r = i;
@@ -115,11 +138,33 @@ function probes(p: Path): Vec2[] {
   return p.segments.flatMap((s) => [SegmentOps.start(s), SegmentOps.pointAt(s, 0.5)]);
 }
 
-function holds(outer: Path, inner: Path): boolean {
-  const a = PathOps.bbox(outer),
-    b = PathOps.bbox(inner);
-  if (a === null || b === null || !RectOps.containsRect(a, b)) return false;
-  return probes(inner).every((point) => PathOps.containsPoint(outer, point));
+/**
+ * Counts work against `svgShapeTests` before it is done, refusing the file
+ * past it (PERF-012): a point tested against one segment is a unit of it.
+ */
+type Spend = (work: number) => void;
+/**
+ * Two shapes compared — their bounds, planned and then tested, or two circle
+ * centres — cost about 50 segment tests, measured.
+ */
+const PAIR_WORK = 50;
+
+/** A closed path with its bounds and area, each computed once, not once per pair. */
+interface Boxed {
+  readonly path: Path;
+  readonly box: Rect | null;
+  readonly area: number;
+}
+
+function mayHold(outer: Boxed, inner: Boxed): boolean {
+  return outer.box !== null && inner.box !== null && RectOps.containsRect(outer.box, inner.box);
+}
+
+function holds(outer: Boxed, inner: Boxed): boolean {
+  return (
+    mayHold(outer, inner) &&
+    probes(inner.path).every((point) => PathOps.containsPoint(outer.path, point))
+  );
 }
 
 /**
@@ -141,6 +186,8 @@ export function assignRoles(shapes: readonly RoleInput[]): SvgPattern {
     lines: { path: Path; as: 'stitch' | 'fold' | 'marking' }[] = [],
     circles: Circle[] = [],
     leftOut: Partial<Record<LeftOutReason, number>> = {};
+  let work = 0;
+  const spend: Spend = (n) => checkResourceLimit('svgShapeTests', (work += n));
   const leave = (reason: LeftOutReason): void => {
     leftOut[reason] = (leftOut[reason] ?? 0) + 1;
   };
@@ -157,20 +204,31 @@ export function assignRoles(shapes: readonly RoleInput[]): SvgPattern {
         else cut.push(p);
       }
     }
-  const { rows, rest } = likelyHoleRows(circles);
+  const { rows, rest } = likelyHoleRows(circles, spend);
   cut.push(...rest.map((c) => c.path));
 
   // Largest first, so every container is placed before what it holds.
   // ponytail: each path is tried against every larger one, quadratic in the
-  // closed paths; the bounding-box test keeps a real pattern cheap, and the
-  // hostile-file corpus (9.20c) bounds the count.
-  const order = cut.map((_, i) => i).sort((a, b) => PathOps.area(cut[b]!) - PathOps.area(cut[a]!));
+  // closed paths; the bounding-box test keeps a real pattern cheap, and
+  // `spend` refuses a file past svgShapeTests. A spatial index if one needs more.
+  // Planned before the first point is tested: every pair's bounds, then the
+  // point tests of each pair whose bounds nest — at most, as the pass stops
+  // at the nearest container.
+  spend(((cut.length * (cut.length - 1)) / 2) * PAIR_WORK);
+  const boxed = cut.map((path) => ({ path, box: PathOps.bbox(path), area: PathOps.area(path) }));
+  const order = cut.map((_, i) => i).sort((a, b) => boxed[b]!.area - boxed[a]!.area);
+  for (const [k, i] of order.entries())
+    for (let m = 0; m < k; m++) {
+      const outer = boxed[order[m]!]!,
+        inner = boxed[i]!;
+      if (mayHold(outer, inner)) spend(2 * inner.path.segments.length * outer.path.segments.length);
+    }
   const depth = new Map<number, number>(),
     owner = new Map<number, number>();
   for (const [k, i] of order.entries()) {
     let parent: number | undefined;
     for (let m = k - 1; m >= 0 && parent === undefined; m--)
-      if (holds(cut[order[m]!]!, cut[i]!)) parent = order[m];
+      if (holds(boxed[order[m]!]!, boxed[i]!)) parent = order[m];
     const d = parent === undefined ? 0 : (depth.get(parent) ?? 0) + 1;
     depth.set(i, d);
     owner.set(i, d % 2 === 0 ? i : parent!);
@@ -192,7 +250,8 @@ export function assignRoles(shapes: readonly RoleInput[]): SvgPattern {
     if (depth.get(i)! % 2 === 1) pieces.get(owner.get(i)!)!.cutOuts.push(p);
   });
   // Innermost first: the smallest outline around a line is the piece it is on.
-  const smallestFirst = [...outlines].sort((a, b) => PathOps.area(cut[a]!) - PathOps.area(cut[b]!));
+  const smallestFirst = [...outlines].sort((a, b) => boxed[a]!.area - boxed[b]!.area);
+  spend(lines.length * outlines.reduce((sum, i) => sum + cut[i]!.segments.length, 0));
   for (const { path: p, as } of lines) {
     const first = p.segments[0];
     const probe = first === undefined ? null : SegmentOps.pointAt(first, 0.5);

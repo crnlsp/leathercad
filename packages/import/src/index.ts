@@ -16,6 +16,7 @@ import { readTransform } from './transform.js';
 import { LAYER_NAMES, type LayerName } from './roles.js';
 export { SvgImportError } from './numbers.js';
 export { assignRoles, type SvgPattern } from './roles.js';
+export { svgText } from './text.js';
 
 /** ADR 0023: data only; no DOM, text content, or executable objects. */
 export interface SvgAttribute {
@@ -191,9 +192,34 @@ function shape(
       return undefined;
   }
 }
+/**
+ * What a pattern never needs and a file can still hold (9.20c): listed by
+ * kind when left out, even inside another left-out element — a clip in
+ * `defs` — and never fetched, run or applied.
+ */
+const REPORTED = new Set([
+  'text',
+  'image',
+  'use',
+  'foreignObject',
+  'script',
+  'filter',
+  'clipPath',
+  'mask',
+]);
+/** Counts a left-out element by its name, and the reported kinds within it. */
+function leaveOut(node: SvgElement, omitted: Map<string, number>): void {
+  const count = (name: string) => omitted.set(name, (omitted.get(name) ?? 0) + 1);
+  count(node.localName);
+  const inside = [...node.children];
+  for (let child = inside.pop(); child !== undefined; child = inside.pop()) {
+    if (child.namespace === SVG && REPORTED.has(child.localName)) count(child.localName);
+    inside.push(...child.children);
+  }
+}
 /** Converts an already parsed tree atomically. Unknown scale is a typed refusal, never a guess.
  * The caller supplies 96 for Inkscape or 72 for legacy Illustrator after identification/confirmation.
- * XML decoding and hostile-input preflight belong to the platform boundary (9.20c).
+ * The text it was parsed from has passed `svgText` (9.20c).
  */
 function convertSvg(root: SvgElement, options: SvgOptions): SvgGeometry {
   if (root.namespace !== SVG || root.localName !== 'svg') throw new SvgImportError('INVALID_SVG');
@@ -203,6 +229,7 @@ function convertSvg(root: SvgElement, options: SvgOptions): SvgGeometry {
   const view = viewport(root, dpi),
     shapes: SvgShape[] = [],
     omitted = new Map<string, number>();
+  let segments = 0;
   const flip = compose(view.matrix, MatOps.fromScale(1, -1));
   const stack: { node: SvgElement; matrix: Mat2x3; layer?: LayerName }[] = [
     { node: root, matrix: flip },
@@ -213,7 +240,7 @@ function convertSvg(root: SvgElement, options: SvgOptions): SvgGeometry {
     const { node } = entry;
     const matrix = compose(readTransform(attr(node, 'transform') ?? ''), entry.matrix);
     if (node.namespace !== SVG) {
-      omitted.set(node.localName, (omitted.get(node.localName) ?? 0) + 1);
+      leaveOut(node, omitted);
       continue;
     }
     if (node.localName === 'g' || node === root) {
@@ -228,9 +255,10 @@ function convertSvg(root: SvgElement, options: SvgOptions): SvgGeometry {
     const tolerance = EXPORT_TOLERANCE_MM / Math.max(1, stretch);
     const paths = shape(node, dpi, view.userUnit, tolerance);
     if (paths === undefined) {
-      omitted.set(node.localName, (omitted.get(node.localName) ?? 0) + 1);
+      leaveOut(node, omitted);
       continue;
     }
+    for (const p of paths) checkResourceLimit('segments', (segments += p.segments.length));
     for (const p of paths)
       for (const segment of p.segments) {
         if (segment.kind === 'arc')

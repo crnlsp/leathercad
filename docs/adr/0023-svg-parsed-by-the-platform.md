@@ -61,7 +61,9 @@ a typed fact the app words, never a partial import:
    32 MiB expanded-bytes ceiling. The expansion is computed from the declarations and a count of
    their references, never by expanding them. It is pure, so it is tested in Node. This is the step
    the 12.5 s measurement asks for; the parser's own guard stays behind it, for anything this one
-   misses.
+   misses. The subset may hold only internal general entities, comments and processing
+   instructions: a parameter entity, which writes further declarations, an attribute default,
+   which every element would carry, and any other declaration are refused too (9.20c).
 5. **The platform parses.** `new DOMParser().parseFromString(text, 'image/svg+xml')`. A
    `<parsererror>` anywhere, or a root that is not `svg` in the SVG namespace, refuses the file as
    unreadable.

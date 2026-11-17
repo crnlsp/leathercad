@@ -1,11 +1,19 @@
+import { ResourceLimitError } from '@leathercad/core';
 import { diagnose, evaluate } from '@leathercad/domain';
 import { PathOps } from '@leathercad/geometry';
-import type { SvgElement } from '@leathercad/import';
+import { SvgImportError, type SvgElement } from '@leathercad/import';
 import { describe, expect, it } from 'vitest';
 
 import { createI18n } from '../../shared/i18n.js';
 import { historyText } from './historyText.js';
-import { contentsText, densityOf, leftOutLines, readSvg, svgName } from './svgImport.js';
+import {
+  contentsText,
+  densityOf,
+  leftOutLines,
+  readSvg,
+  refusalText,
+  svgName,
+} from './svgImport.js';
 
 const english = createI18n('en');
 const SVG = 'http://www.w3.org/2000/svg';
@@ -51,7 +59,7 @@ describe('reading an SVG for the import preview (9.20b)', () => {
     expect(reading.pattern.likelyHoles).toEqual([
       { count: 12, diameterMm: expect.closeTo(1.2, 9) },
     ]);
-    expect(leftOutLines(reading, english)).toEqual(['1 “text” element']);
+    expect(leftOutLines(reading, english)).toEqual(['1 piece of text']);
     expect(diagnose(reading.project)).toEqual([]);
     const outline = evaluate(reading.project).parts[0]?.features[0];
     const box = outline?.ok ? PathOps.bbox(outline.path) : null;
@@ -117,5 +125,44 @@ describe('reading an SVG for the import preview (9.20b)', () => {
 
   it('says the import for Undo', () => {
     expect(historyText({ action: 'import', count: 2 }, english.t)).toBe('Import 2 pieces');
+  });
+});
+
+describe('an untrusted file, in the maker’s words (9.20c)', () => {
+  it('what a pattern never needs is listed by kind, with what became of it', () => {
+    const reading = readSvg(
+      el('svg', { width: '100mm', height: '100mm', viewBox: '0 0 100 100' }, [
+        el('rect', { width: '50', height: '50' }),
+        el('script'),
+        el('script'),
+        el('image', { href: 'https://example.com/a.png' }),
+        el('defs', {}, [el('clipPath')]),
+      ]),
+      'x',
+      null,
+    );
+    if (reading.kind !== 'read') throw new Error(reading.kind);
+    expect(leftOutLines(reading, english)).toEqual([
+      '2 scripts, not run',
+      '1 image, not loaded',
+      '1 “defs” element',
+      '1 clip, not applied: what it hid arrives whole',
+    ]);
+  });
+
+  it('each refusal says what was refused, by its cause', () => {
+    const said = (error: SvgImportError | ResourceLimitError) => refusalText(error, english);
+    expect(said(new SvgImportError('UNSAFE_SVG'))).toContain('could reach other files');
+    expect(said(new ResourceLimitError('svgBytes', 1))).toBe(
+      'This file is larger than 32 MB, the most LeatherCAD imports.',
+    );
+    expect(said(new ResourceLimitError('svgExpandedBytes', 1))).toContain('past 32 MB');
+    expect(said(new ResourceLimitError('segments', 1))).toContain(
+      'more than 250,000 path segments',
+    );
+    expect(said(new ResourceLimitError('svgShapeTests', 1))).toBe(
+      'This drawing has too many shapes to sort into pieces.',
+    );
+    expect(said(new ResourceLimitError('nodes', 1))).toContain('500,000 elements');
   });
 });
