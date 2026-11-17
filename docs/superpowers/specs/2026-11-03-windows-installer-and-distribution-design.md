@@ -21,7 +21,7 @@ Nothing here is built or has been run on Windows. Linux and macOS packaging stay
 - **The installer's description** and the shortcuts' tooltip are package.json's description,
   "Electron shell for LeatherCAD". **No AppUserModelID** is set by the app, so Windows may file a
   window started from a pinned shortcut under a second taskbar button. Both are the unmerged
-  branch's findings (`origin/feat/windows-builder`, commits d4320f4 and 18b37f1); not yet seen on
+  branch's findings (the deleted `feat/windows-builder`, commits d4320f4 and 18b37f1; [§10](#10-the-deleted-branch-kept-for-later)); not yet seen on
   Windows by anyone.
 - **CI never installs it.** `installers.yml` builds the `.exe`, but the packaged smoke test drives
   `win-unpacked` (`e2e/packaged/packaged.spec.ts`). Only the `.deb` is installed, smoke-tested and
@@ -29,7 +29,7 @@ Nothing here is built or has been run on Windows. Linux and macOS packaging stay
 - **Signing:** none, by decision (roadmap, *Collected from makers, and decided*). SmartScreen warns
   on every release, because an unsigned file's reputation starts from nothing.
 
-**The unmerged branch** (`origin/feat/windows-builder`, October 2026; never built or run on
+**The deleted branch** (`feat/windows-builder`, October 2026, [§10](#10-the-deleted-branch-kept-for-later); never built or run on
 Windows): an assisted installer with a licence page, a 190-line `build/installer.nsh` adding a
 desktop-shortcut and file-association options page (undoing what electron-builder creates when
 unticked), one install per account, an uninstaller page that can remove `%APPDATA%\leathercad`, a
@@ -222,3 +222,110 @@ change of its own, at the release candidate at the latest.
 No change of method: the AppImage, `.deb`, AUR and Flatpak keep their own conventions, and the dmg
 stays drag-to-Applications. R14's document icon and the release checklist's file-manager checks
 cover them. Q37 (Cmd+Q then *Discard* on macOS) and R10 stay with a maker who has a Mac.
+
+## 10. The deleted branch, kept for later
+
+`feat/windows-builder` (six commits on `develop`, 23–26 October 2026; no pull request; never built
+or run on Windows by anyone) was deleted on 2026-11-17. Its commits are recorded here so R12 and
+R14 need not find it. A copy exists only as a local tag on the maintainer's machine,
+`archive/windows-builder`, never pushed.
+
+| Commit | What it did | Decision |
+|---|---|---|
+| `10a02da` | Install to `Programs\LeatherCAD`; an `installer.nsh` macro moved an old `@leathercaddesktop` install | **Rejected** (D13). Releases to date never made that folder wrong enough to move users' installs. |
+| `ce44f6c` | `pnpm package:win` (`tools/package-win.mjs`): builds the `.exe` in the pinned `electronuserland/builder` Wine image | **Not wanted now.** CI builds and (R13) installs the real `.exe` on `windows-latest`, which a Wine build cannot do, so Wine only saves a contributor a Windows PC. Worth reviving if someone has to try an installer change without one; the script was 82 lines plus an ADR 0014 amendment (Wine in the image, host builds the bundles, digest-pinned). |
+| `18b37f1` | `app.setAppUserModelId(appId)` on Windows | **Take, in R14** (§4). Code below. |
+| `d4320f4` | Packaged description is the synopsis, from one constant | **Take, in R14** (§4). Code below. |
+| `236fe28` | Assisted installer: licence page, shortcut and `.lcp`-association options page, one install per account, uninstaller "remove data" | **Rejected** (D12, D13), **except the one-per-account guard → R12** (code below). The options page: revisit with a maker's request ([roadmap](../../roadmap.md#later)). "Remove data" breaks §2's rule and is never taken. |
+| `8660fc2` | ADR 0014 and roadmap wording | **Something is missing from `develop`**: the ADR still says Windows is not built (it is: 8.6a) and that asar integrity protects nothing (on Windows and macOS it catches a damaged install, not a deliberate one, while the exe is unsigned); the roadmap's *Code signing* row lacks the 2026-10-26 *Deferred* wording (a certificate's key must now be in hardware or a cloud service; candidates SignPath Foundation, Azure Trusted Signing via `azureSignOptions`, a Certum open-source certificate). Fix in a change of its own. |
+
+### AppUserModelID (R14)
+
+`apps/desktop/src/main/appUserModelId.ts`:
+
+```ts
+export const APP_USER_MODEL_ID = 'io.github.crnlsp.leathercad';
+```
+
+In `main/index.ts`, after `app.setPath('userData', …)` and before any window:
+
+```ts
+if (process.platform === 'win32') app.setAppUserModelId(APP_USER_MODEL_ID);
+```
+
+In `packaging.test.ts` (`BuilderConfig` gains `appId: string`):
+
+```ts
+it('gives the running app the id the Windows shortcuts carry', async () => {
+  const { appId } = await config();
+  expect(APP_USER_MODEL_ID).toBe(appId);
+});
+```
+
+### Description (R14)
+
+In `electron-builder.config.mjs`:
+
+```js
+/** One line on what the app is: the Linux entry's comment, and Windows' description. */
+const SYNOPSIS = 'Leathercraft patterns that print at exact 1:1 scale';
+// …
+extraMetadata: { name: 'LeatherCAD', description: SYNOPSIS },
+// …
+linux: { /* … */ synopsis: SYNOPSIS },
+```
+
+In `packaging.test.ts` (`BuilderConfig` gains `extraMetadata: { description: string }` and
+`linux.synopsis: string`):
+
+```ts
+it('describes the Windows installer and its shortcuts as Linux does, not as the workspace package', async () => {
+  const { linux, extraMetadata } = await config();
+  expect(extraMetadata.description).toBe(linux.synopsis);
+});
+```
+
+### One install per account (R12)
+
+Untested NSIS, written against electron-builder 26; it must be re-checked against R13's CI. The
+macro runs before the page that asks for whom and skips it when one install exists:
+
+```nsis
+!macro customInstallMode
+  !ifndef BUILD_UNINSTALLER
+    ${if} $hasPerUserInstallation == "1"
+    ${andIf} $hasPerMachineInstallation == "0"
+      StrCpy $isForceCurrentInstall "1"
+    ${elseIf} $hasPerMachineInstallation == "1"
+    ${andIf} $hasPerUserInstallation == "0"
+      StrCpy $isForceMachineInstall "1"
+    ${endif}
+  !endif
+!macroend
+```
+
+And, in `customInit`, a guard against `/allusers` or `/currentuser` on the command line making a
+second install in the other mode (where both already exist, electron-builder's choice stands):
+
+```nsis
+${IfNot} ${UAC_IsInnerInstance}
+  ReadRegStr $R0 HKCU "${INSTALL_REGISTRY_KEY}" InstallLocation
+  ReadRegStr $R1 HKLM "${INSTALL_REGISTRY_KEY}" InstallLocation
+  ${if} $installMode == "all"
+  ${andIf} $R0 != ""
+  ${andIf} $R1 == ""
+    MessageBox MB_OK|MB_ICONSTOP "${PRODUCT_NAME} is installed for you only. Uninstall it first to install it for every user." /SD IDOK
+    SetErrorLevel 2
+    Quit
+  ${elseIf} $installMode == "CurrentUser"
+  ${andIf} $R1 != ""
+  ${andIf} $R0 == ""
+    MessageBox MB_OK|MB_ICONSTOP "${PRODUCT_NAME} is installed for every user. Uninstall it first to install it for you only." /SD IDOK
+    SetErrorLevel 2
+    Quit
+  ${endif}
+${endIf}
+```
+
+The message strings are English literals in the branch; R12 words them as the installer's other
+pages are (the installer is not the app and has no catalogue).
