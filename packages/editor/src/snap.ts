@@ -19,12 +19,19 @@ export type SnapKind =
   'endpoint' | 'midpoint' | 'centre' | 'intersection' | 'guide' | 'on-path' | 'grid';
 
 /**
- * A value one axis of a moving reference caught: alignment, ranks 2 to 7 of
- * the smart-guides spec §5. Nothing collects these yet — 3.16, 3.18 and 3.19
- * do — but they are decided by the same table and the same rules as points.
+ * A value one axis of a moving reference caught: alignment, ranks 2 to 8 of
+ * the smart-guides spec §5, decided by the same table and the same rules as
+ * points. 3.16 collects the piece kinds and 3.18 the host kinds; 3.19 will
+ * collect equal spacing.
  */
 export type AxisKind =
-  'guide-axis' | 'host-centre' | 'host-edge' | 'piece-centre' | 'piece-edge' | 'equal-spacing';
+  | 'guide-axis'
+  | 'host-centre'
+  | 'host-edge'
+  | 'feature-centre'
+  | 'piece-centre'
+  | 'piece-edge'
+  | 'equal-spacing';
 
 /**
  * The one priority table, highest first (smart-guides spec §5).
@@ -45,6 +52,7 @@ const PRIORITY: readonly (SnapKind | AxisKind)[] = [
   'guide-axis',
   'host-centre',
   'host-edge',
+  'feature-centre',
   'piece-centre',
   'piece-edge',
   'equal-spacing',

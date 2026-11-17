@@ -1,7 +1,7 @@
 # Smart guides, nudging and exact placement — design for 1.7 (3.13 – 3.20)
 
 **Status:** design, for the 1.7 plan ([`2026-11-03-release-1.7.md`](../plans/2026-11-03-release-1.7.md)).
-Built so far: §3 (3.13), §4 (3.14, 3.15), §5 (3.20) and §6 for whole pieces (3.16). Where this and the code disagree once a slice lands, the slice updates this
+Built so far: §3 (3.13), §4 (3.14, 3.15), §5 (3.20) and §6, for whole pieces (3.16) and inside a piece (3.18). Where this and the code disagree once a slice lands, the slice updates this
 file in the same pull request.
 
 **What it covers:** picking a piece by its body (3.13), keyboard movement (3.14), typed position
@@ -121,9 +121,10 @@ Before any guide is drawn, the snapping that exists is made one model with one t
 | 2 | Persisted guide (axis-aligned) | A reference value is within tolerance of the guide |
 | 3 | The host piece's centre (moving features inside a piece) | 〃 |
 | 4 | The host piece's extent edges | 〃 |
-| 5 | Other pieces' centres | 〃 |
-| 6 | Other pieces' extent edges | 〃 |
-| 7 | Equal spacing (3.19) | A gap is within tolerance of its neighbour's gap |
+| 5 | The host piece's other holes', cut-outs' and labels' centres (added by 3.18) | 〃 |
+| 6 | Other pieces' centres | 〃 |
+| 7 | Other pieces' extent edges | 〃 |
+| 8 | Equal spacing (3.19) | A gap is within tolerance of its neighbour's gap |
 
 A rank-1 point snap wins both axes. Otherwise each axis is decided on its own. Within a rank the
 nearest in screen pixels wins; a tie goes to the candidate earlier in document order, so the
@@ -192,6 +193,26 @@ move after it.
 order — the one a tie would choose — so a row of level pieces costs a move one comparison. Not yet
 built: dropping targets far outside the visible board (§5), and any label on an alignment line;
 the words for them arrive with 3.17's readout.
+
+*As built in 3.18:* `collectHostTargets` in `align.ts`, chosen by the Select tool when every
+feature moved lies in one part and none is its outline. The host's centre lines (`host-centre`),
+its straight extent edges (`host-edge`), the centres of its other hardware holes, hole rows,
+cut-outs and labels (`feature-centre`, rank 5 above) and the axis-aligned guides; what moves is
+excluded, and so is what moves with it (`dependentsOf`: a rivet's counterpart mirrored across a
+fold), whose place now is not a place to line up with. A single circle — a hardware hole, a drawn
+circle — lines up by its centre alone (`alignMove`'s `centreOnly`); anything else by its extent's
+three values, so a fold carried near the middle lands on it. *Centre or centre of its extent* is
+decided per axis by whether the outline is its own mirror image about that line: every segment,
+reflected, is a segment of the outline, matched by five points along it. So the key fob's strap
+says *Centre* on both, an isosceles gusset on its upright line only, and a turned rectangle — not
+mirrored about an upright or level line through its middle — says *Centre of its extent*. The
+test is conservative: an outline split at places not mirrored to each other reads as not mirrored,
+and its label, *of its extent*, is still true. The words are the app's (`alignment.*`, through
+`ToolContext.alignmentWords`), drawn in the board's value voice past the far end of the line, for
+the host's centre only; the other guides stay unlabelled until 3.17's readout. Collecting the host's
+targets on the 1,000-point traced outline, mirrored both ways, costs 5.2 ms once per drag
+(`editor/align-collect-host-traced-1000`; matched by a binary search on the segments' midpoints,
+a scan of every pair cost 292 ms); a move costs 0.3 µs (`editor/align-drag-host-traced-1000`).
 
 **Locks and refusals.** A move that `transformRefusal` refuses shows its notice and no guides,
 because nothing would move to them. Linked features move with their piece as today; a derived line

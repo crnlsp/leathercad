@@ -8,7 +8,7 @@ import {
 import { PathOps, uniformRadii } from '@leathercad/geometry';
 import { test, type Bench } from 'vitest';
 
-import { alignMove, collectAlignTargets } from './align.js';
+import { alignMove, collectAlignTargets, collectHostTargets } from './align.js';
 import { buildSnapIndex, snap, type Snapped } from './snap.js';
 
 /**
@@ -195,4 +195,37 @@ test('carry a piece among 200: one alignment per move', ({ bench }) =>
       smartGuides: true,
     }).snapped;
     return aligned;
+  }));
+
+/**
+ * Placing inside a piece (3.18): a hole moved inside the 1000-point traced
+ * outline (`traced-1000.lcp`, smart-guides spec §13). Collecting its piece's
+ * targets once, when the drag begins, includes asking whether the outline is
+ * mirrored about each centre line — every segment matched against the others,
+ * the worst case for this outline, which is mirrored about both. Each move is
+ * then one `alignMove` of the hole's centre.
+ */
+const inside = evaluate(project([still]));
+const holeMoving = new Set(['traced-hole']);
+test('begin moving a hole inside a 1000-point traced outline: collect its piece’s targets', ({
+  bench,
+}) =>
+  measure(bench, 'align-collect-host-traced-1000', () =>
+    collectHostTargets(inside, 'traced', holeMoving),
+  ));
+
+const hostTargets = collectHostTargets(inside, 'traced', holeMoving);
+const hole = { minX: 298, minY: 298, maxX: 302, maxY: 302 };
+let hostStep = 0;
+let hostAligned: Snapped | null = null;
+test('carry a hole inside a 1000-point traced outline: one alignment per move', ({ bench }) =>
+  measure(bench, 'align-drag-host-traced-1000', () => {
+    hostStep = (hostStep + 1) % 3600;
+    const raw = { x: (hostStep % 200) * 0.25 - 25, y: (hostStep % 120) * 0.25 - 15 };
+    hostAligned = alignMove(hole, raw, hostTargets, hostAligned, {
+      toleranceMm: 2.6,
+      smartGuides: true,
+      centreOnly: true,
+    }).snapped;
+    return hostAligned;
   }));
