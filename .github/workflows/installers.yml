@@ -16,8 +16,9 @@ name: Installers
 # unpacked app (`--dir`) rather than wrapping it in an installer. On macOS that
 # unpacked app is this runner's architecture only (arm64); the dmg is
 # universal, so its Intel half is never launched here. See
-# docs/release-checklist.md, *The build*. The .deb is smoke-tested one step
-# further, installed: see *Installed smoke test*.
+# docs/release-checklist.md, *The build*. The .deb and the NSIS installer are
+# smoke-tested one step further, installed: see *Installed smoke test* — the
+# NSIS one over 1.6.0, then uninstalled, the maker's data kept (R13).
 #
 # Read-only on purpose: this runs every build-time dependency and the Flatpak
 # bundler, and holds nothing it could publish or sign with. Whoever calls it
@@ -164,6 +165,52 @@ jobs:
           done
           exit "$left"
 
+      # The NSIS installer, installed (R13; the installer spec, §5). As for
+      # the .deb, the installer driven is the sibling build with the inspector
+      # fuse on; the shipped one is installed over it below. First the last
+      # release a maker has: 1.6.0's installer, proven to be the one
+      # release.yml built and attested (a download or verification that fails
+      # fails the job, never skips it), installed silently, and the maker's
+      # data seeded beside it. tools/ci/windows-install.ps1 does the
+      # installing and the checking.
+      - name: Baseline, 1.6.0 with the maker's data (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $installer = "$env:RUNNER_TEMP\LeatherCAD-1.6.0-x64.exe"
+          gh release download leathercad-v1.6.0 --repo $env:GITHUB_REPOSITORY --pattern LeatherCAD-1.6.0-x64.exe --dir $env:RUNNER_TEMP
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          gh attestation verify $installer --repo $env:GITHUB_REPOSITORY --signer-workflow "$env:GITHUB_REPOSITORY/.github/workflows/release.yml"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          ./tools/ci/windows-install.ps1 -Step Install -Installer $installer
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          ./tools/ci/windows-install.ps1 -Step Seed
+
+      # This commit's installer over it, as a maker upgrades: the same folder,
+      # the new version in Apps, .lcp still registered, and every seeded file
+      # byte for byte.
+      - name: Upgrade (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          pnpm --filter @leathercad/desktop package:e2e:win
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          $installer = Get-ChildItem apps/desktop/release/*.exe
+          ./tools/ci/windows-install.ps1 -Step Install -Installer $installer.FullName
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          $version = (Get-Content apps/desktop/package.json -Raw | ConvertFrom-Json).version
+          ./tools/ci/windows-install.ps1 -Step Check -Version $version
+
+      # The packaged smoke test against the installed app, and a .lcp named on
+      # its command line, as a double-click gives it, then a second launch
+      # with another: one process, two tabs (e2e/packaged/installed.spec.ts).
+      # Check above pointed LEATHERCAD_PACKAGED_EXECUTABLE at it.
+      - name: Installed smoke test (Windows)
+        if: runner.os == 'Windows'
+        run: pnpm exec playwright test --config playwright.packaged.config.ts
+
       # The smoke test's build shares apps/desktop/release/ with the installer.
       # electron-builder replaces each unpacked app it rebuilds, but not one it
       # does not (macOS's mac-arm64/), so the e2e build goes, all of it, before
@@ -175,6 +222,24 @@ jobs:
       # Then the installer a user would download, with every fuse as shipped.
       - name: Installer
         run: pnpm package
+
+      # The installer a maker downloads, over the one tested above, then its
+      # uninstaller (R13): the program, its shortcuts, its registry entries and
+      # the .lcp type go; %APPDATA%\leathercad, the maker's settings and
+      # templates, stays byte for byte. Steps 5 and 6 of the spec, an unsafe
+      # folder and a second scope, wait for R12's assisted installer, which
+      # turns them on here.
+      - name: Upgrade to the shipped installer, then uninstall (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem apps/desktop/release/*.exe
+          ./tools/ci/windows-install.ps1 -Step Install -Installer $installer.FullName
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          $version = (Get-Content apps/desktop/package.json -Raw | ConvertFrom-Json).version
+          ./tools/ci/windows-install.ps1 -Step Check -Version $version
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          ./tools/ci/windows-install.ps1 -Step Uninstall
 
       # The Flatpak beside the AppImage (8.5). Its runtimes come from Flathub,
       # installed for this user by the bundler. apt's index is fresh from the
