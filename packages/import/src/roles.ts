@@ -1,5 +1,13 @@
 import { approxEq, EPS_ANGLE, EPS_LENGTH, EPS_POINT } from '@leathercad/core';
-import { dist, PathOps, RectOps, SegmentOps, type Path, type Vec2 } from '@leathercad/geometry';
+import {
+  dist,
+  PathOps,
+  RectOps,
+  SegmentOps,
+  type Path,
+  type Rect,
+  type Vec2,
+} from '@leathercad/geometry';
 
 /** The layer names that decide a shape's role over its shape (9.20b). */
 export type LayerName = 'cut' | 'stitch' | 'fold';
@@ -115,11 +123,17 @@ function probes(p: Path): Vec2[] {
   return p.segments.flatMap((s) => [SegmentOps.start(s), SegmentOps.pointAt(s, 0.5)]);
 }
 
-function holds(outer: Path, inner: Path): boolean {
-  const a = PathOps.bbox(outer),
-    b = PathOps.bbox(inner);
-  if (a === null || b === null || !RectOps.containsRect(a, b)) return false;
-  return probes(inner).every((point) => PathOps.containsPoint(outer, point));
+/** A closed path with its bounds and area, each computed once, not once per pair. */
+interface Boxed {
+  readonly path: Path;
+  readonly box: Rect | null;
+  readonly area: number;
+}
+
+function holds(outer: Boxed, inner: Boxed): boolean {
+  if (outer.box === null || inner.box === null || !RectOps.containsRect(outer.box, inner.box))
+    return false;
+  return probes(inner.path).every((point) => PathOps.containsPoint(outer.path, point));
 }
 
 /**
@@ -164,13 +178,14 @@ export function assignRoles(shapes: readonly RoleInput[]): SvgPattern {
   // ponytail: each path is tried against every larger one, quadratic in the
   // closed paths; the bounding-box test keeps a real pattern cheap, and the
   // hostile-file corpus (9.20c) bounds the count.
-  const order = cut.map((_, i) => i).sort((a, b) => PathOps.area(cut[b]!) - PathOps.area(cut[a]!));
+  const boxed = cut.map((path) => ({ path, box: PathOps.bbox(path), area: PathOps.area(path) }));
+  const order = cut.map((_, i) => i).sort((a, b) => boxed[b]!.area - boxed[a]!.area);
   const depth = new Map<number, number>(),
     owner = new Map<number, number>();
   for (const [k, i] of order.entries()) {
     let parent: number | undefined;
     for (let m = k - 1; m >= 0 && parent === undefined; m--)
-      if (holds(cut[order[m]!]!, cut[i]!)) parent = order[m];
+      if (holds(boxed[order[m]!]!, boxed[i]!)) parent = order[m];
     const d = parent === undefined ? 0 : (depth.get(parent) ?? 0) + 1;
     depth.set(i, d);
     owner.set(i, d % 2 === 0 ? i : parent!);
@@ -192,7 +207,7 @@ export function assignRoles(shapes: readonly RoleInput[]): SvgPattern {
     if (depth.get(i)! % 2 === 1) pieces.get(owner.get(i)!)!.cutOuts.push(p);
   });
   // Innermost first: the smallest outline around a line is the piece it is on.
-  const smallestFirst = [...outlines].sort((a, b) => PathOps.area(cut[a]!) - PathOps.area(cut[b]!));
+  const smallestFirst = [...outlines].sort((a, b) => boxed[a]!.area - boxed[b]!.area);
   for (const { path: p, as } of lines) {
     const first = p.segments[0];
     const probe = first === undefined ? null : SegmentOps.pointAt(first, 0.5);
