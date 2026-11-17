@@ -42,8 +42,12 @@ function encodingOf(bytes: Uint8Array): string {
 const REFERENCE = /&([^\s#&;<>"'%=]+);/g;
 const CHARACTER = /&#(?:(\d+)|x([\da-fA-F]+));/g;
 const SPACE = /\s*/y;
-/** `<!ENTITY` is followed by its name, and a parameter entity's `%` before it. */
-const ENTITY_HEAD = /\s+(%\s)?\s*([^\s"'<>%&;]+)\s+/y;
+/**
+ * `<!ENTITY` is followed by its name, and a parameter entity's `%` before it.
+ * Each run of space has one place to match, so a long one is read once, never
+ * backtracked over: `\s+(%\s)?\s*` was quadratic in it (CodeQL js/polynomial-redos).
+ */
+const ENTITY_HEAD = /\s+(?:(%)\s+)?([^\s"'<>%&;]+)\s+/y;
 
 /**
  * The document's length with every declared entity reference replaced by

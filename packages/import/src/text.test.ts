@@ -122,6 +122,20 @@ describe('the entities are checked before the parser sees them (ADR 0023 step 4)
     ).toBe('UNSAFE_SVG');
   });
 
+  it('a long run of spaces after <!ENTITY is refused in one pass, not backtracked over', () => {
+    // CodeQL js/polynomial-redos: `\s+` beside `\s*` made this quadratic in the run's length,
+    // a frozen window long before the 32 MiB ceiling.
+    const run = ' '.repeat(200_000);
+    expect(code(utf8(svg(`<!DOCTYPE svg [<!ENTITY${run}`)))).toBe('INVALID_SVG');
+    expect(code(utf8(svg(`<!DOCTYPE svg [<!ENTITY${run}%${run}`)))).toBe('INVALID_SVG');
+  });
+
+  it('an entity name and a parameter entity percent sign may sit in any whitespace', () => {
+    const text = svg(`<!DOCTYPE svg [<!ENTITY\n\t x \r\n"y">]>`, '<svg>&x;</svg>');
+    expect(svgText(utf8(text))).toBe(text);
+    expect(code(utf8(svg(`<!DOCTYPE svg [<!ENTITY \n%\t p "y">]>`)))).toBe('UNSAFE_SVG');
+  });
+
   it('an attribute default, which every element would carry, is refused', () => {
     expect(
       code(utf8(svg(`<!DOCTYPE svg [<!ENTITY a "aaaa"><!ATTLIST rect id CDATA "&a;">]>`))),
