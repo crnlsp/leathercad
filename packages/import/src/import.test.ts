@@ -259,3 +259,44 @@ it.each([' 100 mm ', '\t1e2\nmm\r', '+100.mm'])('preserves SVG length grammar wi
   const p = importSvg(root({ width, height: '100mm', viewBox: '0 0 100 100' })).shapes[0]?.paths[0];
   expect(p && PathOps.bbox(p)?.maxX).toBeCloseTo(100, 8);
 });
+
+describe('layer names (9.20b)', () => {
+  const INKSCAPE = 'http://www.inkscape.org/namespaces/inkscape';
+  const group = (
+    attributes: { namespace: string; localName: string; value: string }[],
+    children: SvgElement[],
+  ): SvgElement => ({ ...element('g', {}, children), attributes });
+  const layerOf = (tree: SvgElement): (string | undefined)[] =>
+    importSvg(
+      element('svg', { width: '10mm', height: '10mm', viewBox: '0 0 10 10' }, [tree]),
+    ).shapes.map((s) => s.layer);
+  const rect = () => element('rect', { width: '1', height: '1' });
+
+  it.each([
+    ['an Inkscape label', [{ namespace: INKSCAPE, localName: 'label', value: ' Stitch ' }]],
+    ['an Illustrator data-name', [{ namespace: '', localName: 'data-name', value: 'STITCH' }]],
+    ['an Illustrator id', [{ namespace: '', localName: 'id', value: 'stitch' }]],
+  ])('reads %s, in any case', (_, attributes) => {
+    expect(layerOf(group(attributes, [rect()]))).toEqual(['stitch']);
+  });
+
+  it('the nearest named layer wins; another name neither sets nor clears one', () => {
+    const named = (value: string, children: SvgElement[]) =>
+      group([{ namespace: INKSCAPE, localName: 'label', value }], children);
+    expect(
+      layerOf(
+        named('cut', [
+          rect(),
+          named('fold', [named('details', [rect()])]),
+          named('Layer 2', [rect()]),
+        ]),
+      ),
+    ).toEqual(['cut', 'fold', 'cut']);
+  });
+
+  it('a shape in no named layer has none', () => {
+    expect(
+      layerOf(group([{ namespace: '', localName: 'id', value: 'cutting' }], [rect()])),
+    ).toEqual([undefined]);
+  });
+});

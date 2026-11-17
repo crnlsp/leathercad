@@ -47,6 +47,9 @@
     },
     {
       "path": "../../packages/export"
+    },
+    {
+      "path": "../../packages/import"
     }
   ]
 }

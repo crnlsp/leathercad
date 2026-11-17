@@ -251,6 +251,9 @@ importers:
       '@leathercad/geometry':
         specifier: workspace:*
         version: link:../../packages/geometry
+      '@leathercad/import':
+        specifier: workspace:*
+        version: link:../../packages/import
       '@leathercad/persist':
         specifier: workspace:*
         version: link:../../packages/persist

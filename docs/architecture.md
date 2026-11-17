@@ -179,7 +179,9 @@ headless, above `domain` and `geometry`, reading untrusted input at a boundary a
 and with its own Y flip, as `export/svg` has. It parses nothing itself: the renderer's `DOMParser`
 reads the XML and hands it a plain tree of elements and attributes, and no XML dependency is added
 ([ADR 0023](adr/0023-svg-parsed-by-the-platform.md), which also sets the order the file crosses
-the boundary in). 9.20a converts the plain tree; the platform parser, preview and hostile-input checks follow in 9.20b/c.
+the boundary in). 9.20a converts the plain tree; 9.20b sorts it into pieces by role (`assignRoles`), and the renderer
+parses (`svgTree.ts`) and previews it before one command imports it. The byte ceiling, the entity
+check and the hostile-file corpus follow in 9.20c.
 
 ### The rules, enforced by dependency-cruiser in CI
 
