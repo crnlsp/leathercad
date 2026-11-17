@@ -11,11 +11,25 @@ import {
   deleteGuide,
 } from '@leathercad/document';
 import type { FeatureId } from '@leathercad/domain';
-import { evaluate, type Guide, type PartId, type Problem, type Project } from '@leathercad/domain';
+import {
+  dependentsOf,
+  evaluate,
+  type Feature,
+  type Guide,
+  type PartId,
+  type Problem,
+  type Project,
+} from '@leathercad/domain';
 import { MatOps, RectOps, Shapes, type Rect, type Vec2 } from '@leathercad/geometry';
 import { CANVAS, cssPxPerMm, pathItem, type DisplayList } from '@leathercad/render';
 
-import { alignMove, alignmentOverlay, collectAlignTargets, type AlignTargets } from '../align.js';
+import {
+  alignMove,
+  alignmentOverlay,
+  collectAlignTargets,
+  collectHostTargets,
+  type AlignTargets,
+} from '../align.js';
 import { featuresWithin, pickAt } from '../hitTest.js';
 import type { SnapCandidate, Snapped } from '../snap.js';
 import { means, type Tool, type ToolContext } from '../tool.js';
@@ -30,8 +44,11 @@ type State =
       readonly kind: 'moving';
       /** Why the selection is not moving, while it is not (X3). */
       readonly refusal: Problem | null;
-      /** The extent being moved and what it lines up with; null unless whole pieces move (3.16). */
-      readonly guides: { readonly box: Rect; readonly targets: AlignTargets } | null;
+      /**
+       * The extent being moved and what it lines up with: other pieces for whole
+       * pieces (3.16), the piece they are in for features inside one (3.18).
+       */
+      readonly guides: Guides | null;
       /** What the last move lined up, held by the next (hysteresis). */
       readonly aligned: Snapped | null;
       readonly delta: Vec2;
@@ -41,6 +58,13 @@ type State =
       readonly startMm: { x: number; y: number };
       readonly currentMm: { x: number; y: number };
     };
+
+interface Guides {
+  readonly box: Rect;
+  readonly targets: AlignTargets;
+  /** A single hole or circle, which lines up by its centre alone. */
+  readonly centreOnly: boolean;
+}
 
 /** What a press took hold of, from the press to the release. */
 interface Grab {
@@ -191,6 +215,7 @@ export function createSelectTool(): Tool {
             : alignMove(state.guides.box, raw, state.guides.targets, state.aligned, {
                 toleranceMm: ctx.viewport.pickToleranceMm(),
                 smartGuides: ctx.smartGuides?.() ?? true,
+                centreOnly: state.guides.centreOnly,
               });
         const delta = alignment?.delta ?? raw;
         const { document } = ctx.store.getState();
@@ -313,7 +338,13 @@ export function createSelectTool(): Tool {
           maxY: box.maxY + state.delta.y,
         };
         return {
-          items: alignmentOverlay(moved, state.aligned, targets, cssPxPerMm(ctx.viewport.toView())),
+          items: alignmentOverlay(
+            moved,
+            state.aligned,
+            targets,
+            cssPxPerMm(ctx.viewport.toView()),
+            ctx.alignmentWords,
+          ),
         };
       }
       if (state.kind !== 'band') return { items: [] };
@@ -359,24 +390,45 @@ function pickPiece(ctx: ToolContext, partId: PartId, outline: FeatureId, shift: 
 }
 
 /**
- * The extent a move lines up and the targets it lines up with — for whole
- * pieces only. Features moved inside a piece line up with that piece (3.18),
- * not with the board.
+ * The extent a move lines up and the targets it lines up with. Whole pieces
+ * line up with the board's other pieces (3.16); features inside one piece —
+ * the selection all in one part, its outline not among it — with that piece
+ * (3.18). Anything else, features across pieces, lines up with nothing.
  */
-function guidesFor(
-  project: Project,
-  moving: readonly FeatureId[],
-): { box: Rect; targets: AlignTargets } | null {
+function guidesFor(project: Project, moving: readonly FeatureId[]): Guides | null {
   const { about } = pieceScope(project, moving);
-  const outlines = new Set(
+  const box = about.length === 0 ? null : selectionBox(project, about);
+  if (box === null) return null;
+  const outer = (feature: Feature): boolean =>
+    feature.kind === 'cut-contour' && feature.role === 'outer';
+  const owners = new Map(
     project.parts.flatMap((part) =>
-      part.features
-        .filter((feature) => feature.kind === 'cut-contour' && feature.role === 'outer')
-        .map((feature) => feature.id),
+      part.features.map((feature) => [feature.id, { part, feature }]),
     ),
   );
-  if (about.length === 0 || !about.every((id) => outlines.has(id))) return null;
-  const box = selectionBox(project, about);
-  if (box === null) return null;
-  return { box, targets: collectAlignTargets(evaluate(project), new Set(moving)) };
+  const held = about.map((id) => owners.get(id));
+
+  if (held.every((each) => each !== undefined && outer(each.feature))) {
+    return {
+      box,
+      targets: collectAlignTargets(evaluate(project), new Set(moving)),
+      centreOnly: false,
+    };
+  }
+  const host = held[0]?.part;
+  if (host === undefined || !held.every((each) => each?.part === host && !outer(each.feature))) {
+    return null;
+  }
+  const only = held.length === 1 ? held[0]?.feature : undefined;
+  return {
+    box,
+    // What moves with the selection — a counterpart across a fold — is not
+    // where it will be, so it is no target either.
+    targets: collectHostTargets(
+      evaluate(project),
+      host.id,
+      new Set([...moving, ...dependentsOf(project, moving)]),
+    ),
+    centreOnly: only?.source.kind === 'shape' && only.source.shape.type === 'circle',
+  };
 }

@@ -1,8 +1,10 @@
 import { EPS_POINT, QUANTUM_MM, quantise } from '@leathercad/core';
 import {
   addGuide,
+  addHardwareHole,
   addPart,
   circleShape,
+  pathPart,
   emptyDocument,
   rectShape,
   rectanglePart,
@@ -10,13 +12,14 @@ import {
   type Command,
 } from '@leathercad/document';
 import { evaluate } from '@leathercad/domain';
-import type { Rect, Vec2 } from '@leathercad/geometry';
+import { polyline, type Rect, type Vec2 } from '@leathercad/geometry';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
 import {
   alignMove,
   collectAlignTargets,
+  collectHostTargets,
   indexTargets,
   type AlignTarget,
   type AlignTargets,
@@ -375,5 +378,269 @@ describe('collectAlignTargets — what a moved piece lines up with', () => {
     expect(found.y.all.map((each) => [each.kind, each.value, each.guideId])).toEqual([
       ['guide-axis', -12, 'h'],
     ]);
+  });
+});
+
+describe('collectHostTargets — what a feature moved inside its piece lines up with (3.18)', () => {
+  /** The key fob's strap: 140 × 26, its ends fully round. */
+  const strap = addPart(
+    rectanglePart('strap', 'strap-cut', 'Strap', rectShape({ x: 0, y: 0 }, 140, 26, 13)),
+  );
+
+  function hostTargets(commands: Command[], host: string, moving: string[]): AlignTargets {
+    let document = emptyDocument('proj');
+    for (const command of commands) document = command.apply(document);
+    return collectHostTargets(evaluate(document.project), host, new Set(moving));
+  }
+
+  const listed = (list: readonly AlignTarget[]) =>
+    list.map((each) => [each.kind, each.value, each.label ?? null]);
+
+  it('the strap offers its centre on both axes, called its centre, and an edge only where a side runs straight', () => {
+    const found = hostTargets(
+      [
+        strap,
+        addHardwareHole('strap', 'rivet', { x: 14, y: 13 }, 2),
+        addPart(rectanglePart('other', 'other-cut', 'Other', rectShape({ x: 0, y: 40 }, 30, 30))),
+      ],
+      'strap',
+      ['rivet'],
+    );
+    expect(listed(found.x.all)).toEqual([['host-centre', 70, 'centre']]);
+    expect(listed(found.y.all)).toEqual([
+      ['host-edge', 0, null],
+      ['host-centre', 13, 'centre'],
+      ['host-edge', 26, null],
+    ]);
+    // The line runs across the strap: its extent on the other axis.
+    expect(found.x.all[0]?.span).toEqual([0, 26]);
+  });
+
+  it("the piece's other holes and labels offer their centres; what moves, and what moves with it, does not", () => {
+    const found = hostTargets(
+      [
+        strap,
+        addHardwareHole('strap', 'rivet', { x: 14, y: 13 }, 2),
+        addHardwareHole('strap', 'snap', { x: 40, y: 10 }, 3, 'snap'),
+        addHardwareHole('strap', 'follower', { x: 100, y: 5 }, 2),
+      ],
+      'strap',
+      ['rivet', 'follower'],
+    );
+    expect(listed(found.x.all)).toEqual([
+      ['feature-centre', 40, null],
+      ['host-centre', 70, 'centre'],
+    ]);
+    expect(found.x.all[0]?.featureId).toBe('snap');
+  });
+
+  it('a turned rectangle offers its centre only, called the centre of its extent', () => {
+    const found = hostTargets(
+      [
+        addPart(
+          rectanglePart('t', 't-cut', 'Turned', rectShape({ x: 0, y: 0 }, 60, 20, 0, Math.PI / 6)),
+        ),
+      ],
+      't',
+      [],
+    );
+    expect(found.x.all.map((each) => [each.kind, each.label])).toEqual([
+      ['host-centre', 'extent-centre'],
+    ]);
+    expect(found.y.all.map((each) => [each.kind, each.label])).toEqual([
+      ['host-centre', 'extent-centre'],
+    ]);
+  });
+
+  it('an irregular piece calls its centre the centre of its extent, and keeps its straight edges', () => {
+    // A right-angled triangle: straight along its left and bottom, mirrored about neither centre line.
+    const found = hostTargets(
+      [
+        addPart(
+          pathPart(
+            'tri',
+            'tri-cut',
+            'Triangle',
+            polyline(
+              [
+                { x: 0, y: 0 },
+                { x: 40, y: 0 },
+                { x: 0, y: 30 },
+              ],
+              true,
+            ),
+          ),
+        ),
+      ],
+      'tri',
+      [],
+    );
+    expect(listed(found.x.all)).toEqual([
+      ['host-edge', 0, null],
+      ['host-centre', 20, 'extent-centre'],
+    ]);
+    expect(listed(found.y.all)).toEqual([
+      ['host-edge', 0, null],
+      ['host-centre', 15, 'extent-centre'],
+    ]);
+  });
+
+  it('a piece mirrored about one centre line only calls that one its centre', () => {
+    // An isosceles triangle, its apex up: mirrored about x = 20, not about y = 15.
+    const found = hostTargets(
+      [
+        addPart(
+          pathPart(
+            'iso',
+            'iso-cut',
+            'Gusset',
+            polyline(
+              [
+                { x: 0, y: 0 },
+                { x: 40, y: 0 },
+                { x: 20, y: 30 },
+              ],
+              true,
+            ),
+          ),
+        ),
+      ],
+      'iso',
+      [],
+    );
+    expect(found.x.all.find((each) => each.kind === 'host-centre')?.label).toBe('centre');
+    expect(found.y.all.find((each) => each.kind === 'host-centre')?.label).toBe('extent-centre');
+  });
+
+  it('axis-aligned guides are targets inside a piece too', () => {
+    const found = hostTargets(
+      [strap, addGuide({ id: 'v', origin: { x: 30, y: 0 }, angleRad: Math.PI / 2 })],
+      'strap',
+      [],
+    );
+    expect(found.x.all.map((each) => [each.kind, each.value])).toEqual([
+      ['guide-axis', 30],
+      ['host-centre', 70],
+    ]);
+  });
+
+  const piece = fc.record({
+    w: dyadic(4, 120),
+    h: dyadic(4, 120),
+    corner: fc.integer({ min: 0, max: 4 }),
+    turn: fc.constantFrom(0, Math.PI / 2, Math.PI / 7, 1, -0.4),
+  });
+  const rectOf = (p: { w: number; h: number; corner: number; turn: number }, at: Vec2) =>
+    addPart(
+      rectanglePart(
+        'p',
+        'p-cut',
+        'Piece',
+        rectShape(at, p.w, p.h, (Math.min(p.w, p.h) / 2) * (p.corner / 4), p.turn),
+      ),
+    );
+
+  it('translation: moving the piece moves its centre by as much, and changes nothing else', () => {
+    fc.assert(
+      fc.property(piece, delta, (p, v) => {
+        const here = hostTargets([rectOf(p, { x: 0, y: 0 })], 'p', []);
+        const there = hostTargets([rectOf(p, v)], 'p', []);
+        for (const axis of ['x', 'y'] as const) {
+          expect(there[axis].all.map((each) => [each.kind, each.label])).toEqual(
+            here[axis].all.map((each) => [each.kind, each.label]),
+          );
+          there[axis].all.forEach((each, i) => {
+            expect(each.value).toBeCloseTo(here[axis].all[i]!.value + v[axis], 9);
+          });
+        }
+      }),
+    );
+  });
+
+  it('a turned piece offers its centre and no edge', () => {
+    fc.assert(
+      fc.property(
+        piece,
+        fc.double({ min: 0.05, max: Math.PI / 2 - 0.05, noNaN: true }),
+        (p, turn) => {
+          const found = hostTargets([rectOf({ ...p, turn }, { x: 0, y: 0 })], 'p', []);
+          for (const axis of ['x', 'y'] as const) {
+            expect(found[axis].all.map((each) => each.kind)).toEqual(['host-centre']);
+          }
+        },
+      ),
+    );
+  });
+
+  it("an upright rectangle's centre is called its centre, rounded corners or not", () => {
+    fc.assert(
+      fc.property(piece, delta, (p, at) => {
+        const found = hostTargets([rectOf({ ...p, turn: 0 }, at)], 'p', []);
+        for (const axis of ['x', 'y'] as const) {
+          expect(found[axis].all.find((each) => each.kind === 'host-centre')?.label).toBe('centre');
+        }
+      }),
+    );
+  });
+
+  it('exact: a hole moved near the centre lands on it, to the storage quantum', () => {
+    fc.assert(
+      fc.property(
+        piece,
+        delta,
+        fc.record({ x: dyadic(-60, 60), y: dyadic(-60, 60) }),
+        // Inside the tolerance: a turned piece's centre is not dyadic, so a
+        // pointer exactly at the tolerance is caught or not by a rounding.
+        dyadic(-TOL + 1 / 16, TOL - 1 / 16),
+        (p, at, hole, off) => {
+          const targets = hostTargets([rectOf(p, at)], 'p', []);
+          const centre = targets.y.all.find((each) => each.kind === 'host-centre')!.value;
+          const rivet: Rect = {
+            minX: hole.x - 2,
+            maxX: hole.x + 2,
+            minY: hole.y - 2,
+            maxY: hole.y + 2,
+          };
+          const raw = { x: 0, y: centre - hole.y + off };
+          const result = alignMove(rivet, raw, targets, null, { ...on, centreOnly: true });
+          expect(result.snapped.y?.kind).toBe('host-centre');
+          expect(Math.abs(hole.y + quantise(result.delta.y) - centre)).toBeLessThanOrEqual(
+            QUANTUM_MM / 2 + EPS_POINT,
+          );
+        },
+      ),
+    );
+  });
+
+  it('work bound: a hole moved along a row of fifty in its piece measures at most four values', () => {
+    // Fifty rivets 10 mm apart along the strap's centre line: level, so one
+    // target on y, and at most one in reach on x of 1.5 × tolerance.
+    const holes = Array.from({ length: 50 }, (_, i) =>
+      addHardwareHole('strap', `h${i}`, { x: 20 + i * 10, y: 13 }, 2),
+    );
+    const long = addPart(
+      rectanglePart('strap', 'strap-cut', 'Strap', rectShape({ x: 0, y: 0 }, 540, 26, 13)),
+    );
+    const targets = hostTargets([long, ...holes], 'strap', ['mover']);
+    const rivet: Rect = { minX: 13, maxX: 17, minY: 30, maxY: 34 };
+    for (let step = 0; step < 400; step++) {
+      const result = alignMove(rivet, { x: step * 1.3, y: -19 }, targets, null, {
+        ...on,
+        centreOnly: true,
+      });
+      expect(result.snapped.y).not.toBeNull();
+      expect(result.measured).toBeLessThanOrEqual(4);
+    }
+  });
+
+  it("centre only: a hole's rim never lines up, only its centre", () => {
+    const targets = indexTargets([
+      { kind: 'host-edge', axis: 'y', value: 0, featureId: 'cut', order: 0, span: [0, 10] },
+    ]);
+    const rivet: Rect = { minX: 8, maxX: 12, minY: 1, maxY: 5 };
+    // Its bottom 1 mm off the edge, its centre 3 mm off: only the rim is in reach.
+    expect(alignMove(rivet, { x: 0, y: 0 }, targets, null, on).snapped.y).not.toBeNull();
+    const centred = alignMove(rivet, { x: 0, y: 0 }, targets, null, { ...on, centreOnly: true });
+    expect(centred.snapped.y).toBeNull();
   });
 });

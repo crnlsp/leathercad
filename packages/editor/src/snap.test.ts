@@ -573,6 +573,7 @@ describe('one snapping model (3.20)', () => {
     'guide-axis',
     'host-centre',
     'host-edge',
+    'feature-centre',
     'piece-centre',
     'piece-edge',
     'equal-spacing',

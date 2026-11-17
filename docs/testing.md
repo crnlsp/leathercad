@@ -496,6 +496,7 @@ commit that re-records one changes its row here:
 | `domain/mark-seams-unrelated` | 9.13, 2026-11-11 | 24.22.2 | 5.0.5 | Forty seams' alignment marks after an unrelated edit, evaluation included; new baseline, existing baselines untouched |
 | `editor/snap-hover-traced-1000` | 3.20, 2026-11-11 | 24.22.2 | 5.0.5 | One `snap()` per move round the 1,000-point traced outline, recorded on the code before the one snapping model so it compares against it; existing baselines untouched |
 | `editor/align-collect-200-pieces`, `editor/align-drag-200-pieces` | 3.16, 2026-11-16 | 24.22.3 | 5.1.0 | Smart guides among 200 pieces: the targets collected once per drag, and one `alignMove` per pointer move; new cases, existing baselines untouched |
+| `editor/align-collect-host-traced-1000`, `editor/align-drag-host-traced-1000` | 3.18, 2026-11-17 | 24.22.3 | 5.1.0 | A hole moved inside the 1,000-point traced outline: its piece's targets collected once per drag, mirror test included, and one centre-only `alignMove` per pointer move; new cases, existing baselines untouched |
 
 `apps/desktop/src/bench-discovery.test.ts` fails if a baseline has no row here, or a row names
 one that is not committed. `domain/diagnose-strap-slots` compared 1.3–1.4× its baseline, and was

@@ -99,7 +99,7 @@ as any item that will not make it does.
 - ✅ **3.14 Arrow keys nudge, Ctrl+A selects every piece** — on the focused board: 1 mm, 10 mm with Shift, 0.1 mm with Alt, each rebindable; a press or a held key is one undo step; a locked piece says why; a field, the Parts tree, a menu and the tabs keep their arrows.
 - ✅ **3.15 Typed position and Move by** — Properties › Arrange says where the selection's left and bottom edges are and takes a place or a distance, with sums and units; one undo step each; a locked piece says why.
 - ✅ **3.16 Smart guides while moving** — a piece dragged by its body lines its edges and centre up with other pieces' and with guides, exact to the storage quantum; Ctrl suspends; one undo step.
-- ☐ **3.18 Placing inside a piece** — a rivet on a flap's centre, a fold at the middle.
+- ✅ **3.18 Placing inside a piece** — a rivet, a hole or a fold dragged inside a piece lines up with that piece's centre, its straight edges and its other holes' centres, exact to the storage quantum; the line says *Centre*, or *Centre of its extent* where the piece is not mirrored about it; Ctrl suspends; one undo step.
 - ☐ **3.17 Live distances and clearance** — the move in mm, and a hole's rim clearance as the rule measures it.
 - ☐ **3.19 Equal spacing** (P1).
 - ✅ **8.8b Copy and paste whole pieces, across tabs** — Ctrl+C and Ctrl+V on the board, or the right-click menu (Paste alone on empty board); under the pointer, or clear of the drawing; new ids, every reference re-pointed, none dangling, seams between them kept; a mirrored piece without its original pastes as drawn geometry, said when copying; one undo step.

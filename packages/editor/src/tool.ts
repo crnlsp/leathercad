@@ -11,6 +11,7 @@ import {
 } from '@leathercad/domain';
 import { cssPxPerMm, type DisplayList } from '@leathercad/render';
 
+import type { AlignLabel } from './align.js';
 import { selectablePieces } from './hitTest.js';
 import { createNudge, isNudge, type NudgeKey } from './nudge.js';
 import { buildSnapIndex, snap, snapGlyph, type SnapCandidate, type SnapIndex } from './snap.js';
@@ -123,6 +124,12 @@ export interface ToolContext {
    * Absent means on, the preference's default.
    */
   readonly smartGuides?: () => boolean;
+  /**
+   * The words for a host piece's centre line (3.18): its centre, or only the
+   * centre of its extent. The app's, as a caption's are (ADR 0018). Absent,
+   * the line is drawn unnamed.
+   */
+  readonly alignmentWords?: (label: AlignLabel) => string;
 }
 
 /** What a tool takes from the maker's settings: values, never a reference to them. */

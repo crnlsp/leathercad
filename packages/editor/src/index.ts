@@ -17,6 +17,7 @@ export type {
   ToolContext,
 } from './tool.js';
 export { ToolManager } from './tool.js';
+export type { AlignLabel } from './align.js';
 
 export { featuresWithin, pickAt } from './hitTest.js';
 

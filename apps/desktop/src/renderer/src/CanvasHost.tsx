@@ -553,6 +553,8 @@ export function CanvasHost({
   makerDefaultsRef.current = makerDefaults;
   const smartGuidesRef = useRef(smartGuides);
   smartGuidesRef.current = smartGuides;
+  const tRef = useRef(t);
+  tRef.current = t;
   const hardwareRef = useRef(hardware);
   hardwareRef.current = hardware;
   const pointOptionsRef = useRef(pointOptions);
@@ -602,6 +604,8 @@ export function CanvasHost({
         drawAs: () => drawAsRef.current,
         makerDefaults: () => makerDefaultsRef.current,
         smartGuides: () => smartGuidesRef.current,
+        alignmentWords: (label) =>
+          tRef.current(label === 'centre' ? 'alignment.centre' : 'alignment.extentCentre'),
         requestDelete: (ids) => requestDeleteRef.current(ids),
         requestDeletePart: (partId) => requestDeletePartRef.current(partId),
       },

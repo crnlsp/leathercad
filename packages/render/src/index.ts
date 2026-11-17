@@ -51,6 +51,7 @@ export { EDGE_PX, extentOf, itemsReachingView, reachesView, unionExtent } from '
 export type { DisplayItem, DisplayList, Stroke } from './displayList.js';
 export {
   ROLE_STROKES,
+  boardTextItem,
   documentTextItem,
   dotsItem,
   markerItem,
