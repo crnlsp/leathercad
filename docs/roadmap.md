@@ -122,6 +122,7 @@ as any item that will not make it does.
 - ◐ **9.13 Alignment marks on mating edges** (P1) — prints: format 13; marks at a seam's first and last or every *n*th pair on both pieces, on the board, Sheets, PDF, SVG and DXF. Awaiting its paper reading ([log](print-verification-log.md#alignment-marks--913)).
 - ☐ **Q21 Cut two, one turned over** (P1) — prints: a format version of its own, measured on paper.
 - ✅ **Q43 A laser export names pieces that overlap on the board** (P1).
+- ☐ **9.26 The iron's tooth: French, Japanese or round holes** (P1) — the hole set knows its iron's tooth; the board draws it, SVG and DXF cut it true, paper unchanged; a format version.
 
 ### Stage 4 — Geometry and interoperability ([plan](superpowers/plans/2026-11-03-release-1.7.md#stage-4--geometry-and-interoperability))
 
@@ -299,8 +300,8 @@ release until it is moved into one.
 - **Draw tools in their role's colour** — still an open question in the UI decisions record.
 - **Measuring on the sheets.** U.9 left it out: no tool acts on the Sheets view, so it would be new
   behaviour, not a change of window.
-- **A radius-aware corner policy,** and **slot or diamond holes, and leaving single holes out**
-  ([domain-model](domain-model.md) §3.3, §6.1).
+- **A radius-aware corner policy,** and **leaving single holes out**
+  ([domain-model](domain-model.md) §3.3, §6.1). Hole shapes moved into 1.7 as 9.26 (2026-11-17).
 - **`.lcp.json`,** a project as plain JSON for version control ([file-format](file-format.md) §8).
 
 ### Exploring — neither planned nor rejected
