@@ -1416,8 +1416,6 @@
     "emptyPart": "The part is empty",
     "hideNote": "Also left off the PDF until shown again",
     "label": "Selection",
-    "spansParts_one": "The selection is in {{count}} part; duplicate one at a time",
-    "spansParts_other": "The selection is in {{count}} parts; duplicate one at a time",
     "copy_one": "Copy piece",
     "copy_other": "Copy {{count}} pieces",
     "paste_one": "Paste piece",

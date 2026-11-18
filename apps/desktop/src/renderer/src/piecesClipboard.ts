@@ -42,6 +42,21 @@ export function copySelection(project: Project, selection: Selection): Copied | 
 }
 
 /**
+ * *Duplicate* for any number of pieces (8.8b): a copy and a paste in one step,
+ * clear of the drawing as a single duplicate is — so one machinery makes new
+ * ids, re-points every reference and keeps the seams between the pieces.
+ * `null` when the selection is in no piece.
+ */
+export function duplicateSelection(
+  project: Project,
+  selection: Selection,
+  nextId: () => string,
+): { command: Command; partIds: readonly string[] } | null {
+  const copied = copySelection(project, selection);
+  return copied === null ? null : pasteCommand(copied.clipboard, nextId, null);
+}
+
+/**
  * The paste, with fresh ids for everything in it. Read through `persist` as a
  * file is (the trust boundary), so it throws `InvalidProjectFileError` for a
  * copy that is not one.

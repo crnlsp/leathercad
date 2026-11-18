@@ -39,7 +39,8 @@ export function selectionForRightClick(selection: Selection, clicked: RightClick
 export interface SelectionActions {
   sewTogether?: () => void;
   dispatch(command: Command): void;
-  duplicatePart(partId: PartId): void;
+  /** The selected pieces, one or several: what Ctrl+D does too. */
+  duplicatePieces(): void;
   /** Copies the pieces the selection is in, for any open project (8.8b). */
   copyPieces(): void;
   /** What was copied, when anything was: *Paste* puts it where the menu was opened. */
@@ -137,9 +138,7 @@ export function selectionMenu(
       label: t('actions.duplicatePart'),
       icon: 'duplicate',
       keys: 'duplicatePiece',
-      refusal:
-        parts.length === 1 ? undefined : t('contextMenu.spansParts', { count: parts.length }),
-      onChoose: () => actions.duplicatePart(parts[0]!.id),
+      onChoose: actions.duplicatePieces,
     },
     // Under the hand where Duplicate is, for this project or another (8.8b).
     {
