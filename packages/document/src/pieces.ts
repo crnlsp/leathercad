@@ -259,7 +259,7 @@ export function pieceStep(
   if (was === null || is === null || before.parts.length !== after.parts.length) return null;
 
   const step = Vec2Ops.quantiseVec({ x: is.minX - was.minX, y: is.minY - was.minY });
-  if (step.x === 0 && step.y === 0) return null;
+  if (approxEq(step.x, 0) && approxEq(step.y, 0)) return null;
 
   // Moved whole means exactly what moving them whole makes of them.
   const expected = movePieces(before, partIds, step).parts;
