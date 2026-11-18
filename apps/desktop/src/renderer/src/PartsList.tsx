@@ -31,6 +31,8 @@ import { IS_MAC, useKeysInSentences } from './keyCaps.js';
 import { keysOf, matches, type CommandId } from './keymap.js';
 import { MIRROR_ICON } from './icons/arrange.js';
 import { Icon } from './icons/Icon.js';
+import { ToolIcon } from './icons/ToolIcon.js';
+import type { PointerValue } from './pointerValue.js';
 import { FeatureMark, MarkOf } from './icons/marks.js';
 import { MenuButton } from './Menu.js';
 import { PieceThumbnail, pieceName, pressOf } from './PanelFold.js';
@@ -79,6 +81,8 @@ export function PartsList({
   folds,
   selected,
   selectedParts,
+  hoveredRow,
+  editing = null,
   badges,
   printStatus,
   onRemovePart,
@@ -98,6 +102,13 @@ export function PartsList({
   printStatus: ReadonlyMap<string, PartPrintStatus>;
   selected: ReadonlySet<string>;
   selectedParts: ReadonlySet<string>;
+  /**
+   * The row of what a click on the board would take, highlighted as if pointed at here (U.22).
+   * A pointer value, not a prop that renders the tree on every change (PERF-007).
+   */
+  hoveredRow?: PointerValue<string | null>;
+  /** The feature whose points Edit points is changing, marked on its row (U.22). */
+  editing?: string | null;
   /**
    * Problem counts, rolled up from the one diagnostic list. Passed in rather
    * than computed here so the panel and this tree cannot disagree (X7).
@@ -146,6 +157,25 @@ export function PartsList({
       ?.querySelector('[role="treeitem"][aria-selected="true"]')
       ?.scrollIntoView({ block: 'nearest' });
   }, [selection]);
+  // The board's hover marks its row straight on the DOM, outside React: it
+  // changes as the pointer crosses the board, and rendering the tree for it
+  // is what PERF-007 keeps a pointer move from doing (U.22).
+  useEffect(() => {
+    if (hoveredRow === undefined) return;
+    const mark = (): void => {
+      const root = tree.current;
+      if (root === null) return;
+      for (const row of root.querySelectorAll('[data-board-hover]')) {
+        row.removeAttribute('data-board-hover');
+      }
+      const key = hoveredRow.get();
+      if (key !== null) {
+        root.querySelector(`[data-key="${CSS.escape(key)}"]`)?.setAttribute('data-board-hover', '');
+      }
+    };
+    mark();
+    return hoveredRow.subscribe(mark);
+  }, [hoveredRow]);
 
   const rows = treeRows(project.parts, closed);
   // A rename lasts as long as its row: one that goes — undone away from the
@@ -348,6 +378,7 @@ export function PartsList({
                     feature={feature}
                     holes={count}
                     isSelected={selected.has(feature.id)}
+                    isEditing={editing === feature.id}
                     problems={problems}
                     treeProps={rowProps(
                       row,
@@ -611,6 +642,7 @@ function FeatureRow({
   feature,
   holes,
   isSelected,
+  isEditing,
   problems,
   treeProps,
   renaming,
@@ -622,6 +654,7 @@ function FeatureRow({
   feature: Feature;
   holes: number | null;
   isSelected: boolean;
+  isEditing: boolean;
   problems: Badge | null;
   treeProps: TreeItem;
   renaming: boolean;
@@ -630,9 +663,11 @@ function FeatureRow({
   onContextMenu: OpenMenu;
 }) {
   const { t, locale } = useI18n();
+  const editingWords = t('parts.isEditing', { tool: t('tools.points.name') });
   const description = useDescription([
     feature.visible ? null : t('parts.isHidden'),
     feature.locked ? t('parts.isLocked') : null,
+    isEditing ? editingWords : null,
   ]);
 
   return (
@@ -689,6 +724,14 @@ function FeatureRow({
               onToggle={() => store.dispatch(setFeatureVisible([feature.id], !feature.visible))}
             />
           </span>
+          {isEditing && (
+            // Its points have handles on the board: the same tool's icon here.
+            <Tooltip text={editingWords}>
+              <span className="row-mark" data-testid={`editing-mark-${feature.id}`}>
+                <ToolIcon toolId="points" size={14} />
+              </span>
+            </Tooltip>
+          )}
           {isMirroredFeature(feature) && (
             // A counterpart already nests under its original here, but the
             // nesting alone reads the same as a stitch line's. This says which

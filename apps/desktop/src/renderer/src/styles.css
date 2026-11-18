@@ -3639,7 +3639,9 @@ button.problem-row[aria-current='true'] {
   cursor: pointer;
 }
 
-.tree-row:hover {
+/* Pointed at here, or on the board (U.22): what a click would take. */
+.tree-row:hover,
+.tree-row[data-board-hover] {
   background: var(--shell-600);
   color: var(--text);
 }

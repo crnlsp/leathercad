@@ -6,6 +6,7 @@ import {
   selectedFeatureIds,
   type Command,
   type PathPointEdit,
+  type Selection,
 } from '@leathercad/document';
 import {
   cornerSites,
@@ -331,24 +332,39 @@ function reshapeAt(
  */
 function soleSelected(ctx: ToolContext): FeatureId | null {
   const { selection, document } = ctx.store.getState();
+  return soleIn(document.project, selection);
+}
+
+function soleIn(project: Project, selection: Selection): FeatureId | null {
   const selected =
     selection.features.size === 0 && selection.parts.size === 1
-      ? pieceScope(document.project, selectedFeatureIds(document.project, selection)).about
+      ? pieceScope(project, selectedFeatureIds(project, selection)).about
       : [...selection.features];
   return selected.length === 1 ? selected[0]! : null;
 }
 
-/** The selected feature's drawn path, when its points can be edited. */
-function editable(ctx: ToolContext): { id: FeatureId; path: Path } | null {
-  const id = soleSelected(ctx);
+/**
+ * The drawn path Edit points puts its handles on: the sole selection, when its
+ * points can be edited. What the Parts row marks as being edited (U.22).
+ */
+export function pointsUnderEdit(
+  project: Project,
+  selection: Selection,
+): { id: FeatureId; path: Path } | null {
+  const id = soleIn(project, selection);
   if (id === null) return null;
-  const project = ctx.store.getState().document.project;
   if (pointEditingRefusal(project, id) !== null) return null;
 
   const found = findFeature(project, id);
   if (found === null || !found.feature.visible) return null;
   const { source } = found.feature;
   return source.kind === 'path' ? { id, path: source.path } : null;
+}
+
+/** The selected feature's drawn path, when its points can be edited. */
+function editable(ctx: ToolContext): { id: FeatureId; path: Path } | null {
+  const { selection, document } = ctx.store.getState();
+  return pointsUnderEdit(document.project, selection);
 }
 
 /** The nearest point within reach, by index, or `null`. */

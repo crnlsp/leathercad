@@ -72,8 +72,35 @@ export const CANVAS = {
    */
   halo: {
     widthPx: 5,
-    hover: alpha(ACCENT.tanInk, 0.18),
     selected: alpha(ACCENT.tanInk, 0.45),
+    /**
+     * What a click would take (U.22): twice as broad and half as dense as a
+     * selection, so the two are told apart by width as well as by tone — never
+     * by colour alone. A selected piece is warmer inside besides.
+     */
+    hoverWidthPx: 10,
+    hover: alpha(ACCENT.tanInk, 0.22),
+    /**
+     * Pointed at, but locked, so a click passes over it: the hover's band in
+     * the ground's dim ink, not the accent — it is not the maker's to take —
+     * with a padlock beside it (`lock`).
+     */
+    locked: alpha(GROUND.inkDim, 0.25),
+  },
+
+  /**
+   * The padlock a locked line or piece shows while it is pointed at (U.22): a
+   * filled body and a stroked shackle, `gapPx` up and right of its top-right
+   * corner, the same size at every zoom.
+   */
+  lock: {
+    widthPx: 9,
+    heightPx: 7,
+    shackleRadiusPx: 3,
+    shackleLegPx: 2,
+    strokePx: 1.5,
+    gapPx: 4,
+    colour: GROUND.inkDim,
   },
 
   /**

@@ -441,8 +441,8 @@ A pointer move renders nothing of React's but what shows the pointer (PERF-007).
 and the rulers' tick are painted from refs. The point under the pointer, and where the pointer is
 over the canvas, are `PointerValue`s (`renderer/src/pointerValue.ts`): the board sets them, and
 only the status bar's readout and a notice beside the pointer subscribe. What the window's status
-carries — the zoom, a tool's notice, the sheet under the pointer, a shape's sizes while it is
-drawn — changes far less often, and is set only when it changes.
+carries — the zoom, a tool's notice, the sheet under the pointer, the Parts row of what a click
+would take (U.22), a shape's sizes while it is drawn — changes far less often, and is set only when it changes.
 
 DPR handling: back the canvas at `cssSize * dpr`. Every screen-constant size — a stroke, a halo, a
 dash in pixels, a glyph, a label, the grid and the rulers — is in **CSS pixels**, and each screen

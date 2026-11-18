@@ -13,7 +13,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { PointerInput, Tool, ToolContext } from '../tool.js';
 import { Viewport } from '../viewport.js';
-import { createEditPointsTool } from './editPointsTool.js';
+import { createEditPointsTool, pointsUnderEdit } from './editPointsTool.js';
 import { keyInput } from './keys.fixture.js';
 
 const OUTLINE = 'outline' as FeatureId;
@@ -75,6 +75,22 @@ function kinds(store: DocumentStore): string[] {
   if (source.kind !== 'path') throw new Error('not drawn');
   return source.path.segments.map((s) => s.kind);
 }
+
+describe('what is being edited (U.22)', () => {
+  const under = (store: DocumentStore) =>
+    pointsUnderEdit(store.getState().document.project, store.getState().selection)?.id ?? null;
+
+  it('is the selected drawn path, and nothing when nothing is selected', () => {
+    expect(under(harness().store)).toBe(OUTLINE);
+    expect(under(harness(false).store)).toBeNull();
+  });
+
+  it('is the outline of a piece picked by its heading', () => {
+    const { store } = harness(false);
+    store.selectParts(['part']);
+    expect(under(store)).toBe(OUTLINE);
+  });
+});
 
 describe('rounding and sharpening with R (3.9d)', () => {
   it('rounds the picked corner to the radius in the work bar, and sharpens it again', () => {

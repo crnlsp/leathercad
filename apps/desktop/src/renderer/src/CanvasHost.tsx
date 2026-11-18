@@ -61,6 +61,7 @@ import { designContent } from './designContent.js';
 import { CanvasFrames } from './canvasFrames.js';
 import { observePixelRatio, pixelRatio, resizeBackingStore } from './canvasDensity.js';
 import { sheetPlanFor, sheetsPagesFor } from './sheets.js';
+import { featureKey, partKey } from './partsTree.js';
 import { IS_MAC } from './keyCaps.js';
 import {
   commandFor,
@@ -195,6 +196,7 @@ export function CanvasHost({
   onEditSeam,
   hoveredPart = null,
   onHoverPart,
+  hoverRow,
   toolId,
   onToolChange,
   drawAs,
@@ -226,6 +228,11 @@ export function CanvasHost({
   hoveredPart?: string | null;
   /** The part under the pointer on the Sheets view, for Parts to highlight. */
   onHoverPart?: (partId: string | null) => void;
+  /**
+   * The Parts row of what a click on the board would take — or of what a lock
+   * keeps it from taking — for Parts to highlight (U.22).
+   */
+  hoverRow?: PointerValue<string | null>;
   toolId: string;
   onToolChange: (id: string) => void;
   drawAs: DrawMode;
@@ -848,9 +855,10 @@ export function CanvasHost({
   useEffect(() => {
     managerRef.current?.pointerLeave();
     hoveredRef.current = null;
+    hoverRow?.set(null);
     hoveredPartRef.current = null;
     frames.paintNow();
-  }, [view, frames]);
+  }, [view, frames, hoverRow]);
 
   useEffect(() => {
     onStatus?.({
@@ -1148,16 +1156,31 @@ export function CanvasHost({
       pointerRef.current = at;
 
       // Hover says what a click would pick, so only where a click picks: a
-      // line, or a piece by its body, haloed by its outline (3.13).
-      const pick =
+      // line, or a piece by its body, haloed by its outline (3.13). Where a
+      // click takes nothing because of a lock, the locked line or piece, which
+      // the board draws with its padlock (U.22).
+      const resolved =
         managerRef.current?.activeTool.id === 'select'
-          ? pickAt(evaluate(store.getState().document.project), raw, viewport.pickToleranceMm())
+          ? evaluate(store.getState().document.project)
           : null;
+      const tolerance = viewport.pickToleranceMm();
+      const pick =
+        resolved === null
+          ? null
+          : (pickAt(resolved, raw, tolerance) ??
+            pickAt(resolved, raw, tolerance, { locked: true }));
       hoveredRef.current =
         pick?.kind === 'feature' ? pick.id : pick?.kind === 'part' ? pick.outline : null;
+      hoverRow?.set(
+        pick?.kind === 'feature'
+          ? featureKey(pick.id)
+          : pick?.kind === 'part'
+            ? partKey(pick.id)
+            : null,
+      );
       invalidate();
     },
-    [camera, cursor, invalidate, pickOnSheets, pointerCss, rulerGuideAt, store, toInput],
+    [camera, cursor, hoverRow, invalidate, pickOnSheets, pointerCss, rulerGuideAt, store, toInput],
   );
 
   /**
@@ -1277,6 +1300,7 @@ export function CanvasHost({
           cursor.set(null);
           pointerRef.current = null;
           hoveredRef.current = null;
+          hoverRow?.set(null);
           if (hoveredPartRef.current !== null) onHoverPartRef.current?.(null);
           hoveredPartRef.current = null;
           setSheetUnder(null);

@@ -37,8 +37,8 @@ import type { SheetsLayout } from './sheetsLayout.js';
 /** How far a join line runs past the piece, so its ends are seen. */
 const JOIN_OVERRUN_MM = 6;
 
-/** What a halo reaches past its path, in CSS pixels: half its width, and the antialiased edge. */
-const HALO_EDGE_PX = CANVAS.halo.widthPx / 2 + EDGE_PX;
+/** What a halo reaches past its path, in CSS pixels: half the broader one's width, and the antialiased edge. */
+const HALO_EDGE_PX = Math.max(CANVAS.halo.widthPx, CANVAS.halo.hoverWidthPx) / 2 + EDGE_PX;
 
 /** The tiles of each taped part, keyed by part id, in sheet order. */
 function tilesByPart(plan: SheetPlan): Map<string, { bounds: Rect; tiles: Tile[] }> {
@@ -424,12 +424,15 @@ export function sheetsLayers(
   ];
 }
 
-/** The halo a piece is given: selected over hovered, as ever. */
-function haloColour(partId: string, { selected, hovered }: SheetsEmphasis): string | null {
+/** The halo a piece is given: selected over hovered, as on the board (U.22). */
+function haloBand(
+  partId: string,
+  { selected, hovered }: SheetsEmphasis,
+): { readonly colour: string; readonly widthPx: number } | null {
   return selected?.has(partId) === true
-    ? CANVAS.halo.selected
+    ? { colour: CANVAS.halo.selected, widthPx: CANVAS.halo.widthPx }
     : hovered === partId
-      ? CANVAS.halo.hover
+      ? { colour: CANVAS.halo.hover, widthPx: CANVAS.halo.hoverWidthPx }
       : null;
 }
 
@@ -443,13 +446,15 @@ const halos = new WeakMap<SheetsPage, { readonly key: string; readonly page: She
  */
 function haloed(page: SheetsPage, emphasis: SheetsEmphasis): SheetsPage {
   const marked = page.pieces.flatMap((one) => {
-    const colour = haloColour(one.partId, emphasis);
-    return colour === null ? [] : [{ one, colour }];
+    const band = haloBand(one.partId, emphasis);
+    return band === null ? [] : [{ one, band }];
   });
   if (marked.length === 0) return page;
 
   // The part too: two pieces share a `start` when the first emits nothing.
-  const key = marked.map(({ one, colour }) => `${one.partId}@${String(one.start)}${colour}`).join();
+  const key = marked
+    .map(({ one, band }) => `${one.partId}@${String(one.start)}${band.colour}`)
+    .join();
   const known = halos.get(page);
   if (known?.key === key) return known.page;
 
@@ -457,11 +462,11 @@ function haloed(page: SheetsPage, emphasis: SheetsEmphasis): SheetsPage {
   const cut = <T extends DisplayItem>(items: readonly T[]): (T | BoundedItem)[] => {
     const out: (T | BoundedItem)[] = [];
     let from = 0;
-    for (const { one, colour } of marked) {
+    for (const { one, band } of marked) {
       for (; from < one.start; from++) out.push(items[from]!);
       for (const { path } of one.paths) {
         if (!shows(path, one.at, clip, HALO_EDGE_PX)) continue;
-        out.push(stroke(moved(path, one.at), colour, CANVAS.halo.widthPx));
+        out.push(stroke(moved(path, one.at), band.colour, band.widthPx));
       }
     }
     for (; from < items.length; from++) out.push(items[from]!);
