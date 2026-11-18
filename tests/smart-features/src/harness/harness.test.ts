@@ -4,7 +4,9 @@ import { describe, expect, it } from 'vitest';
 
 import {
   drawRectangle,
+  holdsCard,
   outlineOf,
+  punchHoles,
   statesNothing,
   stitchLeavingOpen,
   stitchOf,
@@ -127,6 +129,74 @@ describe('the diagnostic comparison', () => {
     expect(text).toContain('Expected (1):');
     expect(text).toContain('Actual (1):');
     expect(report([], [])).toBeNull();
+  });
+});
+
+describe('what else the comparison holds', () => {
+  const placed = (location: Diagnostic['location']): Diagnostic => ({
+    ...narrow,
+    ...(location === undefined ? {} : { location }),
+  });
+
+  it('reports where a problem is marked, when the scenario says', () => {
+    const two = placed({
+      kind: 'points',
+      points: [
+        { x: 0, y: 0 },
+        { x: 1, y: 0 },
+      ],
+    });
+    expect(differences([two], [{ ...expectNarrow, location: { points: 2 } }])).toEqual([]);
+    expect(
+      differences([two], [{ ...expectNarrow, location: { points: [{ x: 0, y: 0 }] } }]),
+    ).toHaveLength(1);
+    expect(differences([two], [{ ...expectNarrow, location: 'path' }])).toEqual([
+      {
+        finding: 'location',
+        line: 'POCKET_TOO_NARROW on s — expected location path, got 2 points',
+      },
+    ]);
+    expect(differences([placed(undefined)], [{ ...expectNarrow, location: 'none' }])).toEqual([]);
+  });
+
+  it('reports a problem filed under a piece that does not hold its feature', () => {
+    expect(differences([narrow], [expectNarrow], new Map([['s', 'other']]))).toEqual([
+      {
+        finding: 'part',
+        line: 'POCKET_TOO_NARROW on s — filed under part:p, held by part:other',
+      },
+    ]);
+  });
+});
+
+describe('the workbench, refusing what proves nothing', () => {
+  const pocket = () =>
+    new Bench().do(
+      drawRectangle('pocket', { x: 0, y: 0, width: 90, height: 60, radius: 3 }),
+      stitchLeavingOpen('pocket', 'top', 3),
+      punchHoles('pocket'),
+      holdsCard(stitchOf('pocket'), 2),
+    );
+
+  it('refuses an edit that makes a new project the same as the old one', () => {
+    // The command builds new objects; the requirement it sets is the one there.
+    expect(() => pocket().do(holdsCard(stitchOf('pocket'), 2))).toThrow('changed nothing');
+  });
+
+  it('pins a known defect to its exact output, so a fix or another change fails it', () => {
+    const narrowAt = (widthMm: number): Expected => ({
+      code: 'POCKET_TOO_NARROW',
+      severity: 'warning',
+      on: stitchOf('pocket'),
+      facts: { widthMm },
+    });
+    expect(() => pocket().expectDefect('SF-X', { now: [narrowAt(84)], correct: [] })).not.toThrow();
+    expect(() => pocket().expectDefect('SF-X', { now: [], correct: [narrowAt(84)] })).toThrow(
+      'Known defect SF-X no longer shows as recorded',
+    );
+    expect(() =>
+      pocket().expectDefect('SF-X', { now: [narrowAt(84)], correct: [narrowAt(84)] }),
+    ).toThrow('the same list');
   });
 });
 

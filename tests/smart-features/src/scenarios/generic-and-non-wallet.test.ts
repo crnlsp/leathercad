@@ -24,6 +24,7 @@ import {
   stitchOf,
 } from '../harness/actions.js';
 import { Bench } from '../harness/bench.js';
+import { checkMatrixClaims } from '../harness/coverage.js';
 import { stitchReading } from './support.js';
 
 /**
@@ -31,6 +32,8 @@ import { stitchReading } from './support.js';
  * (J). The universal rules apply wherever their geometry is; nothing about
  * pockets, cards or seams is said, because nothing was declared.
  */
+
+checkMatrixClaims();
 
 const fourRectangles: Command[] = [0, 1, 2, 3].map((i) =>
   drawRectangle(`r${i}`, { x: (i % 2) * 120, y: Math.floor(i / 2) * 80, width: 100, height: 60 }),
@@ -69,6 +72,8 @@ describe('A — shapes drawn with no purpose declared', () => {
             severity: 'warning',
             on: holesOf('r0'),
             facts: { clearanceMm: 1, minimumMm: 1.5 },
+            // Every hole is 1 mm in: every hole is shown.
+            location: { points: 80 },
           },
         ],
         'at 1 mm',
@@ -85,6 +90,7 @@ describe('A — shapes drawn with no purpose declared', () => {
         severity: 'warning',
         on: 'rivet',
         facts: { clearanceMm: 1, minimumMm: 1.5 },
+        location: { points: [at(50, 3)] },
       },
     ]);
   });
@@ -164,28 +170,29 @@ describe('J — leatherwork that is not a wallet', () => {
   });
 
   /**
-   * KNOWN DEFECT SF-D3 (docs/smart-features.md §7). A hardware hole that is a
+   * KNOWN DEFECT KD-2 (docs/smart-features.md §7). A hardware hole that is a
    * mirror — across a fold, as the key fob's second rivet is, or of a whole
    * piece — is never asked where it sits: `punchesOf` in validate.ts reads a
    * hardware hole only when its source is a drawn circle. So the mirrored rivet
-   * 3 mm from the far end, or wholly off the leather, is not reported.
+   * 3 mm from the far end, or wholly off the leather, is not reported. SF-J4
+   * shows it is there.
    */
-  it.fails(
-    'SF-J3 · a rivet pushed toward the end warns on both halves of the fold, and nothing else',
-    () => {
-      const nearTheEnd = {
-        code: 'HOLE_TOO_CLOSE_TO_EDGE',
-        severity: 'warning',
-        facts: { clearanceMm: 1, minimumMm: 1.5 },
-      } as const;
-      Bench.open('key-fob')
-        .do(pushedToTheEnd)
-        .expect([
+  it('SF-J3 · KNOWN DEFECT KD-2 · a rivet pushed toward the end warns on one half of the fold, not both', () => {
+    const nearTheEnd = {
+      code: 'HOLE_TOO_CLOSE_TO_EDGE',
+      severity: 'warning',
+      facts: { clearanceMm: 1, minimumMm: 1.5 },
+    } as const;
+    Bench.open('key-fob')
+      .do(pushedToTheEnd)
+      .expectDefect('KD-2', {
+        now: [{ ...nearTheEnd, on: 'strap-rivet-a', location: { points: [at(3, 13)] } }],
+        correct: [
           { ...nearTheEnd, on: 'strap-rivet-a' },
           { ...nearTheEnd, on: 'strap-rivet-b' },
-        ]);
-    },
-  );
+        ],
+      });
+  });
 
   it('SF-J2 · a strap stitched all round with a row of buckle holes says nothing, and reads as no pocket', () => {
     const bench = new Bench().do(

@@ -7,14 +7,18 @@ import {
   drawStitching,
   holdsCard,
   holdsSize,
+  holesOf,
   openStitching,
   punchHoles,
   resize,
+  sew,
   statesNothing,
   stitchAllRound,
+  stitchLeavingOpen,
   stitchOf,
 } from '../harness/actions.js';
 import { Bench } from '../harness/bench.js';
+import { checkMatrixClaims } from '../harness/coverage.js';
 import type { Expected } from '../harness/expectDiagnostics.js';
 import { cardPocket, depthFromOpening, stitchReading } from './support.js';
 
@@ -25,6 +29,8 @@ import { cardPocket, depthFromOpening, stitchReading } from './support.js';
  * below the opening = height − 3. A payment card is 85.60 × 53.98 mm; with
  * 2 mm of ease its width needs 87.60 mm between the stitch lines.
  */
+
+checkMatrixClaims();
 
 const STITCH = stitchOf('pocket');
 
@@ -153,7 +159,13 @@ describe('E — a requirement on stitching that makes no measurable pocket', () 
         holdsCard(STITCH, 2, true),
       )
       .expect([
-        { code: 'OUTSIDE_PART', severity: 'warning', on: STITCH, facts: { what: 'line' } },
+        {
+          code: 'OUTSIDE_PART',
+          severity: 'warning',
+          on: STITCH,
+          facts: { what: 'line' },
+          location: 'path',
+        },
         notMeasurable('opening'),
       ]);
   });
@@ -174,30 +186,81 @@ describe('E — a requirement on stitching that makes no measurable pocket', () 
   });
 
   /**
-   * KNOWN DEFECT SF-D2 (docs/smart-features.md §7). A pocket sewn onto a
-   * larger panel, its U of stitching drawn on the panel and its top edge
-   * marked at 45 mm: 41 mm below the pocket's own top, too shallow for a card
-   * held fully. DR8 reads the opening from the panel's outline, 120 mm up, and
-   * passes it. Plan D21 names this limit for a slit; it holds for any pocket
-   * whose opening is not on the outline of the piece its stitching is in, and
-   * the maker is told nothing. The correct outcome is not to claim the card
-   * goes in: either too shallow, or not measurable.
+   * LIMIT L1 (docs/smart-features.md §7). Which piece's edge is a pocket's
+   * opening is a relationship the model does not hold: pieces are drawn apart,
+   * never stacked. DR8 reads the opening from the outline of the piece the
+   * stitching is on — exact for the card holder, whose pocket piece carries its
+   * own stitching (SF-E6), and an upper bound otherwise, because the real
+   * opening can only be lower (`depth below the opening never grows as the edge
+   * comes down`, properties.test.ts). So *too shallow* is always sound; a
+   * full-insertion pass is only "not disproved".
+   *
+   * Here the holes are punched through both layers at once, as the bifold's
+   * lining is (seams spec §1), so only the 120 mm back panel carries stitching;
+   * the 45 mm pocket front is a piece with none. The card cannot go in fully —
+   * 41 mm under the front's edge — and nothing is said: the depth is read 116 mm
+   * up, at the panel's edge. Pinned as it behaves, not as a defect: the
+   * geometry is read correctly, and what is missing is a statement of where the
+   * opening is (§8).
    */
-  it.fails(
-    'SF-E4 · a pocket stitched onto a larger panel does not claim a card goes in fully',
-    () => {
-      const bench = new Bench().do(
-        drawRectangle('pocket', { x: 0, y: 0, width: 100, height: 120 }),
-        drawStitching('pocket', [at(4, 42), at(4, 4), at(96, 4), at(96, 42)]),
-        punchHoles('pocket'),
-        holdsCard(STITCH, 2, true),
-      );
-      const said = bench.diagnostics.map((d) => d.problem.code);
-      expect(
-        said.some((code) => code === 'POCKET_TOO_SHALLOW' || code === 'POCKET_NOT_MEASURABLE'),
-      ).toBe(true);
-    },
-  );
+  const panelStitchedThrough = () => [
+    drawRectangle('panel', { x: 0, y: 0, width: 100, height: 120, name: 'Panel' }),
+    drawStitching('panel', [at(3, 42), at(3, 3), at(97, 3), at(97, 42)]),
+    punchHoles('panel'),
+    drawRectangle('front', { x: 120, y: 0, width: 100, height: 45, radius: 3, name: 'Pocket' }),
+  ];
+
+  it('SF-E4 · (limit L1) a pocket whose front piece carries no stitching is measured to the panel’s edge, and passed', () => {
+    const bench = new Bench()
+      .do(...panelStitchedThrough(), holdsCard(stitchOf('panel'), 2, true))
+      .expect([]);
+    expect(depthFromOpening(bench.project, 'panel', stitchOf('panel'))).toBe(117);
+  });
+
+  it('SF-E6 · the same pocket with its own stitching, the requirement on it, is too shallow by its own edge', () => {
+    // The card holder's construction: the front is cut 45 mm with 3 mm top
+    // corners and stitched 3 mm in, so 42 mm lie under its opening.
+    new Bench()
+      .do(
+        ...panelStitchedThrough(),
+        stitchLeavingOpen('front', 'top', 3),
+        punchHoles('front'),
+        holdsCard(stitchOf('front'), 2, true),
+      )
+      .expect([
+        {
+          code: 'POCKET_TOO_SHALLOW',
+          severity: 'warning',
+          on: stitchOf('front'),
+          facts: { depthMm: 42, neededMm: 53.98 },
+          location: 'path',
+        },
+      ]);
+  });
+
+  it('SF-E7 · (limit L1) sewn to the panel by a declared seam, the panel’s requirement still reads the panel’s edge', () => {
+    // The seam says the two stitchings are one; DR8 does not read seams, so the
+    // relationship that would find the lower opening is in the model and unused.
+    new Bench()
+      .do(
+        ...panelStitchedThrough(),
+        stitchLeavingOpen('front', 'top', 3),
+        punchHoles('front'),
+        sew({
+          id: 'pocket-seam',
+          a: {
+            holeSetId: holesOf('front'),
+            stretch: { kind: 'between', fromAnchor: 'start', toAnchor: 'end' },
+          },
+          b: {
+            holeSetId: holesOf('panel'),
+            stretch: { kind: 'between', fromAnchor: 'start', toAnchor: 'end' },
+          },
+        }),
+        holdsCard(stitchOf('panel'), 2, true),
+      )
+      .expect([]);
+  });
 });
 
 describe('F — a card meant to stand proud of its pocket', () => {

@@ -7,6 +7,7 @@ import {
   type Project,
   type Severity,
 } from '@leathercad/domain';
+import type { Vec2 } from '@leathercad/geometry';
 
 /**
  * One diagnostic a scenario expects: what is said, how loudly, about what, and
@@ -16,6 +17,10 @@ import {
  * with a whole piece (`EMPTY_PART`). `facts` is a subset: only the facts named
  * are compared, numbers within `EPS_LENGTH` unless given as `within(value,
  * tolerance)`, nested objects (a seam's sides) the same way.
+ *
+ * `location` is where the board marks it and *go to* frames: `'path'` (the
+ * feature's line), `'none'`, or `{ points }` — how many, or which, within
+ * `EPS_LENGTH`. Where "which hole" is the thing a maker must act on, say it.
  */
 export interface Expected {
   readonly code: ProblemCode;
@@ -23,6 +28,7 @@ export interface Expected {
   readonly on: string;
   readonly related?: readonly string[];
   readonly facts?: Readonly<Record<string, unknown>>;
+  readonly location?: 'path' | 'none' | { readonly points: number | readonly Vec2[] };
 }
 
 /** A number compared within a tolerance of the test's choosing, never looser than the code's. */
@@ -43,7 +49,15 @@ export function within(value: number, tolerance: number): Within {
 
 /** What kind of difference a line of the report describes. */
 export type Finding =
-  'missing' | 'unexpected' | 'severity' | 'target' | 'related' | 'facts' | 'duplicate';
+  | 'missing'
+  | 'unexpected'
+  | 'severity'
+  | 'target'
+  | 'related'
+  | 'facts'
+  | 'location'
+  | 'part'
+  | 'duplicate';
 
 export interface Difference {
   readonly finding: Finding;
@@ -58,15 +72,28 @@ const targetOf = (d: Diagnostic): string =>
  * reader needs it: what is missing, what appeared that should not, and for a
  * problem that is there, a wrong severity, subject, related feature or
  * measurement. Duplicates — the same problem listed twice on one subject — are
- * found whatever was expected.
+ * found whatever was expected, and so is a diagnostic filed under a piece that
+ * does not hold its feature (`owners`: each feature's piece), which would put
+ * its row under the wrong piece and send *go to* to the wrong place.
  *
  * Pure, and tested on its own: a matcher that forgives is worse than none.
  */
 export function differences(
   actual: readonly Diagnostic[],
   expected: readonly Expected[],
+  owners: ReadonlyMap<string, string> = new Map(),
 ): Difference[] {
   const found: Difference[] = [];
+
+  for (const d of actual) {
+    const owner = d.featureId === undefined ? undefined : owners.get(d.featureId);
+    if (owner !== undefined && owner !== d.partId) {
+      found.push({
+        finding: 'part',
+        line: `${d.problem.code} on ${targetOf(d)} — filed under part:${d.partId}, held by part:${owner}`,
+      });
+    }
+  }
 
   const seen = new Map<string, number>();
   for (const d of actual) {
@@ -136,7 +163,31 @@ function problemsOf(d: Diagnostic, e: Expected): Difference[] {
   for (const mismatch of factMismatches(d.problem.facts, e.facts ?? {}, '')) {
     found.push({ finding: 'facts', line: `${about} — ${mismatch}` });
   }
+  const where = locationMismatch(d, e.location);
+  if (where !== null) found.push({ finding: 'location', line: `${about} — ${where}` });
   return found;
+}
+
+function locationMismatch(d: Diagnostic, wanted: Expected['location']): string | null {
+  if (wanted === undefined) return null;
+  const got = d.location;
+  const shown =
+    got === undefined ? 'none' : got.kind === 'path' ? 'path' : `${got.points.length} points`;
+  if (wanted === 'none' || wanted === 'path') {
+    return shown === wanted ? null : `expected location ${wanted}, got ${shown}`;
+  }
+  if (got?.kind !== 'points') return `expected points, got ${shown}`;
+  if (typeof wanted.points === 'number') {
+    return got.points.length === wanted.points
+      ? null
+      : `expected ${wanted.points} points, got ${got.points.length}`;
+  }
+  const missing = wanted.points.filter(
+    (w) => !got.points.some((p) => Math.hypot(p.x - w.x, p.y - w.y) <= EPS_LENGTH),
+  );
+  return missing.length === 0 && got.points.length === wanted.points.length
+    ? null
+    : `expected points ${JSON.stringify(wanted.points)}, got ${JSON.stringify(got.points)}`;
 }
 
 function sameList(a: readonly string[], b: readonly string[]): boolean {
@@ -194,8 +245,9 @@ export function report(
   actual: readonly Diagnostic[],
   expected: readonly Expected[],
   when?: string,
+  owners?: ReadonlyMap<string, string>,
 ): string | null {
-  const found = differences(actual, expected);
+  const found = differences(actual, expected, owners);
   if (found.length === 0) return null;
   const width = Math.max(...found.map((f) => f.finding.length));
   return [
@@ -219,6 +271,13 @@ export function expectDiagnostics(
   expected: readonly Expected[],
   when?: string,
 ): void {
-  const message = report(diagnose(project), expected, when);
+  const message = report(diagnose(project), expected, when, ownersOf(project));
   if (message !== null) throw new Error(message);
+}
+
+/** Which piece holds each feature. */
+export function ownersOf(project: Project): ReadonlyMap<string, string> {
+  return new Map(
+    project.parts.flatMap((part) => part.features.map((f) => [f.id, part.id] as const)),
+  );
 }

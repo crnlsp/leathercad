@@ -12,6 +12,7 @@ import {
   at,
   drawRectangle,
   drawStitching,
+  holdsCard,
   holds,
   holesOf,
   movePiece,
@@ -25,7 +26,7 @@ import {
   turnPiece,
 } from '../harness/actions.js';
 import { Bench } from '../harness/bench.js';
-import { cardPocket, stitchReading } from './support.js';
+import { cardPocket, depthFromOpening, stitchReading } from './support.js';
 
 /**
  * What holds across every project of a kind, not one example (§3.5 of
@@ -51,6 +52,11 @@ const requirement: fc.Arbitrary<PocketRequirement> = fc.record({
   easeMm: tenths(0, 8),
   fully: fc.boolean(),
 });
+
+/** A turn that turns: a few thousandths of a degree and up, either way. */
+const turn = fc
+  .double({ min: -Math.PI, max: Math.PI, noNaN: true })
+  .filter((angle) => Math.abs(angle) > 1e-4);
 
 const pocketSize = fc.record({ width: tenths(60, 130), height: tenths(30, 90) });
 
@@ -116,9 +122,9 @@ describe('properties of a pocket that holds what it must', () => {
       fc.property(
         pocketSize,
         requirement,
-        fc.double({ min: -Math.PI, max: Math.PI, noNaN: true }),
+        turn,
         tenths(-500, 500),
-        tenths(-500, 500),
+        tenths(-500, 500).filter((dy) => dy !== 0),
         (size, wanted, angle, dx, dy) => {
           const bench = pocket(size, wanted);
           const before = bench.diagnostics;
@@ -127,6 +133,42 @@ describe('properties of a pocket that holds what it must', () => {
         },
       ),
       { numRuns: 60 },
+    );
+  });
+
+  it('depth below the opening never grows as the piece’s edge comes down, so too shallow is never wrong', () => {
+    // Why POCKET_TOO_SHALLOW is sound and a pass is only an upper bound (limit
+    // L1, SF-E4): a pocket's real opening is at or below the edge of the piece
+    // its stitching is on. Assumes stitching drawn as an open U well inside the
+    // piece, its ends below the edge.
+    fc.assert(
+      fc.property(
+        tenths(40, 100),
+        tenths(20, 60),
+        tenths(1, 80),
+        tenths(0.1, 40),
+        (width, depth, above, lower) => {
+          const edge = 5 + depth + above;
+          const drawn = (height: number) =>
+            new Bench().do(
+              drawRectangle('pocket', { x: 0, y: 0, width: width + 10, height }),
+              drawStitching('pocket', [
+                at(5, 5 + depth),
+                at(5, 5),
+                at(5 + width, 5),
+                at(5 + width, 5 + depth),
+              ]),
+              holdsCard(STITCH, 0, true),
+            );
+          const tall = drawn(edge);
+          const short = drawn(Math.max(5 + depth + 0.1, edge - lower));
+          const deep = depthFromOpening(tall.project, 'pocket', STITCH)!;
+          const shallow = depthFromOpening(short.project, 'pocket', STITCH)!;
+          expect(shallow).toBeLessThanOrEqual(deep + EPS_LENGTH);
+          if (said(tall, 'POCKET_TOO_SHALLOW'))
+            expect(said(short, 'POCKET_TOO_SHALLOW')).toBe(true);
+        },
+      ),
     );
   });
 
@@ -256,8 +298,8 @@ describe('properties of pieces sewn together', () => {
         panelWidth,
         panelWidth,
         fc.constantFrom('back', 'front'),
-        fc.double({ min: -Math.PI, max: Math.PI, noNaN: true }),
-        tenths(-300, 300),
+        turn,
+        tenths(-300, 300).filter((d) => d !== 0),
         (back, front, piece, angle, d) => {
           const bench = sewnPanels(back, front);
           const before = bench.diagnostics;

@@ -32,7 +32,14 @@ export const CLASSES = ['positive', 'negative', 'notApplicable', 'transition'] a
 
 const UNIVERSAL =
   'universal: it applies wherever its geometry exists, so "absent prerequisites" is the negative case';
-const DOMAIN_ONLY = 'covered by packages/domain/src/validate.test.ts only; no project scenario yet';
+/**
+ * Why a class is left to the domain's tests: the rule reads one feature's own
+ * geometry, so a project adds nothing to it — no other feature, requirement or
+ * seam changes its answer — and undo and redo are held for every edit by
+ * SF-H7 and the undo property. Its boundaries are in validate.test.ts.
+ */
+const ONE_FEATURE =
+  'one feature’s own geometry: no other feature changes its answer, so its boundaries are domain tests (validate.test.ts), and undo is held for every edit by SF-H7 and the undo property';
 
 export const MATRIX: { readonly [code: string]: RuleCoverage } = {
   // ——— DR8: a pocket holds what the maker says it is for ———
@@ -40,10 +47,10 @@ export const MATRIX: { readonly [code: string]: RuleCoverage } = {
     positive: ['SF-B2', 'SF-B4', 'SF-B5', 'SF-B6', 'SF-I4', 'SF-E5'],
     negative: ['SF-B1', 'SF-B4', 'SF-I3', 'SF-I5'],
     notApplicable: ['SF-C1', 'SF-D1', 'SF-D3'],
-    transition: ['SF-B3', 'SF-B5', 'SF-C2', 'SF-H7'],
+    transition: ['SF-B3', 'SF-B5', 'SF-C2', 'SF-H7', 'SF-X1'],
   },
   POCKET_TOO_SHALLOW: {
-    positive: ['SF-F2', 'SF-F4', 'SF-I3'],
+    positive: ['SF-F2', 'SF-F4', 'SF-I3', 'SF-E6'],
     negative: ['SF-F3', 'SF-F4'],
     notApplicable: ['SF-F1', 'SF-C1'],
     transition: ['SF-F2', 'SF-H7'],
@@ -69,13 +76,10 @@ export const MATRIX: { readonly [code: string]: RuleCoverage } = {
   },
   // ——— Seam outcomes: a declared seam that cannot be walked ———
   SEAM_SIDE_MISSING: {
-    positive: ['SF-G7'],
+    positive: ['SF-G7', 'SF-X2'],
     negative: ['SF-G1'],
     notApplicable: ['SF-D2'],
-    transition: {
-      exempt:
-        'arises only from a file another version edited; the app’s own delete takes the seam with its side (SF-G6)',
-    },
+    transition: ['SF-X2'],
   },
   SEAM_RUNS_OFF_THE_LINE: {
     positive: ['SF-G8'],
@@ -86,21 +90,21 @@ export const MATRIX: { readonly [code: string]: RuleCoverage } = {
   // ——— DR2: everything in a part lies on its material ———
   HOLE_TOO_CLOSE_TO_EDGE: {
     positive: ['SF-A4', 'SF-A5'],
-    negative: ['SF-A2', 'SF-K1'],
+    negative: ['SF-A2', 'SF-K1', 'SF-K6'],
     notApplicable: { exempt: UNIVERSAL },
     transition: ['SF-A4'],
   },
   OUTSIDE_PART: {
-    positive: ['SF-E3'],
+    positive: ['SF-E3', 'SF-K5', 'SF-A11'],
     negative: ['SF-A2', 'SF-K1'],
     notApplicable: { exempt: UNIVERSAL },
-    transition: { gap: 'a line or holes moved off the leather and back' },
+    transition: ['SF-A11'],
   },
   CUT_OUT_OUTSIDE_PART: {
-    positive: { gap: DOMAIN_ONLY },
-    negative: { gap: 'a card slot cut wholly inside its piece, said nothing' },
+    positive: ['SF-A10'],
+    negative: ['SF-A10'],
     notApplicable: { exempt: UNIVERSAL },
-    transition: { gap: 'a cut-out dragged out of its piece and back' },
+    transition: ['SF-A10'],
   },
   // ——— DR1, DR3, DR4, DR5, DR6: the shape of each piece ———
   PART_HAS_NO_OUTER_CONTOUR: {
@@ -113,37 +117,37 @@ export const MATRIX: { readonly [code: string]: RuleCoverage } = {
     positive: ['SF-A6'],
     negative: ['SF-A1'],
     notApplicable: { exempt: UNIVERSAL },
-    transition: { gap: 'a crossing point dragged clear' },
+    transition: { exempt: ONE_FEATURE },
   },
   HOLES_OVERLAP: {
-    positive: { gap: DOMAIN_ONLY },
-    negative: ['SF-J2'],
+    positive: ['SF-J6'],
+    negative: ['SF-J2', 'SF-J6'],
     notApplicable: { exempt: UNIVERSAL },
-    transition: { gap: 'a row’s pitch typed below its hole size and back' },
+    transition: ['SF-J6'],
   },
   HOLE_SPACING_DEVIATION: {
     positive: ['SF-A7'],
     negative: ['SF-A2'],
     notApplicable: { exempt: UNIVERSAL },
-    transition: { gap: 'a short run lengthened until the iron fits it' },
+    transition: { exempt: ONE_FEATURE },
   },
   HOLE_SPACING_UNEVEN: {
-    positive: { gap: DOMAIN_ONLY },
-    negative: ['SF-A2'],
+    positive: ['SF-J5'],
+    negative: ['SF-A2', 'SF-J5'],
     notApplicable: { exempt: UNIVERSAL },
-    transition: { gap: 'a long side and a short one evened out' },
+    transition: ['SF-J5'],
   },
   HOLE_COUNT_TOO_LOW: {
-    positive: { gap: DOMAIN_ONLY },
+    positive: { exempt: ONE_FEATURE },
     negative: ['SF-A2'],
     notApplicable: { exempt: UNIVERSAL },
-    transition: { gap: 'a hole set on a line lengthened past one hole' },
+    transition: { exempt: ONE_FEATURE },
   },
   TEXT_TOO_SMALL_TO_PRINT: {
     positive: ['SF-A8'],
-    negative: { gap: 'a label at 1.5 mm capital height, said nothing' },
+    negative: { exempt: ONE_FEATURE },
     notApplicable: { exempt: UNIVERSAL },
-    transition: { gap: 'covered in the app by e2e/text-legibility.spec.ts; no project scenario' },
+    transition: { exempt: `${ONE_FEATURE}; in the app, e2e/text-legibility.spec.ts` },
   },
   EMPTY_PART: {
     positive: ['SF-A3'],
@@ -161,14 +165,15 @@ export const MATRIX: { readonly [code: string]: RuleCoverage } = {
 export const DECLARED_OUTCOME_PREFIXES = ['SEAM_', 'POCKET_'] as const;
 
 /**
- * Defects the scenarios found, each kept as an `it.fails` scenario that states
- * the correct behaviour. When the defect is fixed the scenario passes, so
- * `it.fails` fails: take `.fails` off, and the entry here, in the same change.
+ * Defects the scenarios found, each pinned by `Bench.expectDefect` in its
+ * scenario: the list exactly as the defect makes it, beside the correct one.
+ * The fix fails that scenario on purpose; it then asserts the correct list and
+ * takes its entry out of here, in the same change.
  */
 export const KNOWN_DEFECTS: readonly { readonly id: string; readonly scenario: string }[] = [
-  { id: 'SF-D1', scenario: 'SF-K3' },
-  { id: 'SF-D2', scenario: 'SF-E4' },
-  { id: 'SF-D3', scenario: 'SF-J3' },
+  { id: 'KD-1', scenario: 'SF-K3' },
+  { id: 'KD-2', scenario: 'SF-J3' },
+  { id: 'KD-3', scenario: 'SF-K4' },
 ];
 
 export function isCovered(coverage: Coverage): coverage is readonly string[] {

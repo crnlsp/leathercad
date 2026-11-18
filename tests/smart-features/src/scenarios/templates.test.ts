@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { holdsCard, resize } from '../harness/actions.js';
+import { checkMatrixClaims } from '../harness/coverage.js';
 import { Bench } from '../harness/bench.js';
 import type { Expected } from '../harness/expectDiagnostics.js';
 
@@ -9,6 +10,8 @@ import type { Expected } from '../harness/expectDiagnostics.js';
  * fixtures/projects that the app ships. A template is not assumed correct; what
  * is checked is what it says, and what it says when a maker states a purpose.
  */
+
+checkMatrixClaims();
 
 const TEMPLATES = ['bifold-wallet', 'card-holder', 'key-fob', 'coaster'] as const;
 const POCKET_STITCH = 'pocket-stitch';

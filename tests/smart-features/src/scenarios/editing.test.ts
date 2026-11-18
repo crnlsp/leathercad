@@ -22,6 +22,7 @@ import {
   statesNothing,
   stitchOf,
 } from '../harness/actions.js';
+import { checkMatrixClaims } from '../harness/coverage.js';
 import { Bench } from '../harness/bench.js';
 import type { Expected } from '../harness/expectDiagnostics.js';
 import { cardPocket } from './support.js';
@@ -31,6 +32,8 @@ import { cardPocket } from './support.js';
  * reopen, copy and paste leaves exactly the diagnostics of the pattern as it
  * now is — none stale, none twice.
  */
+
+checkMatrixClaims();
 
 const STITCH = stitchOf('pocket');
 const narrowOn = (on: string, widthMm = 84): Expected => ({

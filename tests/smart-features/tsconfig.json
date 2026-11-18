@@ -7,6 +7,7 @@
     { "path": "../../packages/geometry" },
     { "path": "../../packages/domain" },
     { "path": "../../packages/document" },
-    { "path": "../../packages/persist" }
+    { "path": "../../packages/persist" },
+    { "path": "../../packages/platform" }
   ]
 }

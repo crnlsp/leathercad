@@ -12,6 +12,7 @@
     "@leathercad/document": "workspace:*",
     "@leathercad/domain": "workspace:*",
     "@leathercad/geometry": "workspace:*",
-    "@leathercad/persist": "workspace:*"
+    "@leathercad/persist": "workspace:*",
+    "@leathercad/platform": "workspace:*"
   }
 }

@@ -13,6 +13,7 @@ import {
   stitchAllRound,
 } from '../harness/actions.js';
 import { Bench, type Action } from '../harness/bench.js';
+import { checkMatrixClaims } from '../harness/coverage.js';
 import { within, type Expected } from '../harness/expectDiagnostics.js';
 import { cardPocket } from './support.js';
 
@@ -26,6 +27,8 @@ import { cardPocket } from './support.js';
  * - W 99.5 → 93.5 mm, 24 gaps: the last pair 0.5 mm apart, the limit (D4);
  * - W 80 → 74 mm, 19 gaps, 20 holes.
  */
+
+checkMatrixClaims();
 
 const BOTTOM = { kind: 'between', fromAnchor: 3, toAnchor: 0 } as const;
 

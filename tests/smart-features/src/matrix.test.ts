@@ -25,8 +25,7 @@ const sources = readdirSync(SCENARIOS)
 function titled(pattern: RegExp): string[] {
   return sources.flatMap((source) => [...source.matchAll(pattern)].map((m) => m[1]!));
 }
-const scenarioIds = titled(/\bit(?:\.fails|\.each[^(]*\([^)]*\))?\(\s*'(SF-[A-Z]+\d+)\s/g);
-const failingIds = titled(/\bit\.fails\(\s*'(SF-[A-Z]+\d+)\s/g);
+const scenarioIds = titled(/\bit(?:\.each[^(]*\([^)]*\))?\(\s*'(SF-[A-Z]+\d+)\s/g);
 
 const scope = (Object.keys(PROBLEM_CODES) as ProblemCode[]).filter((code) =>
   inScope(code, PROBLEM_CODES[code].category),
@@ -76,13 +75,19 @@ describe('the Smart Features applicability matrix', () => {
     expect(repeated).toEqual([]);
   });
 
-  it('lets a scenario fail only as a known defect, written down in the doc', () => {
-    expect([...failingIds].sort()).toEqual(KNOWN_DEFECTS.map((d) => d.scenario).sort());
+  it('lets no scenario be expected to fail: a known defect is pinned, and written down', () => {
+    const all = sources.join('\n');
+    expect(all).not.toMatch(/\bit\.fails\b/);
     const doc = readFileSync(DOC, 'utf8');
     for (const { id, scenario } of KNOWN_DEFECTS) {
+      const title = new RegExp(`'${scenario} · KNOWN DEFECT ${id} ·`);
+      expect(all, `${scenario} is titled with ${id}`).toMatch(title);
+      expect(all, `${scenario} pins ${id}`).toContain(`expectDefect('${id}'`);
       expect(doc, `${id} is written down`).toContain(`**${id}**`);
       expect(doc, `${id} names its scenario`).toContain(scenario);
     }
+    const pinned = [...all.matchAll(/expectDefect\('(KD-\d+)'/g)].map((m) => m[1]);
+    expect([...new Set(pinned)].sort()).toEqual(KNOWN_DEFECTS.map((d) => d.id).sort());
   });
 });
 

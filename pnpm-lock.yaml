@@ -445,6 +445,9 @@ importers:
       '@leathercad/persist':
         specifier: workspace:*
         version: link:../../packages/persist
+      '@leathercad/platform':
+        specifier: workspace:*
+        version: link:../../packages/platform
 
 packages:
 
