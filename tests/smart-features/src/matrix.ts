@@ -172,7 +172,6 @@ export const DECLARED_OUTCOME_PREFIXES = ['SEAM_', 'POCKET_'] as const;
  */
 export const KNOWN_DEFECTS: readonly { readonly id: string; readonly scenario: string }[] = [
   { id: 'KD-1', scenario: 'SF-K3' },
-  { id: 'KD-2', scenario: 'SF-J3' },
   { id: 'KD-3', scenario: 'SF-K4' },
 ];
 
