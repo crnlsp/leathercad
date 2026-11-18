@@ -271,6 +271,76 @@ test('a piece moved into line with another, its smart guide drawn (3.16)', async
   }
 });
 
+test('a piece hovered, selected, being edited and locked, each its own (U.22)', async () => {
+  const { app, window } = await launch();
+  try {
+    await drawAPanel(window, { left: 250, parts: '1' });
+    const canvas = window.getByTestId('editor-canvas');
+    const box = await canvas.boundingBox();
+    if (box === null) throw new Error('canvas is missing');
+    const body = { x: box.x + 325, y: box.y + 205 };
+    const empty = { x: box.x + 60, y: box.y + 60 };
+    const outline = window.locator('[data-testid^="feature-row-"]', { hasText: 'Outline' });
+    /**
+     * The board with the pointer still on it. Electron's own capture, after a
+     * frame has been drawn: a locator screenshot moved the pointer in the
+     * container, which took the hover away (as for the smart guide above).
+     */
+    const board = async (): Promise<Buffer> => {
+      await window.evaluate(
+        () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+      );
+      const png = await app.evaluate(
+        async ({ BrowserWindow }, rect) => {
+          const page = BrowserWindow.getAllWindows()[0];
+          if (page === undefined) throw new Error('app window required');
+          return (await page.webContents.capturePage(rect)).toPNG().toString('base64');
+        },
+        {
+          x: Math.round(box.x),
+          y: Math.round(box.y),
+          width: Math.round(box.width),
+          height: Math.round(box.height),
+        },
+      );
+      return Buffer.from(png, 'base64');
+    };
+    await window.getByTestId('tool-select').click();
+
+    // Hovered: the broad, light band, the piece left pale.
+    await window.mouse.click(empty.x, empty.y);
+    await expect(window.getByTestId('selected-count')).toHaveText('0');
+    await window.mouse.move(body.x, body.y);
+    await expect(window.locator('[data-board-hover]')).toHaveCount(1);
+    expect(await board()).toMatchSnapshot('state-hover.png');
+
+    // Selected: the narrow, dense band and the warmer piece.
+    await window.mouse.click(body.x, body.y);
+    await expect(window.getByTestId('selected-count')).toHaveText('1');
+    await pointerAway(window);
+    await expect(canvas).toHaveScreenshot('state-selected.png');
+
+    // Being edited: a handle on every point of the drawn path.
+    await outline.click();
+    await window.getByTestId('convert-to-path').click();
+    await window.getByTestId('tool-points').click();
+    await pointerAway(window);
+    await expect(canvas).toHaveScreenshot('state-editing.png');
+
+    // Locked, pointed at: the band in the ground's ink, and the padlock.
+    await window.getByTestId('tool-select').click();
+    await outline.hover();
+    await outline.locator('[data-testid^="feature-locked-"]').click();
+    await window.mouse.click(empty.x, empty.y);
+    await expect(window.getByTestId('selected-count')).toHaveText('0');
+    await window.mouse.move(body.x, body.y);
+    await expect(window.locator('[data-board-hover]')).toHaveCount(1);
+    expect(await board()).toMatchSnapshot('state-locked.png');
+  } finally {
+    await closeApp(app);
+  }
+});
+
 test('the print test on its sheets (7.4c)', async () => {
   const { app, window } = await launch();
   try {

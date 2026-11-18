@@ -95,7 +95,7 @@ as any item that will not make it does.
 
 - ✅ **3.20 One snapping model** — one priority table, sources, hysteresis; the base for smart guides.
 - ✅ **3.13 A click on a piece's body selects it** — on its leather, not in a cut-out; a line or a guide within the pick radius still wins; the drag moves the piece whole, the hover halos its outline, and a right-click offers the piece's menu.
-- ☐ **U.22 Hover, selected, editing and locked read differently** (P1).
+- ✅ **U.22 Hover, selected, editing and locked read differently** — a hover's band is twice a selection's width and half its density; a locked line or piece pointed at shows a grey band and a padlock; Edit points' handles mark what is edited, and Parts highlights the row of what a click would take and marks the one being edited.
 - ✅ **3.14 Arrow keys nudge, Ctrl+A selects every piece** — on the focused board: 1 mm, 10 mm with Shift, 0.1 mm with Alt, each rebindable; a press or a held key is one undo step; a locked piece says why; a field, the Parts tree, a menu and the tabs keep their arrows.
 - ✅ **3.15 Typed position and Move by** — Properties › Arrange says where the selection's left and bottom edges are and takes a place or a distance, with sums and units; one undo step each; a locked piece says why.
 - ✅ **3.16 Smart guides while moving** — a piece dragged by its body lines its edges and centre up with other pieces' and with guides, exact to the storage quantum; Ctrl suspends; one undo step.

@@ -187,7 +187,9 @@ describe('which pages the Sheets view draws', () => {
 describe('pointing at a piece', () => {
   const isHalo = (item: DisplayItem): boolean =>
     item.kind === 'path' &&
-    item.stroke.widthPx === CANVAS.halo.widthPx &&
+    [CANVAS.halo.widthPx, CANVAS.halo.hoverWidthPx].some(
+      (width) => width === item.stroke.widthPx,
+    ) &&
     [CANVAS.halo.hover, CANVAS.halo.selected].includes(item.stroke.colour);
   const plain = sheetsLayers(pages);
 

@@ -44,6 +44,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import {
   DEFAULT_EDIT_POINTS,
   DEFAULT_HARDWARE,
+  pointsUnderEdit,
   type DrawMode,
   type EditPointsOptions,
   type HardwareOptions,
@@ -225,6 +226,11 @@ export function App({
    * side can show it too (7.4d). View state, never saved.
    */
   const [hoveredPart, setHoveredPart] = useState<string | null>(null);
+  /**
+   * The Parts row of what the board's pointer would take (U.22). Changes with the pointer, so it
+   * is kept out of React state, as the readout's point is (PERF-007). Never saved.
+   */
+  const [boardHoverRow] = useState(() => new PointerValue<string | null>(null));
   /** The tool the board had when the maker went to the sheets, to give back. */
   const designToolRef = useRef<string>('rectangle');
 
@@ -1790,6 +1796,13 @@ export function App({
                     folds={tab.folds}
                     selected={storeState.selection.features}
                     selectedParts={storeState.selection.parts}
+                    hoveredRow={boardHoverRow}
+                    editing={
+                      toolId === 'points'
+                        ? (pointsUnderEdit(storeState.document.project, storeState.selection)?.id ??
+                          null)
+                        : null
+                    }
                     badges={badges}
                     printStatus={printStatusFor(storeState.document.project)}
                     onRemovePart={requestDeletePart}
@@ -1827,6 +1840,7 @@ export function App({
                   view={view}
                   hoveredPart={hoveredPart}
                   onHoverPart={setHoveredPart}
+                  hoverRow={boardHoverRow}
                   toolId={toolId}
                   nextId={nextId}
                   onToolChange={chooseTool}

@@ -844,6 +844,7 @@
     "empty": "No parts yet. Press {{rectangle}}, then drag or click two corners to draw one.",
     "emptyPart": "Empty",
     "hidePart": "Hide part",
+    "isEditing": "Its points are being edited with {{tool}}",
     "isHidden": "Hidden",
     "isLocked": "Locked",
     "mirrorsMark": "Mirrors the feature it nests under",

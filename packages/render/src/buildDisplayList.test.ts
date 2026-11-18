@@ -299,6 +299,85 @@ describe('selection', () => {
   });
 });
 
+describe('hover, selected and locked read apart (U.22)', () => {
+  const halos = (items: readonly DisplayItem[]) =>
+    items.filter(
+      (i) =>
+        i.kind === 'path' &&
+        [CANVAS.halo.hover, CANVAS.halo.selected, CANVAS.halo.locked].includes(i.stroke.colour),
+    );
+  const lockFills = (items: readonly DisplayItem[]) =>
+    items.filter((i) => i.kind === 'fill' && i.colour === CANVAS.lock.colour);
+  /** The padlock's body: its one filled shape. */
+  const lockBody = (items: readonly DisplayItem[]) => {
+    const [fill] = lockFills(items);
+    return fill?.kind === 'fill' && fill.paths[0] !== undefined
+      ? PathOps.bbox(fill.paths[0])
+      : null;
+  };
+
+  it('halos a hovered line in a band broader than selection’s, so width tells them apart', () => {
+    const [hover] = halos(buildDisplayList(resolved([outline]), { hovered: 'cut-1' }).items);
+    const [chosen] = halos(
+      buildDisplayList(resolved([outline]), { selected: new Set(['cut-1']) }).items,
+    );
+    expect(hover).toMatchObject({ stroke: { colour: CANVAS.halo.hover } });
+    expect(chosen).toMatchObject({ stroke: { colour: CANVAS.halo.selected } });
+    if (hover?.kind !== 'path' || chosen?.kind !== 'path') throw new Error('halo missing');
+    expect(hover.stroke.widthPx).toBe(CANVAS.halo.hoverWidthPx);
+    expect(hover.stroke.widthPx).toBeGreaterThanOrEqual(chosen.stroke.widthPx * 1.5);
+  });
+
+  it('shows selection, not hover, on a line that is both', () => {
+    const list = buildDisplayList(resolved([outline]), {
+      selected: new Set(['cut-1']),
+      hovered: 'cut-1',
+    });
+    expect(halos(list.items)).toEqual([
+      expect.objectContaining({
+        stroke: expect.objectContaining({ colour: CANVAS.halo.selected }),
+      }),
+    ]);
+  });
+
+  it('halos a hovered locked line in the neutral ink, with a padlock beside it', () => {
+    const locked = { ...outline, locked: true };
+    const list = buildDisplayList(resolved([locked]), { hovered: 'cut-1', pxPerMm: 4 });
+    expect(halos(list.items)).toEqual([
+      expect.objectContaining({ stroke: expect.objectContaining({ colour: CANVAS.halo.locked }) }),
+    ]);
+    // One padlock, clear of the line's top-right corner (100, 60).
+    expect(lockFills(list.items)).toHaveLength(1);
+    const body = lockBody(list.items);
+    expect(body?.minX).toBeGreaterThan(100);
+    expect(body?.minY).toBeGreaterThan(60);
+  });
+
+  it('draws no padlock for a locked line nobody points at, or one that is selected', () => {
+    const locked = { ...outline, locked: true };
+    expect(lockFills(buildDisplayList(resolved([locked])).items)).toEqual([]);
+    expect(
+      lockFills(
+        buildDisplayList(resolved([locked]), { selected: new Set(['cut-1']), hovered: 'cut-1' })
+          .items,
+      ),
+    ).toEqual([]);
+  });
+
+  it('keeps the padlock the same size on screen at any zoom', () => {
+    const locked = { ...outline, locked: true };
+    fc.assert(
+      fc.property(fc.double({ min: 0.5, max: 40, noNaN: true }), (pxPerMm) => {
+        const body = lockBody(
+          buildDisplayList(resolved([locked]), { hovered: 'cut-1', pxPerMm }).items,
+        );
+        expect((body!.maxX - body!.minX) * pxPerMm).toBeCloseTo(CANVAS.lock.widthPx, 6);
+        expect((body!.maxY - body!.minY) * pxPerMm).toBeCloseTo(CANVAS.lock.heightPx, 6);
+      }),
+    );
+  });
+});
+
 describe('zoom bands', () => {
   // UI Foundations §9.3 (F.5): the meaning is constant, the detail adapts.
   // Zoomed out, a hole set stops being hundreds of specks and renders as its

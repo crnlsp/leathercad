@@ -39,7 +39,11 @@ export { buildSnapIndex, decideSnap, snap, snapGlyph } from './snap.js';
 export { createArcTool } from './tools/arcTool.js';
 export { createCircleTool } from './tools/circleTool.js';
 export type { EditPointsOptions } from './tools/editPointsTool.js';
-export { createEditPointsTool, DEFAULT_EDIT_POINTS } from './tools/editPointsTool.js';
+export {
+  createEditPointsTool,
+  DEFAULT_EDIT_POINTS,
+  pointsUnderEdit,
+} from './tools/editPointsTool.js';
 export type { DrawCommit, DrawMode, DrawnSource } from './tools/commitDrawn.js';
 export {
   createDrawCommit,

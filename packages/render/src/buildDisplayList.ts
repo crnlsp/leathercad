@@ -14,6 +14,9 @@ import {
   PathOps,
   RectOps,
   Shapes,
+  arc,
+  line as segment,
+  open,
   type Path,
   type Rect,
   type Vec2,
@@ -129,17 +132,25 @@ export function buildDisplayList(
    * A halo beneath a line: the accent, broad and translucent, laid down before
    * the line so the role colour and dash stay exactly as they are (§8.4).
    */
-  const halo = (id: FeatureId, path: Path): void => {
-    const colour = selected.has(id)
-      ? CANVAS.halo.selected
-      : options.hovered === id
-        ? CANVAS.halo.hover
-        : null;
-    if (colour === null) return;
-    items.push(
-      pathItem('construction', path, { colour, widthPx: CANVAS.halo.widthPx, dashPx: [] }),
-    );
+  const halo = (id: FeatureId, path: Path, locked: boolean): void => {
+    const band = selected.has(id)
+      ? { colour: CANVAS.halo.selected, widthPx: CANVAS.halo.widthPx }
+      : options.hovered !== id
+        ? null
+        : {
+            colour: locked ? CANVAS.halo.locked : CANVAS.halo.hover,
+            widthPx: CANVAS.halo.hoverWidthPx,
+          };
+    if (band === null) return;
+    items.push(pathItem('construction', path, { ...band, dashPx: [] }));
+    // A locked line pointed at says why a click passes over it (U.22).
+    if (locked && !selected.has(id)) {
+      const box = PathOps.bbox(path);
+      if (box !== null) padlock.push(...padlockAt({ x: box.maxX, y: box.maxY }, zoom));
+    }
   };
+  // On top of everything, as a marker is.
+  const padlock: DisplayItem[] = [];
 
   // Alignment marks (9.13) are the seam's, drawn on each piece they fall on.
   const marks = alignmentMarks(resolved);
@@ -171,9 +182,9 @@ export function buildDisplayList(
           // and the number stay untouched (§8.4). The dimension line is the
           // middle of the three segments evaluation builds.
           const line = entry.path.segments[1];
-          if (line !== undefined) halo(id, { closed: false, segments: [line] });
+          if (line !== undefined) halo(id, { closed: false, segments: [line] }, feature.locked);
         } else {
-          halo(id, entry.path);
+          halo(id, entry.path, feature.locked);
         }
         // A label's `path` is the box its words occupy, which is for selection
         // and bounds and must never be drawn. A **dimension** is the other
@@ -225,7 +236,7 @@ export function buildDisplayList(
       // A hole set is haloed along the line its holes are placed on — a halo
       // per hole is a cloud of blobs — and the holes stay as they are (§8.4).
       if (entry.holes !== undefined) {
-        halo(id, entry.path);
+        halo(id, entry.path, feature.locked);
         const { radiusMm } = entry.holes;
         if (radiusMm !== undefined) {
           // A row of punched holes (4.14): each a circle at its true size, as
@@ -282,7 +293,7 @@ export function buildDisplayList(
         outline ??= entry.path;
       }
 
-      halo(id, entry.path);
+      halo(id, entry.path, feature.locked);
       items.push(pathItem(entry.role, entry.path));
 
       // A fold says which way it folds, on the drawing itself (F.7).
@@ -350,7 +361,34 @@ export function buildDisplayList(
     }
   }
 
-  return { items: [...pieces, ...items] };
+  return { items: [...pieces, ...items, ...padlock] };
+}
+
+/**
+ * A padlock (U.22), its body's bottom-left `CANVAS.lock.gapPx` up and right of
+ * `corner`: a filled body and a stroked shackle, sized in screen pixels.
+ */
+function padlockAt(corner: Vec2, pxPerMm: number): DisplayItem[] {
+  const { widthPx, heightPx, shackleRadiusPx, shackleLegPx, strokePx, gapPx, colour } = CANVAS.lock;
+  const mm = (px: number): number => px / pxPerMm;
+  const left = corner.x + mm(gapPx);
+  const bottom = corner.y + mm(gapPx);
+  const top = bottom + mm(heightPx);
+  const centre = { x: left + mm(widthPx) / 2, y: top + mm(shackleLegPx) };
+  const r = mm(shackleRadiusPx);
+  const shackle = open([
+    segment({ x: centre.x + r, y: top }, { x: centre.x + r, y: centre.y }),
+    arc(centre, r, 0, Math.PI),
+    segment({ x: centre.x - r, y: centre.y }, { x: centre.x - r, y: top }),
+  ]);
+  return [
+    fillItem(
+      'construction',
+      [Shapes.rect({ x: left, y: bottom }, mm(widthPx), mm(heightPx))],
+      colour,
+    ),
+    pathItem('construction', shackle, { colour, widthPx: strokePx, dashPx: [] }),
+  ];
 }
 
 /** A 12/16 line's baseline, up from the line's bottom: the half-leading and the typeface's descent. */
