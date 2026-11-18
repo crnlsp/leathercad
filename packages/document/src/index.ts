@@ -26,7 +26,7 @@ export {
   selectionOf,
 } from './document.js';
 
-export type { StoreState } from './store.js';
+export type { HistoryEvent, StoreState } from './store.js';
 export { DocumentStore } from './store.js';
 export { addSeam, setSeam, removeSeam } from './seams.js';
 export type { Fix } from './fixes.js';
@@ -103,7 +103,7 @@ export {
 } from './commands.js';
 
 export type { CopiedPieces, CopyLoss, DrawnPiece, PasteIds, PiecesCopy } from './pieces.js';
-export { copyPieces, importPieces, pastePieces } from './pieces.js';
+export { copyPieces, importPieces, pastePieces, pieceStep } from './pieces.js';
 
 export type { PathPointEdit } from './pathPoints.js';
 export { editPathPoint, pathPointRefusal, pointEditingRefusal } from './pathPoints.js';

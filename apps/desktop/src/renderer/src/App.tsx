@@ -1343,8 +1343,9 @@ export function App({
     [store],
   );
 
+  // `step` is where step and repeat (8.8b) puts the copy, from its original.
   const requestDuplicatePart = useCallback(
-    (partId: string) => {
+    (partId: string, step: Vec2 | null = null) => {
       const part = store.getState().document.project.parts.find((p) => p.id === partId);
       if (part === undefined) return;
 
@@ -1352,32 +1353,36 @@ export function App({
       // description of an edit: one per feature, in document order.
       const newPartId = nextId();
       const featureIds = part.features.map(() => nextId());
-      store.dispatch(duplicatePart(partId, newPartId, featureIds));
+      store.dispatch(duplicatePart(partId, newPartId, featureIds, step));
       // The copy is what you are now working on.
       store.selectParts([newPartId]);
+      tab.steps.remember([newPartId], step ?? undefined);
     },
-    [store, nextId],
+    [store, tab, nextId],
   );
 
   // Ctrl+D and the menu's Duplicate, one undo step. One piece goes the way it
   // always has (a name with "copy"); several go through copy and paste, so
-  // their seams, mirrors and references are the paste's (step and repeat,
-  // 8.8b-3, builds on this).
+  // their seams, mirrors and references are the paste's. Right after a
+  // duplicate that was then moved, the same key repeats the move (step and
+  // repeat, 8.8b): the new copy is that far on from the one duplicated.
   const duplicateSelected = useCallback(() => {
     const { document, selection } = store.getState();
     const parts = selectedParts(document.project, selection);
+    const step = tab.steps.stepFor(parts);
     if (parts.size === 1) {
-      requestDuplicatePart([...parts][0]!);
+      requestDuplicatePart([...parts][0]!, step);
       return;
     }
-    const made = duplicateSelection(document.project, selection, nextId);
+    const made = duplicateSelection(document.project, selection, nextId, step);
     if (made === null) return;
     store.dispatch(made.command);
     store.selectParts(made.partIds);
+    tab.steps.remember(made.partIds, step ?? undefined);
     // What came as drawn shapes, or was left out, said of the copies just made.
     const said = copyNotice(made.copied, i18n, 'duplicate');
     if (said !== null) setNotice({ title: t('pieces.duplicatedTitle'), text: said });
-  }, [store, nextId, requestDuplicatePart, i18n, t]);
+  }, [store, tab, nextId, requestDuplicatePart, i18n, t]);
 
   /**
    * Pieces copied in any tab, for *Paste* in any other (8.8b): the window's,

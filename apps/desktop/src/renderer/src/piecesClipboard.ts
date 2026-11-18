@@ -45,16 +45,18 @@ export function copySelection(project: Project, selection: Selection): Copied | 
  * *Duplicate* for any number of pieces (8.8b): a copy and a paste in one step,
  * clear of the drawing as a single duplicate is — so one machinery makes new
  * ids, re-points every reference and keeps the seams between the pieces.
- * `null` when the selection is in no piece.
+ * `null` when the selection is in no piece. A `stepMm` (step and repeat, 8.8b)
+ * puts the copies that far from the pieces instead.
  */
 export function duplicateSelection(
   project: Project,
   selection: Selection,
   nextId: () => string,
+  stepMm: Vec2 | null = null,
 ): { command: Command; partIds: readonly string[]; copied: Copied } | null {
   const copied = copySelection(project, selection);
   if (copied === null) return null;
-  const { command, partIds } = pasteCommand(copied.clipboard, nextId, null);
+  const { command, partIds } = pasteCommand(copied.clipboard, nextId, null, stepMm);
   // The same edit as a paste, but it undoes as what the maker did.
   const label = { action: 'duplicate-pieces', count: copied.clipboard.count } as const;
   return { command: { ...command, label }, partIds, copied };
@@ -69,6 +71,7 @@ export function pasteCommand(
   clipboard: PiecesClipboard,
   nextId: () => string,
   at: Vec2 | null,
+  stepMm: Vec2 | null = null,
 ): { command: Command; partIds: readonly string[] } {
   const pieces = readPieces(clipboard.text);
   const ids = {
@@ -76,7 +79,7 @@ export function pasteCommand(
     features: pieces.parts.flatMap((part) => part.features).map(() => nextId()),
     seams: pieces.seams.map(() => nextId()),
   };
-  return { command: pastePieces(pieces, ids, at), partIds: ids.parts };
+  return { command: pastePieces(pieces, ids, at, stepMm), partIds: ids.parts };
 }
 
 /**

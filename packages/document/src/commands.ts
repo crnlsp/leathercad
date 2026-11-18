@@ -2010,12 +2010,15 @@ export function setPartVisible(partId: PartId, visible: boolean): Command {
  *
  * The copy is placed clear of the original, because a copy drawn exactly on
  * top of its original is invisible and the first thing anyone would do is drag
- * it off, moved whole as dragging it would (`movePieces`).
+ * it off, moved whole as dragging it would (`movePieces`). Given a `stepMm`
+ * (step and repeat, 8.8b) it is placed that far from the original instead: the
+ * maker has already shown where copies go.
  */
 export function duplicatePart(
   partId: PartId,
   newPartId: PartId,
   featureIds: readonly FeatureId[],
+  stepMm: Vec2 | null = null,
 ): Command {
   return {
     label: { action: 'duplicate-part' },
@@ -2055,7 +2058,11 @@ export function duplicatePart(
         part.features.map((feature, i) => [featureIds[i]!, feature.locked] as const),
       );
 
-      return { project: relock(moveClear(withCopy, [copy]), new Set([newPartId]), wasLocked) };
+      const placed =
+        stepMm === null
+          ? moveClear(withCopy, [copy])
+          : movePieces(withCopy, new Set([newPartId]), Vec2Ops.quantiseVec(stepMm));
+      return { project: relock(placed, new Set([newPartId]), wasLocked) };
     },
   };
 }

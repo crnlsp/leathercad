@@ -172,8 +172,14 @@ export function copyPieces(project: Project, partIds: Iterable<PartId>): PiecesC
  * copy that draws nothing has no centre, and lands where it was. A point that
  * is not finite is refused at once, with a `RangeError` naming it.
  */
-export function pastePieces(pieces: CopiedPieces, ids: PasteIds, at: Vec2 | null): Command {
+export function pastePieces(
+  pieces: CopiedPieces,
+  ids: PasteIds,
+  at: Vec2 | null,
+  stepMm: Vec2 | null = null,
+): Command {
   if (at !== null) Vec2Ops.assertFiniteVec(at, 'paste point');
+  if (stepMm !== null) Vec2Ops.assertFiniteVec(stepMm, 'paste step');
   return command({ action: 'paste', count: pieces.parts.length }, (document) => {
     const features = allFeatures(pieces.parts);
     if (
@@ -212,7 +218,7 @@ export function pastePieces(pieces: CopiedPieces, ids: PasteIds, at: Vec2 | null
       ...(seams.length === 0 ? {} : { seams: [...(document.project.seams ?? []), ...seams] }),
     };
     const partIds = new Set(pasted.map((part) => part.id));
-    return { project: relock(placed(project, pasted, partIds, at), partIds, wasLocked) };
+    return { project: relock(placed(project, pasted, partIds, at, stepMm), partIds, wasLocked) };
   });
 }
 
@@ -221,7 +227,9 @@ function placed(
   pasted: readonly Part[],
   partIds: ReadonlySet<PartId>,
   at: Vec2 | null,
+  stepMm: Vec2 | null,
 ): Project {
+  if (stepMm !== null) return movePieces(project, partIds, Vec2Ops.quantiseVec(stepMm));
   if (at === null) return moveClear(project, pasted);
   const box = boxOfParts(project, partIds);
   if (box === null) return project;
@@ -230,6 +238,42 @@ function placed(
     x: quantise(at.x - centre.x),
     y: quantise(at.y - centre.y),
   });
+}
+
+/**
+ * How far `partIds` were moved between two projects, or `null` when what
+ * happened was anything but that (step and repeat, 8.8b): the pieces not
+ * moved whole, by one offset, or any other piece touched. Quantised, as a move
+ * is, and `null` for no move at all.
+ *
+ * Read from the result rather than from the command, so a drag, *Move by* and
+ * a nudge are all the same to it.
+ */
+export function pieceStep(
+  before: Project,
+  after: Project,
+  partIds: ReadonlySet<PartId>,
+): Vec2 | null {
+  const was = boxOfParts(before, partIds);
+  const is = boxOfParts(after, partIds);
+  if (was === null || is === null || before.parts.length !== after.parts.length) return null;
+
+  const step = Vec2Ops.quantiseVec({ x: is.minX - was.minX, y: is.minY - was.minY });
+  if (step.x === 0 && step.y === 0) return null;
+
+  // Moved whole means exactly what moving them whole makes of them.
+  const expected = movePieces(before, partIds, step).parts;
+  const same = after.parts.every((part, i) => {
+    const old = (partIds.has(part.id) ? expected : before.parts)[i];
+    return (
+      old?.id === part.id &&
+      (partIds.has(part.id)
+        ? JSON.stringify(old.features) === JSON.stringify(part.features)
+        : old.features.length === part.features.length &&
+          old.features.every((feature, k) => feature === part.features[k]))
+    );
+  });
+  return same ? step : null;
 }
 
 /**

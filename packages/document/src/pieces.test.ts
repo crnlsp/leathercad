@@ -23,6 +23,7 @@ import {
   addStitchHoles,
   addStitchLine,
   circleShape,
+  duplicatePart,
   emptyDocument,
   mirrorAcrossFold,
   mirrorAxisFor,
@@ -35,7 +36,7 @@ import {
   translateFeatures,
 } from './commands.js';
 import type { Command, Document } from './document.js';
-import { copyPieces, pastePieces, type CopiedPieces, type PasteIds } from './pieces.js';
+import { copyPieces, pastePieces, pieceStep, type CopiedPieces, type PasteIds } from './pieces.js';
 import { addSeam } from './seams.js';
 import { DocumentStore } from './store.js';
 
@@ -655,5 +656,99 @@ describe('copy then paste, as a property', () => {
         });
       }),
     );
+  });
+});
+
+describe('a step, for step and repeat (8.8b)', () => {
+  /** A whole number of quanta, as a typed or dragged move is. */
+  const quantised = fc
+    .integer({ min: -2_000_000, max: 2_000_000 })
+    .map((n) => quantise(n * QUANTUM_MM));
+  const steps = fc.record({ x: quantised, y: quantised });
+  const some = projects.chain((project) =>
+    fc.record({
+      project: fc.constant(project),
+      partIds: fc.subarray(
+        project.parts.map((p) => p.id),
+        { minLength: 1 },
+      ),
+      step: steps,
+    }),
+  );
+
+  it('pastes the pieces exactly that far from where they were copied', () => {
+    fc.assert(
+      fc.property(some, ({ project, partIds, step }) => {
+        const copy = copyPieces(project, partIds);
+        const ids = freshIds(copy.pieces);
+        const next = pastePieces(copy.pieces, ids, null, step).apply({ project }).project;
+
+        const moving = project.parts
+          .filter((p) => partIds.includes(p.id))
+          .flatMap((p) => p.features.map((f) => f.id));
+        const moved = geometryOf(translateFeatures(moving, step).apply({ project }).project);
+        const pasted = geometryOf(next);
+        copy.pieces.parts
+          .flatMap((p) => p.features)
+          .forEach((f, i) => {
+            expectClose(pasted.get(ids.features[i]!), moved.get(f.id), f.id);
+          });
+      }),
+    );
+  });
+
+  it('places a duplicated piece that far from its original, whatever else is on the board', () => {
+    const document = panel(panel(emptyDocument('two'), 'a', 0), 'b', 200);
+    const next = duplicatePart(pid('a'), pid('c'), [fid('c-0'), fid('c-1'), fid('c-2')], {
+      x: 0,
+      y: -15,
+    }).apply(document);
+    const was = boxOf(document.project, ['a'])!;
+    const now = boxOf(next.project, ['c'])!;
+    expect(now.minX).toBeCloseTo(was.minX, 9);
+    expect(now.minY).toBeCloseTo(was.minY - 15, 9);
+  });
+
+  it('is read back off a move of those pieces, whoever made the move', () => {
+    fc.assert(
+      fc.property(some, ({ project, partIds, step }) => {
+        const ids = new Set(partIds);
+        const moving = project.parts.filter((p) => ids.has(p.id)).flatMap((p) => p.features);
+        const after = translateFeatures(
+          moving.map((f) => f.id),
+          step,
+        ).apply({ project }).project;
+        const read = pieceStep(project, after, ids);
+        const wasMoved = after.parts.some((p, i) =>
+          p.features.some((f, k) => f !== project.parts[i]!.features[k]),
+        );
+        if (read === null) {
+          // Nothing moved: the step is zero, or every feature refused it.
+          expect(wasMoved || (step.x === 0 && step.y === 0)).toBe(false);
+        } else {
+          expect(read).toEqual(step);
+        }
+      }),
+    );
+  });
+
+  it('is not read off a move of anything but whole pieces', () => {
+    const document = panel(panel(emptyDocument('two'), 'a', 0), 'b', 200);
+    const only = (ids: string[], by = { x: 3, y: 4 }) =>
+      translateFeatures(ids.map(fid), by).apply(document).project;
+    const a = new Set([pid('a')]);
+    // The piece whole, picked by its outline as a drag picks it: read. A feature
+    // of it moved out of it, a piece and another, or another piece: not.
+    expect(pieceStep(document.project, only(['a-cut', 'a-stitch', 'a-holes']), a)).toEqual({
+      x: 3,
+      y: 4,
+    });
+    expect(pieceStep(document.project, only(['a-cut']), a)).toEqual({ x: 3, y: 4 });
+    expect(pieceStep(document.project, only(['a-stitch'], { x: -30, y: 0 }), a)).toBeNull();
+    expect(pieceStep(document.project, only(['b-cut', 'b-stitch', 'b-holes']), a)).toBeNull();
+    expect(
+      pieceStep(document.project, only(['a-cut', 'a-stitch', 'a-holes', 'b-cut']), a),
+    ).toBeNull();
+    expect(pieceStep(document.project, document.project, a)).toBeNull();
   });
 });

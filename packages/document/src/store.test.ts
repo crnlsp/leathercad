@@ -462,6 +462,31 @@ describe('reset', () => {
   });
 });
 
+describe('onHistory', () => {
+  it('reports each edit with its label, each undo and redo, and nothing else', () => {
+    const store = new DocumentStore(docWithRect());
+    const seen: string[] = [];
+    const stop = store.onHistory((event) =>
+      seen.push(event.kind === 'edit' ? `edit ${event.label.action}` : event.kind),
+    );
+
+    store.dispatch(renameFeature('feat-1', 'A'));
+    store.begin({ action: 'move' });
+    store.preview(translateFeatures(['feat-1'], { x: 1, y: 0 }));
+    expect(seen).toEqual(['edit rename']); // a drag's preview is not a step
+    store.commit();
+    store.select(['feat-1']); // nor is a selection
+    store.undo();
+    store.redo();
+    store.dispatch({ label: { action: 'rename' }, apply: (d) => d }); // a no-op earns no history
+    expect(seen).toEqual(['edit rename', 'edit move', 'undo', 'redo']);
+
+    stop();
+    store.undo();
+    expect(seen).toHaveLength(4);
+  });
+});
+
 describe('subscribe', () => {
   it('notifies on change and stops after unsubscribe', () => {
     const store = new DocumentStore(docWithRect());
