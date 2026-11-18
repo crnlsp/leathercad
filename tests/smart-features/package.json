@@ -1,0 +1,18 @@
+{
+  "name": "@leathercad/smart-features",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Scenario tests for the design checks: what a maker's project should and should not be told",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --build"
+  },
+  "dependencies": {
+    "@leathercad/core": "workspace:*",
+    "@leathercad/document": "workspace:*",
+    "@leathercad/domain": "workspace:*",
+    "@leathercad/geometry": "workspace:*",
+    "@leathercad/persist": "workspace:*",
+    "@leathercad/platform": "workspace:*"
+  }
+}
