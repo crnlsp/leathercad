@@ -146,11 +146,7 @@ describe('duplicating any set of pieces (8.8b)', () => {
       const project = fixture(name);
       for (const chosen of subsets(project.parts.slice(0, 5))) {
         const chosenIds = new Set(chosen.map((p) => p.id));
-        const made = duplicateSelection(
-          project,
-          partSelectionOf([...chosenIds]),
-          ids(),
-        )!;
+        const made = duplicateSelection(project, partSelectionOf([...chosenIds]), ids())!;
         const next = made.command.apply({ ...emptyDocument('x'), project }).project;
 
         expect(next.parts).toHaveLength(project.parts.length + chosen.length);

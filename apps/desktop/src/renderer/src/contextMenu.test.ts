@@ -172,7 +172,10 @@ describe('the right-click menu (8.8)', () => {
   });
 
   it('duplicates the pieces a selection is in, one or several, by the board’s key (8.8b)', () => {
-    for (const picked of [['cut-a', 'stitch-a'], ['cut-a', 'cut-b']]) {
+    for (const picked of [
+      ['cut-a', 'stitch-a'],
+      ['cut-a', 'cut-b'],
+    ]) {
       const { entries, on } = menu(selectionOf(picked));
       const duplicate = item(entries, 'context-duplicate-part');
       duplicate.onChoose();
