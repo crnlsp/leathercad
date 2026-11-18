@@ -1358,6 +1358,14 @@ export function App({
     [store, nextId],
   );
 
+  // Ctrl+D is the menu's Duplicate: one piece, as one undo step. Several are
+  // refused there, so here too (step and repeat, 8.8b-3, builds on this).
+  const duplicateSelected = useCallback(() => {
+    const { document, selection } = store.getState();
+    const parts = selectedParts(document.project, selection);
+    if (parts.size === 1) requestDuplicatePart([...parts][0]!);
+  }, [store, requestDuplicatePart]);
+
   /**
    * Pieces copied in any tab, for *Paste* in any other (8.8b): the window's,
    * not a tab's, so switching tabs keeps it.
@@ -1845,6 +1853,7 @@ export function App({
                   onBoardContextMenu={openBoardMenu}
                   onCopyPieces={copyPieces}
                   onPastePieces={pastePieces}
+                  onDuplicatePiece={duplicateSelected}
                 >
                   {/* The legend explains the board's marks; the sheets are ink. */}
                   {view === 'design' && (

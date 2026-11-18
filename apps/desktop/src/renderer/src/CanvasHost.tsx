@@ -208,6 +208,7 @@ export function CanvasHost({
   onBoardContextMenu,
   onCopyPieces,
   onPastePieces,
+  onDuplicatePiece,
   nextId,
   onStatus,
   cursor,
@@ -250,6 +251,7 @@ export function CanvasHost({
   onCopyPieces?: () => void;
   /** The board's Paste key (8.8b), at the point under the pointer, or null off the board. */
   onPastePieces?: (at: Vec2 | null) => void;
+  onDuplicatePiece?: () => void;
   nextId: () => string;
   onStatus?: (status: CanvasStatus) => void;
   /**
@@ -571,6 +573,8 @@ export function CanvasHost({
   onCopyPiecesRef.current = onCopyPieces;
   const onPastePiecesRef = useRef(onPastePieces);
   onPastePiecesRef.current = onPastePieces;
+  const onDuplicatePieceRef = useRef(onDuplicatePiece);
+  onDuplicatePieceRef.current = onDuplicatePiece;
 
   const tools = useMemo(
     () => [
@@ -934,6 +938,11 @@ export function CanvasHost({
         if (meant.includes('copyPieces')) {
           event.preventDefault();
           onCopyPiecesRef.current?.();
+          return;
+        }
+        if (meant.includes('duplicatePiece')) {
+          event.preventDefault();
+          onDuplicatePieceRef.current?.();
           return;
         }
         if (meant.includes('pastePieces')) {

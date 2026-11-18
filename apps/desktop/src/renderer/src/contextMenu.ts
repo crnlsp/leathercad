@@ -136,6 +136,7 @@ export function selectionMenu(
       id: 'context-duplicate-part',
       label: t('actions.duplicatePart'),
       icon: 'duplicate',
+      keys: 'duplicatePiece',
       refusal:
         parts.length === 1 ? undefined : t('contextMenu.spansParts', { count: parts.length }),
       onChoose: () => actions.duplicatePart(parts[0]!.id),

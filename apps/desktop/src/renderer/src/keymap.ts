@@ -109,6 +109,7 @@ export type CommandId =
   | 'selectAllPieces'
   | 'copyPieces'
   | 'pastePieces'
+  | 'duplicatePiece'
   | `nudge${NudgeDirection}${NudgeStep}`
   | `tool.${ToolId}`
   | 'finishPolyline'
@@ -263,6 +264,16 @@ export const KEYMAP: readonly Command[] = [
     group: 'edit',
     scope: 'board',
     keys: [mod('KeyV')],
+    defaultYields: true,
+  },
+  // The piece, again, beside itself (8.8b): what the right-click menu's
+  // Duplicate does, on the board.
+  {
+    id: 'duplicatePiece',
+    does: 'shortcuts.duplicatePiece',
+    group: 'edit',
+    scope: 'board',
+    keys: [mod('KeyD')],
     defaultYields: true,
   },
   ...NUDGES,

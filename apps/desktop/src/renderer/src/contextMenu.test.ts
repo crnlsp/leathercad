@@ -175,6 +175,8 @@ describe('the right-click menu (8.8)', () => {
     const { entries, on } = menu(selectionOf(['cut-a', 'stitch-a']));
     item(entries, 'context-duplicate-part').onChoose();
     expect(on.duplicatePart).toHaveBeenCalledWith('a');
+    // The key it shows is the board's (8.8b-2), read from the keymap.
+    expect(item(entries, 'context-duplicate-part').keys).toBe('duplicatePiece');
 
     expect(
       item(menu(selectionOf(['cut-a', 'cut-b'])).entries, 'context-duplicate-part').refusal,

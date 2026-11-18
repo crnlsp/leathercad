@@ -378,6 +378,7 @@
     "selectAllPieces": "Select every piece on the board",
     "copyPieces": "Copy the pieces the selection is in, for any open project",
     "pastePieces": "Paste the copied pieces under the pointer",
+    "duplicatePiece": "Duplicate the selected piece",
     "arc": "Polyline: the next segment is an arc",
     "straight": "Polyline: the next segment is straight",
     "cancel": "Cancel what the tool is doing, clear the selection, or leave focus mode",
