@@ -139,6 +139,7 @@ export type HistoryAction =
   | 'duplicate'
   | 'duplicate-part'
   | 'paste'
+  | 'duplicate-pieces'
   | 'import'
   | 'follow'
   | 'follow-another'

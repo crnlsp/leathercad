@@ -51,9 +51,13 @@ export function duplicateSelection(
   project: Project,
   selection: Selection,
   nextId: () => string,
-): { command: Command; partIds: readonly string[] } | null {
+): { command: Command; partIds: readonly string[]; copied: Copied } | null {
   const copied = copySelection(project, selection);
-  return copied === null ? null : pasteCommand(copied.clipboard, nextId, null);
+  if (copied === null) return null;
+  const { command, partIds } = pasteCommand(copied.clipboard, nextId, null);
+  // The same edit as a paste, but it undoes as what the maker did.
+  const label = { action: 'duplicate-pieces', count: copied.clipboard.count } as const;
+  return { command: { ...command, label }, partIds, copied };
 }
 
 /**

@@ -1526,6 +1526,8 @@
     "deleteWithDependentsKeepFrozen_other": "Delete {{what}} and {{count}} dependents, keep {{frozen}} frozen",
     "duplicate": "Duplicate {{name}}",
     "duplicate-part": "Duplicate part",
+    "duplicate-pieces_one": "Duplicate piece",
+    "duplicate-pieces_other": "Duplicate {{count}} pieces",
     "paste_one": "Paste piece",
     "paste_other": "Paste {{count}} pieces",
     "import_one": "Import piece",

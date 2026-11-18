@@ -1374,7 +1374,10 @@ export function App({
     if (made === null) return;
     store.dispatch(made.command);
     store.selectParts(made.partIds);
-  }, [store, nextId, requestDuplicatePart]);
+    // What came as drawn shapes, said as Copy says it.
+    const said = copyNotice(made.copied, i18n);
+    if (said !== null) setNotice({ title: t('pieces.copiedTitle'), text: said });
+  }, [store, nextId, requestDuplicatePart, i18n, t]);
 
   /**
    * Pieces copied in any tab, for *Paste* in any other (8.8b): the window's,

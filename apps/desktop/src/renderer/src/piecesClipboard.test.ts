@@ -176,6 +176,31 @@ describe('duplicating any set of pieces (8.8b)', () => {
     });
   }
 
+  it('undoes as a duplicate, named by how many pieces it made, in one step', () => {
+    const holder = fixture('card-holder');
+    const made = duplicateSelection(holder, partSelectionOf(holder.parts.map((p) => p.id)), ids())!;
+
+    expect(made.command.label).toEqual({ action: 'duplicate-pieces', count: holder.parts.length });
+    expect(historyText({ action: 'duplicate-pieces', count: 1 }, english.t)).toBe(
+      'Duplicate piece',
+    );
+    expect(historyText({ action: 'duplicate-pieces', count: 3 }, english.t)).toBe(
+      'Duplicate 3 pieces',
+    );
+  });
+
+  it('hands back what Copy would say, so a frozen mirror is told of', () => {
+    const wallet = fixture('bifold-wallet');
+    const selection = partSelectionOf([pocketOf(wallet).id]);
+
+    const made = duplicateSelection(wallet, selection, ids())!;
+    const copied = copySelection(wallet, selection)!;
+
+    expect(made.copied.frozen).toEqual(copied.frozen);
+    expect(made.copied.dropped).toEqual(copied.dropped);
+    expect(copyNotice(made.copied, english)).toBe(copyNotice(copied, english));
+  });
+
   it('does nothing for a selection in no piece', () => {
     expect(duplicateSelection(fixture('coaster'), selectionOf([]), ids())).toBeNull();
   });
