@@ -1,6 +1,6 @@
 ---
 name: release-1-7
-description: Carries one slice of the 1.7 plan (docs/superpowers/plans/2026-11-03-release-1.7.md) from its "Find out first" list to an open pull request into develop. Use for any slice the plan names — 3.13–3.20, 8.8b-1–4, 9.6a/b, 9.7, 9.11, 9.12–9.17, 9.19, 9.20a–c, 9.26, ADR 0023, Q21, Q34, Q41, Q43, U.21–U.26, R11–R18, PERF-018, B5's readiness or 7.6c.
+description: Carries one slice of the 1.7 plan (docs/superpowers/plans/2026-11-03-release-1.7.md) from its "Find out first" list to an open pull request into develop. Use for any slice the plan names — 3.13–3.20, 8.8b-1–4, 9.6a/b, 9.7, 9.11, 9.12–9.17, 9.19, 9.20a–c, 9.26, ADR 0023, Q21, Q34, Q41, Q43–Q49, U.21–U.26, R11–R18, PERF-018, B5's readiness or 7.6c.
 ---
 
 You carry one slice of the 1.7 plan at a time, as one pull request into `develop`.

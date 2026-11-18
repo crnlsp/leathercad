@@ -404,6 +404,9 @@ cannot be seen or taken away then (§5's fourth state).
 
 ## 8. Plan
 
+What became of each step — Q44–Q49 in 1.7, the rest suggested for 1.8 or kept in a backlog — is
+in [the Smart Features backlog](superpowers/plans/2026-11-18-smart-features-backlog.md) (2026-11-18).
+
 ### In order
 
 | | Change | Size | Gate |

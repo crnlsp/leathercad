@@ -1,6 +1,6 @@
 # Roadmap
 
-**Released:** v1.6.1 (2026-11-14) · **Next:** 1.7 — Design & Construct · **Last updated:** 2026-11-15
+**Released:** v1.6.1 (2026-11-14) · **Next:** 1.7 — Design & Construct · **Last updated:** 2026-11-18
 
 What comes next, and everything known that is not done yet. What already shipped is in
 [`CHANGELOG.md`](../CHANGELOG.md). The full record of how 1.0 was built — every slice from 0.1 to
@@ -46,7 +46,7 @@ holds the items themselves, their status and their order.
   code does today, what to find out first, and how to check it is done.
 
 - **1.7's slices** continue the numbers: `3.13` to `3.20` for editing, `U.21` to `U.26` for the
-  interface, `R11` to `R18` for release engineering, `PERF-018`, the findings `Q41` to `Q43`, and the
+  interface, `R11` to `R18` for release engineering, `PERF-018`, the findings `Q41` to `Q49`, and the
   `9.x` items it takes from *Later*. Each slice's whole task — why, what the code does today, what
   to find out first and how to check it is done — is in [the 1.7 plan](superpowers/plans/2026-11-03-release-1.7.md).
 
@@ -123,6 +123,12 @@ as any item that will not make it does.
 - ☐ **Q21 Cut two, one turned over** (P1) — prints: a format version of its own, measured on paper.
 - ✅ **Q43 A laser export names pieces that overlap on the board** (P1).
 - ✅ **9.26 The iron's tooth: French, Japanese or round holes** (P1) — the hole set knows its iron's tooth; the board draws it, SVG and DXF cut it true, paper unchanged; format 14.
+- ☐ **Q45 A mirrored hardware hole is checked** — the key fob's second rivet, judged by its rim like the first.
+- ☐ **Q44 A hole on the cut edge, one verdict** — the same problem whichever way the piece faces (D29).
+- ☐ **Q46 A tooth through the edge is off the leather** (P1) — a hole set's iron read as SVG and DXF cut it.
+- ☐ **Q47 End holes moved in** (P1) — start and end offsets in Properties; the advice names them.
+- ☐ **Q48 Stitched sides say which side is open** (P1) — named sides on a rectangle, numbered corners while choosing.
+- ☐ **Q49 Holds says what it measured to** (P1) — the piece and the rise, "no ease", and still shown while its line fails.
 
 ### Stage 4 — Geometry and interoperability ([plan](superpowers/plans/2026-11-03-release-1.7.md#stage-4--geometry-and-interoperability))
 
@@ -285,6 +291,24 @@ release until it is moved into one.
 - **Q37 Cmd+Q, then *Discard*, closes the window but leaves the app running on macOS** — the quit
   was cancelled by the question, and Discard only closes the window. Unverified: no Mac. Check it
   in the same Mac session as release-checklist check 12.
+
+### Found by the Smart Features audit (2026-11-18)
+
+What [the audit](smart-features.md) found that 1.7 does not take (its Q44–Q49 are in Stage 3).
+None is in a release until it is moved into one; [its backlog](superpowers/plans/2026-11-18-smart-features-backlog.md)
+gives each task's problem, acceptance and tests, suggests 1.8 for these five, and holds the
+decisions, research and smaller items behind them.
+
+- **9.27 A pocket check says what passed, and why** — one domain function DR8 is built on, giving
+  each check's state and both numbers; Properties shows a line per check, never "fits".
+- **9.28 Selecting the holes shows their stitch line's requirement** — and a button to the stitch
+  line (D24's later refinement).
+- **9.29 Card templates say what their pockets hold** — *Holds: Payment card*, the maker's ease
+  copied in as a template opens (its D30, to decide).
+- **9.30 *Use as stitching* for a marking line** — and back, one undo step; the SVG import preview
+  says a `stitch` layer does it on the way in.
+- **Q50 Teeth that run into each other are said to** — for typed teeth, from the outline Q46 reads
+  (its D31, to decide).
 
 ### Also later, each already decided in principle
 
