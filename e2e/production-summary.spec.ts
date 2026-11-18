@@ -26,7 +26,11 @@ test('Properties says what to cut, punch and buy, and Copy puts it on the clipbo
 
     await summary.getByTestId('production-copy').click();
     await expect(summary.getByTestId('production-copy-status')).toHaveText('Copied');
-    const copied = await app.evaluate(({ clipboard }) => clipboard.readText());
+    // Windows' clipboard stores text with CRLF line ends, and reads it back so (#280).
+    const copied = (await app.evaluate(({ clipboard }) => clipboard.readText())).replace(
+      /\r\n/g,
+      '\n',
+    );
     const name = await window.getByTestId('job-totals').locator('.panel-heading').innerText();
     expect(copied).toBe(
       [
