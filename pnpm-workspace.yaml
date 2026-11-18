@@ -1,6 +1,8 @@
 packages:
   - 'packages/*'
   - 'apps/*'
+  # Test suites that span packages and are no layer of their own (docs/smart-features.md).
+  - 'tests/*'
 
 # Runs package scripts through pnpm's own POSIX-like shell on every platform,
 # so `LEATHERCAD_PACKAGE_FOR_E2E=1 pnpm …` and `&&` mean the same on Windows

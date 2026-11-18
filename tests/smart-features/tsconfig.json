@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "outDir": "dist", "rootDir": "." },
+  "include": ["src/**/*.ts"],
+  "references": [
+    { "path": "../../packages/core" },
+    { "path": "../../packages/geometry" },
+    { "path": "../../packages/domain" },
+    { "path": "../../packages/document" },
+    { "path": "../../packages/persist" }
+  ]
+}

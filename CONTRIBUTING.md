@@ -30,6 +30,7 @@ directory of its own — on Linux, `XDG_CONFIG_HOME=/tmp/lc-dev pnpm dev`.
 |---|---|
 | `pnpm check` | Typecheck, lint, format, layering, dead code, tests with coverage, performance ceilings, in a minute or two. **Run it before every push** — the pre-push hook does |
 | `pnpm test` | Unit, property, golden, export and snapshot tests. The print checks among them need poppler (`poppler-utils` in most Linux distributions, `poppler` in Homebrew, pacman and Chocolatey); without it they skip, which CI does not allow |
+| `pnpm test:smart` | The Smart Features scenarios alone, in a few seconds: realistic designs, each checked against its whole diagnostic list ([`docs/smart-features.md`](docs/smart-features.md)) |
 | `pnpm test:e2e` | Builds, then Playwright drives the real Electron app (with an accessibility scan). On Linux its windows open on a hidden Xvfb screen, at low CPU priority — see [Running E2E on Linux](#running-e2e-on-linux) |
 | `pnpm test:visual` | Pixel diffs in the pinned Playwright container. Needs Docker and `pnpm build` |
 | `pnpm test:packaged` | Packages the app, then smoke-tests the packaged binary |

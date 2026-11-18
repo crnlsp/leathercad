@@ -39,6 +39,9 @@
     },
     {
       "path": "./apps/desktop"
+    },
+    {
+      "path": "./tests/smart-features"
     }
   ]
 }

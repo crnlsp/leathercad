@@ -26,6 +26,7 @@ invisible and expensive.
 | Export accuracy | Vitest + poppler (`pdftoppm`, `pdfinfo`) | ~40 | < 10 s | The 1:1 promise |
 | Rendering (SVG snapshot) | Vitest | ~30 | < 3 s | What is drawn |
 | Rendering (pixel diff) | Playwright `toHaveScreenshot`, in the pinned container | ~12 | ~60 s | Anti-aliasing, hairlines, grid |
+| Smart Features scenarios | Vitest + fast-check, in `tests/smart-features` | ~90 | < 3 s | That a real design is told exactly what applies to it — nothing missing, nothing invented ([`smart-features.md`](smart-features.md) §6) |
 | E2E | Playwright + Electron, with axe scans | ~320, in 48 specs | ~9 min, ~4 in CI's three shards | The app actually runs, workflow by workflow |
 | Packaged smoke | Playwright + the packaged binary | 10 | ~60 s | app origin and denied paths, CSP, asar, fuses, resources |
 | Loader fuzzing | Vitest + fast-check | 6 | < 1 s | A damaged `.lcp` refuses with a reason |

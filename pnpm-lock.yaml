@@ -428,6 +428,24 @@ importers:
         specifier: workspace:*
         version: link:../geometry
 
+  tests/smart-features:
+    dependencies:
+      '@leathercad/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@leathercad/document':
+        specifier: workspace:*
+        version: link:../../packages/document
+      '@leathercad/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
+      '@leathercad/geometry':
+        specifier: workspace:*
+        version: link:../../packages/geometry
+      '@leathercad/persist':
+        specifier: workspace:*
+        version: link:../../packages/persist
+
 packages:
 
   '@axe-core/playwright@4.14.0':

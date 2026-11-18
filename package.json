@@ -15,6 +15,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage --exclude \"**/perf.test.ts\"",
+    "test:smart": "vitest run --project smart-features",
     "test:perf": "vitest run --project domain --no-file-parallelism perf.test",
     "test:tools": "node --test \"tools/ci/*.test.mjs\"",
     "typecheck": "tsc --build --force",

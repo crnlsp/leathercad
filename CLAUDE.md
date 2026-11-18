@@ -39,6 +39,7 @@ pnpm dev              # run the app (electron-vite, with HMR)
 pnpm check            # typecheck + lint + format:check + depcruise + knip + test:coverage + test:perf — before a slice is done
 pnpm test             # unit + property + export + SVG snapshot + format fixtures
 pnpm test locales     # structural integrity: keys, placeholders, plural forms (ADR 0018)
+pnpm test:smart       # the Smart Features scenarios alone: whole diagnostic lists for real designs (docs/smart-features.md)
 pnpm locales:report   # informational logical-message coverage; missing translations never fail CI
 pnpm test:e2e         # builds, then Playwright drives the real Electron app (incl. the axe scan); hidden Xvfb on Linux, LEATHERCAD_E2E_HEADED=1 to watch
 pnpm hidden-screen <cmd>  # Linux: runs a command that launches the app on a hidden Xvfb screen, at low priority (needs Xvfb)
@@ -115,6 +116,10 @@ and previews; the bytes are bounded, decoded and their entities checked before p
 
 No package below them imports `ui`, `editor` or `apps/desktop`. `export` and `print` run headless.
 
+`tests/smart-features` is a workspace of tests, not a layer: projects built with `document`'s
+commands, saved through `persist`, and checked against `domain`'s whole diagnostic list
+(`docs/smart-features.md` §6). Nothing imports it.
+
 ## Conventions
 
 - Tests are co-located: `src/foo.ts` beside `src/foo.test.ts`.
@@ -176,6 +181,7 @@ Before starting a slice, read `docs/roadmap.md` and whichever of these applies:
 | Changing what the UI refinement built, U.1–U.20 (1.5) | `docs/superpowers/plans/2026-10-08-ui-refinement.md` — the slice's section says why it is as it is — and the requirements and mockups it links |
 | 1.7's slices — 3.13–3.20, 8.8b, 9.6, 9.7, 9.12–9.20, 9.26, Q34, Q41–Q43, U.21–U.26, R11–R18, PERF-018 | `docs/superpowers/plans/2026-11-03-release-1.7.md` and the four specs it links |
 | Tests | `docs/testing.md` |
+| A design rule, a seam or pocket check, a requirement, or how they are shown | `docs/smart-features.md` — a new rule needs its row in the applicability matrix (§6) |
 | Interface text, languages, Settings → Language | `docs/adr/0018-interface-language.md` |
 | Commits, pull requests, releases | `CONTRIBUTING.md` |
 

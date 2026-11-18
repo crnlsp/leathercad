@@ -2,7 +2,7 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    projects: ['packages/*', 'apps/*'],
+    projects: ['packages/*', 'apps/*', 'tests/*'],
 
     // Determinism. See docs/testing.md §8 — golden tests, SVG snapshots and
     // byte-stable saves all depend on these being pinned.
