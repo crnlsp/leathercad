@@ -41,7 +41,7 @@ function actions(): SelectionActions & { dispatched: Command[] } {
   return {
     dispatched,
     dispatch: (command) => dispatched.push(command),
-    duplicatePart: vi.fn(),
+    duplicatePieces: vi.fn(),
     copyPieces: vi.fn(),
     deleteFeatures: vi.fn(),
     deletePart: vi.fn(),
@@ -171,14 +171,18 @@ describe('the right-click menu (8.8)', () => {
     expect(on.dispatched[0]!.apply(document)).not.toBe(document);
   });
 
-  it('duplicates the part a selection is in, and refuses a selection across parts', () => {
-    const { entries, on } = menu(selectionOf(['cut-a', 'stitch-a']));
-    item(entries, 'context-duplicate-part').onChoose();
-    expect(on.duplicatePart).toHaveBeenCalledWith('a');
-
-    expect(
-      item(menu(selectionOf(['cut-a', 'cut-b'])).entries, 'context-duplicate-part').refusal,
-    ).toBeDefined();
+  it('duplicates the pieces a selection is in, one or several, by the board’s key (8.8b)', () => {
+    for (const picked of [
+      ['cut-a', 'stitch-a'],
+      ['cut-a', 'cut-b'],
+    ]) {
+      const { entries, on } = menu(selectionOf(picked));
+      const duplicate = item(entries, 'context-duplicate-part');
+      duplicate.onChoose();
+      expect(on.duplicatePieces).toHaveBeenCalledOnce();
+      expect(duplicate.refusal).toBeUndefined();
+      expect(duplicate.keys).toBe('duplicatePiece');
+    }
   });
 
   it('copies the pieces a selection is in, however many, named by count (8.8b)', () => {

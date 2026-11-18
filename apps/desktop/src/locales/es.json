@@ -1298,9 +1298,6 @@
     "emptyPart": "La pieza está vacía",
     "hideNote": "También se omite del PDF hasta que se vuelva a mostrar",
     "label": "Selección",
-    "spansParts_one": "La selección está en {{count}} pieza; duplica una cada vez",
-    "spansParts_other": "La selección está en {{count}} piezas; duplica una cada vez",
-    "spansParts_many": "La selección está en {{count}} piezas; duplica una cada vez",
     "flip": {
       "horizontal": "Voltear horizontalmente",
       "vertical": "Voltear verticalmente"

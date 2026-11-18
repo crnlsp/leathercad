@@ -42,6 +42,25 @@ export function copySelection(project: Project, selection: Selection): Copied | 
 }
 
 /**
+ * *Duplicate* for any number of pieces (8.8b): a copy and a paste in one step,
+ * clear of the drawing as a single duplicate is — so one machinery makes new
+ * ids, re-points every reference and keeps the seams between the pieces.
+ * `null` when the selection is in no piece.
+ */
+export function duplicateSelection(
+  project: Project,
+  selection: Selection,
+  nextId: () => string,
+): { command: Command; partIds: readonly string[]; copied: Copied } | null {
+  const copied = copySelection(project, selection);
+  if (copied === null) return null;
+  const { command, partIds } = pasteCommand(copied.clipboard, nextId, null);
+  // The same edit as a paste, but it undoes as what the maker did.
+  const label = { action: 'duplicate-pieces', count: copied.clipboard.count } as const;
+  return { command: { ...command, label }, partIds, copied };
+}
+
+/**
  * The paste, with fresh ids for everything in it. Read through `persist` as a
  * file is (the trust boundary), so it throws `InvalidProjectFileError` for a
  * copy that is not one.
@@ -60,18 +79,35 @@ export function pasteCommand(
   return { command: pastePieces(pieces, ids, at), partIds: ids.parts };
 }
 
-/** What a copy will not bring as it was, in the maker's words; `null` when nothing. */
-export function copyNotice({ frozen, dropped }: Copied, { t, list: join }: I18n): string | null {
+/**
+ * What a copy will not bring as it was, in the maker's words; `null` when nothing.
+ * Said before a paste after *Copy*, and of the copies already made after *Duplicate*.
+ */
+export function copyNotice(
+  { frozen, dropped }: Copied,
+  { t, list: join }: I18n,
+  after: 'copy' | 'duplicate',
+): string | null {
   const name = (loss: CopyLoss): string =>
     t('pieces.lossName', { feature: loss.featureName, part: loss.partName });
   const list = (losses: readonly CopyLoss[]): string => join(losses.map(name));
   const lines = [
     ...(frozen.length === 0
       ? []
-      : [t('pieces.frozen', { count: frozen.length, names: list(frozen) })]),
+      : [
+          t(after === 'copy' ? 'pieces.frozen' : 'pieces.duplicateFrozen', {
+            count: frozen.length,
+            names: list(frozen),
+          }),
+        ]),
     ...(dropped.length === 0
       ? []
-      : [t('pieces.dropped', { count: dropped.length, names: list(dropped) })]),
+      : [
+          t(after === 'copy' ? 'pieces.dropped' : 'pieces.duplicateDropped', {
+            count: dropped.length,
+            names: list(dropped),
+          }),
+        ]),
   ];
   return lines.length === 0 ? null : lines.join(' ');
 }

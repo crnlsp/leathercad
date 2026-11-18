@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest';
 
 import { createI18n } from '../../shared/i18n.js';
 import { historyText } from './historyText.js';
-import { copyNotice, copySelection, pasteCommand } from './piecesClipboard.js';
+import { copyNotice, copySelection, duplicateSelection, pasteCommand } from './piecesClipboard.js';
 
 const english = createI18n('en');
 
@@ -109,7 +109,7 @@ describe('copying and pasting pieces between projects (8.8b)', () => {
     const wallet = fixture('bifold-wallet');
     const copied = copySelection(wallet, partSelectionOf([pocketOf(wallet).id]))!;
 
-    expect(copyNotice(copied, english)).toBeNull();
+    expect(copyNotice(copied, english, 'copy')).toBeNull();
   });
 
   it('names what will paste frozen and what will be left out, before it is pasted', () => {
@@ -122,15 +122,105 @@ describe('copying and pasting pieces between projects (8.8b)', () => {
       dropped: [{ featureName: 'Gap', partName: 'Left' }],
     };
 
-    expect(copyNotice(copied, english)).toBe(
+    expect(copyNotice(copied, english, 'copy')).toBe(
       'Outline mirrored in Left and Stitch line mirrored in Left follow pieces you did not copy, ' +
         'so they will paste as the shapes they are now. Gap in Left points at a piece you did ' +
         'not copy, so it will be left out.',
     );
   });
 
+  it('says of a duplicate what its copies, already made, came without', () => {
+    const copied = {
+      clipboard: { text: '', count: 1 },
+      frozen: [{ featureName: 'Outline mirrored', partName: 'Left' }],
+      dropped: [
+        { featureName: 'Gap', partName: 'Left' },
+        { featureName: 'Slot', partName: 'Left' },
+      ],
+    };
+
+    expect(copyNotice(copied, english, 'duplicate')).toBe(
+      'Outline mirrored in Left follows a piece you did not duplicate, so its copy is the shape ' +
+        'it was. Gap in Left and Slot in Left point at pieces you did not duplicate, so they were ' +
+        'left out of the copies.',
+    );
+  });
+
   it('names a paste for Undo by how many pieces it brought', () => {
     expect(historyText({ action: 'paste', count: 1 }, english.t)).toBe('Paste piece');
     expect(historyText({ action: 'paste', count: 3 }, english.t)).toBe('Paste 3 pieces');
+  });
+});
+
+describe('duplicating any set of pieces (8.8b)', () => {
+  const subsets = <T>(items: readonly T[]): T[][] =>
+    Array.from({ length: 2 ** items.length - 1 }, (_, i) =>
+      items.filter((_, bit) => ((i + 1) >> bit) & 1),
+    );
+
+  for (const name of ['bifold-wallet', 'card-holder', 'key-fob', 'coaster']) {
+    it(`leaves no dangling reference and keeps the seams between them (${name})`, () => {
+      const project = fixture(name);
+      for (const chosen of subsets(project.parts.slice(0, 5))) {
+        const chosenIds = new Set(chosen.map((p) => p.id));
+        const made = duplicateSelection(project, partSelectionOf([...chosenIds]), ids())!;
+        const next = made.command.apply({ ...emptyDocument('x'), project }).project;
+
+        expect(next.parts).toHaveLength(project.parts.length + chosen.length);
+        expect(next.parts.slice(0, project.parts.length)).toEqual(project.parts);
+        expect(made.partIds).toHaveLength(chosen.length);
+
+        // Every id a feature or seam names is a feature that exists.
+        const features = new Set(next.parts.flatMap((p) => p.features.map((f) => f.id)));
+        const named: string[] = [];
+        JSON.stringify(next.parts.slice(project.parts.length), (key, value: unknown) => {
+          if (['sourceId', 'featureId', 'foldId', 'holeSetId'].includes(key))
+            named.push(String(value));
+          return value;
+        });
+        for (const seam of next.seams ?? []) named.push(seam.a.holeSetId, seam.b.holeSetId);
+        expect(named.filter((id) => !features.has(id))).toEqual([]);
+
+        // Seams between chosen pieces come twice; any other is not copied.
+        const holeSetsOf = (ps: typeof chosen) =>
+          new Set(ps.flatMap((p) => p.features.map((f) => f.id)));
+        const inside = holeSetsOf(chosen);
+        const between = (project.seams ?? []).filter(
+          (s) => inside.has(s.a.holeSetId) && inside.has(s.b.holeSetId),
+        );
+        expect(next.seams ?? []).toHaveLength((project.seams ?? []).length + between.length);
+      }
+    });
+  }
+
+  it('undoes as a duplicate, named by how many pieces it made, in one step', () => {
+    const holder = fixture('card-holder');
+    const made = duplicateSelection(holder, partSelectionOf(holder.parts.map((p) => p.id)), ids())!;
+
+    expect(made.command.label).toEqual({ action: 'duplicate-pieces', count: holder.parts.length });
+    expect(historyText({ action: 'duplicate-pieces', count: 1 }, english.t)).toBe(
+      'Duplicate piece',
+    );
+    expect(historyText({ action: 'duplicate-pieces', count: 3 }, english.t)).toBe(
+      'Duplicate 3 pieces',
+    );
+  });
+
+  it('hands back what Copy would lose, so a frozen mirror is told of', () => {
+    const wallet = fixture('bifold-wallet');
+    const selection = partSelectionOf([pocketOf(wallet).id]);
+
+    const made = duplicateSelection(wallet, selection, ids())!;
+    const copied = copySelection(wallet, selection)!;
+
+    expect(made.copied.frozen).toEqual(copied.frozen);
+    expect(made.copied.dropped).toEqual(copied.dropped);
+    expect(copyNotice(made.copied, english, 'duplicate')).toBe(
+      copyNotice(copied, english, 'duplicate'),
+    );
+  });
+
+  it('does nothing for a selection in no piece', () => {
+    expect(duplicateSelection(fixture('coaster'), selectionOf([]), ids())).toBeNull();
   });
 });

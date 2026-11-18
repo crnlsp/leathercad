@@ -65,6 +65,7 @@ import {
 import {
   copyNotice,
   copySelection,
+  duplicateSelection,
   pasteCommand,
   type PiecesClipboard,
 } from './piecesClipboard.js';
@@ -1358,6 +1359,26 @@ export function App({
     [store, nextId],
   );
 
+  // Ctrl+D and the menu's Duplicate, one undo step. One piece goes the way it
+  // always has (a name with "copy"); several go through copy and paste, so
+  // their seams, mirrors and references are the paste's (step and repeat,
+  // 8.8b-3, builds on this).
+  const duplicateSelected = useCallback(() => {
+    const { document, selection } = store.getState();
+    const parts = selectedParts(document.project, selection);
+    if (parts.size === 1) {
+      requestDuplicatePart([...parts][0]!);
+      return;
+    }
+    const made = duplicateSelection(document.project, selection, nextId);
+    if (made === null) return;
+    store.dispatch(made.command);
+    store.selectParts(made.partIds);
+    // What came as drawn shapes, or was left out, said of the copies just made.
+    const said = copyNotice(made.copied, i18n, 'duplicate');
+    if (said !== null) setNotice({ title: t('pieces.duplicatedTitle'), text: said });
+  }, [store, nextId, requestDuplicatePart, i18n, t]);
+
   /**
    * Pieces copied in any tab, for *Paste* in any other (8.8b): the window's,
    * not a tab's, so switching tabs keeps it.
@@ -1369,7 +1390,7 @@ export function App({
     if (copied === null) return;
     setPiecesClipboard(copied.clipboard);
     // What the paste will not bring as it was is said now, before it is pasted.
-    const said = copyNotice(copied, i18n);
+    const said = copyNotice(copied, i18n, 'copy');
     if (said !== null) setNotice({ title: t('pieces.copiedTitle'), text: said });
   }, [store, i18n, t]);
   const pastePieces = useCallback(
@@ -1845,6 +1866,7 @@ export function App({
                   onBoardContextMenu={openBoardMenu}
                   onCopyPieces={copyPieces}
                   onPastePieces={pastePieces}
+                  onDuplicatePiece={duplicateSelected}
                 >
                   {/* The legend explains the board's marks; the sheets are ink. */}
                   {view === 'design' && (
@@ -2094,7 +2116,7 @@ export function App({
                   : selectionMenu(i18n, storeState.document.project, storeState.selection, {
                       dispatch: (command) => store.dispatch(command),
                       sewTogether: startSewing,
-                      duplicatePart: requestDuplicatePart,
+                      duplicatePieces: duplicateSelected,
                       copyPieces,
                       paste: pasteChoice,
                       deleteFeatures: requestDelete,
