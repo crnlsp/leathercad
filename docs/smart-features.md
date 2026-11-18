@@ -45,8 +45,8 @@ Verified against the code, not the documents. Where they differ, it says so.
   the edge is not reported (**KD-3**).
 - Q33 says a hardware hole is judged by its rim. A hardware hole that is a mirror — across a fold,
   as the key fob's second rivet is — was not judged at all (**KD-2**, fixed by Q45).
-- Nothing says a hole on the cut edge is judged by which way the piece faces, and it is
-  (**KD-1**).
+- Nothing says a hole on the cut edge is judged by which way the piece faces, and it was
+  (**KD-1**, fixed by Q44).
 
 ## 2. Is the architecture right?
 
@@ -81,7 +81,7 @@ pocket's opening (L1) — is a statement to add, not a layer.
 | # | Weakness | Evidence |
 |---|---|---|
 | W1 | Which piece's edge is a pocket's opening is not modelled; DR8 takes the stitching's own piece. Exact for a pocket stitched on its own piece, an upper bound otherwise — even when a declared seam joins the two | SF-E4, SF-E6, SF-E7, the depth property (L1) |
-| W2 | Points exactly on an edge have no defined answer in `containsPoint`, and stitch holes are asked it | SF-K3 (KD-1) |
+| W2 | Points exactly on an edge have no defined answer in `containsPoint`, and stitch holes were asked it — fixed by Q44: `isOnMaterial` puts a point within a storage quantum of an edge on the leather (D29) | SF-K3 (KD-1) |
 | W3 | Mirrored hardware holes were never asked where they sit — fixed by Q45 | SF-J3, SF-J7 (KD-2) |
 | W8 | A stitch hole is judged at its centre, though 9.26 knows the tooth that cuts it and SVG and DXF cut that tooth | SF-K4–K6 (KD-3) |
 | W4 | A pocket problem's identity (`problemKey`) holds nothing of the requirement, so 9.16 cannot tell an accepted warning from a new one by key alone | SF-H6 |
@@ -157,7 +157,7 @@ fails if a design rule or a seam or pocket outcome is added to the registry with
 | `SEAM_HOLES_DRIFT` | DR7 · warning | As above, counts equal | Worst pair more than 0.5 mm apart along the stitching from the first holes | Within 0.5 mm (kept as information) | — |
 | `SEAM_SIDE_MISSING` | E3 · error | A declared seam | A side's hole set is gone or failed (an older version's delete) | The app's own delete removes the seam too | — |
 | `SEAM_RUNS_OFF_THE_LINE` | E4 · error | A seam side following the other's length | That length runs past the end of its line | — | — |
-| `HOLE_TOO_CLOSE_TO_EDGE` | DR2 · warning | Holes in a piece with an outline | A stitch hole's point, or a hardware or row hole's rim, within 1.5 mm of an edge | Clear of every edge | A hole exactly on the edge: this or `OUTSIDE_PART`, by orientation (**KD-1**). A stitch hole is read at its centre, not its tooth (contract, §7) |
+| `HOLE_TOO_CLOSE_TO_EDGE` | DR2 · warning | Holes in a piece with an outline | A stitch hole's point, or a hardware or row hole's rim, within 1.5 mm of an edge | Clear of every edge | A stitch hole exactly on the edge — the outline's or a cut-out's — is this at 0 mm, whichever way the piece faces (D29; **KD-1**, fixed by Q44). A stitch hole is read at its centre, not its tooth (contract, §7) |
 | `OUTSIDE_PART` | DR2 · error for holes, warning for lines | A piece with an outline | Holes off the leather; a line leaving it (sampled, §8.4) | Lines that end on the edge, within a storage quantum | As above; a stitch tooth through the edge is not read (**KD-3**) |
 | `CUT_OUT_OUTSIDE_PART` | DR2 · error | A cut-out and an outline | Part of the cut-out lies outside the outline (sampled) | — | — |
 | `PART_HAS_NO_OUTER_CONTOUR` | DR1 · error | A piece with features | None of them is its outline | An empty piece (that is `EMPTY_PART`) | — |
@@ -307,7 +307,7 @@ written beside it. `it.fails` was used first and was too forgiving — a scenari
 (a renamed id) stayed green as an "expected failure". Pinned, a broken setup, a different wrong
 answer and the fix all fail it; the fix then asserts `correct` and removes the entry from
 `KNOWN_DEFECTS`, in the same change. `matrix.test.ts` refuses `it.fails` anywhere in the scenarios,
-and holds each defect to its title (`'SF-K3 · KNOWN DEFECT KD-1 · …'`), its pin and §7.
+and holds each defect to its title (`'SF-K4 · KNOWN DEFECT KD-3 · …'`), its pin and §7.
 
 A **limit** — the model lacks something, and reads what it has correctly — is asserted as it
 behaves, with a comment naming the limit (SF-E4, SF-E7); so is behaviour still awaiting a decision
@@ -344,7 +344,11 @@ defined answer on a boundary: open at the top or right the two end holes are `OU
 (error), at the bottom or left `HOLE_TOO_CLOSE_TO_EDGE` at 0 mm (warning), and turned by a few
 degrees either, by rounding. It is the first error a maker meets making a pocket (§3, journey 2).
 Scenario **SF-K3**; evidence SF-K2. *Direction:* one answer for a hole within a storage quantum of
-the edge, as Q2 and Q33 did for lines and hardware rims, applied before `containsPoint`.
+the edge, as Q2 and Q33 did for lines and hardware rims, applied before `containsPoint`. *Fixed by
+Q44:* `isOnMaterial` puts a point within a storage quantum of any edge — the outline or a cut-out —
+on the leather (D29), so every rule that asks it shares the answer; the two end holes are
+`HOLE_TOO_CLOSE_TO_EDGE` at 0 mm whichever side is open and however the piece is turned. SF-K3
+asserts that list, and a property turns and moves a square-cornered pocket open on any side.
 
 **KD-2** — *A mirrored hardware hole is never checked.* `punchesOf` in `validate.ts` reads a
 hardware hole only when its source is a drawn circle; a mirror's source is a derivation. The key

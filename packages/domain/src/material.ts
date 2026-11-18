@@ -1,4 +1,4 @@
-import { EPS_POINT, type Mm } from '@leathercad/core';
+import { EPS_POINT, QUANTUM_MM, type Mm } from '@leathercad/core';
 import { PathOps, type Path, type Rect, type Vec2 } from '@leathercad/geometry';
 
 import type { ResolvedPart } from './evaluate.js';
@@ -36,11 +36,21 @@ export function materialOf(part: ResolvedPart): Material {
   return { outer, holes };
 }
 
-/** Whether a point is on the leather: inside the outline, outside every hole. */
+/**
+ * Whether a point is on the leather: inside the outline, outside every hole.
+ *
+ * A point within a storage quantum of an edge — the outline or a cut-out — is
+ * on it, and so on the leather (D29), as for a line (Q2) and a hardware rim
+ * (Q33). `containsPoint` has no defined answer on a boundary, so without this
+ * a stitch hole on the cut edge was off or on by which way the piece faced
+ * (Q44). Only a point the containment test puts off the leather pays for the
+ * distance.
+ */
 export function isOnMaterial(material: Material, point: Vec2): boolean {
   if (material.outer === null) return false;
-  if (!PathOps.containsPoint(material.outer, point)) return false;
-  return !material.holes.some((hole) => PathOps.containsPoint(hole, point));
+  const onEdge = (edge: Path) => PathOps.distanceToPath(edge, point) <= QUANTUM_MM;
+  if (!PathOps.containsPoint(material.outer, point) && !onEdge(material.outer)) return false;
+  return !material.holes.some((hole) => PathOps.containsPoint(hole, point) && !onEdge(hole));
 }
 
 /**
