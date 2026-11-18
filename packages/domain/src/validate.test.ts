@@ -737,6 +737,68 @@ describe('the rules about a part and its material', () => {
       ).toBeCloseTo(1, 6);
     });
 
+    it('reads a stitch hole on a cut-out’s edge as on the leather, 0 mm clear, from any side (D29)', () => {
+      // A square window, 40 to 60 by 27 to 47, and stitching run up to it
+      // from each side, ending with a hole on its edge. One verdict, whichever
+      // side — not an error on two and a warning on the other two.
+      const window: Feature = {
+        ...base('window-1', 'Window'),
+        kind: 'cut-contour',
+        role: 'inner',
+        source: {
+          kind: 'path',
+          path: PathOps.polyline(
+            [
+              { x: 40, y: 27 },
+              { x: 60, y: 27 },
+              { x: 60, y: 47 },
+              { x: 40, y: 47 },
+            ],
+            true,
+          ),
+        },
+      };
+      const runs: readonly (readonly [Vec2, Vec2])[] = [
+        [
+          { x: 20, y: 37 },
+          { x: 40, y: 37 },
+        ],
+        [
+          { x: 80, y: 37 },
+          { x: 60, y: 37 },
+        ],
+        [
+          { x: 50, y: 7 },
+          { x: 50, y: 27 },
+        ],
+        [
+          { x: 50, y: 67 },
+          { x: 50, y: 47 },
+        ],
+      ];
+      for (const [from, to] of runs) {
+        const found = validate(
+          evaluate(
+            project([
+              panel(),
+              window,
+              drawn('stitch-line', [from, to], false),
+              holeSet('stitch-1'),
+            ]),
+          ),
+        ).filter((d) => d.featureId === 'holes-1');
+
+        expect(
+          found.map((d) => [d.problem.code, d.severity]),
+          `to ${to.x}, ${to.y}`,
+        ).toEqual([['HOLE_TOO_CLOSE_TO_EDGE', 'warning']]);
+        expect(
+          found[0]!.problem.code === 'HOLE_TOO_CLOSE_TO_EDGE' &&
+            found[0]!.problem.facts.clearanceMm,
+        ).toBeCloseTo(0, 6);
+      }
+    });
+
     it('says nothing about a hole off the material — that is a different problem', () => {
       const off = codes(evaluate(project([panel(), rivet({ x: 300, y: 40 })])));
 

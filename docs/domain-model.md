@@ -935,7 +935,10 @@ deliberate: an exact answer needs path-against-path clipping, which [ADR 0008](a
 declined, and a rule that exists to catch mistakes does not have to certify their absence. What
 follows from it: a rule finding nothing is **not** a guarantee, nothing downstream may treat these
 rules as a proof of validity, and a cut path or an export must never be gated on one of them. Hole
-rules are exact — a hole is a point, and a point is either on the material or not.
+rules are exact — a hole is a point, and a point is either on the material or not. A point within
+a storage quantum of an edge, the outline's or a cut-out's, is on it, and so on the leather (D29,
+Q44), as a line's end is (Q2) and a hardware rim (Q33): `isOnMaterial` answers that for every rule,
+so a stitch hole on the cut edge is `HOLE_TOO_CLOSE_TO_EDGE` at 0 mm whichever way the piece faces.
 
 ### 8.5 Interaction invariants
 
@@ -1086,7 +1089,7 @@ The diagnostics themselves:
 | `TEXT_GLYPH_MISSING` | warning | outcome | E2 | built 4.11a for part names; labels 4.11b |
 | `CONTOUR_SELF_INTERSECTS` | error | rule | DR3 | built 4.12a |
 | `OUTSIDE_PART` | error for stitch and hardware holes, warning for lines | rule | DR2 | built 4.3a; a hardware hole by its rim, Q33; a row's holes by theirs, 4.14 |
-| `HOLE_TOO_CLOSE_TO_EDGE` | warning (under 1.5 mm, from a stitch hole's point or a hardware or row hole's rim) | rule | DR2 | built 4.3a; the rim, Q33 |
+| `HOLE_TOO_CLOSE_TO_EDGE` | warning (under 1.5 mm, from a stitch hole's point or a hardware or row hole's rim) | rule | DR2 | built 4.3a; the rim, Q33; a stitch hole on the edge, at 0 mm, Q44 |
 | `CUT_OUT_OUTSIDE_PART` | error | rule | DR2 | built 4.3a |
 | `HOLES_OVERLAP` | warning (a row's neighbouring holes no more than a diameter apart) | rule | DR3 | built 4.14 |
 | `PART_HAS_NO_OUTER_CONTOUR` | error | rule | DR1 | built 4.3a |

@@ -22,8 +22,10 @@ import {
   sew,
   statesNothing,
   stitchAllRound,
+  stitchLeavingOpen,
   stitchOf,
   turnPiece,
+  type Side,
 } from '../harness/actions.js';
 import { Bench } from '../harness/bench.js';
 import { cardPocket, depthFromOpening, stitchReading } from './support.js';
@@ -65,6 +67,9 @@ const pocket = (size: { width: number; height: number }, wanted?: PocketRequirem
     ...cardPocket('pocket', size),
     ...(wanted === undefined ? [] : [holds(STITCH, wanted)]),
   );
+
+/** The rules that say where a hole stands against the cut edge (DR2). */
+const EDGE_CODES: readonly string[] = ['OUTSIDE_PART', 'HOLE_TOO_CLOSE_TO_EDGE'];
 
 const said = (bench: Bench, code: string) => bench.diagnostics.some((d) => d.problem.code === code);
 
@@ -116,8 +121,8 @@ describe('properties of a pocket that holds what it must', () => {
   });
 
   it('moving and turning the pocket changes nothing it is told', () => {
-    // Assumes `cardPocket`, whose holes stand 3 mm clear of every edge. Holes
-    // exactly on an edge are the one exception known, and a defect (SF-K3).
+    // Assumes `cardPocket`, whose holes stand 3 mm clear of every edge; the
+    // next property is the pocket with square corners, its end holes on one.
     fc.assert(
       fc.property(
         pocketSize,
@@ -128,6 +133,41 @@ describe('properties of a pocket that holds what it must', () => {
         (size, wanted, angle, dx, dy) => {
           const bench = pocket(size, wanted);
           const before = bench.diagnostics;
+          bench.do(turnPiece('pocket', angle, at(17, 23)), movePiece('pocket', at(dx, dy)));
+          expectSameVerdicts(before, bench.diagnostics);
+        },
+      ),
+      { numRuns: 60 },
+    );
+  });
+
+  it('a square-cornered pocket, open on any side, turned and moved, is told one thing about its end holes on the edge', () => {
+    // Its end holes are on the cut edge (SF-K2). Within a storage quantum of
+    // an edge is on the leather (D29): one 0 mm warning, whichever side is
+    // open, however the piece is turned (Q44).
+    const squarePocket = (size: { width: number; height: number }, open: Side) =>
+      new Bench().do(
+        drawRectangle('pocket', { x: 0, y: 0, ...size }),
+        stitchLeavingOpen('pocket', open, 3),
+        punchHoles('pocket'),
+      );
+    fc.assert(
+      fc.property(
+        pocketSize,
+        fc.constantFrom<Side>('top', 'right', 'bottom', 'left'),
+        turn,
+        tenths(-500, 500),
+        tenths(-500, 500).filter((dy) => dy !== 0),
+        (size, open, angle, dx, dy) => {
+          // Across sides, the edge rules alone: a side's length decides how
+          // evenly its holes fall, which is DR4's and no part of this.
+          const edge = (list: readonly Diagnostic[]) =>
+            list.filter((d) => EDGE_CODES.includes(d.problem.code));
+          const reference = edge(squarePocket(size, 'bottom').diagnostics);
+          expect(reference.map((d) => d.problem.code)).toEqual(['HOLE_TOO_CLOSE_TO_EDGE']);
+          const bench = squarePocket(size, open);
+          const before = bench.diagnostics;
+          expectSameVerdicts(reference, edge(before));
           bench.do(turnPiece('pocket', angle, at(17, 23)), movePiece('pocket', at(dx, dy)));
           expectSameVerdicts(before, bench.diagnostics);
         },
