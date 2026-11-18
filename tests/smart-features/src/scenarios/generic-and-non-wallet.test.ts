@@ -169,15 +169,9 @@ describe('J — leatherwork that is not a wallet', () => {
     expect(box.maxX - box.minX).toBeCloseTo(4, 9);
   });
 
-  /**
-   * KNOWN DEFECT KD-2 (docs/smart-features.md §7). A hardware hole that is a
-   * mirror — across a fold, as the key fob's second rivet is, or of a whole
-   * piece — is never asked where it sits: `punchesOf` in validate.ts reads a
-   * hardware hole only when its source is a drawn circle. So the mirrored rivet
-   * 3 mm from the far end, or wholly off the leather, is not reported. SF-J4
-   * shows it is there.
-   */
-  it('SF-J3 · KNOWN DEFECT KD-2 · a rivet pushed toward the end warns on one half of the fold, not both', () => {
+  // KD-2, fixed by Q45: the mirror is judged by the circle it resolves to,
+  // like the rivet it mirrors.
+  it('SF-J3 · a rivet pushed toward the end warns on both halves of the fold, with the same clearance', () => {
     const nearTheEnd = {
       code: 'HOLE_TOO_CLOSE_TO_EDGE',
       severity: 'warning',
@@ -185,13 +179,21 @@ describe('J — leatherwork that is not a wallet', () => {
     } as const;
     Bench.open('key-fob')
       .do(pushedToTheEnd)
-      .expectDefect('KD-2', {
-        now: [{ ...nearTheEnd, on: 'strap-rivet-a', location: { points: [at(3, 13)] } }],
-        correct: [
-          { ...nearTheEnd, on: 'strap-rivet-a' },
-          { ...nearTheEnd, on: 'strap-rivet-b' },
-        ],
-      });
+      .expect([
+        { ...nearTheEnd, on: 'strap-rivet-a', location: { points: [at(3, 13)] } },
+        { ...nearTheEnd, on: 'strap-rivet-b', location: { points: [at(137, 13)] } },
+      ]);
+  });
+
+  it('SF-J7 · a rivet pushed off the leather is off it on both halves of the fold', () => {
+    // 13 mm left puts its centre at (1, 13): its rim leaves the round end by 1 mm.
+    const outside = { code: 'OUTSIDE_PART', severity: 'error', facts: { what: 'holes' } } as const;
+    Bench.open('key-fob')
+      .do(translateFeatures(['strap-rivet-a'], at(-13, 0)))
+      .expect([
+        { ...outside, on: 'strap-rivet-a', location: { points: [at(1, 13)] } },
+        { ...outside, on: 'strap-rivet-b', location: { points: [at(139, 13)] } },
+      ]);
   });
 
   it('SF-J2 · a strap stitched all round with a row of buckle holes says nothing, and reads as no pocket', () => {

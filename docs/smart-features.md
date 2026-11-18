@@ -44,7 +44,7 @@ Verified against the code, not the documents. Where they differ, it says so.
   says from a stitch hole's point. Since 9.26 a stitch hole's cut is its tooth, and a tooth through
   the edge is not reported (**KD-3**).
 - Q33 says a hardware hole is judged by its rim. A hardware hole that is a mirror — across a fold,
-  as the key fob's second rivet is — is not judged at all (**KD-2**).
+  as the key fob's second rivet is — was not judged at all (**KD-2**, fixed by Q45).
 - Nothing says a hole on the cut edge is judged by which way the piece faces, and it is
   (**KD-1**).
 
@@ -82,7 +82,7 @@ pocket's opening (L1) — is a statement to add, not a layer.
 |---|---|---|
 | W1 | Which piece's edge is a pocket's opening is not modelled; DR8 takes the stitching's own piece. Exact for a pocket stitched on its own piece, an upper bound otherwise — even when a declared seam joins the two | SF-E4, SF-E6, SF-E7, the depth property (L1) |
 | W2 | Points exactly on an edge have no defined answer in `containsPoint`, and stitch holes are asked it | SF-K3 (KD-1) |
-| W3 | Mirrored hardware holes are never asked where they sit | SF-J3 (KD-2) |
+| W3 | Mirrored hardware holes were never asked where they sit — fixed by Q45 | SF-J3, SF-J7 (KD-2) |
 | W8 | A stitch hole is judged at its centre, though 9.26 knows the tooth that cuts it and SVG and DXF cut that tooth | SF-K4–K6 (KD-3) |
 | W4 | A pocket problem's identity (`problemKey`) holds nothing of the requirement, so 9.16 cannot tell an accepted warning from a new one by key alone | SF-H6 |
 | W5 | A pass is silence. The domain returns no record of which checks ran, passed, or could not run, so the app cannot say "checked: 94 mm across, 87.6 mm needed" without computing again | Properties shows readings and notes, never a verdict line |
@@ -121,7 +121,7 @@ from the code and the scenarios for the rest.
 | 3 | Opening the bifold | Clean. Its pocket stitching reads 89 × 53 mm; *Holds: Nothing stated*; no card check runs | 1 to say *Payment card* | Medium: a maker may believe the template's pockets were checked for a card | Ship the card templates with *Holds: Payment card* (not fully). Needs the ease decision in §8 first: today a requirement copies an ease, and a template cannot know the maker's |
 | 4 | Changing a pocket checked before | Recomputed on every evaluation; warnings come and go exactly (SF-B3, H7, I5). Selecting the **holes** — what the board shows most — gives the reading but neither the requirement nor its warning, which are on the stitch line | 1 extra to find the stitch line | Medium | When a hole set is selected, show its stitch line's pocket problems, and a button that selects the stitch line (D24 foresaw it) |
 | 5 | An SVG with no layer names | Open paths arrive as markings. No command turns a marking into stitching, so seams and pocket checks are out of reach without redrawing | Redraw | Medium | *Use as stitching* on a marking line (and back), one undo step. The preview could say that a layer named `stitch` brings lines in as stitching |
-| 6 | A strap, a key fob | Universal rules only; nothing about pockets or seams (SF-J1, J2). The fob's mirrored rivet is not checked (KD-2) | 0 | High until KD-2 is fixed: the template teaching fold mirrors teaches an unchecked hole | Fix KD-2 |
+| 6 | A strap, a key fob | Universal rules only; nothing about pockets or seams (SF-J1, J2). The fob's mirrored rivet was not checked (KD-2); since Q45 it is | 0 | High until KD-2 was fixed: the template teaching fold mirrors taught an unchecked hole | Fixed by Q45 |
 | 7 | A pocket-shaped piece that is not one | Properties shows *Stitching dimensions* and *Holds: Nothing stated*; no warning (scenario SF-D1) | 0 | Low: *Holds* could read as a field to fill | The note in journey 2 must read as optional: "Say what goes in…", never "Purpose missing" |
 | 8 | Accepting a valid warning | Impossible: 9.16 is not built. The only ways to quiet a warning are to change the requirement or the ease, which falsifies the design | — | High for real projects with deliberate choices | Build 9.16 with the criteria in §8 |
 | 9 | Changing a requirement after accepting its warning | Would keep the acceptance: the key does not change (SF-H6) | — | High once 9.16 ships | 9.16 stores what the warning was found from — the requirement, and the ease — and drops the acceptance when it changes |
@@ -157,7 +157,7 @@ fails if a design rule or a seam or pocket outcome is added to the registry with
 | `SEAM_HOLES_DRIFT` | DR7 · warning | As above, counts equal | Worst pair more than 0.5 mm apart along the stitching from the first holes | Within 0.5 mm (kept as information) | — |
 | `SEAM_SIDE_MISSING` | E3 · error | A declared seam | A side's hole set is gone or failed (an older version's delete) | The app's own delete removes the seam too | — |
 | `SEAM_RUNS_OFF_THE_LINE` | E4 · error | A seam side following the other's length | That length runs past the end of its line | — | — |
-| `HOLE_TOO_CLOSE_TO_EDGE` | DR2 · warning | Holes in a piece with an outline | A stitch hole's point, or a hardware or row hole's rim, within 1.5 mm of an edge | Clear of every edge | A hole exactly on the edge: this or `OUTSIDE_PART`, by orientation (**KD-1**). A mirrored hardware hole: never asked (**KD-2**). A stitch hole is read at its centre, not its tooth (contract, §7) |
+| `HOLE_TOO_CLOSE_TO_EDGE` | DR2 · warning | Holes in a piece with an outline | A stitch hole's point, or a hardware or row hole's rim, within 1.5 mm of an edge | Clear of every edge | A hole exactly on the edge: this or `OUTSIDE_PART`, by orientation (**KD-1**). A stitch hole is read at its centre, not its tooth (contract, §7) |
 | `OUTSIDE_PART` | DR2 · error for holes, warning for lines | A piece with an outline | Holes off the leather; a line leaving it (sampled, §8.4) | Lines that end on the edge, within a storage quantum | As above; a stitch tooth through the edge is not read (**KD-3**) |
 | `CUT_OUT_OUTSIDE_PART` | DR2 · error | A cut-out and an outline | Part of the cut-out lies outside the outline (sampled) | — | — |
 | `PART_HAS_NO_OUTER_CONTOUR` | DR1 · error | A piece with features | None of them is its outline | An empty piece (that is `EMPTY_PART`) | — |
@@ -350,7 +350,9 @@ the edge, as Q2 and Q33 did for lines and hardware rims, applied before `contain
 hardware hole only when its source is a drawn circle; a mirror's source is a derivation. The key
 fob's second rivet, a fold mirror, can sit 1 mm from the far end, or off the leather, unreported.
 Scenario **SF-J3**; evidence SF-J4. *Direction:* read the resolved circle — its path — for any
-`hardware-hole`, as a row's holes are read resolved.
+`hardware-hole`, as a row's holes are read resolved. *Fixed by Q45:* `punchesOf` reads the
+resolved circle, whatever its source; SF-J3 asserts both halves warn at 1 mm, SF-J7 that both are
+`OUTSIDE_PART` once off the leather.
 
 **KD-3** — *A stitch tooth that cuts through the edge is not reported.* Since 9.26 a hole set
 knows its tooth, and SVG and DXF cut its true outline (D27); the rules still read a stitch hole as

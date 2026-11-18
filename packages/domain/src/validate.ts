@@ -588,13 +588,12 @@ function punchesOf(entry: Extract<ResolvedFeature, { ok: true }>): readonly Punc
     return entry.holes.holes.map((hole) => ({ centre: hole.point, radiusMm }));
   }
 
-  const source = entry.feature.source;
-  if (
-    entry.feature.kind === 'hardware-hole' &&
-    source.kind === 'shape' &&
-    source.shape.type === 'circle'
-  ) {
-    return [{ centre: source.shape.centre, radiusMm: source.shape.radius }];
+  // Judged by the circle it resolves to, not by its source: a mirror — across
+  // a fold, a line, or of another mirror — is a hole punched like any other
+  // (Q45). A circle resolves to one whole-turn arc, and a reflection keeps it one.
+  const [only, ...rest] = entry.path.segments;
+  if (entry.feature.kind === 'hardware-hole' && only?.kind === 'arc' && rest.length === 0) {
+    return [{ centre: only.centre, radiusMm: only.radius }];
   }
   return null;
 }

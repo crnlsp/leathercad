@@ -123,7 +123,7 @@ as any item that will not make it does.
 - ☐ **Q21 Cut two, one turned over** (P1) — prints: a format version of its own, measured on paper.
 - ✅ **Q43 A laser export names pieces that overlap on the board** (P1).
 - ✅ **9.26 The iron's tooth: French, Japanese or round holes** (P1) — the hole set knows its iron's tooth; the board draws it, SVG and DXF cut it true, paper unchanged; format 14.
-- ☐ **Q45 A mirrored hardware hole is checked** — the key fob's second rivet, judged by its rim like the first.
+- ✅ **Q45 A mirrored hardware hole is checked** — the key fob's second rivet, judged by its rim like the first.
 - ☐ **Q44 A hole on the cut edge, one verdict** — the same problem whichever way the piece faces (D29).
 - ☐ **Q46 A tooth through the edge is off the leather** (P1) — a hole set's iron read as SVG and DXF cut it.
 - ☐ **Q47 End holes moved in** (P1) — start and end offsets in Properties; the advice names them.

@@ -1039,6 +1039,108 @@ describe('a hardware hole is measured by its rim, not its centre (Q33)', () => {
   });
 });
 
+// ——— A mirrored hardware hole is a hole too (Q45) ———————————————————————————
+
+describe('a mirrored hardware hole is checked like its original (Q45)', () => {
+  const rivet = (centre: Vec2, radius: number): Feature => ({
+    ...base('rivet-a', 'Rivet'),
+    kind: 'hardware-hole',
+    hardwareType: 'rivet',
+    source: { kind: 'shape', shape: { type: 'circle', centre, radius } },
+  });
+
+  /** Mirrors `sourceId` across the vertical line x = `x`. */
+  const mirrorOf = (id: string, sourceId: string, x: number): Feature => ({
+    ...base(id, 'Rivet'),
+    kind: 'hardware-hole',
+    hardwareType: 'rivet',
+    source: {
+      kind: 'derived',
+      sourceId,
+      op: {
+        type: 'mirror',
+        axis: { kind: 'line', origin: { x, y: 0 }, angleRad: Math.PI / 2 },
+        glideMm: 0,
+      },
+    },
+  });
+
+  /** The hole codes and clearance reported on one feature. */
+  const verdictOn = (found: readonly Diagnostic[], id: string) =>
+    found
+      .filter((d) => d.featureId === id)
+      .map((d) => ({
+        code: d.problem.code,
+        clearanceMm:
+          d.problem.code === 'HOLE_TOO_CLOSE_TO_EDGE' ? d.problem.facts.clearanceMm : undefined,
+      }));
+
+  it('reports a mirror that lands off the leather, though its original is fine', () => {
+    const found = validate(
+      evaluate(
+        project([
+          panel(105, 75, 0),
+          rivet({ x: 20, y: 37 }, 2),
+          mirrorOf('rivet-b', 'rivet-a', 110),
+        ]),
+      ),
+    );
+
+    expect(verdictOn(found, 'rivet-a')).toEqual([]);
+    expect(verdictOn(found, 'rivet-b')).toEqual([{ code: 'OUTSIDE_PART', clearanceMm: undefined }]);
+  });
+
+  it('checks a mirror of a mirror too', () => {
+    const found = validate(
+      evaluate(
+        project([
+          panel(105, 75, 0),
+          rivet({ x: 20, y: 37 }, 2),
+          mirrorOf('rivet-b', 'rivet-a', 52.5),
+          mirrorOf('rivet-c', 'rivet-b', 0),
+        ]),
+      ),
+    );
+
+    expect(verdictOn(found, 'rivet-c')).toEqual([{ code: 'OUTSIDE_PART', clearanceMm: undefined }]);
+  });
+
+  it('gives a hole and its mirror across the piece the same verdict and clearance', () => {
+    // The panel is symmetric about x = width / 2, so the mirror sits exactly
+    // where the hole would after the piece is turned over: whatever is said
+    // of one must be said of the other.
+    fc.assert(
+      fc.property(
+        fc.double({ min: 20, max: 400, noNaN: true }),
+        fc.double({ min: 20, max: 400, noNaN: true }),
+        fc.double({ min: -0.05, max: 1.05, noNaN: true }),
+        fc.double({ min: -0.05, max: 1.05, noNaN: true }),
+        fc.double({ min: 0.5, max: 8, noNaN: true }),
+        (width, height, u, v, radius) => {
+          const found = validate(
+            evaluate(
+              project([
+                panel(width, height, 8),
+                rivet({ x: width * u, y: height * v }, radius),
+                mirrorOf('rivet-b', 'rivet-a', width / 2),
+              ]),
+            ),
+          );
+          const original = verdictOn(found, 'rivet-a');
+          const mirrored = verdictOn(found, 'rivet-b');
+
+          expect(mirrored.map((d) => d.code)).toEqual(original.map((d) => d.code));
+          mirrored.forEach((d, i) => {
+            if (d.clearanceMm !== undefined) {
+              expect(d.clearanceMm).toBeCloseTo(original[i]!.clearanceMm!, 6);
+            }
+          });
+        },
+      ),
+    );
+  });
+});
+
 describe('validation reused across revisions (PERF-005)', () => {
   /** A marking line with nothing to cut it from. */
   const panelless = (): Feature => ({
