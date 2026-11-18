@@ -79,18 +79,35 @@ export function pasteCommand(
   return { command: pastePieces(pieces, ids, at), partIds: ids.parts };
 }
 
-/** What a copy will not bring as it was, in the maker's words; `null` when nothing. */
-export function copyNotice({ frozen, dropped }: Copied, { t, list: join }: I18n): string | null {
+/**
+ * What a copy will not bring as it was, in the maker's words; `null` when nothing.
+ * Said before a paste after *Copy*, and of the copies already made after *Duplicate*.
+ */
+export function copyNotice(
+  { frozen, dropped }: Copied,
+  { t, list: join }: I18n,
+  after: 'copy' | 'duplicate',
+): string | null {
   const name = (loss: CopyLoss): string =>
     t('pieces.lossName', { feature: loss.featureName, part: loss.partName });
   const list = (losses: readonly CopyLoss[]): string => join(losses.map(name));
   const lines = [
     ...(frozen.length === 0
       ? []
-      : [t('pieces.frozen', { count: frozen.length, names: list(frozen) })]),
+      : [
+          t(after === 'copy' ? 'pieces.frozen' : 'pieces.duplicateFrozen', {
+            count: frozen.length,
+            names: list(frozen),
+          }),
+        ]),
     ...(dropped.length === 0
       ? []
-      : [t('pieces.dropped', { count: dropped.length, names: list(dropped) })]),
+      : [
+          t(after === 'copy' ? 'pieces.dropped' : 'pieces.duplicateDropped', {
+            count: dropped.length,
+            names: list(dropped),
+          }),
+        ]),
   ];
   return lines.length === 0 ? null : lines.join(' ');
 }

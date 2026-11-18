@@ -1409,6 +1409,11 @@
     "frozen_other": "{{names}} follow pieces you did not copy, so they will paste as the shapes they are now.",
     "dropped_one": "{{names}} points at a piece you did not copy, so it will be left out.",
     "dropped_other": "{{names}} point at pieces you did not copy, so they will be left out.",
+    "duplicatedTitle": "Duplicated",
+    "duplicateFrozen_one": "{{names}} follows a piece you did not duplicate, so its copy is the shape it was.",
+    "duplicateFrozen_other": "{{names}} follow pieces you did not duplicate, so their copies are the shapes they were.",
+    "duplicateDropped_one": "{{names}} points at a piece you did not duplicate, so it was left out of the copy.",
+    "duplicateDropped_other": "{{names}} point at pieces you did not duplicate, so they were left out of the copies.",
     "pasteFailedTitle": "Could not paste",
     "pasteFailed": "The copied pieces could not be read back. Copy them again."
   },

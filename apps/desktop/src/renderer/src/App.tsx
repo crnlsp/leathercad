@@ -1374,9 +1374,9 @@ export function App({
     if (made === null) return;
     store.dispatch(made.command);
     store.selectParts(made.partIds);
-    // What came as drawn shapes, said as Copy says it.
-    const said = copyNotice(made.copied, i18n);
-    if (said !== null) setNotice({ title: t('pieces.copiedTitle'), text: said });
+    // What came as drawn shapes, or was left out, said of the copies just made.
+    const said = copyNotice(made.copied, i18n, 'duplicate');
+    if (said !== null) setNotice({ title: t('pieces.duplicatedTitle'), text: said });
   }, [store, nextId, requestDuplicatePart, i18n, t]);
 
   /**
@@ -1390,7 +1390,7 @@ export function App({
     if (copied === null) return;
     setPiecesClipboard(copied.clipboard);
     // What the paste will not bring as it was is said now, before it is pasted.
-    const said = copyNotice(copied, i18n);
+    const said = copyNotice(copied, i18n, 'copy');
     if (said !== null) setNotice({ title: t('pieces.copiedTitle'), text: said });
   }, [store, i18n, t]);
   const pastePieces = useCallback(

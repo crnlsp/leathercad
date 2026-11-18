@@ -109,7 +109,7 @@ describe('copying and pasting pieces between projects (8.8b)', () => {
     const wallet = fixture('bifold-wallet');
     const copied = copySelection(wallet, partSelectionOf([pocketOf(wallet).id]))!;
 
-    expect(copyNotice(copied, english)).toBeNull();
+    expect(copyNotice(copied, english, 'copy')).toBeNull();
   });
 
   it('names what will paste frozen and what will be left out, before it is pasted', () => {
@@ -122,10 +122,27 @@ describe('copying and pasting pieces between projects (8.8b)', () => {
       dropped: [{ featureName: 'Gap', partName: 'Left' }],
     };
 
-    expect(copyNotice(copied, english)).toBe(
+    expect(copyNotice(copied, english, 'copy')).toBe(
       'Outline mirrored in Left and Stitch line mirrored in Left follow pieces you did not copy, ' +
         'so they will paste as the shapes they are now. Gap in Left points at a piece you did ' +
         'not copy, so it will be left out.',
+    );
+  });
+
+  it('says of a duplicate what its copies, already made, came without', () => {
+    const copied = {
+      clipboard: { text: '', count: 1 },
+      frozen: [{ featureName: 'Outline mirrored', partName: 'Left' }],
+      dropped: [
+        { featureName: 'Gap', partName: 'Left' },
+        { featureName: 'Slot', partName: 'Left' },
+      ],
+    };
+
+    expect(copyNotice(copied, english, 'duplicate')).toBe(
+      'Outline mirrored in Left follows a piece you did not duplicate, so its copy is the shape ' +
+        'it was. Gap in Left and Slot in Left point at pieces you did not duplicate, so they were ' +
+        'left out of the copies.',
     );
   });
 
@@ -189,7 +206,7 @@ describe('duplicating any set of pieces (8.8b)', () => {
     );
   });
 
-  it('hands back what Copy would say, so a frozen mirror is told of', () => {
+  it('hands back what Copy would lose, so a frozen mirror is told of', () => {
     const wallet = fixture('bifold-wallet');
     const selection = partSelectionOf([pocketOf(wallet).id]);
 
@@ -198,7 +215,9 @@ describe('duplicating any set of pieces (8.8b)', () => {
 
     expect(made.copied.frozen).toEqual(copied.frozen);
     expect(made.copied.dropped).toEqual(copied.dropped);
-    expect(copyNotice(made.copied, english)).toBe(copyNotice(copied, english));
+    expect(copyNotice(made.copied, english, 'duplicate')).toBe(
+      copyNotice(copied, english, 'duplicate'),
+    );
   });
 
   it('does nothing for a selection in no piece', () => {
