@@ -558,11 +558,9 @@ function offMaterial(
     feature.kind === 'marking-line'
   ) {
     // A line may run *to* the edge: a fold drawn right across the piece ends
-    // on the outline, and that is on the leather, not off it (Q2). "On the
-    // edge" is within one storage quantum, the grid every drawn point snaps to.
-    const off = pointsAlong(entry.path).some(
-      (point) => !isOnMaterial(material, point) && distanceToEdge(material, point) > QUANTUM_MM,
-    );
+    // on the outline, and that is on the leather, not off it (Q2) — which
+    // `isOnMaterial` answers for every rule, within one storage quantum (D29).
+    const off = pointsAlong(entry.path).some((point) => !isOnMaterial(material, point));
     if (off) found.push({ problem: problem('OUTSIDE_PART', { ...about, what: 'line' }) });
   }
 

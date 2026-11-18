@@ -1,5 +1,5 @@
 import { IRON_STYLES, evaluate, toothOfStyle, toothOutline, type Tooth } from '@leathercad/domain';
-import { intersectPaths } from '@leathercad/geometry';
+import { MatOps, intersectPaths } from '@leathercad/geometry';
 import { STARTER_IRONS } from '@leathercad/platform';
 import { describe, expect, it } from 'vitest';
 
@@ -13,6 +13,7 @@ import {
   stitchAllRound,
   stitchLeavingOpen,
   stitchOf,
+  turnPiece,
   type Side,
 } from '../harness/actions.js';
 import { Bench } from '../harness/bench.js';
@@ -92,23 +93,14 @@ describe('K — holes on, and teeth across, the cut edge', () => {
   });
 
   /**
-   * KNOWN DEFECT KD-1 (docs/smart-features.md §7). A stitch hole exactly on
-   * the outline is asked `containsPoint`, which has no defined answer on the
-   * boundary (geometry/path/contains.ts). Open at the top or the right it is
-   * `OUTSIDE_PART`, an error; at the bottom or the left `HOLE_TOO_CLOSE_TO_EDGE`
-   * with 0 mm clearance, a warning; turned by a few degrees, either, by
-   * rounding. A hardware hole's rim on the edge is held to one answer within a
-   * storage quantum (Q2, Q33); a stitch hole is not. Which answer is right is
-   * the maintainer's; the defect is that they differ, so each orientation's
-   * `correct` is the verdict the other half gets.
+   * Was KNOWN DEFECT KD-1 (docs/smart-features.md §7), fixed by Q44. A stitch
+   * hole exactly on the outline was asked `containsPoint`, which has no
+   * defined answer on the boundary: open at the top or the right it was
+   * `OUTSIDE_PART`, an error; at the bottom or the left a 0 mm warning; turned
+   * a few degrees, either. Within a storage quantum of an edge is on the
+   * leather (D29), so it is the warning every way the piece faces.
    */
-  it('SF-K3 · KNOWN DEFECT KD-1 · holes on the edge are an error or a warning by which side is open', () => {
-    const off = {
-      code: 'OUTSIDE_PART',
-      severity: 'error',
-      on: holesOf('pocket'),
-      facts: { what: 'holes' },
-    } as const;
+  it('SF-K3 · holes on the edge get one verdict, a 0 mm warning, whichever side is open and however the piece is turned', () => {
     const near = {
       code: 'HOLE_TOO_CLOSE_TO_EDGE',
       severity: 'warning',
@@ -121,17 +113,17 @@ describe('K — holes on, and teeth across, the cut edge', () => {
       bottom: [at(97, 0), at(3, 0)],
       left: [at(0, 3), at(0, 57)],
     };
-    for (const open of ['top', 'right'] as const) {
-      squarePocket(open).expectDefect('KD-1', {
-        now: [{ ...off, location: { points: ends[open] } }],
-        correct: [near],
-      });
-    }
-    for (const open of ['bottom', 'left'] as const) {
-      squarePocket(open).expectDefect('KD-1', {
-        now: [{ ...near, location: { points: ends[open] } }],
-        correct: [off],
-      });
+    const about = at(17, 23);
+    for (const open of sides) {
+      for (const angle of [0, 0.001, Math.PI / 7, Math.PI / 2, -2.5]) {
+        const turned = MatOps.fromRotationAround(about, angle);
+        const bench = squarePocket(open);
+        if (angle !== 0) bench.do(turnPiece('pocket', angle, about));
+        bench.expect(
+          [{ ...near, location: { points: ends[open].map((p) => MatOps.apply(turned, p)) } }],
+          `open at the ${open}, turned ${angle}`,
+        );
+      }
     }
   });
 
