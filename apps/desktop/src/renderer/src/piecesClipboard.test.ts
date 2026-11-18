@@ -220,6 +220,25 @@ describe('duplicating any set of pieces (8.8b)', () => {
     );
   });
 
+  it('puts several duplicated pieces a step on from where they are, seams and all (8.8b)', () => {
+    const holder = fixture('card-holder');
+    const all = partSelectionOf(holder.parts.map((p) => p.id));
+    const step = { x: 0, y: -15 };
+    const made = duplicateSelection(holder, all, ids(), step)!;
+    const next = made.command.apply({ ...emptyDocument('x'), project: holder }).project;
+
+    const bottom = (project: Project, id: string) =>
+      PathOps.bbox(
+        evaluate(project)
+          .parts.find((p) => p.part.id === id)!
+          .features.flatMap((f) => (f.ok ? [f.path] : []))[0]!,
+      )!;
+    holder.parts.forEach((part, i) => {
+      const [was, now] = [bottom(holder, part.id), bottom(next, made.partIds[i]!)];
+      expect(approxEq(now.minX, was.minX) && approxEq(now.minY, was.minY - 15)).toBe(true);
+    });
+  });
+
   it('does nothing for a selection in no piece', () => {
     expect(duplicateSelection(fixture('coaster'), selectionOf([]), ids())).toBeNull();
   });

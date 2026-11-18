@@ -6,6 +6,7 @@ import type { OutsideChange } from '@leathercad/platform';
 import type { Translate } from '../../shared/i18n.js';
 import type { CanvasView, TabCameras } from './CanvasHost.js';
 import type { PartsFolds } from './PartsList.js';
+import { StepMemory } from './stepAndRepeat.js';
 
 /** A project's file, as its tab last left it: where it is, and what went wrong with it. */
 export interface ProjectFileState {
@@ -45,6 +46,8 @@ export interface ProjectTab {
   view: CanvasView;
   readonly cameras: TabCameras;
   readonly folds: PartsFolds;
+  /** What Ctrl+D remembers to repeat (8.8b): the tab's own, forgotten with any other edit. */
+  readonly steps: StepMemory;
   /**
    * Which *Untitled* a new project is (8.12): 1, 2, 3… for one made with
    * *New*, its name until it has one; 0 for a project that came from a file,
@@ -72,6 +75,7 @@ export function newTab(id: string, store: DocumentStore, untitled = 0): ProjectT
       sheetsFramed: null,
     },
     folds: { closed: new Set() },
+    steps: new StepMemory(store),
   };
 }
 

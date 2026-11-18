@@ -32,6 +32,12 @@ export interface StoreState {
   readonly resourceLimit: ResourceLimitError | null;
 }
 
+/** A step of history, as `onHistory` reports it. */
+export type HistoryEvent =
+  | { readonly kind: 'edit'; readonly label: HistoryLabel }
+  | { readonly kind: 'undo' }
+  | { readonly kind: 'redo' };
+
 const NEW_DOCUMENT: HistoryLabel = { action: 'new-document' };
 const OPEN: HistoryLabel = { action: 'open' };
 
@@ -55,6 +61,7 @@ export class DocumentStore {
 
   private listeners = new Set<() => void>();
   private resetListeners = new Set<() => void>();
+  private historyListeners = new Set<(event: HistoryEvent) => void>();
 
   /**
    * How many steps of history to keep.
@@ -101,6 +108,17 @@ export class DocumentStore {
   }
 
   /**
+   * Told of each step of history as it lands: an edit with its label, or an
+   * undo or a redo — and of nothing else, so a selection or a drag's preview
+   * is not one. For what is remembered only while nothing else is done
+   * (step and repeat, 8.8b), which has to know what came between.
+   */
+  onHistory(listener: (event: HistoryEvent) => void): () => void {
+    this.historyListeners.add(listener);
+    return () => this.historyListeners.delete(listener);
+  }
+
+  /**
    * Applies a command and pushes one history entry. A gesture still under way
    * is cancelled first, so the command applies to what was there before it and
    * the half-finished preview never enters history.
@@ -124,6 +142,7 @@ export class DocumentStore {
       label,
     };
     this.emit();
+    this.said({ kind: 'edit', label });
   }
 
   /**
@@ -173,6 +192,7 @@ export class DocumentStore {
       label: transaction.label,
     };
     this.emit();
+    this.said({ kind: 'edit', label: transaction.label });
   }
 
   /** Abandons a transaction, restoring the state before it began. */
@@ -211,6 +231,7 @@ export class DocumentStore {
     this.future.push(this.present);
     this.present = previous;
     this.emit();
+    this.said({ kind: 'undo' });
   }
 
   redo(): void {
@@ -222,6 +243,7 @@ export class DocumentStore {
     this.past.push(this.present);
     this.present = next;
     this.emit();
+    this.said({ kind: 'redo' });
   }
 
   /**
@@ -285,6 +307,10 @@ export class DocumentStore {
       this.emit();
       return null;
     }
+  }
+
+  private said(event: HistoryEvent): void {
+    for (const listener of this.historyListeners) listener(event);
   }
 
   private emit(): void {
