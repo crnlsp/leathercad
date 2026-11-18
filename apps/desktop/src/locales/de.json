@@ -1256,8 +1256,6 @@
     "emptyPart": "Das Teil ist leer",
     "hideNote": "Fehlt auch in der PDF, bis es wieder eingeblendet wird",
     "label": "Auswahl",
-    "spansParts_one": "Die Auswahl umfasst {{count}} Teil; einzeln duplizieren",
-    "spansParts_other": "Die Auswahl umfasst {{count}} Teile; einzeln duplizieren",
     "flip": {
       "horizontal": "Horizontal spiegeln",
       "vertical": "Vertikal spiegeln"

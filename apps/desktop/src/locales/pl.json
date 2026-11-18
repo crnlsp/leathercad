@@ -1340,10 +1340,6 @@
     "emptyPart": "Część jest pusta",
     "hideNote": "Nie będzie też w PDF, dopóki nie zostanie ponownie pokazana",
     "label": "Zaznaczenie",
-    "spansParts_one": "Zaznaczenie obejmuje {{count}} część; powielaj po jednej",
-    "spansParts_few": "Zaznaczenie obejmuje {{count}} części; powielaj po jednej",
-    "spansParts_many": "Zaznaczenie obejmuje {{count}} części; powielaj po jednej",
-    "spansParts_other": "Zaznaczenie obejmuje {{count}} części; powielaj po jednej",
     "flip": {
       "horizontal": "Odwróć w poziomie",
       "vertical": "Odwróć w pionie"

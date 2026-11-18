@@ -1298,9 +1298,6 @@
     "emptyPart": "La pièce est vide",
     "hideNote": "Également exclu du PDF jusqu’à son réaffichage",
     "label": "Sélection",
-    "spansParts_one": "La sélection couvre {{count}} pièce ; dupliquez une pièce à la fois",
-    "spansParts_other": "La sélection couvre {{count}} pièces ; dupliquez une pièce à la fois",
-    "spansParts_many": "La sélection couvre {{count}} de pièces ; dupliquez une pièce à la fois",
     "flip": {
       "horizontal": "Retourner horizontalement",
       "vertical": "Retourner verticalement"
