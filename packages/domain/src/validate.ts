@@ -505,53 +505,26 @@ function offMaterial(
     return found;
   }
 
-  const punched = punchesOf(entry);
-  if (punched !== null) {
-    // One pass rather than a filter, a min and a filter: whether a hole is off,
-    // the nearest clearance, and the holes that share it all come out of the
-    // same distance, which is the expensive part for three thousand holes.
-    const off: Vec2[] = [];
-    const tight: Vec2[] = [];
-    let clearanceMm = Number.POSITIVE_INFINITY;
-    for (const { centre, radiusMm, toothed } of punched) {
-      if (!isOnMaterial(material, centre)) {
-        off.push(centre);
-        continue;
-      }
-      // A circle whose centre is on the leather stays on it unless an edge
-      // passes nearer the centre than its radius — exact, not sampled. A rim
-      // within a storage quantum of an edge is on it, as for a line (Q2).
-      const edgeMm = distanceToEdge(material, centre);
-      const rimMm = edgeMm - radiusMm;
-      if (
-        rimMm < -QUANTUM_MM ||
-        (toothed !== undefined && toothCutsAnEdge(toothed.hole, toothed.tooth, edgeMm, material))
-      ) {
-        off.push(centre);
-        continue;
-      }
-      // At the minimum is clear: an inset of exactly 1.5 mm measures a last
-      // bit short of it, and a maker who typed 1.5 met the rule (9.17).
-      if (approxGte(rimMm, MIN_HOLE_EDGE_CLEARANCE_MM, EPS_LENGTH)) continue;
-      clearanceMm = Math.min(clearanceMm, Math.max(0, rimMm));
-      tight.push(centre);
-    }
-
-    if (off.length > 0) {
-      found.push({ problem: problem('OUTSIDE_PART', { ...about, what: 'holes' }), points: off });
+  const clearance = edgeClearance(entry, material);
+  if (clearance !== null) {
+    if (clearance.off.length > 0) {
+      found.push({
+        problem: problem('OUTSIDE_PART', { ...about, what: 'holes' }),
+        points: clearance.off,
+      });
       // Where a hole is off the material, how near the edge it sits is not
       // the thing to say about it.
       return found;
     }
 
-    if (tight.length > 0) {
+    if (clearance.tight.length > 0) {
       found.push({
         problem: problem('HOLE_TOO_CLOSE_TO_EDGE', {
           ...about,
-          clearanceMm,
+          clearanceMm: clearance.clearanceMm,
           minimumMm: MIN_HOLE_EDGE_CLEARANCE_MM,
         }),
-        points: tight,
+        points: clearance.tight,
       });
     }
     return found;
@@ -571,6 +544,68 @@ function offMaterial(
   }
 
   return found;
+}
+
+/** Where a feature's holes sit against the edges of its material (DR2, Q33). */
+export interface EdgeClearance {
+  /** The holes whose cut leaves the leather: `OUTSIDE_PART`. */
+  readonly off: readonly Vec2[];
+  /** The holes on the leather nearer an edge than the minimum: `HOLE_TOO_CLOSE_TO_EDGE`. */
+  readonly tight: readonly Vec2[];
+  /**
+   * The least leather left between a hole's cut and an edge, of the holes on
+   * the leather, and never below 0; infinite when none is on it.
+   */
+  readonly clearanceMm: Mm;
+}
+
+/**
+ * How near a feature's holes come to its material's edges — the outline and
+ * the cut-outs — measured from a stitch hole's point and a hardware hole's
+ * rim; a stitch hole whose tooth cuts an edge is off (Q46). Null when the
+ * feature punches nothing.
+ *
+ * The one judgement both `OUTSIDE_PART` (holes) and `HOLE_TOO_CLOSE_TO_EDGE`
+ * are made from, and what a move's live clearance reads (3.17), so the board
+ * cannot warn of something Problems will not list.
+ *
+ * One pass rather than a filter, a min and a filter: whether a hole is off,
+ * the nearest clearance, and the holes that share it all come out of the same
+ * distance, which is the expensive part for three thousand holes.
+ */
+export function edgeClearance(
+  entry: Extract<ResolvedFeature, { ok: true }>,
+  material: Material,
+): EdgeClearance | null {
+  const punched = punchesOf(entry);
+  if (punched === null) return null;
+  const off: Vec2[] = [];
+  const tight: Vec2[] = [];
+  let clearanceMm = Number.POSITIVE_INFINITY;
+  for (const { centre, radiusMm, toothed } of punched) {
+    if (!isOnMaterial(material, centre)) {
+      off.push(centre);
+      continue;
+    }
+    // A circle whose centre is on the leather stays on it unless an edge
+    // passes nearer the centre than its radius — exact, not sampled. A rim
+    // within a storage quantum of an edge is on it, as for a line (Q2). A
+    // tooth through an edge leaves the leather too (Q46).
+    const edgeMm = distanceToEdge(material, centre);
+    const rimMm = edgeMm - radiusMm;
+    if (
+      rimMm < -QUANTUM_MM ||
+      (toothed !== undefined && toothCutsAnEdge(toothed.hole, toothed.tooth, edgeMm, material))
+    ) {
+      off.push(centre);
+      continue;
+    }
+    clearanceMm = Math.min(clearanceMm, Math.max(0, rimMm));
+    // At the minimum is clear: an inset of exactly 1.5 mm measures a last
+    // bit short of it, and a maker who typed 1.5 met the rule (9.17).
+    if (!approxGte(rimMm, MIN_HOLE_EDGE_CLEARANCE_MM, EPS_LENGTH)) tight.push(centre);
+  }
+  return { off, tight, clearanceMm };
 }
 
 /**

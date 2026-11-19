@@ -18,6 +18,7 @@ export type {
 } from './tool.js';
 export { ToolManager } from './tool.js';
 export type { AlignLabel } from './align.js';
+export type { Clearance, MoveReadout } from './distances.js';
 
 export { featuresWithin, pickAt } from './hitTest.js';
 

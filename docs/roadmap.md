@@ -100,7 +100,7 @@ as any item that will not make it does.
 - ✅ **3.15 Typed position and Move by** — Properties › Arrange says where the selection's left and bottom edges are and takes a place or a distance, with sums and units; one undo step each; a locked piece says why.
 - ✅ **3.16 Smart guides while moving** — a piece dragged by its body lines its edges and centre up with other pieces' and with guides, exact to the storage quantum; Ctrl suspends; one undo step.
 - ✅ **3.18 Placing inside a piece** — a rivet, a hole or a fold dragged inside a piece lines up with that piece's centre, its straight edges and its other holes' centres, exact to the storage quantum; the line says *Centre*, or *Centre of its extent* where the piece is not mirrored about it; Ctrl suspends; one undo step.
-- ☐ **3.17 Live distances and clearance** — the move in mm, and a hole's rim clearance as the rule measures it.
+- ✅ **3.17 Live distances and clearance** — a move shows how far it went beside the pointer and in the status bar; a feature moved inside a piece, its four gaps to the real outline; a hole, its rim clearance by the rule's own function, warning exactly where Problems lists it after the drop; a kept drag or nudge is said through a live region.
 - ☐ **3.19 Equal spacing** (P1).
 - ✅ **8.8b Copy and paste whole pieces, across tabs** — Ctrl+C and Ctrl+V on the board, or the right-click menu (Paste alone on empty board); under the pointer, or clear of the drawing; new ids, every reference re-pointed, none dangling, seams between them kept; a mirrored piece without its original pastes as drawn geometry, said when copying; one undo step.
 - ✅ **8.8b Ctrl+D duplicates.** — Ctrl+D (⌘D on macOS, rebindable) does what the menu's Duplicate does, on the board: one piece, one undo step.

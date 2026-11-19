@@ -12,6 +12,7 @@ import {
 import { cssPxPerMm, type DisplayList } from '@leathercad/render';
 
 import type { AlignLabel } from './align.js';
+import type { MoveReadout } from './distances.js';
 import { selectablePieces } from './hitTest.js';
 import { createNudge, isNudge, type NudgeKey } from './nudge.js';
 import { buildSnapIndex, snap, snapGlyph, type SnapCandidate, type SnapIndex } from './snap.js';
@@ -130,6 +131,16 @@ export interface ToolContext {
    * the line is drawn unnamed.
    */
   readonly alignmentWords?: (label: AlignLabel) => string;
+  /**
+   * A distance on the board, in the app's words and number format (3.17): a
+   * moved feature's gap to its piece's outline. Absent, no gap is drawn.
+   */
+  readonly distanceWords?: (mm: Mm) => string;
+  /**
+   * A move was kept — a drag's or a nudge's — with what it read when it was
+   * (3.17): the app says it through its live region (smart-guides spec §11).
+   */
+  readonly moved?: (readout: MoveReadout) => void;
 }
 
 /** What a tool takes from the maker's settings: values, never a reference to them. */
@@ -197,6 +208,12 @@ export interface Tool {
    * so a tool cannot explain a refusal differently from everywhere else.
    */
   notice?(ctx: ToolContext): Problem | null;
+
+  /**
+   * While this tool moves something (3.17): how far, and how near the edges
+   * it is. Null between moves, and while a move is refused.
+   */
+  readout?(ctx: ToolContext): MoveReadout | null;
 
   /** Called when the tool is swapped out; must leave no transaction open. */
   onDeactivate?(ctx: ToolContext): void;
@@ -325,6 +342,11 @@ export class ToolManager {
       () => this.active.notice?.(this.context) ?? this.nudge.notice(this.context),
       null,
     );
+  }
+
+  /** The move under way, the active tool's or the arrow keys' (3.17). */
+  readout(): MoveReadout | null {
+    return this.active.readout?.(this.context) ?? this.nudge.readout();
   }
 
   /**

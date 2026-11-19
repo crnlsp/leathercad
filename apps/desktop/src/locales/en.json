@@ -1813,6 +1813,18 @@
     "centre": "Centre",
     "extentCentre": "Centre of its extent"
   },
+  "move": {
+    "delta": "Δx {{x}} · Δy {{y}}",
+    "fromEdge": "{{clearance}} from the edge",
+    "tooNear": "{{clearance}} from the edge · {{rule}}",
+    "left": "{{distance}} left",
+    "right": "{{distance}} right",
+    "up": "{{distance}} up",
+    "down": "{{distance}} down",
+    "moved": "Moved {{directions}}.",
+    "movedNear": "Moved {{directions}}; {{clearance}}.",
+    "notMoved": "Put back where it was."
+  },
   "arrange": {
     "title": "Align and distribute",
     "help": "Arrange the selected bounding boxes. A piece moves whole. Distribution keeps the outer items fixed and makes the gaps equal.",

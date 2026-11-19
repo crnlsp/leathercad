@@ -48,6 +48,7 @@ import {
   type DrawMode,
   type EditPointsOptions,
   type HardwareOptions,
+  type MoveReadout,
 } from '@leathercad/editor';
 
 import { createI18n, resolveLocale, type Translate } from '../../shared/i18n.js';
@@ -117,6 +118,7 @@ import { PartsList } from './PartsList.js';
 import { PointerValue, usePointerValue } from './pointerValue.js';
 import { historyText } from './historyText.js';
 import { describeProblem } from './problemText.js';
+import { deltaWords } from './moveWords.js';
 import { ProblemsPanel } from './ProblemsPanel.js';
 import { nextDiagnostic } from './problemNavigation.js';
 import { PropertyPanel } from './PropertyPanel.js';
@@ -186,6 +188,7 @@ export function App({
   // The point under the pointer, which only the readout reads: a move renders
   // it, not the window (PERF-007).
   const [cursor] = useState(() => new PointerValue<Vec2 | null>(null));
+  const [move] = useState(() => new PointerValue<MoveReadout | null>(null));
   const [toolId, setToolId] = useState<string>('rectangle');
 
   // The open projects (8.12): one tab each, and the one the window shows.
@@ -1886,6 +1889,7 @@ export function App({
                   onToolChange={chooseTool}
                   onStatus={handleStatus}
                   cursor={cursor}
+                  move={move}
                   panelOver={open}
                   selectionBar={selectionBarOn ? tools : null}
                   drawAs={drawAs}
@@ -2118,6 +2122,7 @@ export function App({
                 />
               </span>
 
+              <MoveStatus move={move} t={t} />
               <span className="status-right" data-testid="cursor-readout">
                 {view === 'sheets' ? (
                   status?.sheet === null || status?.sheet === undefined ? (
@@ -2430,6 +2435,17 @@ export function App({
 function CursorReadout({ cursor }: { cursor: PointerValue<Vec2 | null> }) {
   const at = usePointerValue(cursor);
   return at === null ? '— , —' : `${formatNumber(at.x, 2)} , ${formatMm(at.y)}`;
+}
+
+/** How far the move under way has gone (3.17), beside the cursor's place; nothing between moves. */
+function MoveStatus({ move, t }: { move: PointerValue<MoveReadout | null>; t: Translate }) {
+  const readout = usePointerValue(move);
+  if (readout === null) return null;
+  return (
+    <span className="status-move" data-testid="move-readout">
+      {deltaWords(readout, t)}
+    </span>
+  );
 }
 
 function cameraOf(tab: ProjectTab): TabCamera | null {

@@ -9,6 +9,7 @@ import { PathOps, uniformRadii } from '@leathercad/geometry';
 import { test, type Bench } from 'vitest';
 
 import { alignMove, collectAlignTargets, collectHostTargets } from './align.js';
+import { clearanceOf, rayDistances } from './distances.js';
 import { buildSnapIndex, snap, type Snapped } from './snap.js';
 
 /**
@@ -228,4 +229,46 @@ test('carry a hole inside a 1000-point traced outline: one alignment per move', 
       centreOnly: true,
     }).snapped;
     return hostAligned;
+  }));
+
+/**
+ * Live distances (3.17): what a move of a 4 mm rivet inside the 1000-point
+ * traced outline reads each pointer move (smart-guides spec §13) — its four
+ * rays to the outline and its rim's clearance from every edge, judged as
+ * `HOLE_TOO_CLOSE_TO_EDGE` judges it.
+ */
+const riveted = evaluate(
+  project([
+    {
+      ...still,
+      features: [
+        ...still.features,
+        {
+          id: 'traced-rivet',
+          kind: 'hardware-hole',
+          hardwareType: 'rivet',
+          name: 'Rivet',
+          visible: true,
+          locked: false,
+          source: {
+            kind: 'shape',
+            shape: { type: 'circle', centre: { x: 300, y: 300 }, radius: 2 },
+          },
+        },
+      ],
+    },
+  ]),
+);
+const tracedOutline = riveted.parts[0]?.features.find((entry) => entry.feature.id === 'traced-cut');
+const rivetMoving = new Set(['traced-rivet']);
+let readoutStep = 0;
+test('carry a rivet inside a 1000-point traced outline: its distances and clearance per move', ({
+  bench,
+}) =>
+  measure(bench, 'readout-drag-host-traced-1000', () => {
+    if (tracedOutline?.ok !== true) throw new Error('the traced outline did not build');
+    readoutStep = (readoutStep + 1) % 3600;
+    const at = { x: 300 + (readoutStep % 200) - 100, y: 300 + (readoutStep % 120) - 60 };
+    const box = { minX: at.x - 2, maxX: at.x + 2, minY: at.y - 2, maxY: at.y + 2 };
+    return [rayDistances(tracedOutline.path, box, 2), clearanceOf(riveted, rivetMoving)];
   }));

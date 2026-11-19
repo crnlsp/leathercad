@@ -7,8 +7,10 @@ import {
   type DocumentStore,
   type Selection,
 } from '@leathercad/document';
-import type { FeatureId, Problem } from '@leathercad/domain';
+import { evaluate, type FeatureId, type Problem } from '@leathercad/domain';
 import { MatOps, type Vec2 } from '@leathercad/geometry';
+
+import { clearanceOf, hostPart, punchedBy, type MoveReadout } from './distances.js';
 
 /** A nudge of the selection (3.14): a direction, and the step it takes. */
 export type NudgeKey = `nudge${'Left' | 'Right' | 'Up' | 'Down'}${'' | 'Big' | 'Fine'}`;
@@ -23,6 +25,8 @@ interface NudgePress {
 interface NudgeContext {
   readonly store: DocumentStore;
   invalidate(): void;
+  /** Told of a nudge kept (3.17), as a drag tells it. */
+  readonly moved?: (readout: MoveReadout) => void;
 }
 
 /**
@@ -75,6 +79,9 @@ type State =
       /** Every step so far, summed, in tenths of a millimetre. */
       readonly tenths: Vec2;
       readonly refusal: Problem | null;
+      /** What moves inside a piece and may punch it, for the clearance; null for whole pieces. */
+      readonly punched: ReadonlySet<string> | null;
+      readonly readout: MoveReadout | null;
     }
   /** Cancelled with keys still down: their repeats move nothing until they come up. */
   | { readonly kind: 'cancelled'; readonly held: ReadonlySet<string> };
@@ -104,6 +111,8 @@ export interface Nudge {
   /** Escape: gives the move up. True when there was one. */
   cancel(ctx: NudgeContext): boolean;
   notice(ctx: NudgeContext): Problem | null;
+  /** The nudge under way, while one is and is not refused (3.17). */
+  readout(): MoveReadout | null;
 }
 
 export function createNudge(): Nudge {
@@ -114,8 +123,10 @@ export function createNudge(): Nudge {
       state = IDLE;
       return;
     }
-    const { refusal } = state;
-    if (ctx.store.inTransaction) ctx.store.commit();
+    const { refusal, readout } = state;
+    const kept = ctx.store.inTransaction;
+    if (kept) ctx.store.commit();
+    if (kept && readout !== null) ctx.moved?.(readout);
     state = {
       kind: 'idle',
       refused:
@@ -153,24 +164,42 @@ export function createNudge(): Nudge {
           moving: features,
           tenths: { x: 0, y: 0 },
           refusal: null,
+          punched:
+            hostPart(document.project, pieceScope(document.project, features).about) === null
+              ? null
+              : punchedBy(document.project, features),
+          readout: null,
         };
       }
 
       const tenths = { x: gesture.tenths.x + step.x, y: gesture.tenths.y + step.y };
       const delta = { x: quantise(tenths.x / 10), y: quantise(tenths.y / 10) };
+      // The check the command makes, asked first so the maker is told why
+      // nothing moves, as a drag tells them.
+      const refusal = transformRefusal(
+        ctx.store.getState().document.project,
+        gesture.moving,
+        MatOps.fromTranslation(delta),
+      );
+      ctx.store.preview(translateFeatures(gesture.moving, delta));
+      const { punched } = gesture;
       state = {
         ...gesture,
         held: new Set([...gesture.held, event.code]),
         tenths,
-        // The check the command makes, asked first so the maker is told why
-        // nothing moves, as a drag tells them.
-        refusal: transformRefusal(
-          ctx.store.getState().document.project,
-          gesture.moving,
-          MatOps.fromTranslation(delta),
-        ),
+        refusal,
+        readout:
+          refusal === null
+            ? {
+                deltaMm: delta,
+                rays: [],
+                clearance:
+                  punched === null
+                    ? null
+                    : clearanceOf(evaluate(ctx.store.getState().document.project), punched),
+              }
+            : null,
       };
-      ctx.store.preview(translateFeatures(gesture.moving, delta));
       ctx.invalidate();
       return true;
     },
@@ -196,6 +225,10 @@ export function createNudge(): Nudge {
       state = { kind: 'cancelled', held: state.held };
       ctx.invalidate();
       return true;
+    },
+
+    readout() {
+      return state.kind === 'moving' ? state.readout : null;
     },
 
     notice(ctx) {
