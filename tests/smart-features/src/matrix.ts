@@ -63,10 +63,10 @@ export const MATRIX: { readonly [code: string]: RuleCoverage } = {
   },
   // ——— DR7: sewn stretches have paired holes ———
   SEAM_HOLE_COUNT_MISMATCH: {
-    positive: ['SF-G2', 'SF-G9', 'SF-I5'],
+    positive: ['SF-G2', 'SF-G9', 'SF-G10', 'SF-I5'],
     negative: ['SF-G1'],
     notApplicable: ['SF-D2'],
-    transition: ['SF-G6', 'SF-G9'],
+    transition: ['SF-G6', 'SF-G9', 'SF-G10'],
   },
   SEAM_HOLES_DRIFT: {
     positive: ['SF-G3', 'SF-G4', 'SF-G5'],
@@ -89,10 +89,10 @@ export const MATRIX: { readonly [code: string]: RuleCoverage } = {
   },
   // ——— DR2: everything in a part lies on its material ———
   HOLE_TOO_CLOSE_TO_EDGE: {
-    positive: ['SF-A4', 'SF-A5'],
+    positive: ['SF-A4', 'SF-A5', 'SF-K7'],
     negative: ['SF-A2', 'SF-K1', 'SF-K6'],
     notApplicable: { exempt: UNIVERSAL },
-    transition: ['SF-A4'],
+    transition: ['SF-A4', 'SF-K7'],
   },
   OUTSIDE_PART: {
     positive: ['SF-E3', 'SF-K4', 'SF-K5', 'SF-A11'],

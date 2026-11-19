@@ -322,7 +322,7 @@ minimum that proves the workflows, about 10 s more:
 | Change | The test |
 |---|---|
 | Sides named in *Stitched sides* | From a square-cornered rectangle, choose *Open at the top*; the board marks the run, Properties reads 94 mm across, and the opening is above the stitch ends |
-| Hole offsets in Properties | The same pocket with its end holes on the edge: *Problems* says 1 error; type 3 mm start and end offsets, *Nothing to fix*; undo brings the error back. Reachable by keyboard |
+| Hole offsets in Properties | The same pocket with its end holes on the edge: *Problems* says 1 warning (Q44); type 3 mm start and end offsets, *Nothing to fix*; undo brings the warning back. Reachable by keyboard. Built by Q47 as SF-UI3 |
 | Requirement shown from the holes | Click a hole on the board (not the parts tree): Properties shows the stitch line's *Pocket too narrow* and a button to its stitch line; pressing it selects the line with *Holds* focused; axe clean |
 | *Use as stitching* | Import an SVG with an unlayered open U (`e2e/svgPatterns.ts`): it is a marking; *Use as stitching* makes it a stitch line with a reading and *Holds*; undo makes it a marking again |
 | The five states | One test walks a U through nothing stated, met, not met and not measurable, reading each line, and finds no line on a closed stitch line or an outline |
@@ -349,7 +349,9 @@ the edge, as Q2 and Q33 did for lines and hardware rims, applied before `contain
 Q44:* `isOnMaterial` puts a point within a storage quantum of any edge — the outline or a cut-out —
 on the leather (D29), so every rule that asks it shares the answer; the two end holes are
 `HOLE_TOO_CLOSE_TO_EDGE` at 0 mm whichever side is open and however the piece is turned. SF-K3
-asserts that list, and a property turns and moves a square-cornered pocket open on any side.
+asserts that list, and a property turns and moves a square-cornered pocket open on any side. Since
+Q47 the warning says it is the end holes (`atEnds`) and names *Start offset* and *End offset*,
+which move them in and keep the corners' holes (SF-K7).
 
 **KD-2** — *A mirrored hardware hole is never checked.* `punchesOf` in `validate.ts` reads a
 hardware hole only when its source is a drawn circle; a mirror's source is a derivation. The key

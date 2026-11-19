@@ -1,9 +1,10 @@
 import { deleteFeatures } from '@leathercad/document';
-import { seamVerdict, type Project, type Seam } from '@leathercad/domain';
+import { alignmentMarks, evaluate, seamVerdict, type Project, type Seam } from '@leathercad/domain';
 import { QUANTUM_MM } from '@leathercad/core';
 import { describe, expect, it } from 'vitest';
 
 import {
+  at,
   drawRectangle,
   holesOf,
   punchHoles,
@@ -11,6 +12,7 @@ import {
   setHoles,
   sew,
   stitchAllRound,
+  stitchLeavingOpen,
 } from '../harness/actions.js';
 import { Bench, type Action } from '../harness/bench.js';
 import { checkMatrixClaims } from '../harness/coverage.js';
@@ -119,6 +121,67 @@ describe('G — pieces sewn together', () => {
       )
       .do(setHoles(holesOf('front'), { pitchMm: 3.85 }))
       .expect([], 'with the same iron on both');
+  });
+
+  /**
+   * Two pockets, square-cornered and open at the top, sewn from the start of
+   * their stitching down the side and along the bottom: 151 mm, 40 holes
+   * each, marked at both ends of the seam (9.13). Moving one side's end holes
+   * in (Q47) moves its first hole, so its pairs are counted again from there
+   * (D3): 39 against 40 cannot pair. Moving the other's in too pairs them
+   * again, and the marks go with the first holes. Undo brings each back.
+   */
+  it('SF-G10 · moving a sewn side’s end holes in changes its pairing, the marks follow, and undo restores it', () => {
+    const stretch = { kind: 'between', fromAnchor: 'start', toAnchor: 0 } as const;
+    const pocket = (piece: string, x: number): Action[] => [
+      drawRectangle(piece, { x, y: 0, width: 100, height: 60 }),
+      stitchLeavingOpen(piece, 'top', 3),
+      punchHoles(piece),
+    ];
+    const onTheEdge = (piece: string): Expected => ({
+      code: 'HOLE_TOO_CLOSE_TO_EDGE',
+      severity: 'warning',
+      on: holesOf(piece),
+      facts: { atEnds: true },
+    });
+    const mismatch: Expected = {
+      code: 'SEAM_HOLE_COUNT_MISMATCH',
+      severity: 'error',
+      ...onTheSeam,
+      facts: { a: { count: 40, lengthMm: 151 }, b: { count: 39, lengthMm: 151 } },
+    };
+    /** Each side's mark at the seam's first pair, to the micrometre. */
+    const firstMarks = (bench: Bench) =>
+      alignmentMarks(evaluate(bench.project))
+        .filter((mark) => mark.pair === 1)
+        .map(({ point }) =>
+          at(Math.round(point.x * 1000) / 1000, Math.round(point.y * 1000) / 1000),
+        );
+
+    const bench = new Bench()
+      .do(
+        ...pocket('back', 0),
+        ...pocket('front', 120),
+        sew({
+          id: 'side-seam',
+          a: { holeSetId: holesOf('back'), stretch },
+          b: { holeSetId: holesOf('front'), stretch },
+          marks: { kind: 'ends' },
+        }),
+      )
+      .expect([onTheEdge('back'), onTheEdge('front')], 'as drawn');
+    expect(verdictOf(bench.project)).toMatchObject({ ok: true, countA: 40, countB: 40 });
+    expect(firstMarks(bench)).toEqual([at(3, 60), at(123, 60)]);
+
+    bench
+      .do(setHoles(holesOf('front'), { startOffsetMm: 3, endOffsetMm: 3 }))
+      .expect([mismatch, onTheEdge('back')], 'with the front’s ends moved in')
+      .do(setHoles(holesOf('back'), { startOffsetMm: 3, endOffsetMm: 3 }))
+      .expect([], 'with both moved in');
+    expect(verdictOf(bench.project)).toMatchObject({ ok: true, countA: 39, countB: 39 });
+    expect(firstMarks(bench)).toEqual([at(3, 57), at(123, 57)]);
+
+    bench.undo().expect([mismatch, onTheEdge('back')], 'after one undo');
   });
 
   it('SF-G4 · a drift of exactly 0.5 mm is within the limit; a storage step more is not', () => {

@@ -1538,6 +1538,124 @@ describe('a stitch tooth that cuts through the edge is off the leather (Q46)', (
   });
 });
 
+// ——— The end holes of an open run (Q47) ————————————————————————————————————
+
+describe('a hole problem says when only the end holes of an open run are at fault (Q47)', () => {
+  /** Holes on the drawn stitch line, a hole at every corner, moved in from its ends. */
+  const holesMovedIn = (startOffsetMm?: number, endOffsetMm?: number): Feature => ({
+    ...base('holes-1', 'Stitch holes'),
+    kind: 'stitch-hole-set',
+    source: {
+      kind: 'derived',
+      sourceId: 'stitch-1',
+      op: {
+        type: 'stitch-holes',
+        pitchMm: 3.85,
+        mode: 'fit-whole',
+        corners: 'hole-at-corner',
+        ...(startOffsetMm === undefined ? {} : { startOffsetMm }),
+        ...(endOffsetMm === undefined ? {} : { endOffsetMm }),
+      },
+    },
+  });
+
+  /** What the edge rules say of a 100 × 60 square-cornered piece stitched along `line`. */
+  const edgeProblems = (line: Vec2[], closed: boolean, holes = holesMovedIn()) =>
+    validate(evaluate(project([panel(100, 60, 0), drawn('stitch-line', line, closed), holes])))
+      .map((d) => d.problem)
+      .filter((p) => p.code === 'OUTSIDE_PART' || p.code === 'HOLE_TOO_CLOSE_TO_EDGE')
+      // The stitch line past the edge is its own problem; these are the holes'.
+      .filter((p) => p.facts.featureId === 'holes-1');
+
+  /** The pocket, open at the top: down, across and up, 3 mm in, from edge to edge. */
+  const openAtTheTop: Vec2[] = [
+    { x: 3, y: 60 },
+    { x: 3, y: 3 },
+    { x: 97, y: 3 },
+    { x: 97, y: 60 },
+  ];
+
+  it('says so of a pocket whose two end holes sit on the cut edge', () => {
+    expect(edgeProblems(openAtTheTop, false)).toEqual([
+      expect.objectContaining({
+        code: 'HOLE_TOO_CLOSE_TO_EDGE',
+        facts: expect.objectContaining({ atEnds: true, clearanceMm: 0 }),
+      }),
+    ]);
+  });
+
+  it('says so of an end hole past the edge', () => {
+    const past = [{ x: 3, y: 61 }, ...openAtTheTop.slice(1, 3), { x: 97, y: 55 }];
+    expect(edgeProblems(past, false)).toEqual([
+      expect.objectContaining({
+        code: 'OUTSIDE_PART',
+        facts: expect.objectContaining({ what: 'holes', atEnds: true }),
+      }),
+    ]);
+  });
+
+  it('does not, where a hole between the ends is at fault too', () => {
+    // Along the bottom 1 mm in: every hole is too near, not only the ends.
+    const bottom = [
+      { x: 0, y: 1 },
+      { x: 100, y: 1 },
+    ];
+    expect(edgeProblems(bottom, false)).toEqual([
+      expect.objectContaining({
+        code: 'HOLE_TOO_CLOSE_TO_EDGE',
+        facts: expect.objectContaining({ atEnds: false }),
+      }),
+    ]);
+  });
+
+  it('does not, on a closed line, which has no ends', () => {
+    const allRound = [
+      { x: 1, y: 1 },
+      { x: 99, y: 1 },
+      { x: 99, y: 59 },
+      { x: 1, y: 59 },
+    ];
+    expect(edgeProblems(allRound, true)).toEqual([
+      expect.objectContaining({ facts: expect.objectContaining({ atEnds: false }) }),
+    ]);
+  });
+
+  it('does not, of a hardware hole', () => {
+    const rivet: Feature = {
+      ...base('rivet-1', 'Rivet 4 mm'),
+      kind: 'hardware-hole',
+      hardwareType: 'rivet',
+      source: { kind: 'shape', shape: { type: 'circle', centre: { x: 3, y: 37 }, radius: 2 } },
+    };
+    const found = validate(evaluate(project([panel(105, 75, 0), rivet]))).find(
+      (d) => d.problem.code === 'HOLE_TOO_CLOSE_TO_EDGE',
+    );
+    expect(found?.problem.facts).toMatchObject({ atEnds: false });
+  });
+
+  it('clears once the end holes are moved in, for any straight run from edge to edge', () => {
+    // Moved in by less than the minimum, the ends are still too near and said
+    // to be the ends; by the minimum or more, nothing is said.
+    fc.assert(
+      fc.property(
+        fc.double({ min: 3, max: 57, noNaN: true }),
+        fc.double({ min: 0, max: 1.4, noNaN: true }),
+        fc.double({ min: MIN_HOLE_EDGE_CLEARANCE_MM, max: 10, noNaN: true }),
+        (y, short, enough) => {
+          const across = [
+            { x: 0, y },
+            { x: 100, y },
+          ];
+          const tooNear = edgeProblems(across, false, holesMovedIn(short, short));
+          expect(tooNear).toHaveLength(1);
+          expect(tooNear[0]?.facts).toMatchObject({ atEnds: true });
+          expect(edgeProblems(across, false, holesMovedIn(enough, enough))).toEqual([]);
+        },
+      ),
+    );
+  });
+});
+
 /** A path whose segments count every time one is read. */
 function countedPath(p: Path, reads: { count: number }): Path {
   return {

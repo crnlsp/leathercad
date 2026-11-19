@@ -10,6 +10,7 @@ import {
   outlineOf,
   punchHardware,
   punchHoles,
+  setHoles,
   setInset,
   stitchAllRound,
   stitchLeavingOpen,
@@ -128,6 +129,38 @@ describe('K — holes on, and teeth across, the cut edge', () => {
     }
   });
 
+  /**
+   * The way out of SF-K3 that keeps the square corners (Q47): the hole set's
+   * start and end offsets, typed in Properties, move the two end holes 3 mm in
+   * from the cut edge, and only those: the holes on the pocket's two corners
+   * stay on them. The warning that sent the maker there said it was the end
+   * holes (`atEnds`), so its advice names the offsets, not the inset.
+   */
+  it('SF-K7 · start and end offsets move the end holes in off the edge, the corners keep their holes, and undo puts them back', () => {
+    const onTheEdge = {
+      code: 'HOLE_TOO_CLOSE_TO_EDGE',
+      severity: 'warning',
+      on: holesOf('pocket'),
+      facts: { clearanceMm: 0, atEnds: true },
+      location: { points: [at(3, 60), at(97, 60)] },
+    } as const;
+    const bench = squarePocket('top')
+      .expect([onTheEdge], 'with its end holes on the edge')
+      .do(setHoles(holesOf('pocket'), { startOffsetMm: 3 }))
+      .expect([{ ...onTheEdge, location: { points: [at(97, 60)] } }], 'with one end moved in')
+      .do(setHoles(holesOf('pocket'), { endOffsetMm: 3 }))
+      .expect([], 'with both ends moved in');
+
+    const holes = holePointsOf(bench, 'pocket');
+    for (const p of [at(3, 57), at(3, 3), at(97, 3), at(97, 57)]) {
+      expect(
+        holes.some((h) => Math.hypot(h.x - p.x, h.y - p.y) < 1e-6),
+        `a hole at ${p.x}, ${p.y}`,
+      ).toBe(true);
+    }
+    bench.undo().expect([{ ...onTheEdge, location: { points: [at(97, 60)] } }], 'after undo');
+  });
+
   /** A piece 100 × 60 stitched all round at an inset, with the iron's tooth said. */
   const toothed = (insetMm: number, tooth: Tooth) =>
     new Bench().do(
@@ -135,6 +168,17 @@ describe('K — holes on, and teeth across, the cut edge', () => {
       stitchAllRound('panel', insetMm),
       punchHoles('panel', { tooth }),
     );
+
+  /** Where a piece's stitch holes are. */
+  function holePointsOf(bench: Bench, piece: string) {
+    const holes = evaluate(bench.project)
+      .parts.flatMap((part) => part.features)
+      .find((f) => f.feature.id === holesOf(piece));
+    if (holes?.ok !== true || holes.holes === undefined) {
+      throw new Error(`${piece}'s holes must resolve`);
+    }
+    return holes.holes.holes.map((hole) => hole.point);
+  }
 
   /** How many of the panel's teeth cut through its outline. */
   function teethAcrossTheEdge(bench: Bench): number {

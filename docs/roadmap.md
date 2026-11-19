@@ -126,7 +126,7 @@ as any item that will not make it does.
 - ✅ **Q45 A mirrored hardware hole is checked** — the key fob's second rivet, judged by its rim like the first.
 - ✅ **Q44 A hole on the cut edge, one verdict** — the same problem whichever way the piece faces (D29).
 - ✅ **Q46 A tooth through the edge is off the leather** (P1) — a hole set's iron read as SVG and DXF cut it.
-- ☐ **Q47 End holes moved in** (P1) — start and end offsets in Properties; the advice names them.
+- ✅ **Q47 End holes moved in** (P1) — *Start offset* and *End offset* in Properties move an open run's end holes in, a hole kept on every corner; the edge problem's advice names them.
 - ☐ **Q48 Stitched sides say which side is open** (P1) — named sides on a rectangle, numbered corners while choosing.
 - ☐ **Q49 Holds says what it measured to** (P1) — the piece and the rise, "no ease", and still shown while its line fails.
 

@@ -139,6 +139,14 @@ Evaluates to holes `{ point, tangent, runIndex, ordinal, alongMm }` and a report
 spacing, and per-run length, count and spacing. **Holes have no ids.** They are addressed by
 position, because there is no correct answer to which of the old 84 holes is this one of the new 86.
 
+**The start and end offsets** (Q47) are how far an open line's first and last holes sit in from
+its ends, the line's own ends only: a hole stays on every corner between. They are what clears a
+square-cornered pocket's end holes off its cut edge, where the inset moves every hole. A closed line
+has no ends; one distributed continuously takes the start offset as its phase. The achieved spacing
+is measured over what is stitched, between the offsets. When only an open set's end holes break DR2,
+`OUTSIDE_PART` (holes) and `HOLE_TOO_CLOSE_TO_EDGE` say so as a fact, `atEnds`, and the app's
+advice names the offsets rather than the inset.
+
 **The pitch has a floor, `MIN_PITCH_MM` = 0.5 mm,** shared by the editor's field and evaluation
 (5.6). Distribution places `length / pitch` holes, so a pitch nearer zero than any iron makes the
 count unbounded. A file that holds one still opens, and the hole set alone fails with
@@ -1089,8 +1097,8 @@ The diagnostics themselves:
 | `ANCHOR_MISSING` | error | outcome | E4 | built 4.12a for runs; through derivations 4.4b |
 | `TEXT_GLYPH_MISSING` | warning | outcome | E2 | built 4.11a for part names; labels 4.11b |
 | `CONTOUR_SELF_INTERSECTS` | error | rule | DR3 | built 4.12a |
-| `OUTSIDE_PART` | error for stitch and hardware holes, warning for lines | rule | DR2 | built 4.3a; a hardware hole by its rim, Q33; a row's holes by theirs, 4.14; a stitch hole whose iron is said by its tooth's outline, Q46 (its clearance stays from the point) |
-| `HOLE_TOO_CLOSE_TO_EDGE` | warning (under 1.5 mm, from a stitch hole's point or a hardware or row hole's rim) | rule | DR2 | built 4.3a; the rim, Q33; a stitch hole on the edge, at 0 mm, Q44 |
+| `OUTSIDE_PART` | error for stitch and hardware holes, warning for lines | rule | DR2 | built 4.3a; a hardware hole by its rim, Q33; a row's holes by theirs, 4.14; a stitch hole whose iron is said by its tooth's outline, Q46 (its clearance stays from the point); `atEnds` when only an open set's end holes, Q47 |
+| `HOLE_TOO_CLOSE_TO_EDGE` | warning (under 1.5 mm, from a stitch hole's point or a hardware or row hole's rim) | rule | DR2 | built 4.3a; the rim, Q33; a stitch hole on the edge, at 0 mm, Q44; `atEnds` when only an open set's end holes, Q47 |
 | `CUT_OUT_OUTSIDE_PART` | error | rule | DR2 | built 4.3a |
 | `HOLES_OVERLAP` | warning (a row's neighbouring holes no more than a diameter apart) | rule | DR3 | built 4.14 |
 | `PART_HAS_NO_OUTER_CONTOUR` | error | rule | DR1 | built 4.3a |

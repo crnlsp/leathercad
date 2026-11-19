@@ -1332,12 +1332,14 @@
       "title": "Off the material",
       "holes": "{{featureName}} has holes that leave the material — through the outline, or into a cut-out. They cannot be punched there.",
       "line": "{{featureName}} runs off the material, so part of it cannot be marked.",
-      "fix": "Move the feature back onto the material, or adjust its source line and inset in Properties."
+      "fix": "Move the feature back onto the material, or adjust its source line and inset in Properties.",
+      "fixEnds": "Only the end holes are off the leather: in Properties, raise Start offset and End offset to move them in from the edge."
     },
     "HOLE_TOO_CLOSE_TO_EDGE": {
       "title": "Too near the edge",
       "description": "{{featureName}} comes within {{clearance}} of an edge, under the {{minimum}} a hole needs. Leather tears out between a hole and an edge.",
-      "fix": "Increase the inset or move the holes farther from the edge. A smaller hole diameter also leaves more leather."
+      "fix": "Increase the inset or move the holes farther from the edge. A smaller hole diameter also leaves more leather.",
+      "fixEnds": "Only the end holes are too near: in Properties, raise Start offset and End offset to move them in from the edge."
     },
     "POCKET_TOO_NARROW": {
       "title": "Pocket too narrow",
@@ -1454,6 +1456,7 @@
     "direction": "Direction",
     "drawnByHand": "Drawn by hand, so it has points rather than measurements. Move, add or remove them with Edit points ({{points}}).",
     "edgeMargin": "Edge margin",
+    "endOffset": "End offset",
     "fit": "Fit",
     "height": "Height",
     "holeCount": "Holes",
@@ -1467,6 +1470,7 @@
     "size": "Size",
     "spacing": "Spacing",
     "start": "Start",
+    "startOffset": "Start offset",
     "sweep": "Sweep",
     "text": "Text",
     "thickness": "Thickness",

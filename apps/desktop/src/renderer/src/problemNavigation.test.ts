@@ -39,7 +39,12 @@ describe('walking the problems in their displayed order (9.15)', () => {
         related: [],
       },
       {
-        problem: problem('HOLE_TOO_CLOSE_TO_EDGE', { ...named, clearanceMm: 0.5, minimumMm: 1.5 }),
+        problem: problem('HOLE_TOO_CLOSE_TO_EDGE', {
+          ...named,
+          clearanceMm: 0.5,
+          minimumMm: 1.5,
+          atEnds: false,
+        }),
         severity: 'warning',
         partId: 'part',
         featureId: 'holes',

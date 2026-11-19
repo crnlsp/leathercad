@@ -136,8 +136,8 @@ const SAMPLES: { readonly [K in ProblemCode]: ProblemFacts[K] } = {
   EMPTY_PART: { partId: 'p-1', partName: 'Gusset' },
   PART_HAS_NO_OUTER_CONTOUR: { partId: 'p-1', partName: 'Gusset' },
   CUT_OUT_OUTSIDE_PART: { featureId: 'f-1', featureName: 'Card slot' },
-  OUTSIDE_PART: { ...named, what: 'holes' },
-  HOLE_TOO_CLOSE_TO_EDGE: { ...named, clearanceMm: 0.8, minimumMm: 1.5 },
+  OUTSIDE_PART: { ...named, what: 'holes', atEnds: false },
+  HOLE_TOO_CLOSE_TO_EDGE: { ...named, clearanceMm: 0.8, minimumMm: 1.5, atEnds: false },
   POCKET_TOO_NARROW: { ...named, content: 'id-1', widthMm: 89, neededMm: 89.6, easeMm: 4 },
   POCKET_TOO_SHALLOW: { ...named, content: 'size', depthMm: 44.3487, neededMm: 53.98 },
   POCKET_NOT_MEASURABLE: { ...named, reading: 'width' },
@@ -160,6 +160,23 @@ describe('every listed problem explains why and what to do (9.15)', () => {
     expect(problemExplanation(part, polish.t).fix).toBe(
       'Zmień nazwę części, używając znaków łacińskich.',
     );
+  });
+
+  const off = (atEnds: boolean) => problem('OUTSIDE_PART', { ...named, what: 'holes', atEnds });
+  const near = (atEnds: boolean) =>
+    problem('HOLE_TOO_CLOSE_TO_EDGE', { ...named, clearanceMm: 0, minimumMm: 1.5, atEnds });
+  it.each([
+    ['OUTSIDE_PART', off],
+    ['HOLE_TOO_CLOSE_TO_EDGE', near],
+  ] as const)('sends end holes at fault to the offsets, never the inset (Q47): %s', (_, make) => {
+    const fix = problemExplanation(make(true), t).fix ?? '';
+    // The fields' own labels, so the advice names what Properties shows.
+    expect(fix).toContain(t('editor.startOffset'));
+    expect(fix).toContain(t('editor.endOffset'));
+    expect(fix).not.toMatch(/inset/i);
+    // Any other hole at fault keeps the inset's advice.
+    const elsewhere = problemExplanation(make(false), t).fix;
+    expect(elsewhere).toMatch(/inset/i);
   });
 
   it.each(listedCodes)('%s has a reason and an actionable fix in the shared message', (code) => {
