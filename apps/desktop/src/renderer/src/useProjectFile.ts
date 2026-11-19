@@ -1,21 +1,13 @@
-import { ResourceLimitError } from '@leathercad/core';
 import { setProjectName, type Command, type Document } from '@leathercad/document';
 import { exportReadiness, type ExportReadiness, type Project } from '@leathercad/domain';
 import { exportDxf, exportSvg, type ExportRole, type TiledPart } from '@leathercad/export';
-import {
-  CURRENT_FORMAT_VERSION,
-  InvalidProjectFileError,
-  LCP_EXTENSION,
-  NewerFormatError,
-  loadProject,
-} from '@leathercad/persist';
+import { LCP_EXTENSION, loadProject } from '@leathercad/persist';
 import type { PlatformHost, TabCamera, TemplateSave } from '@leathercad/platform';
 import { useCallback, useRef, useState } from 'react';
 
 import { SOURCE_LOCALE, createI18n, type Translate } from '../../shared/i18n.js';
 import { encodeProject } from './lcpEncoder.js';
-import { writePdf, PdfWriterError } from './pdfWriter.js';
-import { describeProblemWithSubject } from './problemText.js';
+import { writePdf } from './pdfWriter.js';
 import {
   isUnnamed,
   nextUntitled,
@@ -40,38 +32,6 @@ export interface Written {
 /** The last part of a path, on any platform: Windows' separator is a backslash. */
 export function fileName(path: string): string {
   return path.split(/[\\/]/).pop() ?? path;
-}
-
-/**
- * A file error in the interface's words (ADR 0018). A file from a newer
- * version, and a design whose reference graph is broken, are said in full;
- * anything below that — bytes that are not an archive, a schema violation,
- * the operating system refusing a write — is said as it was reported.
- */
-export function fileErrorText(error: unknown, t: Translate): string {
-  if (error instanceof ResourceLimitError) {
-    return t('file.resourceLimit', {
-      resource: t(`file.resources.${error.resource}`),
-      limit: error.limit,
-    });
-  }
-  if (error instanceof NewerFormatError) {
-    return t(error.savedBy === undefined ? 'file.newer' : 'file.newerNamed', {
-      version: error.savedBy ?? '',
-      format: error.fileVersion,
-      current: CURRENT_FORMAT_VERSION,
-    });
-  }
-  if (error instanceof InvalidProjectFileError && error.problems.length > 0) {
-    const problems = error.problems.map((p) => describeProblemWithSubject(p, t)).join(' ');
-    return t('file.invalid', { problems });
-  }
-  if (error instanceof PdfWriterError) {
-    return t(error.kind === 'failed' ? 'file.pdfFailed' : 'file.pdfUnavailable', {
-      reason: error.detail,
-    });
-  }
-  return error instanceof Error ? error.message : String(error);
 }
 
 /**

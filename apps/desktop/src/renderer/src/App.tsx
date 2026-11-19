@@ -85,8 +85,8 @@ import { TextFieldMenu } from './TextFieldMenu.js';
 import { ExportDialog } from './ExportDialog.js';
 import { ExportNotice } from './ExportNotice.js';
 import { PrintPreview } from './PrintPreview.js';
+import { fileErrorText } from './fileErrorText.js';
 import {
-  fileErrorText,
   fileName,
   useProjectFile,
   type DrawingFormat,

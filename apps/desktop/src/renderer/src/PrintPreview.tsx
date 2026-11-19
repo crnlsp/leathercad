@@ -38,7 +38,8 @@ import { describeCounts } from './problemsIndicator.js';
 import { SeverityGlyph } from './SeverityGlyph.js';
 import { describeSheets } from './sheetWords.js';
 import { sheetPlanFor } from './sheets.js';
-import { exportReportFor, fileErrorText } from './useProjectFile.js';
+import { fileErrorText } from './fileErrorText.js';
+import { exportReportFor } from './useProjectFile.js';
 
 const PAPERS = Object.keys(PAPER_SIZES) as PaperName[];
 const ORIENTATIONS: readonly Orientation[] = ['portrait', 'landscape'];
