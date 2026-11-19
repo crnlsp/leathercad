@@ -1,18 +1,4 @@
-import { mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-
 import { defineConfig } from '@playwright/test';
-
-// Every app a test launches keeps its preferences and recent projects (8.2)
-// here — never in the developer's own ~/.config/leathercad, and never carried
-// from one run into the next. Tests that change a preference launch with a
-// directory of their own as well, so the order they run in cannot matter.
-process.env['XDG_CONFIG_HOME'] = mkdtempSync(join(tmpdir(), 'leathercad-e2e-config-'));
-// Nor its log, crash dumps and crash-recovery copies (5.3b) in the developer's
-// own ~/.local/state/leathercad. e2e/launchApp.ts gives every launch a state
-// directory of its own; this catches one that does not go through it.
-process.env['XDG_STATE_HOME'] = mkdtempSync(join(tmpdir(), 'leathercad-e2e-state-'));
 
 // The update check (8.9) never asks GitHub from a test: the app is pointed at
 // a port nothing listens on, so a check a test asks for fails at once and says so
@@ -26,8 +12,9 @@ export default defineConfig({
   // build (`pnpm test:packaged`), and the README's pictures are taken on
   // demand (`pnpm docs:media`).
   testIgnore: ['**/visual/**', '**/packaged/**', '**/media/**'],
-  // Off the developer's screen on Linux. See e2e/virtualScreen.ts.
-  globalSetup: './e2e/virtualScreen.ts',
+  // The run's temp directory, removed when it ends (e2e/tempRoot.ts), and off
+  // the developer's screen on Linux (e2e/virtualScreen.ts).
+  globalSetup: ['./e2e/tempRoot.ts', './e2e/virtualScreen.ts'],
   timeout: 60_000,
   expect: { timeout: 10_000 },
   // Electron instances are heavyweight and contend for the display; one at a time.
