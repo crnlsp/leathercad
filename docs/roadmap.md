@@ -143,7 +143,7 @@ as any item that will not make it does.
 ### Stage 5 — The interface and distribution ([plan](superpowers/plans/2026-11-03-release-1.7.md#stage-5--the-interface-and-distribution))
 
 - ☐ **U.23 The start screen opens on the templates.**
-- ☐ **U.24a Project tabs, refined.**
+- ✅ **U.24a Project tabs, refined** — a tab is as wide as its name, to 200 px, and no narrower than 128 so crowded names stay whole while the strip scrolls; the *All tabs* list opens inside the window (X27, X28).
 - ☐ **U.24b The template picker and its management, refined.**
 - ☐ **U.24c Guides and Arrange, refined** — a level guide shows only its y; Arrange as icons.
 - ☐ **U.24d Parts, Properties and the selection bar, refined.**

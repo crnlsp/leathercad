@@ -431,6 +431,12 @@ test('more tabs than the strip shows: a list of them all (8.12)', async () => {
       for (let i = 0; i < 14; i++) await window.keyboard.press('ControlOrMeta+n');
       await expect(all).toBeVisible();
       await all.click();
+      // The list lies inside the window, whole (X27).
+      const items = await window.getByTestId('all-tabs-items').boundingBox();
+      const size = { width: await window.evaluate(() => window.innerWidth) };
+      expect(items).not.toBeNull();
+      expect(items!.x).toBeGreaterThanOrEqual(0);
+      expect(items!.x + items!.width).toBeLessThanOrEqual(size.width);
       await window.getByTestId('all-tabs-0').click();
       await expect(window.getByTestId('project-name')).toHaveText('Untitled');
       await expect(window.getByTestId('tab-strip').getByRole('tab', { selected: true })).toHaveText(
@@ -439,6 +445,26 @@ test('more tabs than the strip shows: a list of them all (8.12)', async () => {
     },
     { size: [1024, 768] },
   );
+});
+
+test('a tab is as wide as its name, and a crowded strip keeps names readable (X27, X28)', async () => {
+  await withApp(async (window) => {
+    await renameProject(window, 'Wallet for Ana');
+    const name = window.getByTestId('tab-strip').getByRole('tab').first();
+    const clipped = (): Promise<boolean> =>
+      name.evaluate((element) => element.scrollWidth > element.clientWidth);
+    const wide = (await name.boundingBox())!.width;
+    expect(await clipped()).toBe(false);
+    // Not stretched to the old fixed 200 px beyond its name.
+    expect(wide).toBeLessThan(200);
+    for (let i = 0; i < 14; i++) await window.keyboard.press('ControlOrMeta+n');
+    // Crowded, a name still reads whole: the strip scrolls rather than squeezes.
+    const tabs = window.getByTestId('tab-strip').getByRole('tab');
+    for (const index of [1, 14]) {
+      const each = tabs.nth(index);
+      expect(await each.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+    }
+  });
 });
 
 test('a tab is dragged along the strip, or moved with Ctrl+Shift+Page Up and Down (8.12)', async () => {
