@@ -155,7 +155,12 @@ test('by keyboard alone: Enter opens the sizes, Tab goes on, a corner too large 
     await expect(note).toHaveCount(0);
     await expect(field(window, 'corner')).toHaveValue('30.0');
     const panel = window.getByTestId('property-panel');
-    for (const corner of ['↖', '↗', '↙', '↘']) {
+    for (const corner of [
+      'Top-left corner radius',
+      'Top-right corner radius',
+      'Bottom-left corner radius',
+      'Bottom-right corner radius',
+    ]) {
       await expect(panel.getByLabel(corner)).toHaveValue('30');
     }
 
@@ -295,7 +300,7 @@ test('Properties refuses a corner larger than fits, the same way (U.14)', async 
   await withSample(async (window) => {
     await window.getByTestId('feature-row-outer-outline').click();
     const panel = window.getByTestId('property-panel');
-    const topLeft = panel.getByLabel('↖');
+    const topLeft = panel.getByLabel('Top-left corner radius');
     // The other corners are 5: the left side, 95 tall, leaves this one 90.
     await topLeft.fill('95');
     await topLeft.press('Enter');
@@ -309,7 +314,7 @@ test('Properties refuses a corner larger than fits, the same way (U.14)', async 
     await expect(topLeft).not.toBeFocused();
 
     // Leaving drops a refused value, as it drops one it cannot read.
-    const topRight = panel.getByLabel('↗');
+    const topRight = panel.getByLabel('Top-right corner radius');
     await topRight.fill('200');
     await topRight.press('Enter');
     await panel.getByLabel('Width').focus();
@@ -317,7 +322,7 @@ test('Properties refuses a corner larger than fits, the same way (U.14)', async 
 
     // The arrow keys stop at the most that fits, and a step that changes
     // nothing is no step to undo.
-    const bottomRight = panel.getByLabel('↘');
+    const bottomRight = panel.getByLabel('Bottom-right corner radius');
     await bottomRight.fill('90');
     await bottomRight.press('Enter');
     await bottomRight.focus();
@@ -404,7 +409,12 @@ test('a width or height its corners do not fit in is refused, on the board and i
     await expect(field(window, 'height')).toHaveValue('10.0');
 
     // Stored as drawn: the corners are still the 5 mm typed.
-    for (const corner of ['↖', '↗', '↙', '↘']) {
+    for (const corner of [
+      'Top-left corner radius',
+      'Top-right corner radius',
+      'Bottom-left corner radius',
+      'Bottom-right corner radius',
+    ]) {
       await expect(panel.getByLabel(corner)).toHaveValue('5');
     }
     // Two sizes accepted, two steps back; the refusals were none.

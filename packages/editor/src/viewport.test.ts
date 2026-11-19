@@ -320,6 +320,58 @@ describe('fitTo', () => {
     expect(closeTo(v.scale, 0.8)).toBe(true);
   });
 
+  // X32: the legend floats over the board's bottom-left; a fit keeps out of it.
+  const corner = { widthPx: 220, heightPx: 150 };
+  const inCorner = (v: Viewport, p: { x: number; y: number }): boolean =>
+    p.x < corner.widthPx - 1e-6 && p.y > v.heightPx - corner.heightPx + 1e-6;
+
+  it('leaves a corner held by a control clear, whatever is framed', () => {
+    fc.assert(
+      fc.property(
+        fc.double({ min: -500, max: 500, noNaN: true }),
+        fc.double({ min: -500, max: 500, noNaN: true }),
+        // Up to a hide's size, framed above the least zoom: past it nothing fits.
+        fc.double({ min: 1, max: 1500, noNaN: true }),
+        fc.double({ min: 1, max: 1500, noNaN: true }),
+        (x, y, w, h) => {
+          const v = makeViewport();
+          const bounds = RectOps.fromCorners({ x, y }, { x: x + w, y: y + h });
+          v.fitTo(bounds, 40, corner);
+          const a = v.toScreen({ x, y: y + h });
+          const b = v.toScreen({ x: x + w, y });
+          // Inside the padding on every side…
+          expect(a.x).toBeGreaterThanOrEqual(40 - 1e-6);
+          expect(a.y).toBeGreaterThanOrEqual(40 - 1e-6);
+          expect(b.x).toBeLessThanOrEqual(800 - 40 + 1e-6);
+          expect(b.y).toBeLessThanOrEqual(600 - 40 + 1e-6);
+          // …and the framed box's bottom-left, its nearest point, out of the corner.
+          expect(inCorner(v, { x: a.x, y: b.y })).toBe(false);
+        },
+      ),
+    );
+  });
+
+  it('frames as without the corner what already lies clear of it', () => {
+    const bounds = RectOps.fromCorners({ x: 0, y: 0 }, { x: 1000, y: 10 });
+    const plain = makeViewport();
+    plain.fitTo(bounds, 40);
+    const clear = makeViewport();
+    clear.fitTo(bounds, 40, corner);
+    expect(clear.scale).toBe(plain.scale);
+    expect(clear.centreMm).toEqual(plain.centreMm);
+  });
+
+  it('gives up the side that costs the least zoom', () => {
+    const wide = makeViewport();
+    wide.fitTo(RectOps.fromCorners({ x: 0, y: 0 }, { x: 1000, y: 10 }), 0, corner);
+    // Wide content has height to spare: it moves up, at the full width's zoom.
+    expect(closeTo(wide.scale, 0.8)).toBe(true);
+
+    const tall = makeViewport();
+    tall.fitTo(RectOps.fromCorners({ x: 0, y: 0 }, { x: 10, y: 1000 }), 0, corner);
+    expect(closeTo(tall.scale, 0.6)).toBe(true);
+  });
+
   it('keeps the current zoom for a degenerate bound', () => {
     const v = makeViewport();
     const before = v.scale;

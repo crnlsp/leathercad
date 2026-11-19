@@ -170,7 +170,17 @@ describe('placeSelectionBar (U.17, R-14)', () => {
         // A panel open over one side of the board, or none.
         fc.option(fc.double({ min: 0, max: 500, noNaN: true }), { nil: undefined }),
         fc.boolean(),
-        (centre, zoom, dpr, x, y, w, h, size, taken, obstacles, panel, fromLeft) => {
+        // The other pieces, which may send it beside the selection (X33).
+        fc.array(
+          fc.record({
+            x: fc.double({ min: -300, max: 300, noNaN: true }),
+            y: fc.double({ min: -300, max: 300, noNaN: true }),
+            w: fc.double({ min: 1, max: 200, noNaN: true }),
+            h: fc.double({ min: 1, max: 200, noNaN: true }),
+          }),
+          { maxLength: 3 },
+        ),
+        (centre, zoom, dpr, x, y, w, h, size, taken, obstacles, panel, fromLeft, others) => {
           const v = view(centre, zoom, dpr);
           const bounds = piece(x, y, w, h);
           const area: CssBox | undefined =
@@ -185,6 +195,7 @@ describe('placeSelectionBar (U.17, R-14)', () => {
               size,
               taken: taken.map(toBox),
               obstacles: obstacles.map(toBox),
+              others: others.map((o) => piece(o.x, o.y, o.w, o.h)),
               ...(area === undefined ? {} : { area }),
             }),
           );
@@ -221,6 +232,72 @@ describe('placeSelectionBar (U.17, R-14)', () => {
           const placed = placeSelectionBar(v, input(bounds));
           if (box.bottom + 40 + BAR.height > 600) return;
           expect(placed?.side).toBe('below');
+        },
+      ),
+    );
+  });
+});
+
+describe('placeSelectionBar beside the other pieces (X33)', () => {
+  const v = view();
+  const bounds = piece(0, 0, 100, 50);
+  const other = (b: Rect): SelectionBarInput => input(bounds, { others: [b] });
+
+  it('flips above rather than cover the piece under the selection', () => {
+    const under = piece(0, -60, 100, 40);
+    const placed = placeSelectionBar(v, other(under))!;
+    expect(placed.side).toBe('above');
+    expect(overlap(barBox(placed), onScreen(v, under))).toBe(false);
+  });
+
+  it('goes beside the selection when pieces lie both under and over it', () => {
+    const narrow = piece(0, 0, 40, 50);
+    const under = piece(0, -60, 40, 40);
+    const over = piece(0, 60, 40, 40);
+    const placed = placeSelectionBar(v, { boundsMm: narrow, size: BAR, others: [under, over] })!;
+    expect(placed.side).toBe('right');
+    expect(placed.at.x).toBeGreaterThan(onScreen(v, narrow).right);
+    for (const b of [under, over]) expect(overlap(barBox(placed), onScreen(v, b))).toBe(false);
+  });
+
+  it('is not moved by a piece the selection lies on, as a pocket on its outer', () => {
+    expect(placeSelectionBar(v, other(piece(-20, -100, 140, 300)))!.side).toBe('below');
+  });
+
+  it('stays under the selection when a piece beside it is out of its way', () => {
+    expect(placeSelectionBar(v, other(piece(200, 0, 40, 50)))!.side).toBe('below');
+  });
+
+  it('covers a piece rather than leave the selection without its bar', () => {
+    // Pieces on every side: below, as before.
+    const all = [piece(0, -60, 100, 40), piece(0, 60, 100, 40), piece(-150, -100, 140, 300)];
+    const right = piece(110, -100, 140, 300);
+    const placed = placeSelectionBar(v, input(bounds, { others: [...all, right] }))!;
+    expect(placed.side).toBe('below');
+  });
+
+  it('never covers the selection, and covers another piece only when no side is clear', () => {
+    fc.assert(
+      fc.property(
+        fc.array(
+          fc.record({
+            x: fc.double({ min: -250, max: 250, noNaN: true }),
+            y: fc.double({ min: -150, max: 150, noNaN: true }),
+            w: fc.double({ min: 5, max: 150, noNaN: true }),
+            h: fc.double({ min: 5, max: 100, noNaN: true }),
+          }),
+          { maxLength: 4 },
+        ),
+        (rects) => {
+          const others = rects.map((r) => piece(r.x, r.y, r.w, r.h));
+          const placed = placeSelectionBar(v, input(bounds, { others }));
+          if (placed === null) return;
+          const bar = barBox(placed);
+          expect(overlap(bar, onScreen(v, bounds))).toBe(false);
+          // A side was taken over another piece only because every one was covered.
+          if (placed.side === 'right' || placed.side === 'left') {
+            for (const b of others) expect(overlap(bar, onScreen(v, b))).toBe(false);
+          }
         },
       ),
     );

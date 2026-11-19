@@ -504,14 +504,33 @@ export function CanvasHost({
     return () => observer.disconnect();
   }, [view, invalidate]);
 
+  /**
+   * Frames a box on the Design board, clear of the legend in its corner
+   * (X32): a fit that slid the drawing under the key would hide what it keys.
+   */
+  const frameOnBoard = useCallback((bounds: Rect) => {
+    const viewport = viewportRef.current;
+    const canvas = canvasRef.current;
+    const legend = containerRef.current?.querySelector('.canvas-legend') ?? null;
+    let clearOf: { widthPx: number; heightPx: number } | undefined;
+    if (canvas !== null && legend !== null) {
+      const board = canvas.getBoundingClientRect();
+      const held = legend.getBoundingClientRect();
+      clearOf = {
+        widthPx: (held.right - board.left) * viewport.dpr,
+        heightPx: (board.bottom - held.top) * viewport.dpr,
+      };
+    }
+    viewport.fitTo(bounds, FIT_PADDING_PX * viewport.dpr, clearOf);
+  }, []);
+
   const fitDrawing = useCallback(() => {
-    viewportRef.current.fitTo(
+    frameOnBoard(
       drawnBounds(evaluate(store.getState().document.project)) ??
         RectOps.fromCorners({ x: 0, y: 0 }, { x: 120, y: 90 }),
-      FIT_PADDING_PX * viewportRef.current.dpr,
     );
     invalidate();
-  }, [store, invalidate]);
+  }, [store, invalidate, frameOnBoard]);
 
   const handleDoubleClick = useCallback(() => {
     if (viewRef.current === 'sheets') {
@@ -539,7 +558,7 @@ export function CanvasHost({
       frame(bounds) {
         // The same padding the double-click fit uses, so being taken to a
         // problem looks like being taken to a part.
-        viewportRef.current.fitTo(bounds, FIT_PADDING_PX * viewportRef.current.dpr);
+        frameOnBoard(bounds);
         invalidate();
       },
       step(direction) {
@@ -556,7 +575,7 @@ export function CanvasHost({
         if (viewRef.current === 'sheets') return;
         const box = selectionBounds();
         if (box === null) return;
-        viewportRef.current.fitTo(box, FIT_PADDING_PX * viewportRef.current.dpr);
+        frameOnBoard(box);
         invalidate();
       },
       selectionPoint() {
@@ -584,7 +603,7 @@ export function CanvasHost({
         return barRef.current?.toggleFocus() ?? false;
       },
     }),
-    [camera, handleDoubleClick, fitDrawing, invalidate, selectionBounds],
+    [camera, handleDoubleClick, fitDrawing, frameOnBoard, invalidate, selectionBounds],
   );
 
   // Settings the tools read at the moment they act. Refs rather than props

@@ -16,12 +16,14 @@ export interface SelectionBarInput {
   readonly area?: CssBox;
   /** Controls laid over the board — the legend, the zoom control — which it never covers. */
   readonly obstacles?: readonly CssBox[];
+  /** The other pieces, drawn, in millimetres: the bar takes a side clear of them where one is (X33). */
+  readonly others?: readonly Rect[];
 }
 
 export interface PlacedSelectionBar {
   /** Its top-left, in CSS pixels. */
   readonly at: Vec2;
-  readonly side: 'below' | 'above';
+  readonly side: 'below' | 'above' | 'right' | 'left';
 }
 
 /** Between the bar and what it sits under or over. */
@@ -35,7 +37,10 @@ const GAP_PX = 4;
  * nor over, or the piece is out of view. It never covers the piece, at any
  * zoom: it is wholly under the lowest thing the piece lays out, or wholly
  * over the highest. Along its line it slides clear of a control laid over
- * the board, as a chip does, and stays inside the area.
+ * the board, as a chip does, and stays inside the area. Where under or over
+ * would cover another piece, it takes the first side clear of them all —
+ * over, then beside to the right or left (X33) — and covers one only when
+ * every side would.
  */
 export function placeSelectionBar(
   view: ViewportView,
@@ -44,15 +49,18 @@ export function placeSelectionBar(
   const { size } = input;
   const toCss = worldToCss(view);
   const area = clearArea(view, input.area);
-  const corners = RectOps.corners(input.boundsMm).map((p) => MatOps.apply(toCss, p));
-  const xs = corners.map((p) => p.x);
-  const ys = corners.map((p) => p.y);
-  const piece: CssBox = {
-    left: Math.min(...xs),
-    top: Math.min(...ys),
-    right: Math.max(...xs),
-    bottom: Math.max(...ys),
+  const onScreen = (bounds: Rect): CssBox => {
+    const corners = RectOps.corners(bounds).map((p) => MatOps.apply(toCss, p));
+    const xs = corners.map((p) => p.x);
+    const ys = corners.map((p) => p.y);
+    return {
+      left: Math.min(...xs),
+      top: Math.min(...ys),
+      right: Math.max(...xs),
+      bottom: Math.max(...ys),
+    };
   };
+  const piece = onScreen(input.boundsMm);
   // Out of view, there is nothing on the board for it to be about.
   if (
     piece.right <= area.left ||
@@ -95,16 +103,54 @@ export function placeSelectionBar(
   };
 
   const below = low + GAP_PX;
-  if (below + size.height <= area.bottom) {
-    const left = clearAt(below);
-    if (left !== null) return { at: { x: left, y: below }, side: 'below' };
-  }
   const above = high - GAP_PX - size.height;
-  if (above >= area.top) {
+  const under: PlacedSelectionBar | null = (() => {
+    if (below + size.height > area.bottom) return null;
+    const left = clearAt(below);
+    return left === null ? null : { at: { x: left, y: below }, side: 'below' };
+  })();
+  const over: PlacedSelectionBar | null = (() => {
+    if (above < area.top) return null;
     const left = clearAt(above);
-    if (left !== null) return { at: { x: left, y: above }, side: 'above' };
-  }
-  return null;
+    return left === null ? null : { at: { x: left, y: above }, side: 'above' };
+  })();
+
+  // Beside, level with the piece's top, past its chips: only to keep off
+  // another piece, so a lone piece keeps its bar where the maker reads it.
+  const top = clamp(piece.top, area.top, area.bottom - size.height);
+  const beside = (left: number, side: 'right' | 'left'): PlacedSelectionBar | null =>
+    left < area.left ||
+    left + size.width > area.right ||
+    top < area.top ||
+    blocked({ x: left + size.width / 2, y: top + size.height / 2 }, keepOff)
+      ? null
+      : { at: { x: left, y: top }, side };
+  const right = beside(Math.max(piece.right, ...taken.map((box) => box.right)) + GAP_PX, 'right');
+  const leftSide = beside(
+    Math.min(piece.left, ...taken.map((box) => box.left)) - GAP_PX - size.width,
+    'left',
+  );
+
+  // A piece the selection lies on — a pocket on its outer — is under every
+  // side alike, so it decides nothing.
+  const others = (input.others ?? []).map(onScreen).filter((box) => !overlaps(box, piece));
+  const clearOfOthers = (placed: PlacedSelectionBar | null): boolean => {
+    if (placed === null) return false;
+    const bar: CssBox = {
+      left: placed.at.x,
+      top: placed.at.y,
+      right: placed.at.x + size.width,
+      bottom: placed.at.y + size.height,
+    };
+    return !others.some((box) => overlaps(bar, box));
+  };
+  if (others.length === 0) return under ?? over;
+  return [under, over, right, leftSide].find(clearOfOthers) ?? under ?? over;
+}
+
+/** Whether two boxes share any area; touching edges do not. */
+function overlaps(a: CssBox, b: CssBox): boolean {
+  return a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
 }
 
 function clamp(value: number, min: number, max: number): number {

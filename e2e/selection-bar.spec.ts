@@ -309,17 +309,30 @@ test('it never covers the selected piece, at any zoom, and hides while dragging 
         // a few pixels off.
         const side = await shown.getAttribute('data-side');
         seen.add(side ?? '');
-        const y = side === 'above' ? box.y + box.height + 1 : box.y - 1;
-        for (const x of [box.x + 1, box.x + box.width - 1]) {
+        // Under or over, the long edge nearest the piece at both its ends;
+        // beside (X33: the lining lies under the outer), the short one.
+        const beside = side === 'right' || side === 'left';
+        const points: [number, number][] = beside
+          ? [box.y + 1, box.y + box.height - 1].map((y) => [
+              side === 'right' ? box.x - 1 : box.x + box.width + 1,
+              y,
+            ])
+          : [box.x + 1, box.x + box.width - 1].map((x) => [
+              x,
+              side === 'above' ? box.y + box.height + 1 : box.y - 1,
+            ]);
+        for (const [x, y] of points) {
           await window.keyboard.down('Control');
           const read = await readoutAt(window, x, y);
           await window.keyboard.up('Control');
-          const [, mmY] = read
+          const [mmX = NaN, mmY = NaN] = read
             .replace(/\u2212/g, '-')
             .split(',')
             .map((n) => Number.parseFloat(n));
           if (side === 'above') expect(mmY).toBeGreaterThan(95);
-          else expect(mmY).toBeLessThan(0);
+          else if (side === 'below') expect(mmY).toBeLessThan(0);
+          else if (side === 'right') expect(mmX).toBeGreaterThan(200);
+          else expect(mmX).toBeLessThan(0);
         }
       }
       // The next zoom, and the frame that placed the bar for it: measured
@@ -334,7 +347,8 @@ test('it never covers the selected piece, at any zoom, and hides while dragging 
           ),
       );
     }
-    expect(seen.has('below')).toBe(true);
+    // The lining lies under the outer, so it sits over the outer (X33).
+    expect(seen.has('above')).toBe(true);
 
     // Dragging the outline: the bar goes while the piece moves, and comes back.
     await window.getByTestId('tool-select').click();

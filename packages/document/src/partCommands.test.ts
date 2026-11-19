@@ -1,16 +1,20 @@
 import { diagnose, evaluate, type FeatureId, type PartId, type Project } from '@leathercad/domain';
 import { PathOps } from '@leathercad/geometry';
+import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
 import {
   addCutOut,
   addFoldLine,
   addMeasurement,
+  addAllowancePart,
+  addNewPiece,
   addPart,
   addStitchHoles,
   addStitchLine,
   duplicatePart,
   emptyDocument,
+  freshPieceName,
   deleteFeatures,
   isPartVisible,
   mirrorAcrossFold,
@@ -25,6 +29,7 @@ import {
   translateFeatures,
 } from './commands.js';
 import type { Command, Document } from './document.js';
+import { DocumentStore } from './store.js';
 
 const A = 'part-a' as PartId;
 const B = 'part-b' as PartId;
@@ -414,5 +419,82 @@ describe('duplicating a part that is locked', () => {
     const next = duplicatePart(A, B, ids).apply(document);
 
     expect(partIn(next.project, B)!.features.map((f) => f.locked)).toEqual([false, true, false]);
+  });
+});
+
+describe('freshPieceName (X35)', () => {
+  const named = (...names: string[]): Project => ({
+    ...emptyDocument('p').project,
+    parts: names.map((name, i) => ({
+      id: `p${String(i)}` as PartId,
+      name,
+      quantity: 1,
+      features: [],
+    })),
+  });
+
+  it('is the word itself while no piece has it', () => {
+    expect(freshPieceName(named('Pocket'), 'Panel')).toBe('Panel');
+  });
+
+  it('numbers the next piece from 2, the first number no piece has', () => {
+    expect(freshPieceName(named('Pocket'), 'Pocket')).toBe('Pocket 2');
+    expect(freshPieceName(named('Pocket', 'Pocket 2', 'Pocket 4'), 'Pocket')).toBe('Pocket 3');
+  });
+
+  it('never names a piece as another is named', () => {
+    fc.assert(
+      fc.property(
+        fc.array(fc.constantFrom('Panel', 'Panel 2', 'Panel 3', 'Pocket', 'Panel 10', 'panel'), {
+          maxLength: 12,
+        }),
+        (names) => {
+          expect(names).not.toContain(freshPieceName(named(...names), 'Panel'));
+        },
+      ),
+    );
+  });
+});
+
+describe('a new piece’s default name (X35)', () => {
+  const panel = (id: string): Command =>
+    addNewPiece(rectanglePart(id as PartId, `${id}-o`, 'Panel', rectShape({ x: 0, y: 0 }, 10, 10)));
+  const pocket = (id: string): Command =>
+    addAllowancePart(id as PartId, `${id}-s` as FeatureId, `${id}-o` as FeatureId, {
+      kind: 'shape',
+      shape: rectShape({ x: 0, y: 0 }, 40, 30),
+    });
+  const names = (store: DocumentStore): string[] =>
+    store.getState().document.project.parts.map((part) => part.name);
+
+  it('never clashes with a piece already there, whichever way pieces come and go', () => {
+    fc.assert(
+      fc.property(
+        fc.array(fc.constantFrom('panel', 'pocket', 'undo', 'redo'), { maxLength: 20 }),
+        (steps) => {
+          const store = new DocumentStore(emptyDocument('p'));
+          steps.forEach((step, i) => {
+            if (step === 'panel') store.dispatch(panel(`a${String(i)}`));
+            else if (step === 'pocket') store.dispatch(pocket(`b${String(i)}`));
+            else if (step === 'undo') store.undo();
+            else store.redo();
+            expect(new Set(names(store)).size).toBe(names(store).length);
+          });
+        },
+      ),
+    );
+  });
+
+  it('takes back its number on undo: the next drawn is that number again', () => {
+    const store = new DocumentStore(emptyDocument('p'));
+    store.dispatch(pocket('a'));
+    store.dispatch(pocket('b'));
+    store.dispatch(pocket('c'));
+    expect(names(store)).toEqual(['Pocket', 'Pocket 2', 'Pocket 3']);
+    store.undo();
+    store.dispatch(pocket('d'));
+    expect(names(store)).toEqual(['Pocket', 'Pocket 2', 'Pocket 3']);
+    store.dispatch(panel('e'));
+    expect(names(store)).toEqual(['Pocket', 'Pocket 2', 'Pocket 3', 'Panel']);
   });
 });

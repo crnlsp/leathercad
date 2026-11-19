@@ -172,7 +172,13 @@ test('draw roughly, then type exact millimetres', async () => {
     await setField('Y', '0');
     await setField('Width', '105');
     await setField('Height', '75');
-    for (const corner of ['↖', '↗', '↙', '↘']) await setField(corner, '8');
+    for (const corner of [
+      'Top-left corner radius',
+      'Top-right corner radius',
+      'Bottom-left corner radius',
+      'Bottom-right corner radius',
+    ])
+      await setField(corner, '8');
 
     // 2(105-16) + 2(75-16) + 2·pi·8 = 346.2655, computed by the geometry
     // engine rather than by the panel.
@@ -304,7 +310,13 @@ test('saves a project and reopens it with its parameters intact', async () => {
     };
     await setField('Width', '105');
     await setField('Height', '75');
-    for (const corner of ['↖', '↗', '↙', '↘']) await setField(corner, '8');
+    for (const corner of [
+      'Top-left corner radius',
+      'Top-right corner radius',
+      'Bottom-left corner radius',
+      'Bottom-right corner radius',
+    ])
+      await setField(corner, '8');
     await window.getByTestId('part-name').fill('Card holder');
 
     // The dot marks unsaved changes.
@@ -1812,7 +1824,7 @@ test('flipping a panel mirrors it, rather than turning it round', async () => {
     await set('Width', '100');
     await set('Height', '60');
     // One rounded corner, so the flip has something to carry across.
-    await set('↙', '8');
+    await set('Bottom-left corner radius', '8');
 
     await window.getByTestId('flip-horizontal').click();
 
@@ -1824,13 +1836,13 @@ test('flipping a panel mirrors it, rather than turning it round', async () => {
     await expect(field('Turn')).toHaveValue(/^0(\.00)?$/);
     // ...with the rounded corner now on the other side, adjacent rather than
     // diagonally opposite.
-    await expect(field('↙')).toHaveValue(/^0(\.00)?$/);
-    await expect(field('↘')).toHaveValue(/^8(\.00)?$/);
+    await expect(field('Bottom-left corner radius')).toHaveValue(/^0(\.00)?$/);
+    await expect(field('Bottom-right corner radius')).toHaveValue(/^8(\.00)?$/);
 
     // And one Undo puts it back.
     await window.getByTestId('undo').click();
-    await expect(field('↙')).toHaveValue(/^8(\.00)?$/);
-    await expect(field('↘')).toHaveValue(/^0(\.00)?$/);
+    await expect(field('Bottom-left corner radius')).toHaveValue(/^8(\.00)?$/);
+    await expect(field('Bottom-right corner radius')).toHaveValue(/^0(\.00)?$/);
   });
 });
 

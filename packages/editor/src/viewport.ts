@@ -158,22 +158,50 @@ export class Viewport {
     };
   }
 
-  /** Frames a millimetre rectangle, leaving a margin in device pixels. */
-  fitTo(bounds: Rect, paddingPx = 40): void {
+  /**
+   * Frames a millimetre rectangle, leaving a margin in device pixels.
+   *
+   * `clearOf` is a box held by a control floating over the board's
+   * bottom-left corner — the legend (X32). The frame gives up either a band
+   * above it or a band beside it, whichever costs less zoom, and moves the
+   * drawing only as far as clears it, so the drawing never lies under it.
+   */
+  fitTo(bounds: Rect, paddingPx = 40, clearOf?: { widthPx: number; heightPx: number }): void {
     const width = RectOps.width(bounds);
     const height = RectOps.height(bounds);
-    this.centreMm = RectOps.centre(bounds);
-
-    const usableWidth = Math.max(1, this.widthPx - paddingPx * 2);
-    const usableHeight = Math.max(1, this.heightPx - paddingPx * 2);
+    const centre = RectOps.centre(bounds);
+    this.centreMm = centre;
 
     // A degenerate bound has no scale that frames it; keep the current zoom.
     if (width <= 0 && height <= 0) return;
 
-    const scaleX = width > 0 ? usableWidth / width : Number.POSITIVE_INFINITY;
-    const scaleY = height > 0 ? usableHeight / height : Number.POSITIVE_INFINITY;
+    const scaleWithin = (usableWidth: number, usableHeight: number): number =>
+      this.clampScale(
+        Math.min(
+          width > 0 ? Math.max(1, usableWidth) / width : Number.POSITIVE_INFINITY,
+          height > 0 ? Math.max(1, usableHeight) / height : Number.POSITIVE_INFINITY,
+        ),
+      );
+    const usableWidth = this.widthPx - paddingPx * 2;
+    const usableHeight = this.heightPx - paddingPx * 2;
+    this.scale = scaleWithin(usableWidth, usableHeight);
+    if (clearOf === undefined) return;
 
-    this.scale = this.clampScale(Math.min(scaleX, scaleY));
+    const left = Math.max(0, clearOf.widthPx - paddingPx);
+    const bottom = Math.max(0, clearOf.heightPx - paddingPx);
+    const above = scaleWithin(usableWidth, usableHeight - bottom);
+    const beside = scaleWithin(usableWidth - left, usableHeight);
+    // Moved toward the free side only as far as clears the band, so what
+    // lies clear of the corner already frames as it would without it; Y is up.
+    if (above >= beside) {
+      const over = (this.heightPx + height * above) / 2 - (this.heightPx - paddingPx - bottom);
+      this.scale = above;
+      this.centreMm = { x: centre.x, y: centre.y - Math.max(0, over) / above };
+    } else {
+      const over = paddingPx + left - (this.widthPx - width * beside) / 2;
+      this.scale = beside;
+      this.centreMm = { x: centre.x - Math.max(0, over) / beside, y: centre.y };
+    }
   }
 
   /** The millimetre rectangle currently on screen. */

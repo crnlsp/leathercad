@@ -1,5 +1,6 @@
 import { drawnBounds, type DocumentStore } from '@leathercad/document';
-import { MIN_HOLES_IN_A_SET, diagnose, evaluate, type Seam } from '@leathercad/domain';
+import { MIN_HOLES_IN_A_SET, diagnose, evaluate, type Part, type Seam } from '@leathercad/domain';
+import type { Rect } from '@leathercad/geometry';
 import { placeSelectionBar, type CssBox, type ViewportView } from '@leathercad/render';
 import {
   Fragment,
@@ -130,12 +131,16 @@ export const SelectionBar = memo(function SelectionBar({
         bar.style.maxWidth = area === undefined ? '100%' : `${String(area.right - area.left)}px`;
         const { document, selection: now } = store.getState();
         const current = stitchChain(document.project, now);
-        const bounds =
-          current === null || hidden
-            ? null
-            : drawnBounds(
-                evaluate(document.project),
-                new Set(current.part.features.map((feature) => feature.id)),
+        const resolved = evaluate(document.project);
+        const piece = (part: Part): Rect | null =>
+          drawnBounds(resolved, new Set(part.features.map((feature) => feature.id)));
+        const bounds = current === null || hidden ? null : piece(current.part);
+        // The pieces it should not cover (X33).
+        const others =
+          bounds === null
+            ? []
+            : document.project.parts.flatMap((part) =>
+                part.id === current?.part.id ? [] : (piece(part) ?? []),
               );
         const placed =
           bounds === null
@@ -146,6 +151,7 @@ export const SelectionBar = memo(function SelectionBar({
                 taken,
                 ...(area === undefined ? {} : { area }),
                 obstacles,
+                others,
               });
         if (placed === null) {
           // Hidden is not focusable: focus inside goes back to the board.

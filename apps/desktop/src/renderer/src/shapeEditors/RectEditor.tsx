@@ -75,7 +75,8 @@ export function RectEditor({ shape, onChange }: { shape: Rect; onChange: (shape:
       {/* Laid out to match the corners on screen: top row above, bottom below. */}
       <div className="field-pair">
         <NumberField
-          label="↖"
+          label={t('editor.topLeftRadius')}
+          glyph="↖"
           value={shape.radii.topLeft}
           min={0}
           step={0.5}
@@ -83,7 +84,8 @@ export function RectEditor({ shape, onChange }: { shape: Rect; onChange: (shape:
           onCommit={(v) => setRadius('topLeft', v)}
         />
         <NumberField
-          label="↗"
+          label={t('editor.topRightRadius')}
+          glyph="↗"
           value={shape.radii.topRight}
           min={0}
           step={0.5}
@@ -93,7 +95,8 @@ export function RectEditor({ shape, onChange }: { shape: Rect; onChange: (shape:
       </div>
       <div className="field-pair">
         <NumberField
-          label="↙"
+          label={t('editor.bottomLeftRadius')}
+          glyph="↙"
           value={shape.radii.bottomLeft}
           min={0}
           step={0.5}
@@ -101,7 +104,8 @@ export function RectEditor({ shape, onChange }: { shape: Rect; onChange: (shape:
           onCommit={(v) => setRadius('bottomLeft', v)}
         />
         <NumberField
-          label="↘"
+          label={t('editor.bottomRightRadius')}
+          glyph="↘"
           value={shape.radii.bottomRight}
           min={0}
           step={0.5}
