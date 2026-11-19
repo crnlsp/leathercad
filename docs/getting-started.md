@@ -232,6 +232,14 @@ the size your software shows: it should be the size you drew.
   *Copy* and *Paste* too, and a right-click on empty board offers *Paste* alone. A mirrored piece
   copied without the piece it mirrors pastes as the shape it is now, and a dimension to a piece
   left behind is left out; the app says so when you copy. Each paste is one Undo step.
+- **Copy and paste features:** pick features inside one piece — a card slot, a stitch line, a
+  rivet — without its outline, and **Ctrl+C** copies just those. **Ctrl+V** pastes them under the
+  pointer into the piece the selection is in, so select the piece first; with no piece selected
+  the app asks you to choose one. A feature copied without what it follows — a stitch line
+  without its outline — pastes as the shape it is now, and holes without their stitch line are
+  left out; the app says so when you copy. **Ctrl+D** duplicates them into their own piece, on top
+  of the originals: move the copy, press **Ctrl+D** again, and the next lands that far on — three
+  card slots 15 mm apart down a lining.
 - **Typing where it goes:** *Properties → Arrange* shows where the selection's **Left** and
   **Bottom** edges are, as the rulers read them; type a number there and it moves to it. **Move
   by** takes a distance **Right** and **Up** — **−12** goes 12 mm left — and **Move** moves it,

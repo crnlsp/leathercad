@@ -195,7 +195,7 @@ describe('the right-click menu (8.8)', () => {
 
   it('offers Paste beside Copy once something is copied, and not before (8.8b)', () => {
     const onChoose = vi.fn();
-    const on = { ...actions(), paste: { count: 1, onChoose } };
+    const on = { ...actions(), paste: { kind: 'pieces', count: 1, onChoose } } as const;
 
     const { entries } = menu(selectionOf(['cut-a']), project(), on);
     item(entries, 'context-paste-pieces').onChoose();
@@ -203,6 +203,19 @@ describe('the right-click menu (8.8)', () => {
     expect(item(entries, 'context-paste-pieces').label).toBe('Paste piece');
     expect(onChoose).toHaveBeenCalledOnce();
     expect(() => item(menu(selectionOf(['cut-a'])).entries, 'context-paste-pieces')).toThrow();
+  });
+
+  it('copies and duplicates features picked in one piece as features, and pastes them so (8.8b-4)', () => {
+    const on = { ...actions(), paste: { kind: 'features', count: 2, onChoose: vi.fn() } } as const;
+    const { entries } = menu(selectionOf(['stitch-a']), project(), on);
+
+    expect(item(entries, 'context-copy-pieces').label).toBe('Copy feature');
+    expect(item(entries, 'context-duplicate-part').label).toBe('Duplicate');
+    expect(item(entries, 'context-paste-pieces').label).toBe('Paste 2 features');
+    // The outline stands for its piece.
+    const outline = menu(selectionOf(['cut-a', 'stitch-a'])).entries;
+    expect(item(outline, 'context-copy-pieces').label).toBe('Copy piece');
+    expect(item(outline, 'context-duplicate-part').label).toBe('Duplicate part');
   });
 
   it('deletes selected features through the one delete path, and a part as a part', () => {
@@ -240,7 +253,7 @@ describe('the right-click menu (8.8)', () => {
 
 describe('the right-click menu on empty board (8.8b)', () => {
   it('is Paste alone, once something is copied, and nothing before', () => {
-    const paste = { count: 3, onChoose: vi.fn() };
+    const paste = { kind: 'pieces', count: 3, onChoose: vi.fn() } as const;
 
     expect(boardMenu(createI18n('en'), paste).map((e) => e.kind === 'item' && e.label)).toEqual([
       'Paste 3 pieces',

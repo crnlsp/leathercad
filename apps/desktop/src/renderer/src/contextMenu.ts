@@ -13,6 +13,7 @@ import {
 import type { FeatureId, PartId, Problem, Project } from '@leathercad/domain';
 
 import type { I18n, Translate } from '../../shared/i18n.js';
+import { copyScope } from './piecesClipboard.js';
 import { sewableIds } from './seams.js';
 import { FLIP_ICON } from './icons/arrange.js';
 import type { MenuEntry } from './menus.js';
@@ -39,9 +40,9 @@ export function selectionForRightClick(selection: Selection, clicked: RightClick
 export interface SelectionActions {
   sewTogether?: () => void;
   dispatch(command: Command): void;
-  /** The selected pieces, one or several: what Ctrl+D does too. */
+  /** The selected pieces, or features in one (8.8b-4): what Ctrl+D does too. */
   duplicatePieces(): void;
-  /** Copies the pieces the selection is in, for any open project (8.8b). */
+  /** Copies what `copyScope` says the selection takes, for any open project (8.8b). */
   copyPieces(): void;
   /** What was copied, when anything was: *Paste* puts it where the menu was opened. */
   paste?: PasteChoice | undefined;
@@ -50,8 +51,9 @@ export interface SelectionActions {
   deletePart(partId: PartId): void;
 }
 
-/** The pieces waiting to be pasted, and the paste (8.8b). */
+/** The pieces, or features (8.8b-4), waiting to be pasted, and the paste (8.8b). */
 export interface PasteChoice {
+  readonly kind: 'pieces' | 'features';
   readonly count: number;
   readonly onChoose: () => void;
 }
@@ -60,7 +62,9 @@ function pasteItem({ t }: I18n, paste: PasteChoice): MenuEntry {
   return {
     kind: 'item',
     id: 'context-paste-pieces',
-    label: t('contextMenu.paste', { count: paste.count }),
+    label: t(paste.kind === 'pieces' ? 'contextMenu.paste' : 'contextMenu.pasteFeatures', {
+      count: paste.count,
+    }),
     keys: 'pastePieces',
     onChoose: paste.onChoose,
   };
@@ -101,6 +105,10 @@ export function selectionMenu(
     .filter((feature) => wholeParts || selection.features.has(feature.id));
   const ids = features.map((feature) => feature.id);
 
+  // Features in one piece are copied and duplicated on their own (8.8b-4).
+  const scope = copyScope(project, selection);
+  const loose = scope?.kind === 'features';
+
   const empty = features.length === 0 ? t('contextMenu.emptyPart') : undefined;
   // Mixed is not all: a half-locked selection is offered Lock, as other
   // editors do, and Unlock only once every piece of it is locked.
@@ -135,7 +143,7 @@ export function selectionMenu(
     {
       kind: 'item',
       id: 'context-duplicate-part',
-      label: t('actions.duplicatePart'),
+      label: loose ? t('actions.duplicate') : t('actions.duplicatePart'),
       icon: 'duplicate',
       keys: 'duplicatePiece',
       onChoose: actions.duplicatePieces,
@@ -144,7 +152,9 @@ export function selectionMenu(
     {
       kind: 'item',
       id: 'context-copy-pieces',
-      label: t('contextMenu.copy', { count: parts.length }),
+      label: loose
+        ? t('contextMenu.copyFeatures', { count: scope.ids.size })
+        : t('contextMenu.copy', { count: parts.length }),
       keys: 'copyPieces',
       onChoose: actions.copyPieces,
     },

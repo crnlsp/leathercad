@@ -66,8 +66,10 @@ import {
 import {
   copyNotice,
   copySelection,
+  copyScope,
   duplicateSelection,
-  pasteCommand,
+  pasteClipboard,
+  selectCopies,
   type PiecesClipboard,
 } from './piecesClipboard.js';
 import { listenForContextMenuKeys } from './keyboardContextMenu.js';
@@ -1362,29 +1364,31 @@ export function App({
       store.dispatch(duplicatePart(partId, newPartId, featureIds, step));
       // The copy is what you are now working on.
       store.selectParts([newPartId]);
-      tab.steps.remember([newPartId], step ?? undefined);
+      tab.steps.remember({ kind: 'pieces', ids: new Set([newPartId]) }, step ?? undefined);
     },
     [store, tab, nextId],
   );
 
   // Ctrl+D and the menu's Duplicate, one undo step. One piece goes the way it
   // always has (a name with "copy"); several go through copy and paste, so
-  // their seams, mirrors and references are the paste's. Right after a
-  // duplicate that was then moved, the same key repeats the move (step and
-  // repeat, 8.8b): the new copy is that far on from the one duplicated.
+  // their seams, mirrors and references are the paste's, and so do features
+  // in one piece, into it (8.8b-4). Right after a duplicate that was then
+  // moved, the same key repeats the move (step and repeat, 8.8b): the new copy
+  // is that far on from the one duplicated.
   const duplicateSelected = useCallback(() => {
     const { document, selection } = store.getState();
-    const parts = selectedParts(document.project, selection);
-    const step = tab.steps.stepFor(parts);
-    if (parts.size === 1) {
-      requestDuplicatePart([...parts][0]!, step);
+    const scope = copyScope(document.project, selection);
+    if (scope === null) return;
+    const step = tab.steps.stepFor(scope);
+    if (scope.kind === 'pieces' && scope.ids.size === 1) {
+      requestDuplicatePart([...scope.ids][0]!, step);
       return;
     }
     const made = duplicateSelection(document.project, selection, nextId, step);
     if (made === null) return;
     store.dispatch(made.command);
-    store.selectParts(made.partIds);
-    tab.steps.remember(made.partIds, step ?? undefined);
+    selectCopies(store, made.copies);
+    tab.steps.remember(made.copies, step ?? undefined);
     // What came as drawn shapes, or was left out, said of the copies just made.
     const said = copyNotice(made.copied, i18n, 'duplicate');
     if (said !== null) setNotice({ title: t('pieces.duplicatedTitle'), text: said });
@@ -1399,7 +1403,8 @@ export function App({
     const { document, selection } = store.getState();
     const copied = copySelection(document.project, selection);
     if (copied === null) return;
-    setPiecesClipboard(copied.clipboard);
+    // A copy of only what cannot come brings nothing to paste: said, not held.
+    if (copied.clipboard.count > 0) setPiecesClipboard(copied.clipboard);
     // What the paste will not bring as it was is said now, before it is pasted.
     const said = copyNotice(copied, i18n, 'copy');
     if (said !== null) setNotice({ title: t('pieces.copiedTitle'), text: said });
@@ -1407,17 +1412,25 @@ export function App({
   const pastePieces = useCallback(
     (at: Vec2 | null) => {
       if (piecesClipboard === null) return;
-      let pasted: ReturnType<typeof pasteCommand>;
+      // Features go into the piece the selection is in (8.8b-4), and into
+      // none when it is in none, or in several.
+      const { document, selection } = store.getState();
+      const [into, ...more] = selectedParts(document.project, selection);
+      let pasted: ReturnType<typeof pasteClipboard>;
       try {
-        pasted = pasteCommand(piecesClipboard, nextId, at);
+        pasted = pasteClipboard(piecesClipboard, nextId, at, more.length === 0 ? into : undefined);
       } catch (error) {
         if (!(error instanceof InvalidProjectFileError)) throw error;
         setNotice({ title: t('pieces.pasteFailedTitle'), text: t('pieces.pasteFailed') });
         return;
       }
+      if (pasted === null) {
+        setNotice({ title: t('pieces.pasteIntoTitle'), text: t('pieces.pasteInto') });
+        return;
+      }
       store.dispatch(pasted.command);
       // What was pasted is what you are now working on, as a duplicate is.
-      store.selectParts(pasted.partIds);
+      selectCopies(store, pasted.copies);
     },
     [piecesClipboard, nextId, store, t],
   );
@@ -1469,6 +1482,7 @@ export function App({
     piecesClipboard === null || contextMenu === null
       ? undefined
       : {
+          kind: piecesClipboard.kind,
           count: piecesClipboard.count,
           onChoose: () => pastePieces(contextMenu.boardAt),
         };

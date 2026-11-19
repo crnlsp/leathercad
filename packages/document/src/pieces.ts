@@ -16,13 +16,16 @@ import {
 import { Vec2Ops, type Path, type Vec2 } from '@leathercad/geometry';
 
 import {
+  boxOfFeatures,
   boxOfParts,
+  capturedLineOf,
   cutOut,
   drawnStitchLine,
   foldLine,
   markingLine,
   moveClear,
   movePieces,
+  moveTogether,
   pathPart,
   relock,
   repointed,
@@ -82,11 +85,74 @@ export interface PasteIds {
 export function copyPieces(project: Project, partIds: Iterable<PartId>): PiecesCopy {
   const wanted = new Set(partIds);
   const parts = project.parts.filter((part) => wanted.has(part.id));
+  const { kept, frozen, dropped } = resolveOut(project, allFeatures(parts));
+  return {
+    pieces: {
+      parts: parts.map((part) => ({
+        ...part,
+        features: part.features.flatMap((f) => {
+          const copy = kept.get(f.id);
+          return copy === undefined ? [] : [copy];
+        }),
+      })),
+      seams: seamsWithin(project, kept),
+    },
+    frozen,
+    dropped,
+  };
+}
+
+/** Features lifted out of their pieces (8.8b-4), for a paste into a piece. */
+export interface CopiedFeatures {
+  readonly features: readonly Feature[];
+  /** Seams between two hole sets both copied. */
+  readonly seams: readonly Seam[];
+}
+
+export interface FeaturesCopy {
+  readonly copied: CopiedFeatures;
+  readonly frozen: readonly CopyLoss[];
+  readonly dropped: readonly CopyLoss[];
+}
+
+/**
+ * Copies features, in document order, resolving every reference that leaves
+ * them as `copyPieces` does (8.8b-4): a derived feature comes with its source
+ * when the source comes too, and is frozen to what it draws now when it does
+ * not. The one thing a piece's copy never meets: a fold mirror copied with its
+ * original but not its fold keeps mirroring it, about the line the fold is on
+ * — as deleting the fold would keep it (`withCapturedAxis`). Pure.
+ */
+export function copyFeatures(project: Project, featureIds: Iterable<FeatureId>): FeaturesCopy {
+  const wanted = new Set(featureIds);
+  const features = allFeatures(project.parts).filter((f) => wanted.has(f.id));
+  const { kept, frozen, dropped } = resolveOut(project, features);
+  return {
+    copied: {
+      features: features.flatMap((f) => {
+        const copy = kept.get(f.id);
+        return copy === undefined ? [] : [copy];
+      }),
+      seams: seamsWithin(project, kept),
+    },
+    frozen,
+    dropped,
+  };
+}
+
+/**
+ * The features of a copy, each as it will be pasted: what points out of them
+ * resolved — re-rooted, its axis captured, frozen, or dropped and named.
+ */
+function resolveOut(
+  project: Project,
+  features: readonly Feature[],
+): { kept: Map<FeatureId, Feature>; frozen: CopyLoss[]; dropped: CopyLoss[] } {
   const original = new Map(allFeatures(project.parts).map((f) => [f.id, f] as const));
   const partNameOf = new Map(
-    parts.flatMap((part) => part.features.map((f) => [f.id, part.name] as const)),
+    project.parts.flatMap((part) => part.features.map((f) => [f.id, part.name] as const)),
   );
-  const kept = new Map(allFeatures(parts).map((f) => [f.id, f] as const));
+  const kept = new Map(features.map((f) => [f.id, f] as const));
 
   let resolved: ReadonlyMap<FeatureId, ResolvedFeature> | null = null;
   const evaluated = (id: FeatureId): ResolvedFeature | undefined => {
@@ -114,7 +180,8 @@ export function copyPieces(project: Project, partIds: Iterable<PartId>): PiecesC
       if (referencesOf(feature).every((ref) => kept.has(ref))) continue;
       changed = true;
 
-      const rerooted = rerootedMirror(feature, original, kept);
+      const rerooted =
+        rerootedMirror(feature, original, kept) ?? capturedAxis(project, feature, kept);
       if (rerooted !== null) {
         kept.set(feature.id, rerooted);
         continue;
@@ -139,23 +206,33 @@ export function copyPieces(project: Project, partIds: Iterable<PartId>): PiecesC
       dropped.push(loss(feature));
     }
   }
+  return { kept, frozen, dropped };
+}
 
-  return {
-    pieces: {
-      parts: parts.map((part) => ({
-        ...part,
-        features: part.features.flatMap((f) => {
-          const copy = kept.get(f.id);
-          return copy === undefined ? [] : [copy];
-        }),
-      })),
-      seams: (project.seams ?? []).filter(
-        (seam) => kept.has(seam.a.holeSetId) && kept.has(seam.b.holeSetId),
-      ),
-    },
-    frozen,
-    dropped,
-  };
+/** The seams whose two hole sets are both in a copy. */
+function seamsWithin(project: Project, kept: ReadonlyMap<FeatureId, Feature>): Seam[] {
+  return (project.seams ?? []).filter(
+    (seam) => kept.has(seam.a.holeSetId) && kept.has(seam.b.holeSetId),
+  );
+}
+
+/**
+ * A fold mirror whose original comes but whose fold does not, mirroring about
+ * the line the fold is on now; `null` for anything else, or a fold that is no
+ * straight line to capture.
+ */
+function capturedAxis(
+  project: Project,
+  feature: Feature,
+  kept: ReadonlyMap<FeatureId, Feature>,
+): Feature | null {
+  if (feature.source.kind !== 'derived' || feature.source.op.type !== 'mirror') return null;
+  const op = feature.source.op;
+  if (op.axis.kind !== 'fold' || kept.has(op.axis.foldId)) return null;
+  if (!kept.has(feature.source.sourceId)) return null;
+  const line = capturedLineOf(project, op.axis.foldId);
+  if (line === null) return null;
+  return { ...feature, source: { ...feature.source, op: { ...op, axis: line } } } as Feature;
 }
 
 /**
@@ -222,6 +299,95 @@ export function pastePieces(
   });
 }
 
+/**
+ * Pastes copied features into the piece `partId` with fresh ids, every
+ * reference among them re-pointed to the pasted copies (8.8b-4).
+ *
+ * Centred on `at` when pasted at a point, moved by whole quanta; `stepMm` away
+ * from where they were copied, for step and repeat; otherwise where they were
+ * copied from — a duplicate inside its own piece stands on its original until
+ * it is moved, so the move is the step. Locks come as they were. One step of
+ * undo.
+ *
+ * Refuses, changing nothing: no such piece, too few ids, nothing to paste, or
+ * an outline among the features — a piece has one (S5), and a copy of
+ * features never holds one, since an outline stands for its piece.
+ */
+export function pasteFeatures(
+  copied: CopiedFeatures,
+  ids: Omit<PasteIds, 'parts'>,
+  partId: PartId,
+  at: Vec2 | null,
+  stepMm: Vec2 | null = null,
+): Command {
+  if (at !== null) Vec2Ops.assertFiniteVec(at, 'paste point');
+  if (stepMm !== null) Vec2Ops.assertFiniteVec(stepMm, 'paste step');
+  return command({ action: 'paste-features', count: copied.features.length }, (document) => {
+    const { features, seams } = copied;
+    const target = document.project.parts.find((part) => part.id === partId);
+    if (
+      target === undefined ||
+      features.length === 0 ||
+      ids.features.length < features.length ||
+      ids.seams.length < seams.length ||
+      features.some((f) => f.kind === 'cut-contour' && f.role === 'outer')
+    ) {
+      return document;
+    }
+
+    const renamed = new Map(features.map((f, i) => [f.id, ids.features[i]!] as const));
+    const into = (ref: FeatureId): FeatureId => renamed.get(ref) ?? ref;
+    const wasLocked = new Map(features.map((f) => [renamed.get(f.id)!, f.locked] as const));
+    const pasted = features.map((f) => ({
+      ...repointed(f, renamed.get(f.id)!, into),
+      locked: false,
+    }));
+
+    const project: Project = {
+      ...document.project,
+      parts: document.project.parts.map((part) =>
+        part === target ? { ...part, features: [...part.features, ...pasted] } : part,
+      ),
+      ...(seams.length === 0
+        ? {}
+        : {
+            seams: [
+              ...(document.project.seams ?? []),
+              ...seams.map((seam, i): Seam => ({
+                ...seam,
+                id: ids.seams[i]!,
+                a: { ...seam.a, holeSetId: into(seam.a.holeSetId) },
+                b: { ...seam.b, holeSetId: into(seam.b.holeSetId) },
+              })),
+            ],
+          }),
+    };
+    const pastedIds = pasted.map((f) => f.id);
+    const offset = offsetFor(project, new Set(pastedIds), at, stepMm);
+    const placed =
+      approxEq(offset.x, 0) && approxEq(offset.y, 0)
+        ? project
+        : moveTogether(project, pastedIds, offset);
+    return { project: relock(placed, new Set([partId]), wasLocked) };
+  });
+}
+
+/** How far a paste of features moves them from where they were copied. */
+function offsetFor(
+  project: Project,
+  ids: ReadonlySet<FeatureId>,
+  at: Vec2 | null,
+  stepMm: Vec2 | null,
+): Vec2 {
+  if (stepMm !== null) return Vec2Ops.quantiseVec(stepMm);
+  const box = at === null ? null : boxOfFeatures(project, ids);
+  if (at === null || box === null) return { x: 0, y: 0 };
+  return {
+    x: quantise(at.x - (box.minX + box.maxX) / 2),
+    y: quantise(at.y - (box.minY + box.maxY) / 2),
+  };
+}
+
 function placed(
   project: Project,
   pasted: readonly Part[],
@@ -254,26 +420,60 @@ export function pieceStep(
   after: Project,
   partIds: ReadonlySet<PartId>,
 ): Vec2 | null {
-  const was = boxOfParts(before, partIds);
-  const is = boxOfParts(after, partIds);
+  return featureStep(
+    before,
+    after,
+    new Set(
+      before.parts
+        .filter((part) => partIds.has(part.id))
+        .flatMap((part) => part.features.map((f) => f.id)),
+    ),
+  );
+}
+
+/**
+ * `pieceStep` for features (8.8b-4): how far `featureIds` were moved as one,
+ * or `null` when anything else happened — another feature touched, one added
+ * or taken away, or those moved apart.
+ */
+export function featureStep(
+  before: Project,
+  after: Project,
+  featureIds: ReadonlySet<FeatureId>,
+): Vec2 | null {
+  // Read off what is drawn for itself, which a move carries rigidly: what
+  // follows it may not — a mirror about a fold slid along its own line stays.
+  const measured = rootsAmong(before, featureIds);
+  const was = boxOfFeatures(before, measured);
+  const is = boxOfFeatures(after, measured);
   if (was === null || is === null || before.parts.length !== after.parts.length) return null;
 
   const step = Vec2Ops.quantiseVec({ x: is.minX - was.minX, y: is.minY - was.minY });
   if (approxEq(step.x, 0) && approxEq(step.y, 0)) return null;
 
-  // Moved whole means exactly what moving them whole makes of them.
-  const expected = movePieces(before, partIds, step).parts;
+  // Moved as one means exactly what moving them as one makes of them.
+  const expected = moveTogether(before, [...featureIds], step).parts;
   const same = after.parts.every((part, i) => {
-    const old = (partIds.has(part.id) ? expected : before.parts)[i];
+    const old = expected[i];
     return (
       old?.id === part.id &&
-      (partIds.has(part.id)
-        ? JSON.stringify(old.features) === JSON.stringify(part.features)
-        : old.features.length === part.features.length &&
-          old.features.every((feature, k) => feature === part.features[k]))
+      old.features.length === part.features.length &&
+      old.features.every((feature, k) =>
+        featureIds.has(feature.id)
+          ? JSON.stringify(feature) === JSON.stringify(part.features[k])
+          : feature === part.features[k],
+      )
     );
   });
   return same ? step : null;
+}
+
+/** The features among `ids` that follow nothing; all of them when none does. */
+function rootsAmong(project: Project, ids: ReadonlySet<FeatureId>): ReadonlySet<FeatureId> {
+  const roots = allFeatures(project.parts).filter(
+    (f) => ids.has(f.id) && f.source.kind !== 'derived' && f.source.kind !== 'measurement',
+  );
+  return roots.length === 0 ? ids : new Set(roots.map((f) => f.id));
 }
 
 /**

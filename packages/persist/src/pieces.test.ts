@@ -1,10 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import type { Project } from '@leathercad/domain';
+import type { Feature, Project } from '@leathercad/domain';
 import { describe, expect, it } from 'vitest';
 
 import { InvalidProjectFileError, loadProject } from './lcp.js';
-import { readPieces, writePieces } from './pieces.js';
+import { readFeatures, readPieces, writeFeatures, writePieces } from './pieces.js';
 
 const cardHolder = (): Project =>
   loadProject(
@@ -61,5 +61,33 @@ describe('readPieces', () => {
     expect(() => readPieces(writePieces({ parts: parts.slice(1), seams }))).toThrow(
       InvalidProjectFileError,
     );
+  });
+});
+
+describe('readFeatures (8.8b-4)', () => {
+  /** The card holder's back: everything in it but its outline. */
+  const inner = () => cardHolder().parts[0]!.features.slice(1);
+
+  it('reads back what was written: features that follow one another', () => {
+    // The back's outline made a cut-out, so what follows it has it to follow.
+    const [outline, ...rest] = cardHolder().parts[0]!.features;
+    if (outline?.kind !== 'cut-contour') throw new Error('the back starts with its outline');
+    const features: Feature[] = [{ ...outline, role: 'inner' }, ...rest];
+    expect(readFeatures(writeFeatures({ features, seams: [] }))).toEqual({ features, seams: [] });
+  });
+
+  it('refuses a feature following something not in the copy', () => {
+    expect(() => readFeatures(writeFeatures({ features: inner(), seams: [] }))).toThrow(
+      InvalidProjectFileError,
+    );
+  });
+
+  it('refuses an outline, which a copy of features never holds', () => {
+    const features = cardHolder().parts[0]!.features;
+    expect(() => readFeatures(writeFeatures({ features, seams: [] }))).toThrow(/outline/);
+  });
+
+  it('refuses what is not JSON', () => {
+    expect(() => readFeatures('{"features": [')).toThrow(InvalidProjectFileError);
   });
 });
