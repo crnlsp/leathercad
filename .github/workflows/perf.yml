@@ -1,0 +1,78 @@
+name: Packaged performance
+
+# PERF-018: the packaged app's startup, idle and soak figures on each
+# platform, on demand — never on a pull request. Shared runners are noisy, so
+# these are a record to read beside the Linux baseline in
+# docs/performance-backlog.md, not a budget: nothing here fails on a number.
+# It fails only if a tool cannot drive the app. The figures are uploaded as
+# `perf-<OS>`.
+
+on:
+  workflow_dispatch:
+    inputs:
+      soak-minutes:
+        description: How long the soak runs; 0 skips it. The backlog's is 120.
+        type: number
+        required: false
+        default: 120
+
+permissions:
+  contents: read
+
+jobs:
+  measure:
+    name: Measure (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    # A 120-minute soak, the startup runs and the build.
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # The unpacked app with the inspector fuse Playwright attaches through;
+      # otherwise the shipped build (installers.yml says how they differ).
+      - name: Package
+        run: pnpm --filter @leathercad/desktop package:e2e
+
+      # Five launches, the first cold where the runner allows it (Linux), each
+      # followed by 10 s and then 60 s idle. Electron needs a display, which a
+      # Linux runner lacks; xvfb is preinstalled there.
+      - name: Startup and idle
+        shell: bash
+        run: |
+          mkdir -p perf
+          run() { if [ "$RUNNER_OS" = Linux ]; then xvfb-run -a "$@"; else "$@"; fi; }
+          run node tools/perf-startup.mjs "$RUNNER_OS" | tee perf/startup.jsonl
+          run node tools/perf-startup.mjs "$RUNNER_OS" --plain | tee perf/startup-plain.jsonl
+
+      # The backlog's working-session cycle, sampled every ten minutes.
+      - name: Soak
+        if: inputs.soak-minutes > 0
+        shell: bash
+        env:
+          MINUTES: ${{ inputs.soak-minutes }}
+        run: |
+          run() { if [ "$RUNNER_OS" = Linux ]; then xvfb-run -a "$@"; else "$@"; fi; }
+          run node tools/perf-soak.mjs "$RUNNER_OS" --minutes "$MINUTES" | tee perf/soak.jsonl
+
+      - name: Upload the figures
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: perf-${{ runner.os }}
+          path: perf/
+          if-no-files-found: ignore

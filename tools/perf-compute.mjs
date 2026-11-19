@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * `node tools/perf-compute.mjs [--root <tree>] [--json] [workload…]` — what the pure layers cost
+ * `node tools/perf-compute.mjs [--root <tree>] [--json] [--fixtures] [workload…]` — what the pure layers cost
  * bundled as the app ships them, rather than through Vitest's module runner (PERF-017).
  *
  * Vite, the bundler that builds the app, bundles the sources of `--root` (this tree by default)
@@ -43,15 +43,15 @@ const args = process.argv.slice(2);
 const flag = args.indexOf('--root');
 const root = resolve(flag === -1 ? resolve(import.meta.dirname, '..') : args.splice(flag, 2)[1]);
 const json = args.includes('--json');
-const only = args.filter((a) => a !== '--json');
+const only = args.filter((a) => !a.startsWith('--'));
 
 const src = (path) => JSON.stringify(resolve(root, path));
 const entry = `
 import * as workloads from ${src('packages/domain/src/workloads.ts')};
 import { diagnose, evaluate, featureTree, graphProblems } from ${src('packages/domain/src/index.ts')};
 import { buildSnapIndex } from ${src('packages/editor/src/index.ts')};
-import { loadProject } from ${src('packages/persist/src/index.ts')};
-export { buildSnapIndex, diagnose, evaluate, featureTree, graphProblems, loadProject, workloads };
+import { loadProject, saveProject } from ${src('packages/persist/src/index.ts')};
+export { buildSnapIndex, diagnose, evaluate, featureTree, graphProblems, loadProject, saveProject, workloads };
 `;
 
 const out = mkdtempSync(join(tmpdir(), 'lc-perf-compute-'));
@@ -76,6 +76,17 @@ rmSync(out, { recursive: true, force: true });
 
 const { buildSnapIndex, diagnose, evaluate, featureTree, graphProblems, loadProject } = lib;
 const w = lib.workloads;
+
+// `--fixtures` writes 1.7's workloads to fixtures/perf/ (PERF-018), for the tools that open them
+// in the app.
+if (args.includes('--fixtures')) {
+  const now = () => new Date('2026-11-19T00:00:00Z');
+  const save = (project) => lib.saveProject(project, { applicationVersion: '1.6.1', now });
+  writeFileSync(resolve(root, 'fixtures/perf/bag-200.lcp'), save(w.bag(200)));
+  writeFileSync(resolve(root, 'fixtures/perf/bifold-seams.lcp'), save(w.seamedBifold()));
+  writeFileSync(resolve(root, 'fixtures/perf/svg-300.svg'), w.svgPattern(300));
+  process.exit(0);
+}
 const WORKLOADS = {
   wallet: () =>
     loadProject(readFileSync(resolve(root, 'fixtures/projects/bifold-wallet.lcp'))).project,
@@ -87,6 +98,8 @@ const WORKLOADS = {
   'bag-30': () => w.bag(30),
   'bag-40': () => w.bag(40),
   'bag-50': () => w.bag(50),
+  'bag-200': () => w.bag(200),
+  'bifold-seams': () => w.seamedBifold(),
   'chain-10': () => w.mirrorChain(10),
   'chain-100': () => w.mirrorChain(100),
   'chain-500': () => w.mirrorChain(500),

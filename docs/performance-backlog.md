@@ -70,6 +70,7 @@ simplification, reduced precision, scaled-to-fit output or reduced undo depth as
 | ✅ | [PERF-015](#perf-015) | P3 | Low | Avoid repeated deep dependency walks | Confirmed on stress fixture | Medium | High | `perf/015-dependency-walks` |
 | ✅ | [PERF-016](#perf-016) | P3 | Low | Prune obsolete collapsed-part IDs | Strong evidence | Small | Low | `claude/perf-016-folds` |
 | ✅ | [PERF-017](#perf-017) | P2 | Medium | Make benchmarks representative and interpretable | Confirmed | Small | Low | `perf/017-benchmarks` |
+| ◐ | [PERF-018](#17-baseline-perf-018) | P0 (1.7) | — | Packaged startup, idle and soak baselines, and 1.7's workloads | Measured | Medium | Low | `claude/xenodochial-boyd-082c07` |
 
 ## Recommended implementation order
 
@@ -185,6 +186,84 @@ history depth and tile count matter separately.
 real mixed-DPI monitor migration, GPU utilization/VRAM/presentation timing, complete native peak
 memory, slow/network filesystems and cross-platform behavior. No claim of verified physical
 print accuracy follows from this audit.
+
+### 1.7 baseline (PERF-018)
+
+What later 1.7 slices and the candidate compare against, on the same machine with the same tools.
+No budget is set from these numbers.
+
+**Machine and build.** The audit's Ryzen 5 7600X × 12, about 30 GiB, Linux 7.3.4-1-cachyos,
+Node 24.22.3 for the tools. The app is develop at `eac5335` (9.16) with this change's tools on
+top, `cd0e1b6`, version 1.6.1, Electron 45.3.1 (Chromium 156.0.8078.96), packaged by
+`pnpm package:e2e` as `linux-unpacked`, and by `pnpm package:dir` for the shipped fuses. Run under
+`pnpm hidden-screen` (Xvfb 2560 × 1600, niceness 10), 2026-11-19 from 21:17, every other session
+finished: the load average was 0.03–0.52 at each tool's start.
+
+**Method.** `tools/perf-startup.mjs`, two rounds interleaved: the instrumented launch, then
+`--plain` on the shipped-fuse build, then `--plain` on the E2E build — each round five launches, the
+first cold (the app's files dropped from the page cache with `dd iflag=nocache`, no root; the
+system's libraries stay cached; profile on tmpfs), four warm. Each opens a copy of the sample wallet
+on a fresh profile, with the update check pointed at a closed port. Times run from the moment
+before the process is started.
+
+| Packaged startup, Linux, ms | Cold (2 runs) | Warm (8 runs), median and range |
+|---|---:|---:|
+| First paint, instrumented E2E build | 419, 345 | 268 (259–274) |
+| Version showing, instrumented E2E build | 502, 414 | 335 (329–340) |
+| First paint, plain, shipped fuses | 434, 442 | 268 (260–284) |
+| First paint, plain, E2E build | 343, 349 | 269 (261–281) |
+
+**Idle, the ten instrumented launches.** 10 s after the version shows, every process's resident
+memory sums to 568.8–572.3 MiB: browser 186–190, GPU 138–139, utility 79, renderer 164–165. Over
+the next 60 s all processes together used 0.10–0.13 % of one core, and the window scheduled
+**0 animation callbacks and 0 board paints** — PERF-014 holds on the packaged app (the audit's
+unpackaged idle took 1,653 callbacks in 10 s).
+
+**Find out first: is the E2E build close enough?** Yes, warm: the instrumented launch, the same
+binary started plainly and the shipped fuses started plainly paint first within a millisecond of
+each other at the median, so neither Playwright's inspector nor the fuse costs anything warm. Cold,
+the shipped-fuse copy was 434–442 ms against 343–349 ms for the E2E build started the same way,
+and the same order at `ec4cdeb` an hour earlier (429–442 against 351–378). The two builds differ by
+one fuse bit and by the directory they were written to; the cause was not found, so a cold number
+is compared only with one taken from the same kind of build. What neither measures is the wrapper
+a maker starts: the AppImage mounts its squashfs before Electron runs, and the NSIS install and the
+dmg are not timed.
+
+**1.7's workloads, bundled** (`tools/perf-compute.mjs`, the median of three runs' medians, each 20
+samples after 3 warm-ups, ms). The two-hour soak below ran beside them, on one of the 12 threads;
+the wallet and `bag-50` are here to compare with the PERF-017 table.
+
+| Workload | Fresh evaluation | Fresh diagnosis | Diagnosis after a rename | Snap-index build |
+|---|---:|---:|---:|---:|
+| Wallet | 0.36 | 0.67 | 0.02 | 0.32 |
+| 50 simple parts (`bag-50`) | 2.90 | 4.17 | 0.19 | 5.97 |
+| 200 pieces on one board (`bag-200`, 23,600 holes) | 6.94 | 14.40 | 0.40 | 78.11 |
+| Bifold, six pieces, six seams (`bifold-seams`) | 0.16 | 0.44 | 0.03 | 0.17 |
+
+The snap index of 200 pieces is the one figure longer than a frame: it indexes every hole one by
+one (PERF-004), and grows with them. It is a fact for 3.16 and 3.19 to read, not a finding: nothing
+here measured when the app builds it. `svg-300.svg` (60 pieces, each an outline in curves and four
+slots: 300 shapes) imports through the packaged app's dialog as 60 pieces with 240 cut-outs and no
+problem; its timing was not recorded.
+
+**Two-hour soak** (`tools/perf-soak.mjs`, `bag-50`, a cycle: open, draw, undo, redo, save,
+Sheets, Design, Print Preview, close, New with a panel, close unsaved). Running from 21:29 at
+`cd0e1b6`; the result follows in this pull request. An earlier run at `aeec619`, under load 8–11
+from four other sessions, reached minute 20 before the machine restarted:
+
+| Minute | Cycles | Post-GC heap, MiB | DOM nodes | JS listeners | RSS, all processes, MiB |
+|---:|---:|---:|---:|---:|---:|
+| 0 | 0 | 8.72 | 96 | 181 | 566 |
+| 10 | 320 | 23.90 | 730 | 258 | 923 |
+| 20 | 616 | 24.16 | 730 | 258 | 816 |
+
+**Windows and macOS** were run only on GitHub's shared runners, by `.github/workflows/perf.yml`
+before it was made dispatch-only (run 44569079884, 4 vCPU each, a 3-minute soak): warm first paint
+630–649 ms on Windows and 1,357–2,070 ms on macOS (Linux on the same kind of runner: 479–497 ms);
+RSS after 10 s 357–361 and 488–496 MiB; idle CPU 0.29–0.53 % and 0.44–0.73 %; 0 idle callbacks and
+paints on both; the soak's heap 17.2–17.4 MiB after 63 and 73 cycles. They show the tools work
+there; shared runners are no baseline. Cold startup off Linux is a first launch only — no cache was
+dropped.
 
 ## Implementation tasks
 
@@ -1520,7 +1599,8 @@ sheets. Separate fresh evaluation, warm reuse, rendering and end-to-end interact
   sample process memory and compare post-cleanup retaining paths at fixed cycle counts.
 - [ ] Physical mixed-DPI monitor transitions without CSS resizing; check backing sizes, pointers,
   rulers and preview canvases.
-- [ ] Cold and warm packaged startup on supported platforms, with OS cache state documented.
+- [x] Cold and warm packaged startup on supported platforms, with OS cache state documented.
+  Linux on the recording machine, Windows and macOS on shared runners: [1.7 baseline](#17-baseline-perf-018).
 - [ ] Chromium rendering/compositor traces for many-page panning; separate CPU submission,
   rasterization and actual presentation rather than treating callback time as frame time.
 - [ ] Slow-storage save/recovery while editing; verify latest-snapshot handling and failures.

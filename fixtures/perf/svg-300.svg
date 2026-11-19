@@ -1,0 +1,302 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700mm" height="300mm" viewBox="0 0 700 300" fill="none" stroke="black">
+  <path d="M5 0H55C58 0 60 2 60 5V35C60 38 58 40 55 40H5C2 40 0 38 0 35V5C0 2 2 0 5 0Z"/>
+  <rect x="8" y="15" width="8" height="10" rx="2"/>
+  <rect x="20" y="15" width="8" height="10" rx="2"/>
+  <rect x="32" y="15" width="8" height="10" rx="2"/>
+  <rect x="44" y="15" width="8" height="10" rx="2"/>
+  <path d="M75 0H125C128 0 130 2 130 5V35C130 38 128 40 125 40H75C72 40 70 38 70 35V5C70 2 72 0 75 0Z"/>
+  <rect x="78" y="15" width="8" height="10" rx="2"/>
+  <rect x="90" y="15" width="8" height="10" rx="2"/>
+  <rect x="102" y="15" width="8" height="10" rx="2"/>
+  <rect x="114" y="15" width="8" height="10" rx="2"/>
+  <path d="M145 0H195C198 0 200 2 200 5V35C200 38 198 40 195 40H145C142 40 140 38 140 35V5C140 2 142 0 145 0Z"/>
+  <rect x="148" y="15" width="8" height="10" rx="2"/>
+  <rect x="160" y="15" width="8" height="10" rx="2"/>
+  <rect x="172" y="15" width="8" height="10" rx="2"/>
+  <rect x="184" y="15" width="8" height="10" rx="2"/>
+  <path d="M215 0H265C268 0 270 2 270 5V35C270 38 268 40 265 40H215C212 40 210 38 210 35V5C210 2 212 0 215 0Z"/>
+  <rect x="218" y="15" width="8" height="10" rx="2"/>
+  <rect x="230" y="15" width="8" height="10" rx="2"/>
+  <rect x="242" y="15" width="8" height="10" rx="2"/>
+  <rect x="254" y="15" width="8" height="10" rx="2"/>
+  <path d="M285 0H335C338 0 340 2 340 5V35C340 38 338 40 335 40H285C282 40 280 38 280 35V5C280 2 282 0 285 0Z"/>
+  <rect x="288" y="15" width="8" height="10" rx="2"/>
+  <rect x="300" y="15" width="8" height="10" rx="2"/>
+  <rect x="312" y="15" width="8" height="10" rx="2"/>
+  <rect x="324" y="15" width="8" height="10" rx="2"/>
+  <path d="M355 0H405C408 0 410 2 410 5V35C410 38 408 40 405 40H355C352 40 350 38 350 35V5C350 2 352 0 355 0Z"/>
+  <rect x="358" y="15" width="8" height="10" rx="2"/>
+  <rect x="370" y="15" width="8" height="10" rx="2"/>
+  <rect x="382" y="15" width="8" height="10" rx="2"/>
+  <rect x="394" y="15" width="8" height="10" rx="2"/>
+  <path d="M425 0H475C478 0 480 2 480 5V35C480 38 478 40 475 40H425C422 40 420 38 420 35V5C420 2 422 0 425 0Z"/>
+  <rect x="428" y="15" width="8" height="10" rx="2"/>
+  <rect x="440" y="15" width="8" height="10" rx="2"/>
+  <rect x="452" y="15" width="8" height="10" rx="2"/>
+  <rect x="464" y="15" width="8" height="10" rx="2"/>
+  <path d="M495 0H545C548 0 550 2 550 5V35C550 38 548 40 545 40H495C492 40 490 38 490 35V5C490 2 492 0 495 0Z"/>
+  <rect x="498" y="15" width="8" height="10" rx="2"/>
+  <rect x="510" y="15" width="8" height="10" rx="2"/>
+  <rect x="522" y="15" width="8" height="10" rx="2"/>
+  <rect x="534" y="15" width="8" height="10" rx="2"/>
+  <path d="M565 0H615C618 0 620 2 620 5V35C620 38 618 40 615 40H565C562 40 560 38 560 35V5C560 2 562 0 565 0Z"/>
+  <rect x="568" y="15" width="8" height="10" rx="2"/>
+  <rect x="580" y="15" width="8" height="10" rx="2"/>
+  <rect x="592" y="15" width="8" height="10" rx="2"/>
+  <rect x="604" y="15" width="8" height="10" rx="2"/>
+  <path d="M635 0H685C688 0 690 2 690 5V35C690 38 688 40 685 40H635C632 40 630 38 630 35V5C630 2 632 0 635 0Z"/>
+  <rect x="638" y="15" width="8" height="10" rx="2"/>
+  <rect x="650" y="15" width="8" height="10" rx="2"/>
+  <rect x="662" y="15" width="8" height="10" rx="2"/>
+  <rect x="674" y="15" width="8" height="10" rx="2"/>
+  <path d="M5 50H55C58 50 60 52 60 55V85C60 88 58 90 55 90H5C2 90 0 88 0 85V55C0 52 2 50 5 50Z"/>
+  <rect x="8" y="65" width="8" height="10" rx="2"/>
+  <rect x="20" y="65" width="8" height="10" rx="2"/>
+  <rect x="32" y="65" width="8" height="10" rx="2"/>
+  <rect x="44" y="65" width="8" height="10" rx="2"/>
+  <path d="M75 50H125C128 50 130 52 130 55V85C130 88 128 90 125 90H75C72 90 70 88 70 85V55C70 52 72 50 75 50Z"/>
+  <rect x="78" y="65" width="8" height="10" rx="2"/>
+  <rect x="90" y="65" width="8" height="10" rx="2"/>
+  <rect x="102" y="65" width="8" height="10" rx="2"/>
+  <rect x="114" y="65" width="8" height="10" rx="2"/>
+  <path d="M145 50H195C198 50 200 52 200 55V85C200 88 198 90 195 90H145C142 90 140 88 140 85V55C140 52 142 50 145 50Z"/>
+  <rect x="148" y="65" width="8" height="10" rx="2"/>
+  <rect x="160" y="65" width="8" height="10" rx="2"/>
+  <rect x="172" y="65" width="8" height="10" rx="2"/>
+  <rect x="184" y="65" width="8" height="10" rx="2"/>
+  <path d="M215 50H265C268 50 270 52 270 55V85C270 88 268 90 265 90H215C212 90 210 88 210 85V55C210 52 212 50 215 50Z"/>
+  <rect x="218" y="65" width="8" height="10" rx="2"/>
+  <rect x="230" y="65" width="8" height="10" rx="2"/>
+  <rect x="242" y="65" width="8" height="10" rx="2"/>
+  <rect x="254" y="65" width="8" height="10" rx="2"/>
+  <path d="M285 50H335C338 50 340 52 340 55V85C340 88 338 90 335 90H285C282 90 280 88 280 85V55C280 52 282 50 285 50Z"/>
+  <rect x="288" y="65" width="8" height="10" rx="2"/>
+  <rect x="300" y="65" width="8" height="10" rx="2"/>
+  <rect x="312" y="65" width="8" height="10" rx="2"/>
+  <rect x="324" y="65" width="8" height="10" rx="2"/>
+  <path d="M355 50H405C408 50 410 52 410 55V85C410 88 408 90 405 90H355C352 90 350 88 350 85V55C350 52 352 50 355 50Z"/>
+  <rect x="358" y="65" width="8" height="10" rx="2"/>
+  <rect x="370" y="65" width="8" height="10" rx="2"/>
+  <rect x="382" y="65" width="8" height="10" rx="2"/>
+  <rect x="394" y="65" width="8" height="10" rx="2"/>
+  <path d="M425 50H475C478 50 480 52 480 55V85C480 88 478 90 475 90H425C422 90 420 88 420 85V55C420 52 422 50 425 50Z"/>
+  <rect x="428" y="65" width="8" height="10" rx="2"/>
+  <rect x="440" y="65" width="8" height="10" rx="2"/>
+  <rect x="452" y="65" width="8" height="10" rx="2"/>
+  <rect x="464" y="65" width="8" height="10" rx="2"/>
+  <path d="M495 50H545C548 50 550 52 550 55V85C550 88 548 90 545 90H495C492 90 490 88 490 85V55C490 52 492 50 495 50Z"/>
+  <rect x="498" y="65" width="8" height="10" rx="2"/>
+  <rect x="510" y="65" width="8" height="10" rx="2"/>
+  <rect x="522" y="65" width="8" height="10" rx="2"/>
+  <rect x="534" y="65" width="8" height="10" rx="2"/>
+  <path d="M565 50H615C618 50 620 52 620 55V85C620 88 618 90 615 90H565C562 90 560 88 560 85V55C560 52 562 50 565 50Z"/>
+  <rect x="568" y="65" width="8" height="10" rx="2"/>
+  <rect x="580" y="65" width="8" height="10" rx="2"/>
+  <rect x="592" y="65" width="8" height="10" rx="2"/>
+  <rect x="604" y="65" width="8" height="10" rx="2"/>
+  <path d="M635 50H685C688 50 690 52 690 55V85C690 88 688 90 685 90H635C632 90 630 88 630 85V55C630 52 632 50 635 50Z"/>
+  <rect x="638" y="65" width="8" height="10" rx="2"/>
+  <rect x="650" y="65" width="8" height="10" rx="2"/>
+  <rect x="662" y="65" width="8" height="10" rx="2"/>
+  <rect x="674" y="65" width="8" height="10" rx="2"/>
+  <path d="M5 100H55C58 100 60 102 60 105V135C60 138 58 140 55 140H5C2 140 0 138 0 135V105C0 102 2 100 5 100Z"/>
+  <rect x="8" y="115" width="8" height="10" rx="2"/>
+  <rect x="20" y="115" width="8" height="10" rx="2"/>
+  <rect x="32" y="115" width="8" height="10" rx="2"/>
+  <rect x="44" y="115" width="8" height="10" rx="2"/>
+  <path d="M75 100H125C128 100 130 102 130 105V135C130 138 128 140 125 140H75C72 140 70 138 70 135V105C70 102 72 100 75 100Z"/>
+  <rect x="78" y="115" width="8" height="10" rx="2"/>
+  <rect x="90" y="115" width="8" height="10" rx="2"/>
+  <rect x="102" y="115" width="8" height="10" rx="2"/>
+  <rect x="114" y="115" width="8" height="10" rx="2"/>
+  <path d="M145 100H195C198 100 200 102 200 105V135C200 138 198 140 195 140H145C142 140 140 138 140 135V105C140 102 142 100 145 100Z"/>
+  <rect x="148" y="115" width="8" height="10" rx="2"/>
+  <rect x="160" y="115" width="8" height="10" rx="2"/>
+  <rect x="172" y="115" width="8" height="10" rx="2"/>
+  <rect x="184" y="115" width="8" height="10" rx="2"/>
+  <path d="M215 100H265C268 100 270 102 270 105V135C270 138 268 140 265 140H215C212 140 210 138 210 135V105C210 102 212 100 215 100Z"/>
+  <rect x="218" y="115" width="8" height="10" rx="2"/>
+  <rect x="230" y="115" width="8" height="10" rx="2"/>
+  <rect x="242" y="115" width="8" height="10" rx="2"/>
+  <rect x="254" y="115" width="8" height="10" rx="2"/>
+  <path d="M285 100H335C338 100 340 102 340 105V135C340 138 338 140 335 140H285C282 140 280 138 280 135V105C280 102 282 100 285 100Z"/>
+  <rect x="288" y="115" width="8" height="10" rx="2"/>
+  <rect x="300" y="115" width="8" height="10" rx="2"/>
+  <rect x="312" y="115" width="8" height="10" rx="2"/>
+  <rect x="324" y="115" width="8" height="10" rx="2"/>
+  <path d="M355 100H405C408 100 410 102 410 105V135C410 138 408 140 405 140H355C352 140 350 138 350 135V105C350 102 352 100 355 100Z"/>
+  <rect x="358" y="115" width="8" height="10" rx="2"/>
+  <rect x="370" y="115" width="8" height="10" rx="2"/>
+  <rect x="382" y="115" width="8" height="10" rx="2"/>
+  <rect x="394" y="115" width="8" height="10" rx="2"/>
+  <path d="M425 100H475C478 100 480 102 480 105V135C480 138 478 140 475 140H425C422 140 420 138 420 135V105C420 102 422 100 425 100Z"/>
+  <rect x="428" y="115" width="8" height="10" rx="2"/>
+  <rect x="440" y="115" width="8" height="10" rx="2"/>
+  <rect x="452" y="115" width="8" height="10" rx="2"/>
+  <rect x="464" y="115" width="8" height="10" rx="2"/>
+  <path d="M495 100H545C548 100 550 102 550 105V135C550 138 548 140 545 140H495C492 140 490 138 490 135V105C490 102 492 100 495 100Z"/>
+  <rect x="498" y="115" width="8" height="10" rx="2"/>
+  <rect x="510" y="115" width="8" height="10" rx="2"/>
+  <rect x="522" y="115" width="8" height="10" rx="2"/>
+  <rect x="534" y="115" width="8" height="10" rx="2"/>
+  <path d="M565 100H615C618 100 620 102 620 105V135C620 138 618 140 615 140H565C562 140 560 138 560 135V105C560 102 562 100 565 100Z"/>
+  <rect x="568" y="115" width="8" height="10" rx="2"/>
+  <rect x="580" y="115" width="8" height="10" rx="2"/>
+  <rect x="592" y="115" width="8" height="10" rx="2"/>
+  <rect x="604" y="115" width="8" height="10" rx="2"/>
+  <path d="M635 100H685C688 100 690 102 690 105V135C690 138 688 140 685 140H635C632 140 630 138 630 135V105C630 102 632 100 635 100Z"/>
+  <rect x="638" y="115" width="8" height="10" rx="2"/>
+  <rect x="650" y="115" width="8" height="10" rx="2"/>
+  <rect x="662" y="115" width="8" height="10" rx="2"/>
+  <rect x="674" y="115" width="8" height="10" rx="2"/>
+  <path d="M5 150H55C58 150 60 152 60 155V185C60 188 58 190 55 190H5C2 190 0 188 0 185V155C0 152 2 150 5 150Z"/>
+  <rect x="8" y="165" width="8" height="10" rx="2"/>
+  <rect x="20" y="165" width="8" height="10" rx="2"/>
+  <rect x="32" y="165" width="8" height="10" rx="2"/>
+  <rect x="44" y="165" width="8" height="10" rx="2"/>
+  <path d="M75 150H125C128 150 130 152 130 155V185C130 188 128 190 125 190H75C72 190 70 188 70 185V155C70 152 72 150 75 150Z"/>
+  <rect x="78" y="165" width="8" height="10" rx="2"/>
+  <rect x="90" y="165" width="8" height="10" rx="2"/>
+  <rect x="102" y="165" width="8" height="10" rx="2"/>
+  <rect x="114" y="165" width="8" height="10" rx="2"/>
+  <path d="M145 150H195C198 150 200 152 200 155V185C200 188 198 190 195 190H145C142 190 140 188 140 185V155C140 152 142 150 145 150Z"/>
+  <rect x="148" y="165" width="8" height="10" rx="2"/>
+  <rect x="160" y="165" width="8" height="10" rx="2"/>
+  <rect x="172" y="165" width="8" height="10" rx="2"/>
+  <rect x="184" y="165" width="8" height="10" rx="2"/>
+  <path d="M215 150H265C268 150 270 152 270 155V185C270 188 268 190 265 190H215C212 190 210 188 210 185V155C210 152 212 150 215 150Z"/>
+  <rect x="218" y="165" width="8" height="10" rx="2"/>
+  <rect x="230" y="165" width="8" height="10" rx="2"/>
+  <rect x="242" y="165" width="8" height="10" rx="2"/>
+  <rect x="254" y="165" width="8" height="10" rx="2"/>
+  <path d="M285 150H335C338 150 340 152 340 155V185C340 188 338 190 335 190H285C282 190 280 188 280 185V155C280 152 282 150 285 150Z"/>
+  <rect x="288" y="165" width="8" height="10" rx="2"/>
+  <rect x="300" y="165" width="8" height="10" rx="2"/>
+  <rect x="312" y="165" width="8" height="10" rx="2"/>
+  <rect x="324" y="165" width="8" height="10" rx="2"/>
+  <path d="M355 150H405C408 150 410 152 410 155V185C410 188 408 190 405 190H355C352 190 350 188 350 185V155C350 152 352 150 355 150Z"/>
+  <rect x="358" y="165" width="8" height="10" rx="2"/>
+  <rect x="370" y="165" width="8" height="10" rx="2"/>
+  <rect x="382" y="165" width="8" height="10" rx="2"/>
+  <rect x="394" y="165" width="8" height="10" rx="2"/>
+  <path d="M425 150H475C478 150 480 152 480 155V185C480 188 478 190 475 190H425C422 190 420 188 420 185V155C420 152 422 150 425 150Z"/>
+  <rect x="428" y="165" width="8" height="10" rx="2"/>
+  <rect x="440" y="165" width="8" height="10" rx="2"/>
+  <rect x="452" y="165" width="8" height="10" rx="2"/>
+  <rect x="464" y="165" width="8" height="10" rx="2"/>
+  <path d="M495 150H545C548 150 550 152 550 155V185C550 188 548 190 545 190H495C492 190 490 188 490 185V155C490 152 492 150 495 150Z"/>
+  <rect x="498" y="165" width="8" height="10" rx="2"/>
+  <rect x="510" y="165" width="8" height="10" rx="2"/>
+  <rect x="522" y="165" width="8" height="10" rx="2"/>
+  <rect x="534" y="165" width="8" height="10" rx="2"/>
+  <path d="M565 150H615C618 150 620 152 620 155V185C620 188 618 190 615 190H565C562 190 560 188 560 185V155C560 152 562 150 565 150Z"/>
+  <rect x="568" y="165" width="8" height="10" rx="2"/>
+  <rect x="580" y="165" width="8" height="10" rx="2"/>
+  <rect x="592" y="165" width="8" height="10" rx="2"/>
+  <rect x="604" y="165" width="8" height="10" rx="2"/>
+  <path d="M635 150H685C688 150 690 152 690 155V185C690 188 688 190 685 190H635C632 190 630 188 630 185V155C630 152 632 150 635 150Z"/>
+  <rect x="638" y="165" width="8" height="10" rx="2"/>
+  <rect x="650" y="165" width="8" height="10" rx="2"/>
+  <rect x="662" y="165" width="8" height="10" rx="2"/>
+  <rect x="674" y="165" width="8" height="10" rx="2"/>
+  <path d="M5 200H55C58 200 60 202 60 205V235C60 238 58 240 55 240H5C2 240 0 238 0 235V205C0 202 2 200 5 200Z"/>
+  <rect x="8" y="215" width="8" height="10" rx="2"/>
+  <rect x="20" y="215" width="8" height="10" rx="2"/>
+  <rect x="32" y="215" width="8" height="10" rx="2"/>
+  <rect x="44" y="215" width="8" height="10" rx="2"/>
+  <path d="M75 200H125C128 200 130 202 130 205V235C130 238 128 240 125 240H75C72 240 70 238 70 235V205C70 202 72 200 75 200Z"/>
+  <rect x="78" y="215" width="8" height="10" rx="2"/>
+  <rect x="90" y="215" width="8" height="10" rx="2"/>
+  <rect x="102" y="215" width="8" height="10" rx="2"/>
+  <rect x="114" y="215" width="8" height="10" rx="2"/>
+  <path d="M145 200H195C198 200 200 202 200 205V235C200 238 198 240 195 240H145C142 240 140 238 140 235V205C140 202 142 200 145 200Z"/>
+  <rect x="148" y="215" width="8" height="10" rx="2"/>
+  <rect x="160" y="215" width="8" height="10" rx="2"/>
+  <rect x="172" y="215" width="8" height="10" rx="2"/>
+  <rect x="184" y="215" width="8" height="10" rx="2"/>
+  <path d="M215 200H265C268 200 270 202 270 205V235C270 238 268 240 265 240H215C212 240 210 238 210 235V205C210 202 212 200 215 200Z"/>
+  <rect x="218" y="215" width="8" height="10" rx="2"/>
+  <rect x="230" y="215" width="8" height="10" rx="2"/>
+  <rect x="242" y="215" width="8" height="10" rx="2"/>
+  <rect x="254" y="215" width="8" height="10" rx="2"/>
+  <path d="M285 200H335C338 200 340 202 340 205V235C340 238 338 240 335 240H285C282 240 280 238 280 235V205C280 202 282 200 285 200Z"/>
+  <rect x="288" y="215" width="8" height="10" rx="2"/>
+  <rect x="300" y="215" width="8" height="10" rx="2"/>
+  <rect x="312" y="215" width="8" height="10" rx="2"/>
+  <rect x="324" y="215" width="8" height="10" rx="2"/>
+  <path d="M355 200H405C408 200 410 202 410 205V235C410 238 408 240 405 240H355C352 240 350 238 350 235V205C350 202 352 200 355 200Z"/>
+  <rect x="358" y="215" width="8" height="10" rx="2"/>
+  <rect x="370" y="215" width="8" height="10" rx="2"/>
+  <rect x="382" y="215" width="8" height="10" rx="2"/>
+  <rect x="394" y="215" width="8" height="10" rx="2"/>
+  <path d="M425 200H475C478 200 480 202 480 205V235C480 238 478 240 475 240H425C422 240 420 238 420 235V205C420 202 422 200 425 200Z"/>
+  <rect x="428" y="215" width="8" height="10" rx="2"/>
+  <rect x="440" y="215" width="8" height="10" rx="2"/>
+  <rect x="452" y="215" width="8" height="10" rx="2"/>
+  <rect x="464" y="215" width="8" height="10" rx="2"/>
+  <path d="M495 200H545C548 200 550 202 550 205V235C550 238 548 240 545 240H495C492 240 490 238 490 235V205C490 202 492 200 495 200Z"/>
+  <rect x="498" y="215" width="8" height="10" rx="2"/>
+  <rect x="510" y="215" width="8" height="10" rx="2"/>
+  <rect x="522" y="215" width="8" height="10" rx="2"/>
+  <rect x="534" y="215" width="8" height="10" rx="2"/>
+  <path d="M565 200H615C618 200 620 202 620 205V235C620 238 618 240 615 240H565C562 240 560 238 560 235V205C560 202 562 200 565 200Z"/>
+  <rect x="568" y="215" width="8" height="10" rx="2"/>
+  <rect x="580" y="215" width="8" height="10" rx="2"/>
+  <rect x="592" y="215" width="8" height="10" rx="2"/>
+  <rect x="604" y="215" width="8" height="10" rx="2"/>
+  <path d="M635 200H685C688 200 690 202 690 205V235C690 238 688 240 685 240H635C632 240 630 238 630 235V205C630 202 632 200 635 200Z"/>
+  <rect x="638" y="215" width="8" height="10" rx="2"/>
+  <rect x="650" y="215" width="8" height="10" rx="2"/>
+  <rect x="662" y="215" width="8" height="10" rx="2"/>
+  <rect x="674" y="215" width="8" height="10" rx="2"/>
+  <path d="M5 250H55C58 250 60 252 60 255V285C60 288 58 290 55 290H5C2 290 0 288 0 285V255C0 252 2 250 5 250Z"/>
+  <rect x="8" y="265" width="8" height="10" rx="2"/>
+  <rect x="20" y="265" width="8" height="10" rx="2"/>
+  <rect x="32" y="265" width="8" height="10" rx="2"/>
+  <rect x="44" y="265" width="8" height="10" rx="2"/>
+  <path d="M75 250H125C128 250 130 252 130 255V285C130 288 128 290 125 290H75C72 290 70 288 70 285V255C70 252 72 250 75 250Z"/>
+  <rect x="78" y="265" width="8" height="10" rx="2"/>
+  <rect x="90" y="265" width="8" height="10" rx="2"/>
+  <rect x="102" y="265" width="8" height="10" rx="2"/>
+  <rect x="114" y="265" width="8" height="10" rx="2"/>
+  <path d="M145 250H195C198 250 200 252 200 255V285C200 288 198 290 195 290H145C142 290 140 288 140 285V255C140 252 142 250 145 250Z"/>
+  <rect x="148" y="265" width="8" height="10" rx="2"/>
+  <rect x="160" y="265" width="8" height="10" rx="2"/>
+  <rect x="172" y="265" width="8" height="10" rx="2"/>
+  <rect x="184" y="265" width="8" height="10" rx="2"/>
+  <path d="M215 250H265C268 250 270 252 270 255V285C270 288 268 290 265 290H215C212 290 210 288 210 285V255C210 252 212 250 215 250Z"/>
+  <rect x="218" y="265" width="8" height="10" rx="2"/>
+  <rect x="230" y="265" width="8" height="10" rx="2"/>
+  <rect x="242" y="265" width="8" height="10" rx="2"/>
+  <rect x="254" y="265" width="8" height="10" rx="2"/>
+  <path d="M285 250H335C338 250 340 252 340 255V285C340 288 338 290 335 290H285C282 290 280 288 280 285V255C280 252 282 250 285 250Z"/>
+  <rect x="288" y="265" width="8" height="10" rx="2"/>
+  <rect x="300" y="265" width="8" height="10" rx="2"/>
+  <rect x="312" y="265" width="8" height="10" rx="2"/>
+  <rect x="324" y="265" width="8" height="10" rx="2"/>
+  <path d="M355 250H405C408 250 410 252 410 255V285C410 288 408 290 405 290H355C352 290 350 288 350 285V255C350 252 352 250 355 250Z"/>
+  <rect x="358" y="265" width="8" height="10" rx="2"/>
+  <rect x="370" y="265" width="8" height="10" rx="2"/>
+  <rect x="382" y="265" width="8" height="10" rx="2"/>
+  <rect x="394" y="265" width="8" height="10" rx="2"/>
+  <path d="M425 250H475C478 250 480 252 480 255V285C480 288 478 290 475 290H425C422 290 420 288 420 285V255C420 252 422 250 425 250Z"/>
+  <rect x="428" y="265" width="8" height="10" rx="2"/>
+  <rect x="440" y="265" width="8" height="10" rx="2"/>
+  <rect x="452" y="265" width="8" height="10" rx="2"/>
+  <rect x="464" y="265" width="8" height="10" rx="2"/>
+  <path d="M495 250H545C548 250 550 252 550 255V285C550 288 548 290 545 290H495C492 290 490 288 490 285V255C490 252 492 250 495 250Z"/>
+  <rect x="498" y="265" width="8" height="10" rx="2"/>
+  <rect x="510" y="265" width="8" height="10" rx="2"/>
+  <rect x="522" y="265" width="8" height="10" rx="2"/>
+  <rect x="534" y="265" width="8" height="10" rx="2"/>
+  <path d="M565 250H615C618 250 620 252 620 255V285C620 288 618 290 615 290H565C562 290 560 288 560 285V255C560 252 562 250 565 250Z"/>
+  <rect x="568" y="265" width="8" height="10" rx="2"/>
+  <rect x="580" y="265" width="8" height="10" rx="2"/>
+  <rect x="592" y="265" width="8" height="10" rx="2"/>
+  <rect x="604" y="265" width="8" height="10" rx="2"/>
+  <path d="M635 250H685C688 250 690 252 690 255V285C690 288 688 290 685 290H635C632 290 630 288 630 285V255C630 252 632 250 635 250Z"/>
+  <rect x="638" y="265" width="8" height="10" rx="2"/>
+  <rect x="650" y="265" width="8" height="10" rx="2"/>
+  <rect x="662" y="265" width="8" height="10" rx="2"/>
+  <rect x="674" y="265" width="8" height="10" rx="2"/>
+</svg>

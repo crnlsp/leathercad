@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -7,6 +7,7 @@ import { pathToFileURL } from 'node:url';
 import { _electron as electron, expect, test, type ElectronApplication } from '@playwright/test';
 
 import { closeApp } from '../closeApp.js';
+import { packagedExecutable } from '../packagedApp.js';
 import { expectAccurate, exportPrintTest, inkOn, measurePrintTest } from '../printTest.js';
 
 /**
@@ -25,30 +26,6 @@ import { expectAccurate, exportPrintTest, inkOn, measurePrintTest } from '../pri
  */
 
 const DESKTOP_DIR = resolve(import.meta.dirname, '../../apps/desktop');
-const RELEASE = resolve(DESKTOP_DIR, 'release');
-
-/**
- * Where `pnpm package:dir` leaves the app on this platform (8.6a): a loose
- * executable on Linux and Windows, one inside the .app bundle on macOS — whose
- * directory is named for the architecture it was built on.
- */
-function packagedExecutable(): string {
-  switch (process.platform) {
-    case 'win32':
-      return join(RELEASE, 'win-unpacked', 'leathercad.exe');
-    case 'darwin': {
-      const built = ['mac-universal', 'mac-arm64', 'mac']
-        .map((dir) => join(RELEASE, dir, 'LeatherCAD.app', 'Contents', 'MacOS'))
-        .find((dir) => existsSync(dir));
-      const binary = built === undefined ? undefined : readdirSync(built)[0];
-      return built === undefined || binary === undefined
-        ? join(RELEASE, 'mac-*', 'LeatherCAD.app')
-        : join(built, binary);
-    }
-    default:
-      return join(RELEASE, 'linux-unpacked', 'leathercad');
-  }
-}
 
 /**
  * The binary an installer put in place (B4), when `installers.yml` has

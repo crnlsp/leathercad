@@ -576,6 +576,19 @@ pdf.js workers left running and the post-GC heap (PERF-013). `e2e/pdf-worker.spe
 count — only the sheets near the list's view are drawn — and `pdfPages.test.ts` the pdf.js loading
 task ended at once when the preview no longer wants it, and a few thumbnails drawn at a time.
 
+The packaged app has two of its own, both after `pnpm package:e2e` and, on Linux, under
+`pnpm hidden-screen` (PERF-018). `node tools/perf-startup.mjs` launches it five times on a fresh
+profile with the sample wallet — the first cold, its files dropped from the page cache on Linux —
+and gives the time to the first paint and to the version showing, the resident memory 10 s later,
+and the CPU and animation frames of the next 60 s idle; `--plain` starts it without Playwright,
+for the first paint alone. `node tools/perf-soak.mjs` repeats a working session for two hours —
+open, edit, undo, redo, save, Sheets, Print Preview, close, New — and every ten minutes, at the
+start screen, records the post-GC heap, the DOM counters and every process's memory. Neither has a
+budget: the figures are in the [backlog](performance-backlog.md#17-baseline-perf-018), and
+`.github/workflows/perf.yml` runs both on each platform when dispatched by hand.
+`node tools/perf-compute.mjs --fixtures` writes 1.7's workloads to `fixtures/perf/`: `bag-200.lcp`,
+`bifold-seams.lcp` and `svg-300.svg`.
+
 ## 10. Test-driven development, concretely
 
 For `geometry` and `domain`, tests come first. Not as ritual — because in this domain the test *is*
