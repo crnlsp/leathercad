@@ -277,6 +277,8 @@ export function TabStrip({
           label={t('tabs.all')}
           tooltip={t('tabs.allTooltip')}
           testId="all-tabs"
+          // Near the window's right edge: opens leftwards, inside it (X27).
+          align="end"
           className="tool quiet icon-only tab-all"
           entries={tabs.map((tab, index) => ({
             kind: 'item' as const,

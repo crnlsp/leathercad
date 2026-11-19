@@ -541,9 +541,12 @@ body {
 .tab {
   position: relative;
   display: flex;
-  flex: 0 1 200px;
+  /* As wide as its name, to a cap (X28); never so narrow that "Untitled 12"
+     and "Untitled 13" read alike, the strip scrolls instead (X27). */
+  flex: 0 1 auto;
   align-items: center;
-  min-width: 96px;
+  min-width: 128px;
+  max-width: 200px;
   height: 30px;
   padding: 0 var(--space-1) 0 0;
   border: 1px solid transparent;
