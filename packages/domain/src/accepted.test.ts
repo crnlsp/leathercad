@@ -18,24 +18,35 @@ import { problemKey, type Diagnostic } from './problems/index.js';
 
 const base = (id: string, name: string) => ({ id, name, visible: true, locked: false });
 
-/** A 105 × 75 panel at `origin`, stitched `inset` in, holed at 3.85. */
-function stitchedPanel(inset: number, origin: Vec2 = { x: 0, y: 0 }): Feature[] {
+/** A `width` × 75 panel at `origin`, drawn as a rectangle or a path, stitched `inset` in, holed at 3.85. */
+function stitchedPanel(
+  inset: number,
+  origin: Vec2 = { x: 0, y: 0 },
+  { width = 105, drawn = false }: { width?: number; drawn?: boolean } = {},
+): Feature[] {
+  const { x, y } = origin;
   return [
     {
       ...base('cut-1', 'Outline'),
       kind: 'cut-contour',
       role: 'outer',
-      source: {
-        kind: 'shape',
-        shape: {
-          type: 'rect',
-          origin,
-          width: 105,
-          height: 75,
-          radii: uniformRadii(8),
-          rotation: 0,
-        },
-      },
+      source: drawn
+        ? {
+            kind: 'path',
+            path: PathOps.polyline(
+              [
+                { x, y },
+                { x: x + width, y },
+                { x: x + width, y: y + 75 },
+                { x, y: y + 75 },
+              ],
+              true,
+            ),
+          }
+        : {
+            kind: 'shape',
+            shape: { type: 'rect', origin, width, height: 75, radii: uniformRadii(8), rotation: 0 },
+          },
     },
     {
       ...base('stitch-1', 'Stitch line'),
@@ -194,22 +205,61 @@ describe('accepting a warning (9.16)', () => {
     );
   });
 
-  it('any other warning comes back when its facts change, not when only its place does', () => {
+  it('any other warning is found from stored parameters: moved anywhere it stays accepted', () => {
     fc.assert(
       fc.property(
         fc.integer({ min: 5, max: 14 }).map((t) => t / 10),
-        fc.double({ min: -1000, max: 1000, noNaN: true }),
-        fc.double({ min: -1000, max: 1000, noNaN: true }),
-        (inset, dx, dy) => {
+        fc.integer({ min: -10_000_000, max: 10_000_000 }).map((t) => t / 10_000),
+        fc.integer({ min: -10_000_000, max: 10_000_000 }).map((t) => t / 10_000),
+        fc.boolean(),
+        (inset, x, y, drawn) => {
           const close = (features: Feature[]) =>
-            acceptedIn(stitchedPanel(inset), 'HOLE_TOO_CLOSE_TO_EDGE', features).find(
-              (d) => d.problem.code === 'HOLE_TOO_CLOSE_TO_EDGE',
-            );
-          expect(close(stitchedPanel(inset, { x: dx, y: dy }))?.accepted).toBe(true);
-          expect(close(stitchedPanel(inset - 0.2))?.accepted).toBeUndefined();
+            acceptedIn(
+              stitchedPanel(inset, undefined, { drawn }),
+              'HOLE_TOO_CLOSE_TO_EDGE',
+              features,
+            ).find((d) => d.problem.code === 'HOLE_TOO_CLOSE_TO_EDGE');
+          expect(close(stitchedPanel(inset, { x, y }, { drawn }))?.accepted).toBe(true);
         },
       ),
     );
+  });
+
+  it('any other warning comes back when an inset or the outline changes', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 5, max: 14 }).map((t) => t / 10),
+        fc.boolean(),
+        (inset, drawn) => {
+          const close = (features: Feature[]) =>
+            acceptedIn(
+              stitchedPanel(inset, undefined, { drawn }),
+              'HOLE_TOO_CLOSE_TO_EDGE',
+              features,
+            ).find((d) => d.problem.code === 'HOLE_TOO_CLOSE_TO_EDGE');
+          expect(close(stitchedPanel(inset - 0.2, undefined, { drawn }))?.accepted).toBeUndefined();
+          expect(
+            close(stitchedPanel(inset, undefined, { drawn, width: 110 }))?.accepted,
+          ).toBeUndefined();
+        },
+      ),
+    );
+  });
+
+  it('stores nothing computed: every value in a cause is one the project itself stores', () => {
+    const leaves = (value: unknown): unknown[] =>
+      value !== null && typeof value === 'object' ? Object.values(value).flatMap(leaves) : [value];
+    for (const [features, code] of [
+      [stitchedPanel(1), 'HOLE_TOO_CLOSE_TO_EDGE'],
+      [stitchedPanel(1, { x: 3.3, y: -7.1 }, { drawn: true }), 'HOLE_TOO_CLOSE_TO_EDGE'],
+      [pocket(card(4)), 'POCKET_TOO_NARROW'],
+    ] as const) {
+      const p = project([...features]);
+      const stored = new Set(leaves(p.parts));
+      const { cause } = acceptance(p, warningOf(p, code));
+      for (const value of leaves(cause))
+        expect(stored, `${code}: ${String(value)}`).toContain(value);
+    }
   });
 
   it('a renamed subject is the same cause', () => {

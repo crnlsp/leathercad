@@ -1,7 +1,14 @@
 import { approxEq, QUANTUM_MM } from '@leathercad/core';
 
-import { findFeature, type AcceptedWarning, type Cause, type Project } from './feature.js';
-import { problemKey, type Diagnostic, type Problem } from './problems/index.js';
+import {
+  findFeature,
+  type AcceptedWarning,
+  type Cause,
+  type Feature,
+  type Part,
+  type Project,
+} from './feature.js';
+import { problemKey, subjectOf, type Diagnostic, type Problem } from './problems/index.js';
 
 /**
  * Accepting a warning (9.16): the maker has weighed it, and it stays quiet
@@ -16,9 +23,15 @@ import { problemKey, type Diagnostic, type Problem } from './problems/index.js';
  *   or depth — reshaping the pocket is the maker's answer to the warning, not
  *   a new one.
  * - **DR7** (a seam): each side's hole set, its iron's pitch and its stretch.
- * - **Anything else**: the problem's facts, less the names (a rename is not a
- *   new problem), measurements compared to the storage quantum, so float noise
- *   from an unrelated edit or a save's six decimals never re-raises it.
+ * - **Anything else**: the stored parameters it was found from — the source
+ *   of the feature it names and of each feature that one follows, and the
+ *   piece's cut outlines. Never a measured fact (invariant 4: nothing computed
+ *   is stored), and never a name, so a rename is not a new problem.
+ *
+ * Stored values are kept as they are; where the piece sits is left out by
+ * comparing coordinates up to one translation, so moving the piece keeps an
+ * acceptance while a changed inset or a reshaped outline brings it back.
+ * Numbers compare to the storage quantum.
  */
 
 /** What to store to accept `diagnostic` in `project`. Only a warning can be accepted. */
@@ -70,10 +83,33 @@ function causeOf(project: Project, p: Problem): Cause {
       });
     }
     default:
-      return asCause(
-        Object.fromEntries(Object.entries(p.facts).filter(([key]) => !key.endsWith('Name'))),
-      );
+      return inputsOf(project, p);
   }
+}
+
+/** The stored sources a problem was found from: its subject's chain, then the piece's cut outlines. */
+function inputsOf(project: Project, p: Problem): Cause {
+  const subject = subjectOf(p);
+  const owner: Part | undefined =
+    subject.featureId !== undefined
+      ? findFeature(project, subject.featureId)?.part
+      : project.parts.find((part) => part.id === subject.partId);
+  if (owner === undefined) return null;
+  const byId = new Map(owner.features.map((f) => [f.id, f] as const));
+  const inputs: Feature[] = [];
+  const add = (f: Feature | undefined) => {
+    if (f !== undefined && !inputs.includes(f)) inputs.push(f);
+  };
+  // The subject and what it follows: a hole set, its stitch line, its outline.
+  for (
+    let f = subject.featureId === undefined ? undefined : byId.get(subject.featureId);
+    f !== undefined && !inputs.includes(f);
+    f = f.source.kind === 'derived' ? byId.get(f.source.sourceId) : undefined
+  ) {
+    add(f);
+  }
+  for (const f of owner.features) if (f.kind === 'cut-contour') add(f);
+  return inputs.map((f) => ({ id: f.id, kind: f.kind, source: asCause(f.source) }));
 }
 
 /** A plain copy of `value` as JSON would hold it; absent fields left out. */
@@ -94,23 +130,48 @@ function asCause(value: unknown): Cause {
 }
 
 /**
- * Whether two causes are the same. Numbers within the storage quantum: no
- * stored parameter differs by less, and a measurement that moved by less has
- * not changed in any way a maker could cut.
+ * Whether two causes are the same, up to one translation of every point in
+ * them. Numbers within the storage quantum: no stored parameter differs by less.
  */
 function sameCause(a: Cause, b: Cause): boolean {
+  return sameWithin(a, b, { shift: null });
+}
+
+/** A point as the model stores one: exactly `x` and `y`. */
+function isPoint(c: Cause): c is { readonly x: number; readonly y: number } {
+  if (c === null || typeof c !== 'object' || Array.isArray(c)) return false;
+  const keys = Object.keys(c);
+  return (
+    keys.length === 2 &&
+    typeof (c as { readonly x?: Cause }).x === 'number' &&
+    typeof (c as { readonly y?: Cause }).y === 'number'
+  );
+}
+
+function sameWithin(
+  a: Cause,
+  b: Cause,
+  translation: { shift: { readonly x: number; readonly y: number } | null },
+): boolean {
+  if (isPoint(a) && isPoint(b)) {
+    // The first point pair fixes the translation; every other must agree.
+    const shift = (translation.shift ??= { x: b.x - a.x, y: b.y - a.y });
+    return approxEq(a.x + shift.x, b.x, QUANTUM_MM) && approxEq(a.y + shift.y, b.y, QUANTUM_MM);
+  }
   if (typeof a === 'number' && typeof b === 'number') return approxEq(a, b, QUANTUM_MM);
   if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object') return a === b;
   if (Array.isArray(a) || Array.isArray(b)) {
     if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
     const right: readonly Cause[] = b;
-    return a.every((item: Cause, i) => sameCause(item, right[i] ?? null));
+    return a.every((item: Cause, i) => sameWithin(item, right[i] ?? null, translation));
   }
   const left = a as { readonly [key: string]: Cause };
   const right = b as { readonly [key: string]: Cause };
   const keys = Object.keys(left);
   return (
     keys.length === Object.keys(right).length &&
-    keys.every((key) => key in right && sameCause(left[key] ?? null, right[key] ?? null))
+    keys.every(
+      (key) => key in right && sameWithin(left[key] ?? null, right[key] ?? null, translation),
+    )
   );
 }

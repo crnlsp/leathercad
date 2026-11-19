@@ -1219,7 +1219,9 @@ decisions still open. No schema is fixed here before its slice.
   (U.13). A general requirements engine is not planned.
 - **Accepting a warning (9.16) — built.** Kept in the project as `acceptedWarnings`: each a
   problem's key (Q4) and what it was found from — DR8's requirement and ease, DR7's two sides'
-  pitch and stretch, otherwise the problem's facts less its names — never words (ADR 0018).
+  pitch and stretch, otherwise the stored sources of its subject, what that follows and the piece's
+  cut outlines — never a measured fact (invariant 4), never words (ADR 0018). Points compare up to
+  one translation, so moving a piece keeps an acceptance.
   `diagnose` marks a warning `accepted` while both match, numbers to the storage quantum; it is
   listed and not counted (`countBySeverity`, `badgesOf`). Only a warning: an error is never
   accepted, whatever the file says (`domain/src/accepted.ts`).
