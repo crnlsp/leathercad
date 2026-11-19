@@ -585,14 +585,14 @@
     "follow": "These items follow what you are deleting:",
     "freeze_one": "Keep {{count}} frozen",
     "freeze_other": "Keep {{count}} frozen",
-    "freezeTooltip": "Keep them as drawn geometry, where they are now, no longer following anything",
+    "freezeTooltip": "Frozen, they stay as drawn geometry where they are now, no longer following anything",
     "thisPart": "this part",
     "title": "Delete {{what}}?",
     "note": {
       "direct": "will be deleted: it has no geometry to keep",
-      "freezable": "will be deleted, or can be kept as drawn geometry",
+      "freezable": "will be deleted, or can be kept frozen",
       "holes": "will be deleted: holes cannot exist without their line",
-      "indirect": "will be deleted with what it follows, unless that is kept",
+      "indirect": "will be deleted with what it follows, unless that is kept frozen",
       "seam": "Removed if either hole set is deleted; kept if both survive."
     },
     "seams": "Seams",
