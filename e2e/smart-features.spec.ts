@@ -389,3 +389,47 @@ test('SF-UI4 · Holds says which edge it measured to, says no ease, and stays wh
     await closeApp(app);
   }
 });
+
+/** The board's pixels, as Electron paints them. */
+async function boardPixels(window: Page): Promise<Buffer> {
+  return window.getByTestId('editor-canvas').screenshot({ animations: 'disabled' });
+}
+
+test('SF-UI4 · Stitched sides names the open side of a rectangle, and the board numbers its corners while one is chosen (Q48)', async () => {
+  const { app, window } = await openApp({ size: [1440, 900] });
+  try {
+    const panel = window.getByTestId('property-panel');
+    // A pocket from a blank rectangle: 100 × 60, square corners, stitched 3 mm in.
+    await drawRectangles(window, [[80, 120, 380, 320]]);
+    await enter(panel.getByLabel('Width'), '100');
+    await enter(panel.getByLabel('Height'), '60');
+    await window.getByTestId('selection-bar-step').click();
+    await enter(panel.getByLabel('Edge margin'), '3');
+
+    // Named, not numbered: the opening is the top, 94 mm across between the sides.
+    const sides = panel.getByTestId('stitch-run');
+    await sides.selectOption({ label: 'Open at the top' });
+    await expect(sides.locator('option:checked')).toHaveText('Open at the top');
+    await expect(panel.getByLabel('From corner', { exact: true })).toHaveValue('2');
+    await expect(panel.getByLabel('To corner', { exact: true })).toHaveValue('1');
+    await expect(panel.getByTestId('pocket-width')).toHaveText('94 mm');
+    // A card held fully sits below the opening the run leaves: the opening is
+    // above the stitch ends, not the bottom between them.
+    await panel.getByTestId('pocket-holds').selectOption('id-1');
+    await panel.getByTestId('pocket-fully').check();
+    await expect(panel.getByTestId('pocket-proud')).toHaveText(
+      'What it holds goes 3.02 mm below the opening.',
+    );
+    await expectNoViolations(window, 'Stitched sides named on a rectangle');
+
+    // The corners are numbered while a corner field has focus, and go after.
+    const before = await boardPixels(window);
+    await panel.getByLabel('From corner', { exact: true }).focus();
+    await expect.poll(async () => (await boardPixels(window)).equals(before)).toBe(false);
+    await panel.getByLabel('Edge margin').focus();
+    await expect.poll(async () => (await boardPixels(window)).equals(before)).toBe(true);
+  } finally {
+    await window.screenshot({ path: test.info().outputPath('open-at-the-top.png') });
+    await closeApp(app);
+  }
+});

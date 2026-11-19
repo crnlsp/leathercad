@@ -125,6 +125,9 @@ export const CANVAS = {
 
   seam: { holeRadiusPx: 4, labelGapMm: 2 },
 
+  /** A corner numbered while Stitched sides or Sew together… asks for one (Q48). */
+  corner: { dotRadiusPx: 4, labelGapMm: 4 },
+
   /**
    * The seam allowance: the material between the stitching and the edge grown
    * from it, filled faintly beneath both lines (F.7).

@@ -44,6 +44,7 @@ import {
   SHEET,
   clearCanvas,
   renderDisplayList,
+  cornerNumbers,
   seamOverlay,
   renderGrid,
   guideDisplayList,
@@ -78,6 +79,7 @@ import { isTyping, pressesControl } from './shortcuts.js';
 import { ValueChips, type DrawnChips, type ValueChipsHandle } from './ValueChips.js';
 import { SelectionBar, type SelectionBarHandle } from './SelectionBar.js';
 import type { MakerTools } from './irons.js';
+import { cornerFocus } from './cornerFocus.js';
 import { PointerValue, usePointerValue } from './pointerValue.js';
 
 /**
@@ -384,6 +386,29 @@ export function CanvasHost({
     update();
     return store.subscribe(update);
   }, [store, seam, seamLocale, invalidate]);
+  /** The corners a focused corner field names, numbered on the board (Q48). */
+  const cornerNumbersRef = useRef<ReturnType<typeof cornerNumbers>>({ items: [] });
+  useEffect(() => {
+    const number = new Intl.NumberFormat(seamLocale);
+    const update = () => {
+      const id = cornerFocus.get();
+      cornerNumbersRef.current =
+        id === null
+          ? { items: [] }
+          : cornerNumbers(store.getState().document.project, id, (value) => number.format(value));
+      invalidate();
+    };
+    update();
+    const leave = cornerFocus.subscribe(update);
+    // Only while a field has focus does a change to the drawing move them.
+    const follow = store.subscribe(() => {
+      if (cornerFocus.get() !== null) update();
+    });
+    return () => {
+      leave();
+      follow();
+    };
+  }, [store, seamLocale, invalidate]);
   const hoveredPartPropRef = useRef<string | null>(hoveredPart);
   const onHoverPartRef = useRef(onHoverPart);
   useEffect(() => {
@@ -779,6 +804,7 @@ export function CanvasHost({
     renderDisplayList(context, tapeJoins(sheetPlanFor(document.project)), view);
     // The tool overlay is ephemeral feedback and never touches the document.
     renderDisplayList(context, seamOverlayRef.current, view);
+    renderDisplayList(context, cornerNumbersRef.current, view);
     renderDisplayList(context, managerRef.current?.overlay() ?? { items: [] }, view);
     // A tool builds a fresh problem on every pointer move. Keeping the old one
     // when it says the same thing stops the chrome re-rendering every frame.

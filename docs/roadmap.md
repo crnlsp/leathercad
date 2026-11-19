@@ -127,7 +127,7 @@ as any item that will not make it does.
 - ✅ **Q44 A hole on the cut edge, one verdict** — the same problem whichever way the piece faces (D29).
 - ✅ **Q46 A tooth through the edge is off the leather** (P1) — a hole set's iron read as SVG and DXF cut it.
 - ✅ **Q47 End holes moved in** (P1) — *Start offset* and *End offset* in Properties move an open run's end holes in, a hole kept on every corner; the edge problem's advice names them.
-- ☐ **Q48 Stitched sides say which side is open** (P1) — named sides on a rectangle, numbered corners while choosing.
+- ✅ **Q48 Stitched sides say which side is open** (P1) — *Open at the top* and its three siblings on a rectangle square to the board; the board numbers the corners while a corner field has focus.
 - ✅ **Q49 Holds says what it measured to** (P1) — *Holds* names the piece whose edge the depth was read to and its rise above the stitch ends, says "no ease", and stays, to be cleared, while its line fails.
 
 ### Stage 4 — Geometry and interoperability ([plan](superpowers/plans/2026-11-03-release-1.7.md#stage-4--geometry-and-interoperability))

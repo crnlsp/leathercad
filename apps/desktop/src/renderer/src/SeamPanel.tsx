@@ -9,6 +9,7 @@ import {
 } from '@leathercad/domain';
 import { useEffect, useRef } from 'react';
 
+import { useCornerFocus } from './cornerFocus.js';
 import { useI18n } from './i18n.js';
 import { NumberField } from './NumberField.js';
 import { describeProblem } from './problemText.js';
@@ -260,6 +261,8 @@ function SeamSideFields({
   onChange: (side: SeamSide) => void;
 }) {
   const { t, locale } = useI18n();
+  // The board numbers the corners these fields name while one has focus (Q48).
+  const focus = useCornerFocus(side.holeSetId);
   const choices = stretchChoices(project, side.holeSetId);
   const anchors = seamAnchors(project, side.holeSetId);
   const sets = holeSets(project);
@@ -280,6 +283,7 @@ function SeamSideFields({
       <select
         aria-label={fieldLabel}
         value={String(value)}
+        {...focus}
         onChange={(e) => {
           const chosen = anchors.find((a) => String(a) === e.target.value);
           if (chosen !== undefined) change(chosen);
@@ -321,6 +325,7 @@ function SeamSideFields({
           data-testid="seam-where"
           aria-label={t('seams.where')}
           value={selected < 0 ? stretch.kind : String(selected)}
+          {...focus}
           onChange={(e) => {
             const value = e.target.value;
             const first = anchors[0] ?? 'start';

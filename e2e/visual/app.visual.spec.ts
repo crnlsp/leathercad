@@ -428,3 +428,29 @@ test('an SVG pattern’s import preview (9.20b)', async () => {
     await closeApp(app);
   }
 });
+
+test('a rectangle’s corners numbered while a corner field has focus (Q48)', async () => {
+  const { app, window } = await launch();
+  try {
+    const panel = window.getByTestId('property-panel');
+    await drawAPanel(window, { parts: '1' });
+    // Properties folds away at this width; the corner field is in it.
+    const toggle = window.getByTestId('toggle-properties');
+    if ((await toggle.getAttribute('aria-pressed')) !== 'true') await toggle.click();
+    for (const [label, value] of [
+      ['Width', '100'],
+      ['Height', '60'],
+    ] as const) {
+      await panel.getByLabel(label).fill(value);
+      await panel.getByLabel(label).press('Enter');
+    }
+    await window.getByTestId('selection-bar-step').click();
+    await panel.getByTestId('stitch-run').selectOption({ label: 'Open at the top' });
+    await pointerAway(window);
+    await panel.getByLabel('From corner', { exact: true }).focus();
+    await blankVersion(window);
+    await expect(window).toHaveScreenshot('corner-numbers.png');
+  } finally {
+    await closeApp(app);
+  }
+});
