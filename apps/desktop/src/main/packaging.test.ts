@@ -5,6 +5,8 @@ import { pathToFileURL } from 'node:url';
 import { LCP_EXTENSION, LCP_MIME } from '@leathercad/persist';
 import { describe, expect, it } from 'vitest';
 
+import { APP_USER_MODEL_ID } from './appUserModelId.js';
+
 /**
  * Desktop integration as packaged (slice 8.5a), checked against the files it
  * names — so the configuration and the icons cannot drift apart unnoticed.
@@ -13,17 +15,21 @@ import { describe, expect, it } from 'vitest';
 const DESKTOP = resolve(import.meta.dirname, '../..');
 
 interface BuilderConfig {
+  extraMetadata: { description: string };
   executableName: string;
   directories: { buildResources: string };
   appId: string;
   linux: {
     icon: string;
+    synopsis: string;
+    mimeTypes: string[];
     syncDesktopName: boolean;
     extraFiles: { from: string; to: string }[];
   };
   win: { icon: string };
   mac: { icon: string };
-  fileAssociations: { ext: string; mimeType: string; name: string }[];
+  fileAssociations: { ext: string; icon: string; name: string }[];
+  deb: { fpm: string[] };
   flatpak: { files: [string, string][]; finishArgs: string[] };
 }
 
@@ -36,6 +42,23 @@ async function config(): Promise<BuilderConfig> {
 function pngSize(bytes: Buffer): [number, number] {
   expect(bytes.subarray(1, 4).toString('ascii')).toBe('PNG');
   return [bytes.readUInt32BE(16), bytes.readUInt32BE(20)];
+}
+
+/** The sizes an `.ico` holds, from its directory. */
+function icoSizes(ico: Buffer): number[] {
+  expect(ico.readUInt16LE(2)).toBe(1); // an icon, not a cursor
+  return Array.from({ length: ico.readUInt16LE(4) }, (_, i) => ico[6 + i * 16] || 256);
+}
+
+/** The entry types an `.icns` holds. */
+function icnsTypes(icns: Buffer): string[] {
+  expect(icns.subarray(0, 4).toString('ascii')).toBe('icns');
+  expect(icns.readUInt32BE(4)).toBe(icns.length);
+  const types: string[] = [];
+  for (let at = 8; at < icns.length; at += icns.readUInt32BE(at + 4)) {
+    types.push(icns.subarray(at, at + 4).toString('ascii'));
+  }
+  return types;
 }
 
 describe('desktop integration', () => {
@@ -62,19 +85,24 @@ describe('desktop integration', () => {
   it('has a Windows .ico and a macOS .icns up to their largest sizes', async () => {
     const { win, mac } = await config();
 
-    const ico = readFileSync(join(DESKTOP, win.icon));
-    expect(ico.readUInt16LE(2)).toBe(1); // an icon, not a cursor
-    const sizes = Array.from({ length: ico.readUInt16LE(4) }, (_, i) => ico[6 + i * 16] || 256);
+    const sizes = icoSizes(readFileSync(join(DESKTOP, win.icon)));
     expect(sizes).toEqual(expect.arrayContaining([16, 32, 48, 256]));
 
-    const icns = readFileSync(join(DESKTOP, mac.icon));
-    expect(icns.subarray(0, 4).toString('ascii')).toBe('icns');
-    expect(icns.readUInt32BE(4)).toBe(icns.length);
-    const types: string[] = [];
-    for (let at = 8; at < icns.length; at += icns.readUInt32BE(at + 4)) {
-      types.push(icns.subarray(at, at + 4).toString('ascii'));
-    }
+    const types = icnsTypes(readFileSync(join(DESKTOP, mac.icon)));
     expect(types).toEqual(expect.arrayContaining(['icp4', 'ic07', 'ic09', 'ic10']));
+  });
+
+  it('gives the running app the id the Windows shortcuts carry', async () => {
+    // Otherwise a window started from a pinned shortcut is a second taskbar
+    // button, and the jump list's recent documents belong to neither.
+    const { appId } = await config();
+    expect(APP_USER_MODEL_ID).toBe(appId);
+  });
+
+  it('describes the Windows installer and its shortcuts as Linux does, not as the workspace package', async () => {
+    // package.json's description reads "Electron shell for LeatherCAD".
+    const { linux, extraMetadata } = await config();
+    expect(extraMetadata.description).toBe(linux.synopsis);
   });
 
   it('describes the app to catalogs, for the entry and the type it installs', async () => {
@@ -93,10 +121,39 @@ describe('desktop integration', () => {
 
 describe('opening a project from the file manager (8.5)', () => {
   it('associates the extension and the type the app writes into every project', async () => {
+    const { fileAssociations, linux } = await config();
+    expect(fileAssociations).toEqual([expect.objectContaining({ ext: LCP_EXTENSION })]);
+    expect(linux.mimeTypes).toEqual([LCP_MIME]);
+  });
+
+  it('has the document icon every platform shows for a project file (R14)', async () => {
+    // `icon: 'lcp'` is `lcp.ico` for Windows and `lcp.icns` for macOS.
     const { fileAssociations } = await config();
-    expect(fileAssociations).toEqual([
-      expect.objectContaining({ ext: LCP_EXTENSION, mimeType: LCP_MIME }),
-    ]);
+    expect(fileAssociations[0]?.icon).toBe('lcp');
+    expect(icoSizes(readFileSync(join(DESKTOP, 'build/lcp.ico')))).toEqual(
+      expect.arrayContaining([16, 32, 48, 256]),
+    );
+    expect(icnsTypes(readFileSync(join(DESKTOP, 'build/lcp.icns')))).toEqual(
+      expect.arrayContaining(['icp4', 'ic07', 'ic09', 'ic10']),
+    );
+  });
+
+  it('installs the document icon beside the type on Linux, in the .deb and the Flatpak (R14)', async () => {
+    const { deb, flatpak } = await config();
+    const xml = readFileSync(join(DESKTOP, 'build/linux/io.github.crnlsp.leathercad.xml'), 'utf8');
+    const icon = /<icon name="([^"]+)"\/>/.exec(xml)?.[1];
+    expect(icon).toMatch(/^io\.github\.crnlsp\.leathercad\./); // a Flatpak exports no other
+
+    const installed = [
+      ...deb.fpm.map((pair) => pair.split('=') as [string, string]),
+      ...flatpak.files,
+    ].filter(([, to]) => to.includes('/mimetypes/'));
+    expect(installed).toHaveLength(2 * 7);
+    for (const [from, to] of installed) {
+      const size = /\/(\d+)x\1\/mimetypes\/([^/]+)\.png$/.exec(to);
+      expect(size?.[2]).toBe(icon);
+      expect(pngSize(readFileSync(from))).toEqual([Number(size?.[1]), Number(size?.[1])]);
+    }
   });
 
   it('describes that type to Linux, by name and by the mimetype entry inside the file', async () => {

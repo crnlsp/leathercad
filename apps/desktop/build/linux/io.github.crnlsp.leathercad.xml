@@ -7,11 +7,15 @@
   type, the ODF convention (docs/file-format.md §1), so it is recognised by its
   contents as well as by its name: byte 30 is where the first entry's name
   starts, and its contents follow the name.
+
+  The icon is build/document.svg, installed by the .deb and the Flatpak under
+  this name (R14); a Flatpak exports only icons named for its app id.
 -->
 <mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
   <mime-type type="application/vnd.leathercad.project">
     <comment>LeatherCAD project</comment>
     <sub-class-of type="application/zip"/>
+    <icon name="io.github.crnlsp.leathercad.project"/>
     <generic-icon name="x-office-drawing"/>
     <glob pattern="*.lcp"/>
     <magic priority="70">

@@ -6,9 +6,13 @@
 #                                installer silently (/S) and waits
 #   Seed                         writes the maker's data into %APPDATA%\leathercad
 #                                and remembers it, and where the app is installed
-#   Check     -Version <v>       the installed app: its version, the same folder,
-#                                .lcp registered, shortcuts, and the data folder
-#                                as Install found it, byte for byte; exports
+#   Check     -Version <v> [-Fresh]
+#                                the installed app: its version, the same folder,
+#                                .lcp registered with its own icon (R14), the
+#                                installer's description (R14), and the data
+#                                folder as Install found it, byte for byte; with
+#                                -Fresh, the shortcuts' AppUserModelID and
+#                                description too (R14); exports
 #                                LEATHERCAD_PACKAGED_EXECUTABLE
 #   Uninstall                    runs the uninstaller silently: the program, its
 #                                shortcuts and registry entries go, the data
@@ -24,7 +28,10 @@
 param(
   [Parameter(Mandatory)] [ValidateSet('Install', 'Seed', 'Check', 'Uninstall')] [string] $Step,
   [string] $Installer,
-  [string] $Version
+  [string] $Version,
+  # Check after an installation with no earlier one: only then are the shortcuts
+  # the installer's own, as an upgrade keeps the ones it finds.
+  [switch] $Fresh
 )
 $ErrorActionPreference = 'Stop'
 
@@ -38,11 +45,20 @@ $Shortcuts = @(
   (Join-Path ([Environment]::GetFolderPath('Programs')) 'LeatherCAD.lnk'),
   (Join-Path ([Environment]::GetFolderPath('Desktop')) 'LeatherCAD.lnk')
 )
+$DesktopApp = Join-Path $PSScriptRoot '..\..\apps\desktop'
 $script:Failed = $false
 
 function Fail([string] $Message) {
   Write-Output "::error title=Windows installer::$Message"
   $script:Failed = $true
+}
+
+# A string constant of the builder's configuration (appId, SYNOPSIS): the
+# installer is built from it, so it is what the installed app must show.
+function Get-BuilderValue([string] $Pattern) {
+  $match = [regex]::Match((Get-Content (Join-Path $DesktopApp 'electron-builder.config.mjs') -Raw), $Pattern)
+  if (-not $match.Success) { throw "electron-builder.config.mjs has nothing matching $Pattern." }
+  $match.Groups[1].Value
 }
 
 # The uninstall entry electron-builder writes, under a GUID derived from appId;
@@ -85,6 +101,7 @@ switch ($Step) {
   'Install' {
     New-Item -ItemType Directory -Force $State | Out-Null
     Save-Data
+    Set-Content (Join-Path $State 'installer.txt') $Installer -NoNewline
     $process = Start-Process $Installer -ArgumentList '/S' -PassThru
     if (-not $process.WaitForExit(300000)) { Fail "$Installer /S was still running after five minutes." }
     elseif ($process.ExitCode -ne 0) { Fail "$Installer /S exited with $($process.ExitCode)." }
@@ -125,6 +142,38 @@ switch ($Step) {
     $open = (Get-ItemProperty "HKCU:\Software\Classes\$ProgId\shell\open\command" -ErrorAction SilentlyContinue).'(default)'
     if ($open -notlike "*$executable*") { Fail "'$ProgId' opens with '$open', not $executable." }
     foreach ($shortcut in $Shortcuts) { if (-not (Test-Path $shortcut)) { Fail "No $shortcut." } }
+
+    # R14. A project file shows LeatherCAD's document icon, not the app's:
+    # DefaultIcon names a copy of build/lcp.ico the installer put beside the app.
+    $icon = (Get-ItemProperty "HKCU:\Software\Classes\$ProgId\DefaultIcon" -ErrorAction SilentlyContinue).'(default)'
+    $iconFile = if ($icon) { $icon.Trim('"') }
+    if (-not $iconFile -or $iconFile -like '*leathercad.exe*') { Fail "'$ProgId' shows '$icon', not a document icon of its own." }
+    elseif (-not (Test-Path $iconFile)) { Fail "'$ProgId' shows $iconFile, which is not there." }
+    elseif ((Get-FileHash $iconFile).Hash -ne (Get-FileHash (Join-Path $DesktopApp 'build\lcp.ico')).Hash) {
+      Fail "$iconFile is not build/lcp.ico."
+    }
+
+    # R14. The installer describes the app as the Linux entry does, not as the
+    # workspace package ("Electron shell for LeatherCAD").
+    $synopsis = Get-BuilderValue "const SYNOPSIS = '([^']+)'"
+    $installerFile = Get-Content (Join-Path $State 'installer.txt') -Raw
+    $fileDescription = (Get-Item $installerFile).VersionInfo.FileDescription
+    if ($fileDescription -ne $synopsis) { Fail "$installerFile describes itself as '$fileDescription', not '$synopsis'." }
+
+    # R14. The shortcuts carry the app's AppUserModelID, which the running app
+    # sets too (appUserModelId.ts, held equal to appId by packaging.test.ts), so
+    # a pin and its window are one taskbar button; and the app's description.
+    if ($Fresh) {
+      $appId = Get-BuilderValue "appId: '([^']+)'"
+      $shell = New-Object -ComObject Shell.Application
+      foreach ($shortcut in $Shortcuts) {
+        $item = $shell.NameSpace((Split-Path $shortcut)).ParseName((Split-Path $shortcut -Leaf))
+        $id = $item.ExtendedProperty('System.AppUserModel.ID')
+        if ($id -ne $appId) { Fail "$shortcut carries the id '$id', not '$appId'." }
+        $description = (New-Object -ComObject WScript.Shell).CreateShortcut($shortcut).Description
+        if ($description -ne $synopsis) { Fail "$shortcut describes the app as '$description', not '$synopsis'." }
+      }
+    }
 
     Compare-Data 'After installing'
     if ($env:GITHUB_ENV) { "LEATHERCAD_PACKAGED_EXECUTABLE=$executable" | Add-Content $env:GITHUB_ENV }

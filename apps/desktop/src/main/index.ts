@@ -15,6 +15,7 @@ import { NOTICES_FILE } from '../notices/thirdPartyNotices.js';
 import { SOURCE_LOCALE, createI18n, resolveLocale, type I18n } from '../shared/i18n.js';
 import { IPC } from '../shared/ipc.js';
 import { APP_URL, createAppProtocolHandler } from './appProtocol.js';
+import { APP_USER_MODEL_ID } from './appUserModelId.js';
 import { startDiagnostics, stateDirectory, watchWindow } from './diagnostics.js';
 import { mayOpenExternally } from './externalLinks.js';
 import { projectPathFromArgs } from './launchFile.js';
@@ -47,6 +48,8 @@ app.setPath(
     'leathercad',
   ),
 );
+// The installer's shortcuts carry this id; the windows must too (R14).
+if (process.platform === 'win32') app.setAppUserModelId(APP_USER_MODEL_ID);
 
 // One LeatherCAD at a time (8.11). A second launch — a `.lcp` double-clicked
 // on Linux or Windows while the app runs, or the Start menu — hands its
