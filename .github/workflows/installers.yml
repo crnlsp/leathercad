@@ -241,6 +241,22 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           ./tools/ci/windows-install.ps1 -Step Uninstall
 
+      # An installation with nothing before it, as a first-time maker has: the
+      # shortcuts are the installer's own, so they carry the app's id (one
+      # taskbar button for a pin and its window) and its description (R14). An
+      # upgrade keeps the shortcuts it finds, so the steps above cannot tell.
+      - name: Fresh install of the shipped installer (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem apps/desktop/release/*.exe
+          ./tools/ci/windows-install.ps1 -Step Install -Installer $installer.FullName
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          $version = (Get-Content apps/desktop/package.json -Raw | ConvertFrom-Json).version
+          ./tools/ci/windows-install.ps1 -Step Check -Version $version -Fresh
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          ./tools/ci/windows-install.ps1 -Step Uninstall
+
       # The Flatpak beside the AppImage (8.5). Its runtimes come from Flathub,
       # installed for this user by the bundler. apt's index is fresh from the
       # poppler step.

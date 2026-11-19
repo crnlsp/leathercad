@@ -18,38 +18,45 @@
  *   menu gets a size drawn for it rather than a 1024 px image scaled down;
  * - `icon.ico`, 16–256 px, for Windows;
  * - `icon.icns`, 16–1024 px, for macOS.
+ *
+ * And, from `build/document.svg`, the `.lcp` document's icon (R14): `lcp.ico`
+ * and `lcp.icns`, which electron-builder finds by the extension's name, and
+ * `document/<n>x<n>.png`, which the Linux packages install as the MIME type's
+ * icon.
  */
 import { Buffer } from 'node:buffer';
 import { execFileSync } from 'node:child_process';
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const build = join(dirname(fileURLToPath(import.meta.url)), '..', 'build');
-const svg = join(build, 'icon.svg');
 const scratch = mkdtempSync(join(tmpdir(), 'leathercad-icons-'));
 
-/** @param {number} size */
-function render(size) {
-  const out = join(scratch, `${size}.png`);
+/**
+ * @param {string} svg
+ * @param {number} size
+ */
+function render(svg, size) {
+  const out = join(scratch, `${basename(svg, '.svg')}-${size}.png`);
   execFileSync('rsvg-convert', ['-w', String(size), '-h', String(size), svg, '-o', out]);
   return out;
 }
 
-try {
-  execFileSync('rsvg-convert', ['-w', '1024', '-h', '1024', svg, '-o', join(build, 'icon.png')]);
+/** Windows' icon: PNG-compressed 16–256 px images in one file. */
+function writeIco(svg, file) {
+  execFileSync('magick', [
+    ...[16, 24, 32, 48, 64, 128, 256].map((size) => render(svg, size)),
+    file,
+  ]);
+}
 
-  mkdirSync(join(build, 'icons'), { recursive: true });
-  for (const size of [16, 32, 48, 64, 128, 256, 512]) {
-    copyFileSync(render(size), join(build, 'icons', `${size}x${size}.png`));
-  }
-
-  const ico = [16, 24, 32, 48, 64, 128, 256].map(render);
-  execFileSync('magick', [...ico, join(build, 'icon.ico')]);
-
-  // ICNS: 'icns', total length, then per size a type, its length and a PNG.
-  // The types are Apple's for PNG payloads, 1x and 2x.
+/**
+ * ICNS: 'icns', total length, then per size a type, its length and a PNG.
+ * The types are Apple's for PNG payloads, 1x and 2x.
+ */
+function writeIcns(svg, file) {
   /** @type {[string, number][]} */
   const types = [
     ['icp4', 16],
@@ -64,7 +71,7 @@ try {
     ['ic10', 1024], // 512 @2x
   ];
   const entries = types.map(([type, size]) => {
-    const png = readFileSync(render(size));
+    const png = readFileSync(render(svg, size));
     const header = Buffer.alloc(8);
     header.write(type, 0, 'ascii');
     header.writeUInt32BE(png.length + 8, 4);
@@ -74,7 +81,27 @@ try {
   const head = Buffer.alloc(8);
   head.write('icns', 0, 'ascii');
   head.writeUInt32BE(body.length + 8, 4);
-  writeFileSync(join(build, 'icon.icns'), Buffer.concat([head, body]));
+  writeFileSync(file, Buffer.concat([head, body]));
+}
+
+try {
+  const icon = join(build, 'icon.svg');
+  execFileSync('rsvg-convert', ['-w', '1024', '-h', '1024', icon, '-o', join(build, 'icon.png')]);
+
+  mkdirSync(join(build, 'icons'), { recursive: true });
+  for (const size of [16, 32, 48, 64, 128, 256, 512]) {
+    copyFileSync(render(icon, size), join(build, 'icons', `${size}x${size}.png`));
+  }
+  writeIco(icon, join(build, 'icon.ico'));
+  writeIcns(icon, join(build, 'icon.icns'));
+
+  const document = join(build, 'document.svg');
+  mkdirSync(join(build, 'document'), { recursive: true });
+  for (const size of [16, 32, 48, 64, 128, 256, 512]) {
+    copyFileSync(render(document, size), join(build, 'document', `${size}x${size}.png`));
+  }
+  writeIco(document, join(build, 'lcp.ico'));
+  writeIcns(document, join(build, 'lcp.icns'));
 } finally {
   rmSync(scratch, { recursive: true, force: true });
 }

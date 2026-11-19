@@ -29,11 +29,44 @@ import { join } from 'node:path';
 /** The .lcp type, as `LCP_MIME` in packages/persist writes it into every file. */
 const LCP_MIME = 'application/vnd.leathercad.project';
 
+/** One line on what the app is: the Linux entry's comment, and Windows' description. */
+const SYNOPSIS = 'Leathercraft patterns that print at exact 1:1 scale';
+
+/**
+ * The .lcp type's icon on Linux (R14). Named for the app id, not the type
+ * (application-vnd.leathercad.project): a Flatpak exports only icons that
+ * start with its id, and the type's `<icon>` says which one it is.
+ */
+const DOCUMENT_ICON = 'io.github.crnlsp.leathercad.project';
+
+/**
+ * The document icon's files and the type's definition, as [source, destination]
+ * pairs for a Linux package: the hicolor icons and shared-mime-info's file.
+ * @param {string} share the package's `share` directory, which differs in a
+ *   Flatpak from a .deb
+ * @param {string} mimeName the type definition's file name in it
+ * @returns {[string, string][]}
+ */
+function documentFiles(share, mimeName) {
+  const build = join(import.meta.dirname, 'build');
+  return [
+    [join(build, 'linux/io.github.crnlsp.leathercad.xml'), `${share}/mime/packages/${mimeName}`],
+    ...[16, 32, 48, 64, 128, 256, 512].map((size) => [
+      join(build, `document/${size}x${size}.png`),
+      `${share}/icons/hicolor/${size}x${size}/mimetypes/${DOCUMENT_ICON}.png`,
+    ]),
+  ];
+}
+
 export default {
   appId: 'io.github.crnlsp.leathercad',
   productName: 'LeatherCAD',
   executableName: 'leathercad',
   copyright: 'Copyright © 2026 crnlsp',
+  // package.json's description is for developers ("Electron shell for …"); the
+  // NSIS installer writes it as its own file description, the shortcuts' tooltip
+  // and the uninstall entry's comment, so the packaged one is the synopsis.
+  extraMetadata: { description: SYNOPSIS },
   directories: { output: 'release', buildResources: 'build' },
   files: ['out/**/*', 'package.json'],
   asar: true,
@@ -67,8 +100,10 @@ export default {
       ext: 'lcp',
       name: 'LeatherCAD project',
       description: 'LeatherCAD project',
-      mimeType: LCP_MIME,
       role: 'Editor',
+      // build/lcp.ico and build/lcp.icns, drawn from build/document.svg (R14);
+      // the name has no extension, so each platform takes its own.
+      icon: 'lcp',
     },
   ],
   // The icon is drawn once, in build/icon.svg, and rendered to each format by
@@ -77,7 +112,12 @@ export default {
     target: ['AppImage', 'deb'],
     icon: 'build/icons',
     category: 'Graphics',
-    synopsis: 'Leathercraft patterns that print at exact 1:1 scale',
+    synopsis: SYNOPSIS,
+    // The desktop entry's MimeType. Not `mimeType` on the file association,
+    // which also makes electron-builder write a definition of the type of its
+    // own, with a generic document's icon, that wins over ours: where the
+    // definition and the icon come from is build/linux/*.xml and documentFiles.
+    mimeTypes: [LCP_MIME],
     description:
       'Design leathercraft patterns — parts, stitch lines, holes — that print at exact 1:1 scale.',
     // The desktop entry is named for `desktopName` in package.json, which is
@@ -131,6 +171,10 @@ export default {
     // Print runs `lp` and `lpstat`, and does without them (printing.ts). The
     // default recommendation is a tray library, which the app has no use for.
     recommends: ['cups-client'],
+    // The type's definition and its icons (see `mimeTypes` under linux).
+    fpm: documentFiles('/usr/share', 'io.github.crnlsp.leathercad.xml').map(
+      ([source, destination]) => `${source}=${destination}`,
+    ),
   },
   // The Flatpak (slice 8.5), built by `pnpm package:flatpak` — separately from
   // `pnpm package`, because it needs flatpak-builder and the Flathub runtimes.
@@ -155,13 +199,8 @@ export default {
       '--device=dri',
       '--filesystem=home',
     ],
-    // The .lcp type, where a Flatpak exports shared-mime-info from.
-    files: [
-      [
-        join(import.meta.dirname, 'build/linux/io.github.crnlsp.leathercad.xml'),
-        '/share/mime/packages/io.github.crnlsp.leathercad.xml',
-      ],
-    ],
+    // The .lcp type, where a Flatpak exports shared-mime-info from, and its icons.
+    files: documentFiles('/share', 'io.github.crnlsp.leathercad.xml'),
   },
   // Windows (8.6a): an NSIS installer, per user, no administrator needed.
   // Unsigned, by decision (roadmap 8.6, Code signing); electron-builder would

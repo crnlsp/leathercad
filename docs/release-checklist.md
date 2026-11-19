@@ -244,6 +244,15 @@ forward, and no second tab opens. Minimise the window and double-click again: it
 from the Start menu or the launcher while it runs: the window comes forward, and nothing else
 happens. On Linux, the file manager calls the file a *LeatherCAD project*.
 
+Since R14, each of those file managers — Explorer, Finder, Files — shows a `.lcp` with LeatherCAD's
+document icon (a sheet carrying the card pocket), not the app's icon or a generic document's. On
+Windows, also pin LeatherCAD to the taskbar from its Start menu entry, close it, start it from the
+pin and open a saved project: the window belongs to the pin — one taskbar button, not a second one
+beside it — and right-clicking the pin lists the project under *Recent*. The installer's
+*Properties → Details* and the Start menu entry's tooltip say *Leathercraft patterns that print at
+exact 1:1 scale*, not *Electron shell for LeatherCAD* (a shortcut kept from an earlier version
+keeps the earlier tooltip).
+
 ### 12. The window's edited flag, on macOS
 
 Since 1.5 (U.7). On a **real Mac**, with the packaged dmg. Not Linux, where Electron ignores the
