@@ -202,11 +202,26 @@ export default {
     // The .lcp type, where a Flatpak exports shared-mime-info from, and its icons.
     files: documentFiles('/share', 'io.github.crnlsp.leathercad.xml'),
   },
-  // Windows (8.6a): an NSIS installer, per user, no administrator needed.
-  // Unsigned, by decision (roadmap 8.6, Code signing); electron-builder would
-  // sign if CSC_LINK were ever set, with no change here.
+  // Windows (8.6a): an NSIS installer. Unsigned, by decision (roadmap 8.6,
+  // Code signing); electron-builder would sign if CSC_LINK were ever set, with
+  // no change here.
   win: { target: ['nsis'], icon: 'build/icon.ico' },
-  nsis: { oneClick: true, perMachine: false },
+  // Assisted (R12; the installer spec §3): it asks for whom — only for me by
+  // default, no administrator; everyone with one — and where, then offers to
+  // start the app. build/installer.nsh guards both: one install per account,
+  // and no folder that holds anything but LeatherCAD, since an uninstall
+  // removes the whole folder. It never removes the maker's data (§2).
+  nsis: {
+    oneClick: false,
+    perMachine: false,
+    allowElevation: true,
+    allowToChangeInstallationDirectory: true,
+    runAfterFinish: true,
+    deleteAppDataOnUninstall: false,
+    // The app's languages (SUPPORTED_LANGUAGES), which installer.nsh's own
+    // words are written in; any other system language gets English.
+    installerLanguages: ['en_US', 'pl_PL', 'de_DE', 'ru_RU', 'fr_FR', 'es_ES'],
+  },
   // macOS (8.6a): one dmg for Apple silicon and Intel. Flipping the fuses
   // rewrites the binary and invalidates Electron's own signature, and an
   // arm64 app with no valid signature will not start at all — so, with no
