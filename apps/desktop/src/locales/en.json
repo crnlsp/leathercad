@@ -1467,6 +1467,8 @@
     }
   },
   "editor": {
+    "bottomLeftRadius": "Bottom-left corner radius",
+    "bottomRightRadius": "Bottom-right corner radius",
     "cornerRadii": "Corner radii",
     "corners": "Corners",
     "custom": "Custom",
@@ -1493,6 +1495,8 @@
     "sweep": "Sweep",
     "text": "Text",
     "thickness": "Thickness",
+    "topLeftRadius": "Top-left corner radius",
+    "topRightRadius": "Top-right corner radius",
     "turn": "Turn",
     "width": "Width",
     "fold": {

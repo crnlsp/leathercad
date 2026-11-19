@@ -146,7 +146,7 @@ as any item that will not make it does.
 - ✅ **U.24a Project tabs, refined** — a tab is as wide as its name, to 200 px, and no narrower than 128 so crowded names stay whole while the strip scrolls; the *All tabs* list opens inside the window (X27, X28).
 - ☐ **U.24b The template picker and its management, refined.**
 - ☐ **U.24c Guides and Arrange, refined** — a level guide shows only its y; Arrange as icons.
-- ☐ **U.24d Parts, Properties and the selection bar, refined.**
+- ✅ **U.24d Parts, Properties and the selection bar, refined** — a new piece beside a namesake is "Panel 2"; *Fit* keeps the drawing out of the open legend's corner; the selection bar goes over or beside the selection rather than cover the next piece; the corner radius fields are named for a screen reader (X32, X33, X35, X40).
 - ☐ **U.24e Problems, refined.**
 - ☐ **U.24f The export dialogs, refined.**
 - ☐ **U.24g Print Preview, Sheets and calibration, refined.**

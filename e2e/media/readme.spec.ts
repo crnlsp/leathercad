@@ -183,7 +183,13 @@ test('README media', async () => {
     await type(window, 'Y', 0);
     await type(window, 'Width', 200);
     await type(window, 'Height', 95);
-    for (const corner of ['↖', '↗', '↙', '↘']) await type(window, corner, 5);
+    for (const corner of [
+      'Top-left corner radius',
+      'Top-right corner radius',
+      'Bottom-left corner radius',
+      'Bottom-right corner radius',
+    ])
+      await type(window, corner, 5);
     await fit(window);
     await pause(window);
 
@@ -213,7 +219,13 @@ test('README media', async () => {
     await type(window, 'Y', -110);
     await type(window, 'Width', 196);
     await type(window, 'Height', 91);
-    for (const corner of ['↖', '↗', '↙', '↘']) await type(window, corner, 4);
+    for (const corner of [
+      'Top-left corner radius',
+      'Top-right corner radius',
+      'Bottom-left corner radius',
+      'Bottom-right corner radius',
+    ])
+      await type(window, corner, 4);
     await fit(window);
     at = await viewOf(window);
     await row(window, 'Lining', 'Outline').click();

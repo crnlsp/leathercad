@@ -83,8 +83,8 @@ test('SF-UI2 · a pocket said to hold a card warns while it is too narrow, and u
     await drawRectangles(window, [[80, 120, 380, 320]]);
     await enter(panel.getByLabel('Width'), '100');
     await enter(panel.getByLabel('Height'), '60');
-    await enter(panel.getByRole('textbox', { name: '↖ mm' }), '3');
-    await enter(panel.getByRole('textbox', { name: '↗ mm' }), '3');
+    await enter(panel.getByRole('textbox', { name: 'Top-left corner radius mm' }), '3');
+    await enter(panel.getByRole('textbox', { name: 'Top-right corner radius mm' }), '3');
     const step = window.getByTestId('selection-bar-step');
     await step.click();
     await enter(panel.getByLabel('Edge margin'), '3');

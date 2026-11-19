@@ -63,6 +63,7 @@ export function NumberField({
   disabled = false,
   precision = 2,
   hideLabel = false,
+  glyph,
   refuse,
 }: {
   label: string;
@@ -77,6 +78,8 @@ export function NumberField({
   precision?: number;
   /** Named for a screen reader only, where a column heading or a setting's name says it (U.13). */
   hideLabel?: boolean;
+  /** What is seen in the label's place, when `label` is too long to show: "↖" for "Top-left corner radius" (X40). */
+  glyph?: string;
   /** Why a value that reads cannot be stored as it is, and what to store instead (U.14). */
   refuse?: (value: number) => Refusal | null;
 }) {
@@ -140,7 +143,14 @@ export function NumberField({
 
   return (
     <label className="field">
-      <span className={hideLabel ? 'visually-hidden' : 'field-label'}>{label}</span>
+      <span className={hideLabel || glyph !== undefined ? 'visually-hidden' : 'field-label'}>
+        {label}
+      </span>
+      {glyph !== undefined && (
+        <span className="field-label" aria-hidden="true">
+          {glyph}
+        </span>
+      )}
       <span className="field-input">
         <input
           type="text"

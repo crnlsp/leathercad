@@ -41,8 +41,13 @@ function num(text: string | null): number {
 async function viewOf(window: Window): Promise<(xMm: number, yMm: number) => [number, number]> {
   const box = (await window.getByTestId('editor-canvas').boundingBox())!;
 
+  // With Ctrl held, which suspends snapping: the point itself, not a line
+  // a few pixels off that the drawing happens to have there.
   const readAt = async (px: number, py: number): Promise<{ x: number; y: number }> => {
-    const [x, y] = (await readoutAt(window, box.x + px, box.y + py)).split(',').map(num);
+    await window.keyboard.down('Control');
+    const read = await readoutAt(window, box.x + px, box.y + py);
+    await window.keyboard.up('Control');
+    const [x, y] = read.split(',').map(num);
     return { x: x!, y: y! };
   };
 
@@ -145,7 +150,13 @@ test('a card holder, from the first outline to the printed page', async () => {
     await type(window, 'Y', oy);
     await type(window, 'Width', 180);
     await type(window, 'Height', 95);
-    for (const corner of ['↖', '↗', '↙', '↘']) await type(window, corner, 6);
+    for (const corner of [
+      'Top-left corner radius',
+      'Top-right corner radius',
+      'Bottom-left corner radius',
+      'Bottom-right corner radius',
+    ])
+      await type(window, corner, 6);
     await window.getByTestId('part-name').fill('Shell');
 
     // ── Stitched: a derived line at the project's margin, holes along it (A1) ─
@@ -210,7 +221,13 @@ test('a card holder, from the first outline to the printed page', async () => {
     await type(window, 'Y', oy);
     await type(window, 'Width', 90);
     await type(window, 'Height', 60);
-    for (const corner of ['↖', '↗', '↙', '↘']) await type(window, corner, 0);
+    for (const corner of [
+      'Top-left corner radius',
+      'Top-right corner radius',
+      'Bottom-left corner radius',
+      'Bottom-right corner radius',
+    ])
+      await type(window, corner, 0);
     // Name and Cut are the piece's (R-05): the stitch line is what this mode
     // leaves selected, so the piece is picked by its heading to be named.
     await expect(panel.getByTestId('part-name')).toHaveCount(0);

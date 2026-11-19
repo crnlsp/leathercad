@@ -1941,7 +1941,10 @@ bar never covers the piece, at any zoom; off in Settings means off.
   controls; under the lowest of them by a dimension number's reach, its left edge on the piece's,
   sliding clear of a control; over the piece and its caption when there is no room under; `null`
   when neither, or the piece is out of view. `CanvasHost` places it each frame after the chips,
-  hidden while `store.inTransaction` or a tool has a shape under way.
+  hidden while `store.inTransaction` or a tool has a shape under way. Since U.24d (X33) it takes the
+  other pieces' bounds too: where under would cover one, the first of over, beside right and
+  beside left clear of them all, and under as before when every side would cover one; a piece
+  the selection lies on (a pocket on its outer) decides nothing.
 - **Keys:** `selectionBar` in `KEYMAP`, F6, window scope; `CanvasHandle.toggleSelectionBar`. Esc
   in the bar goes to the board. The bar takes no press but on its button: the first full E2E run
   showed a rectangle drawn where the bar was starting on the bar instead.

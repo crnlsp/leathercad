@@ -75,6 +75,16 @@ export function addPart(part: Part): Command {
 }
 
 /**
+ * Adds a newly drawn piece under its default name, numbered at apply time
+ * against the pieces the document has then (X35): "Panel", then "Panel 2".
+ */
+export function addNewPiece(part: Part): Command {
+  return command({ action: 'add', name: part.name }, (document) =>
+    addPart({ ...part, name: freshPieceName(document.project, part.name) }).apply(document),
+  );
+}
+
+/**
  * Adds a feature to a part.
  *
  * A derived feature the reference graph would not allow — a missing source, a
@@ -961,6 +971,19 @@ function transformFeature(feature: Feature, matrix: Mat2x3, withSource = false):
 }
 
 /**
+ * The name a new piece takes: `base`, or — while a piece has it — `base 2`,
+ * `base 3`, the first number no piece has (X35), so five drawn pockets are
+ * five names in Parts, on the sheets and in their captions.
+ */
+export function freshPieceName(project: Project, base: string): string {
+  const taken = new Set(project.parts.map((part) => part.name));
+  if (!taken.has(base)) return base;
+  let n = 2;
+  while (taken.has(`${base} ${String(n)}`)) n += 1;
+  return `${base} ${String(n)}`;
+}
+
+/**
  * A part holding one parametric shape.
  *
  * The closed/open rule is the same product decision `pathPart` makes for drawn
@@ -1556,7 +1579,7 @@ export function addAllowancePart(
 
       const part: Part = {
         id: partId,
-        name: 'Pocket',
+        name: freshPieceName(document.project, 'Pocket'),
         quantity: 1,
         features: [
           {

@@ -4,7 +4,7 @@ import {
   addDrawnStitchLine,
   addFoldLine,
   addMarkingLine,
-  addPart,
+  addNewPiece,
   pathPart,
   shapePart,
 } from '@leathercad/document';
@@ -130,7 +130,8 @@ function fileDrawn(
         ? shapePart(nextId() as PartId, featureId, name, source.shape)
         : pathPart(nextId() as PartId, featureId, name, source.path);
 
-    ctx.dispatch(addPart(part));
+    // Numbered by the command, "Panel 2" beside a "Panel" (X35).
+    ctx.dispatch(addNewPiece(part));
     ctx.store.select([featureId]);
     return featureId;
   }
