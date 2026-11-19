@@ -185,7 +185,8 @@ export function App({
 }) {
   useEffect(() => listenForContextMenuKeys(IS_MAC), []);
   const [version, setVersion] = useState<string | null>(null);
-  const [bridgeError, setBridgeError] = useState<string | null>(null);
+  // Wrapped, so an error that is itself a falsy value still counts as one.
+  const [bridgeError, setBridgeError] = useState<{ error: unknown } | null>(null);
   const [status, setStatus] = useState<CanvasStatus | null>(null);
   // The point under the pointer, which only the readout reads: a move renders
   // it, not the window (PERF-007).
@@ -1124,7 +1125,7 @@ export function App({
       try {
         setVersion(await getPlatformHost().getAppVersion());
       } catch (error) {
-        setBridgeError(error instanceof Error ? error.message : String(error));
+        setBridgeError({ error });
       }
     })();
   }, []);
@@ -2136,7 +2137,7 @@ export function App({
                   </span>
                 ) : bridgeError !== null || tab.file.error !== null ? (
                   <span className="status-error" data-testid="file-error">
-                    {bridgeError ?? fileErrorText(tab.file.error, t)}
+                    {fileErrorText(bridgeError === null ? tab.file.error : bridgeError.error, t)}
                   </span>
                 ) : null}
                 {tab.file.error === null && storeState.resourceLimit === null && (

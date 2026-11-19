@@ -90,8 +90,12 @@ function outcome(bytes: Uint8Array): 'loaded' | 'refused' {
     evaluate(project);
     return 'loaded';
   } catch (error) {
+    // A refusal the app can word: every one says why, as a fact (U.24h).
+    if (error instanceof InvalidProjectFileError) {
+      expect(error.refusal.kind).toBeTypeOf('string');
+      return 'refused';
+    }
     if (
-      error instanceof InvalidProjectFileError ||
       error instanceof NewerFormatError ||
       error instanceof ResourceLimitError
     ) {

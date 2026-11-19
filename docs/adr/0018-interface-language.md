@@ -64,7 +64,8 @@ them:
 | What | Was | Now |
 |---|---|---|
 | Problems | `domain/problems/messages.ts` | `renderer/src/problemText.ts`, words under `problems.<CODE>` |
-| The loader's refusal | a sentence from the catalogue | `InvalidProjectFileError.problems`, worded by the app |
+| The loader's refusal | a sentence from the catalogue | `InvalidProjectFileError.refusal` (and `.problems` for a broken design), worded by `renderer/src/fileErrorText.ts` (U.24h) |
+| A refusal from the main process or the operating system | its English message, shown as it was | a code — Node's (`ENOENT`, `EACCES`, …) or the main process's own (`shared/refusals.ts`), since only an error's message crosses IPC — worded by the same function (U.24h) |
 | Parts' and the Sheets view's paper wording | `describePrintStatus`, `describeSheets`, … in export | `renderer/src/sheetWords.ts` |
 | Undo labels | English in `document` | `HistoryLabel` — an action and the name or count it needs |
 | A drawing refusal's subject | "An outline" as a fact | `drawing: 'outline' \| 'seam' \| 'cut-out'` |
