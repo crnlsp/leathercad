@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
 import { emptyDocument, rectanglePart, rectShape } from '../packages/document/src/index.js';
+import { PathOps } from '../packages/geometry/src/index.js';
 import { saveProject } from '../packages/persist/src/index.js';
 import { closeApp } from './closeApp.js';
 import { expectNoViolations, openApp } from './launchApp.js';
@@ -228,6 +229,163 @@ test('SF-UI3 · end holes on the cut edge move in with Start offset and End offs
     await expect(start).toHaveValue('3');
   } finally {
     await window.screenshot({ path: test.info().outputPath('hole-offsets.png') });
+    await closeApp(app);
+  }
+});
+
+/**
+ * SF-E4's construction (L1): a 100 × 120 panel stitched 42 mm up through a
+ * 45 mm front that carries no stitching, held fully; and beside it a 90 mm
+ * pocket whose 46 mm inset collapses its stitching (L3, SF-X1). Both say they
+ * hold a payment card with 2 mm of ease.
+ */
+function measuredToPanel(): string {
+  const panel = rectanglePart(
+    'panel',
+    'panel-outline',
+    'Panel',
+    rectShape({ x: 0, y: 0 }, 100, 120),
+  );
+  const front = rectanglePart(
+    'front',
+    'front-outline',
+    'Pocket',
+    rectShape({ x: 120, y: 0 }, 100, 45),
+  );
+  const narrow = rectanglePart(
+    'narrow',
+    'narrow-outline',
+    'Narrow',
+    rectShape({ x: 240, y: 0 }, 90, 60),
+  );
+  const card = { content: { kind: 'id-1' }, easeMm: 2 } as const;
+  const file = join(mkdtempSync(join(tmpdir(), 'leathercad-q49-')), 'Measured.lcp');
+  writeFileSync(
+    file,
+    saveProject(
+      {
+        ...emptyDocument('q49').project,
+        parts: [
+          {
+            ...panel,
+            features: [
+              ...panel.features,
+              {
+                id: 'panel-stitch',
+                name: 'Stitch line',
+                kind: 'stitch-line',
+                visible: true,
+                locked: false,
+                source: {
+                  kind: 'path',
+                  path: PathOps.polyline(
+                    [
+                      { x: 3, y: 42 },
+                      { x: 3, y: 3 },
+                      { x: 97, y: 3 },
+                      { x: 97, y: 42 },
+                    ],
+                    false,
+                  ),
+                },
+                holds: { ...card, fully: true },
+              },
+            ],
+          },
+          front,
+          {
+            ...narrow,
+            features: [
+              ...narrow.features,
+              {
+                id: 'narrow-stitch',
+                name: 'Stitch line',
+                kind: 'stitch-line',
+                visible: true,
+                locked: false,
+                holds: { ...card, fully: false },
+                source: {
+                  kind: 'derived',
+                  sourceId: 'narrow-outline',
+                  op: {
+                    type: 'offset',
+                    distanceMm: 46,
+                    side: 'inward',
+                    run: { kind: 'between', fromAnchor: 2, toAnchor: 1 },
+                  },
+                },
+              },
+            ],
+          },
+        ],
+      },
+      { applicationVersion: '1.7.0', now: () => new Date('2026-11-19T00:00:00.000Z') },
+    ),
+  );
+  return file;
+}
+
+test('SF-UI4 · Holds says which edge it measured to, says no ease, and stays while its stitching fails, to be taken away and undone (Q49)', async () => {
+  const { app, window } = await openApp({ args: [measuredToPanel()], size: [1440, 900] });
+  try {
+    const panel = window.getByTestId('property-panel');
+    const select = async (id: string) => {
+      const row = window.getByTestId('feature-row-' + id);
+      if (!(await row.isVisible())) await window.getByTestId('toggle-parts').click();
+      await row.click();
+    };
+    const note = 'A geometric check of the stitching';
+
+    // A pass read to the panel's edge says so, and how far above the stitch ends that is.
+    await select('panel-stitch');
+    const holds = panel.getByTestId('pocket-requirement');
+    await expect(panel.getByTestId('pocket-down')).toHaveText(
+      "117 mm below Panel's edge, 78 mm above the stitch ends; 53.98 mm stated.",
+    );
+    await expect(panel.getByTestId('pocket-across')).toHaveText(
+      '94 mm between stitch lines; 85.6 mm stated, with 2 mm ease.',
+    );
+    await expect(panel.getByTestId('feature-problems')).toHaveCount(0);
+    await expect(holds).toContainText(note);
+    await expect(holds).not.toContainText(/\bfits\b/);
+    await expectNoViolations(window, 'a requirement read to another edge');
+
+    // With no ease, the width line says so rather than nothing.
+    const ease = panel.getByRole('textbox', { name: 'Ease' });
+    await ease.fill('0');
+    await ease.press('Enter');
+    await expect(panel.getByTestId('pocket-across')).toHaveText(
+      '94 mm between stitch lines; 85.6 mm stated, no ease.',
+    );
+
+    // Nothing stated: one optional line, never "missing".
+    await panel.getByTestId('pocket-holds').selectOption('none');
+    await expect(panel.getByTestId('pocket-invite')).toHaveText(
+      'Say what goes in to check that it fits.',
+    );
+    await expect(panel.getByTestId('pocket-down')).toHaveCount(0);
+    await expect(panel.getByTestId('pocket-reading')).not.toContainText(/missing/i);
+
+    // The collapsed inset keeps its Holds, unchecked, and it can be taken away.
+    await select('narrow-stitch');
+    await expect(panel.getByTestId('feature-problems')).toContainText('Offset collapsed');
+    await expect(panel.getByTestId('pocket-holds')).toHaveValue('id-1');
+    await expect(panel.getByTestId('pocket-unbuilt')).toHaveText(
+      'Not checked until the stitch line builds.',
+    );
+    await expect(panel.getByTestId('pocket-across')).toHaveCount(0);
+    await expect(holds).toContainText(note);
+    await expectNoViolations(window, 'a requirement on stitching that fails');
+    await panel.getByTestId('pocket-holds').selectOption('none');
+    await expect(panel.getByTestId('pocket-requirement')).toHaveCount(0);
+
+    // One undo step brings it back.
+    await window.getByTestId('editor-canvas').focus();
+    await window.keyboard.press('ControlOrMeta+z');
+    await expect(panel.getByTestId('pocket-holds')).toHaveValue('id-1');
+    await expect(panel.getByTestId('pocket-unbuilt')).toBeVisible();
+  } finally {
+    await window.screenshot({ path: test.info().outputPath('holds-measured.png') });
     await closeApp(app);
   }
 });

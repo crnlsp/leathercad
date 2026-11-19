@@ -1,28 +1,40 @@
 import { EPS_LENGTH } from '@leathercad/core';
 import { setPocketRequirement, type DocumentStore } from '@leathercad/document';
-import { ID1_CARD, contentSize, type PocketRequirement, type StitchLine } from '@leathercad/domain';
+import {
+  ID1_CARD,
+  contentSize,
+  pocketOpening,
+  pocketSize,
+  type PocketRequirement,
+  type StitchLine,
+} from '@leathercad/domain';
 import type { Path } from '@leathercad/geometry';
 import { useMemo } from 'react';
 
 import { useI18n } from './i18n.js';
 import { NumberField } from './NumberField.js';
-import { choiceOf, standsProud, withChoice, type HoldsChoice } from './pocketRequirement.js';
+import { choiceOf, withChoice, type HoldsChoice } from './pocketRequirement.js';
 
 /**
  * What the maker says a pocket holds (9.14b), under its reading in
  * Properties. Each change is one command; the rule's verdict is listed with
- * the stitch line's problems, so nothing here judges.
+ * the stitch line's problems, so nothing here judges: the lines say what was
+ * measured, and to which piece's edge (Q49, smart-features §5), never "fits".
  */
 export function PocketRequirementEditor({
   store,
   feature,
+  piece,
   path,
   outline,
   makerEaseMm,
 }: {
   store: DocumentStore;
   feature: StitchLine;
-  path: Path;
+  /** The name of the piece the stitching is on, whose edge the opening is read from. */
+  piece: string;
+  /** Null while the stitch line fails to build: the requirement waits, unchecked (L3). */
+  path: Path | null;
   /** The part's evaluated outline, where the opening is read from. */
   outline: Path | null;
   /** Settings › My tools: what a first requirement's ease starts at. */
@@ -32,9 +44,10 @@ export function PocketRequirementEditor({
   const holds = feature.holds;
   const set = (next: PocketRequirement | undefined) =>
     store.dispatch(setPocketRequirement(feature.id, next));
-  const proud = useMemo(
-    () => (holds === undefined ? null : standsProud(path, outline, holds)),
-    [path, outline, holds],
+  const size = useMemo(() => (path === null ? null : pocketSize(path)), [path]);
+  const opening = useMemo(
+    () => (path === null || outline === null ? null : pocketOpening(path, outline)),
+    [path, outline],
   );
   const number = new Intl.NumberFormat(locale, { maximumFractionDigits: 2 });
 
@@ -63,6 +76,11 @@ export function PocketRequirementEditor({
           <option value="size">{t('pocket.holds.size')}</option>
         </select>
       </label>
+      {holds === undefined && size !== null && (
+        <p className="panel-note" data-testid="pocket-invite">
+          {t('pocket.holds.invite')}
+        </p>
+      )}
       {holds?.content.kind === 'size' && (
         <>
           <NumberField
@@ -109,11 +127,33 @@ export function PocketRequirementEditor({
               onChange={(event) => set({ ...holds, fully: event.target.checked })}
             />
           </label>
-          {proud !== null && (
-            <p className="panel-note" data-testid="pocket-proud">
-              {proud > EPS_LENGTH
-                ? t('pocket.holds.proud', { value: number.format(proud) })
-                : t('pocket.holds.below', { value: number.format(-proud) })}
+          {path === null && (
+            <p className="panel-note" data-testid="pocket-unbuilt">
+              {t('pocket.holds.unbuilt')}
+            </p>
+          )}
+          {size !== null && (
+            <p className="panel-note" data-testid="pocket-across">
+              {holds.easeMm > EPS_LENGTH
+                ? t('pocket.holds.acrossEase', {
+                    width: number.format(size.widthMm),
+                    content: number.format(contentSize(holds.content).widthMm),
+                    ease: number.format(holds.easeMm),
+                  })
+                : t('pocket.holds.across', {
+                    width: number.format(size.widthMm),
+                    content: number.format(contentSize(holds.content).widthMm),
+                  })}
+            </p>
+          )}
+          {opening !== null && (
+            <p className="panel-note" data-testid="pocket-down">
+              {t('pocket.holds.down', {
+                depth: number.format(opening.depthMm),
+                piece,
+                rise: number.format(opening.riseMm),
+                content: number.format(contentSize(holds.content).heightMm),
+              })}
             </p>
           )}
           <p className="panel-note">{t('pocket.holds.note')}</p>

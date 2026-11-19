@@ -1659,8 +1659,11 @@
       "height": "Height",
       "ease": "Ease",
       "fully": "Holds it fully",
-      "proud": "What it holds stands {{value}} mm above the opening.",
-      "below": "What it holds goes {{value}} mm below the opening.",
+      "invite": "Say what goes in to check that it fits.",
+      "across": "{{width}} mm between stitch lines; {{content}} mm stated, no ease.",
+      "acrossEase": "{{width}} mm between stitch lines; {{content}} mm stated, with {{ease}} mm ease.",
+      "down": "{{depth}} mm below {{piece}}'s edge, {{rise}} mm above the stitch ends; {{content}} mm stated.",
+      "unbuilt": "Not checked until the stitch line builds.",
       "note": "A geometric check of the stitching: leather thickness and the stitching's pull are not counted — leave ease for them across the pocket. Without Holds it fully, depth is shown and not judged; with it, what it holds must fit below the opening."
     }
   },

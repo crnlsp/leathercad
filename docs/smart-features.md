@@ -186,7 +186,7 @@ LeatherCAD must not say more than it knows. Each threshold, and what kind of cla
 | Width between stitch lines, stitch depth | **Geometric fact** | `pocketSize`, between stitch centres | Read as room for the card: the thread, the iron's tooth and the leather's thickness all take space inside the centres |
 | What the pocket holds, and the ease | **The maker's requirement** | *Holds*, *Pocket ease* in My tools | Ease left at 0: a pass then means "not narrower than the card" and nothing more |
 | `POCKET_TOO_NARROW` / its absence | **Verified constraint**, geometric | DR8 | Its absence is taken as "the card fits". It says only that the stitch centres are as far apart as the content and its ease |
-| Depth below the opening | **Geometric fact about the stitching's own piece**, and an **upper bound** on the pocket's (D21) | `depthBelowOpening` | Read as the pocket's depth when its front is another piece (L1: SF-E4, SF-E7) or it opens through a slit (D21). *Too shallow* is never wrong; a pass is "not disproved" |
+| Depth below the opening | **Geometric fact about the stitching's own piece**, and an **upper bound** on the pocket's (D21) | `pocketOpening` | Read as the pocket's depth when its front is another piece (L1: SF-E4, SF-E7) or it opens through a slit (D21). *Too shallow* is never wrong; a pass is "not disproved" |
 | A stitch hole's clearance from an edge | **Contract**: measured from the hole's centre (domain-model §8.6) | DR2 | The tooth is wider than the hole's point: at the 1.5 mm minimum the shipped styles' teeth come within 0.66–0.9 mm of the edge. A tooth that cuts through it is `OUTSIDE_PART` (Q46, once KD-3); whether to measure clearance from the tooth is the backlog's D32 |
 | 1.5 mm between a hole and an edge | **Expert recommendation**, not universal | `MIN_HOLE_EDGE_CLEARANCE_MM` | Thin firm leather carries less; soft thick leather needs more. The warning says so |
 | Spacing within 25 % of the iron; runs within 5 % | **Heuristic** | DR4 constants | — |
@@ -323,6 +323,7 @@ minimum that proves the workflows, about 10 s more:
 |---|---|
 | Sides named in *Stitched sides* | From a square-cornered rectangle, choose *Open at the top*; the board marks the run, Properties reads 94 mm across, and the opening is above the stitch ends |
 | Hole offsets in Properties | The same pocket with its end holes on the edge: *Problems* says 1 warning (Q44); type 3 mm start and end offsets, *Nothing to fix*; undo brings the warning back. Reachable by keyboard. Built by Q47 as SF-UI3 |
+| *Holds* says what it measured to | SF-E4's construction reads "117 mm below Panel's edge, 78 mm above the stitch ends"; ease 0 says "no ease"; *Nothing stated* offers one optional line; a collapsed inset still shows *Holds*, "Not checked until the stitch line builds", which clears and comes back with undo; no line says "fits". Built by Q49 as SF-UI4 |
 | Requirement shown from the holes | Click a hole on the board (not the parts tree): Properties shows the stitch line's *Pocket too narrow* and a button to its stitch line; pressing it selects the line with *Holds* focused; axe clean |
 | *Use as stitching* | Import an SVG with an unlayered open U (`e2e/svgPatterns.ts`): it is a marking; *Use as stitching* makes it a stitch line with a reading and *Holds*; undo makes it a marking again |
 | The five states | One test walks a U through nothing stated, met, not met and not measurable, reading each line, and finds no line on a closed stitch line or an outline |
@@ -398,8 +399,9 @@ one slot — and nothing says so, as `HOLES_OVERLAP` does for a row. A decision 
 **L3 — a requirement on stitching that fails to build.** An inset its piece cannot take collapses
 the line: `OFFSET_COLLAPSED` at the root, `SOURCE_FAILED` on its holes, and DR8 does not run
 (SF-X1). That follows E3 — one failure, said at its root — and the requirement is kept and checked
-again once the line builds. But Properties hides *Holds* while the line fails, so the requirement
-cannot be seen or taken away then (§5's fourth state).
+again once the line builds. Properties used to hide *Holds* while the line failed; since Q49 it
+keeps it, saying "Not checked until the stitch line builds", and the requirement can be taken away
+there in one undo step (SF-X1, SF-UI4).
 
 ### Questionable, asserted as it is until decided
 

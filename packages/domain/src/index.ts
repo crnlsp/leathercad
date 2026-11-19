@@ -168,4 +168,4 @@ export { IRON_STYLES, toothOfStyle, toothOutline } from './tooth.js';
 
 export { checkProjectSize } from './resourceSize.js';
 
-export { ID1_CARD, contentSize, depthBelowOpening, pocketSize, type PocketSize } from './pocket.js';
+export { ID1_CARD, contentSize, pocketOpening, pocketSize, type PocketSize } from './pocket.js';

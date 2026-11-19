@@ -110,8 +110,11 @@ export function contentSize(content: PocketContent): { widthMm: Mm; heightMm: Mm
 }
 
 /**
- * Depth from the pocket's opening to the farthest stitching, perpendicular to
- * the endpoint chord (9.14b) — what a card held fully must fit below.
+ * Where a pocket opens on its piece (9.14b): `depthMm` from the opening to the
+ * farthest stitching, perpendicular to the endpoint chord — what a card held
+ * fully must fit below — and `riseMm`, how far that opening is above the stitch
+ * ends (Q49), so a reading can say what it measured to. `depthMm` is always
+ * `pocketSize`'s depth plus `riseMm`, and `riseMm` is never negative.
  *
  * The opening is found on the leather, never assumed at the stitch ends: from
  * each stitch end, straight out of the pocket (square to the chord), to where
@@ -125,7 +128,10 @@ export function contentSize(content: PocketContent): { widthMm: Mm; heightMm: Mm
  * outline). Cut-outs are not read: the outline is what makes an opening.
  * Rigid transforms and walking the stitching backwards change nothing.
  */
-export function depthBelowOpening(stitch: Path, outline: Path): Mm | null {
+export function pocketOpening(
+  stitch: Path,
+  outline: Path,
+): { readonly depthMm: Mm; readonly riseMm: Mm } | null {
   const size = pocketSize(stitch);
   const frame = chordFrame(stitch);
   const bounds = PathOps.bbox(outline);
@@ -143,7 +149,8 @@ export function depthBelowOpening(stitch: Path, outline: Path): Mm | null {
   const left = riseAbove(frame.start);
   const right = riseAbove(frame.end);
   if (left === null || right === null) return null;
-  return size.depthMm + Math.min(left, right);
+  const riseMm = Math.min(left, right);
+  return { depthMm: size.depthMm + riseMm, riseMm };
 }
 
 /** Merge the maximal straight run from an endpoint, independent of segmentation. */

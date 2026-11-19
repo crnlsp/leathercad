@@ -101,8 +101,12 @@ test('a pocket says whether its card goes in, with the maker’s own ease (9.14b
     const problems = panel.getByTestId('feature-problems');
     await expect(problems).toContainText('Pocket too narrow');
     await expect(problems).toContainText('a payment card with 4.00 mm of ease needs 89.60 mm');
-    await expect(panel.getByTestId('pocket-proud')).toHaveText(
-      'What it holds goes 3.02 mm below the opening.',
+    // What was measured, and to which edge (Q49): never a verdict of its own.
+    await expect(panel.getByTestId('pocket-across')).toHaveText(
+      '89 mm between stitch lines; 85.6 mm stated, with 4 mm ease.',
+    );
+    await expect(panel.getByTestId('pocket-down')).toHaveText(
+      "57 mm below Card pocket's edge, 4 mm above the stitch ends; 53.98 mm stated.",
     );
     await expect(problems).not.toContainText('Pocket too shallow');
 
@@ -130,8 +134,8 @@ test('a pocket says whether its card goes in, with the maker’s own ease (9.14b
     const panel = await holdACard(cardHolder.window);
     await expect(panel.getByRole('textbox', { name: 'Ease' })).toHaveValue('4');
     // 99.0 mm across: the card goes in. It stands proud, as a card holder means it to (D15).
-    await expect(panel.getByTestId('pocket-proud')).toHaveText(
-      'What it holds stands 9.63 mm above the opening.',
+    await expect(panel.getByTestId('pocket-down')).toHaveText(
+      "44.35 mm below Pocket's edge, 3 mm above the stitch ends; 53.98 mm stated.",
     );
     const problems = panel.getByTestId('feature-problems');
     await expect(problems).toHaveCount(0);
