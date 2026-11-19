@@ -50,10 +50,26 @@ export function ProblemRows({
         const { why, fix } = problemExplanation(diagnostic.problem, t);
         const body = (
           <>
-            <span className={`problem-mark severity-${diagnostic.severity}`} aria-hidden="true" />
+            <span
+              className={
+                diagnostic.accepted === true
+                  ? 'problem-mark accepted'
+                  : `problem-mark severity-${diagnostic.severity}`
+              }
+              aria-hidden="true"
+            />
             <SeverityGlyph severity={diagnostic.severity} />
             <span className="problem-text selectable">
-              <span className="problem-title">{problemTitle(diagnostic.problem.code, t)}</span>
+              <span className="problem-title">
+                {problemTitle(diagnostic.problem.code, t)}
+                {/* Weighed by the maker, and not counted, until its cause changes (9.16). */}
+                {diagnostic.accepted === true && (
+                  <span className="problem-accepted" data-testid="problem-accepted">
+                    {' · '}
+                    {t('problems.accepted')}
+                  </span>
+                )}
+              </span>
               {showWhere && where !== null && (
                 <span className="problem-where">
                   {/* The feature it is about, named by the mark the tree uses. */}
@@ -85,6 +101,7 @@ export function ProblemRows({
             data-testid="problem-row"
             data-code={diagnostic.problem.code}
             data-severity={diagnostic.severity}
+            data-accepted={diagnostic.accepted}
             aria-current={key === current ? true : undefined}
             onClick={() => onGoTo(diagnostic)}
           >
@@ -97,6 +114,7 @@ export function ProblemRows({
             data-testid="problem-row"
             data-code={diagnostic.problem.code}
             data-severity={diagnostic.severity}
+            data-accepted={diagnostic.accepted}
           >
             {body}
           </div>

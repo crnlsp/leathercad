@@ -1591,6 +1591,8 @@ export function App({
   const badges = badgesOf(diagnostics);
   // And by severity, once, for Print's indicator and the drawer (U.7).
   const counts = countBySeverity(diagnostics);
+  // What the status bar counts: an accepted warning is quiet there too (9.16).
+  const problemCount = counts.error + counts.warning + counts.info;
 
   // Fit selection frames what the board draws of the selection, on Design: it
   // says why when it cannot (U.4). `evaluate` is memoised on the project.
@@ -2108,13 +2110,13 @@ export function App({
                       {t('status.selected')}
                     </>
                   )}
-                  {diagnostics.length > 0 && (
+                  {problemCount > 0 && (
                     <>
                       <span className="sep">·</span>
                       <b className="status-error" data-testid="problem-count">
-                        {diagnostics.length}
+                        {problemCount}
                       </b>{' '}
-                      {t('status.problems', { count: diagnostics.length })}
+                      {t('status.problems', { count: problemCount })}
                     </>
                   )}
                   {tab.file.path !== null && (

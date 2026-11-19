@@ -2,6 +2,7 @@ import type { FeatureId, Project } from './feature.js';
 import { evaluate, type ResolvedProject } from './evaluate.js';
 import { validate } from './validate.js';
 import { seamDiagnostics } from './seams.js';
+import { markAccepted } from './accepted.js';
 import { PROBLEM_CODES, type Diagnostic } from './problems/index.js';
 
 /**
@@ -36,10 +37,13 @@ export function diagnose(project: Project): readonly Diagnostic[] {
 
   // A stable sort: outcomes were listed first, so they stay ahead of rules
   // about the same feature.
-  const diagnostics = unordered
-    .map((diagnostic, index) => ({ diagnostic, index }))
-    .sort((a, b) => rank(a.diagnostic) - rank(b.diagnostic) || a.index - b.index)
-    .map(({ diagnostic }) => diagnostic);
+  const diagnostics = markAccepted(
+    project,
+    unordered
+      .map((diagnostic, index) => ({ diagnostic, index }))
+      .sort((a, b) => rank(a.diagnostic) - rank(b.diagnostic) || a.index - b.index)
+      .map(({ diagnostic }) => diagnostic),
+  );
 
   memo.set(project, diagnostics);
   return diagnostics;

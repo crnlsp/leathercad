@@ -31,7 +31,7 @@ Verified against the code, not the documents. Where they differ, it says so.
 | **Readings, not judged** | Width between stitch lines and stitch depth of any open U (9.14a); how far the content stands above the opening; a seam's pairing; spacing stretched or squeezed; the production summary (9.12) | `pocket.ts`, `seams.ts`, `productionSummary.ts`, the renderer | Nothing |
 | **Fixes** | A drifting seam's drawn stitching shortened or lengthened; a derived stitch line's inset raised to clear the edge. Previewed, one undo step, refused when stale | `packages/document/src/fixes.ts` | Pointing at, then choosing, the fix in Properties |
 | **Surfaces** | One list (`diagnose`, X7) read by the Problems drawer, Properties' problem section, the parts tree's badges, the board's markers, the Print button's count and F8 navigation. While a hole is moved, its clearance beside the pointer is `validate.ts`'s own `edgeClearance`, so it warns exactly when the drop is listed (3.17) | `diagnose.ts`, `validate.ts` (`edgeClearance`), the renderer | — |
-| **Accepting a warning** | **Not built.** Roadmap 9.16 is ☐; no code stores or reads an acceptance | — | — |
+| **Accepting a warning** | Built (9.16): an acceptance stores the problem's key and what it was found from — DR8's requirement and ease, DR7's irons and stretches, otherwise the stored sources it was found from (never a measured fact) — and the warning is listed as accepted, not counted, while both match (SF-H9–H12) | `packages/domain/src/accepted.ts`, `packages/document/src/accepted.ts` | *Accept* / *Un-accept* on a warning in Properties |
 | **Templates** | Four ship. The card holder declares three seams, all pairing. **None states what a pocket holds** (SF-I2), so DR8 is off on all of them | `fixtures/projects/*.lcp` | — |
 
 **Where the documents and the code disagree:**
@@ -84,7 +84,7 @@ pocket's opening (L1) — is a statement to add, not a layer.
 | W2 | Points exactly on an edge have no defined answer in `containsPoint`, and stitch holes were asked it — fixed by Q44: `isOnMaterial` puts a point within a storage quantum of an edge on the leather (D29) | SF-K3 (KD-1) |
 | W3 | Mirrored hardware holes were never asked where they sit — fixed by Q45 | SF-J3, SF-J7 (KD-2) |
 | W8 | A stitch hole was judged at its centre, though 9.26 knows the tooth that cuts it and SVG and DXF cut that tooth — fixed by Q46 for whether it is on the leather; its clearance is still from the centre | SF-K4–K6 (KD-3) |
-| W4 | A pocket problem's identity (`problemKey`) holds nothing of the requirement, so 9.16 cannot tell an accepted warning from a new one by key alone | SF-H6 |
+| W4 | A pocket problem's identity (`problemKey`) holds nothing of the requirement, so 9.16 cannot tell an accepted warning from a new one by key alone. Answered by 9.16: an acceptance stores its cause too | SF-H6, SF-H9 |
 | W5 | A pass is silence. The domain returns no record of which checks ran, passed, or could not run, so the app cannot say "checked: 94 mm across, 87.6 mm needed" without computing again | Properties shows readings and notes, never a verdict line |
 | W6 | A requirement is copied, not shared, when its stitching is mirrored, then diverges | SF-H4 |
 | W7 | Domain tests for DR7 and DR8 filter the list to their own codes, so they cannot see another diagnostic appear beside theirs — which is how KD-1 went unnoticed | `validate.test.ts` (`pocketCodes`) |
@@ -123,8 +123,8 @@ from the code and the scenarios for the rest.
 | 5 | An SVG with no layer names | Open paths arrive as markings. No command turns a marking into stitching, so seams and pocket checks are out of reach without redrawing | Redraw | Medium | *Use as stitching* on a marking line (and back), one undo step. The preview could say that a layer named `stitch` brings lines in as stitching |
 | 6 | A strap, a key fob | Universal rules only; nothing about pockets or seams (SF-J1, J2). The fob's mirrored rivet was not checked (KD-2); since Q45 it is | 0 | High until KD-2 was fixed: the template teaching fold mirrors taught an unchecked hole | Fixed by Q45 |
 | 7 | A pocket-shaped piece that is not one | Properties shows *Stitching dimensions* and *Holds: Nothing stated*; no warning (scenario SF-D1) | 0 | Low: *Holds* could read as a field to fill | The note in journey 2 must read as optional: "Say what goes in…", never "Purpose missing" |
-| 8 | Accepting a valid warning | Impossible: 9.16 is not built. The only ways to quiet a warning are to change the requirement or the ease, which falsifies the design | — | High for real projects with deliberate choices | Build 9.16 with the criteria in §8 |
-| 9 | Changing a requirement after accepting its warning | Would keep the acceptance: the key does not change (SF-H6) | — | High once 9.16 ships | 9.16 stores what the warning was found from — the requirement, and the ease — and drops the acceptance when it changes |
+| 8 | Accepting a valid warning | *Accept* in Properties: listed as accepted, not counted on Print (9.16) | 1 | — | Built |
+| 9 | Changing a requirement after accepting its warning | The warning is back: the acceptance stores the requirement and the ease, not the key alone (SF-H9) | — | — | Built (9.16) |
 | 10 | What 2D cannot know | Notes say leather thickness and stitch pull are not counted; "stands 9.63 mm above the opening" is a geometric reading. Ease defaults to 0, so 85.6 mm passes a card with nothing to spare, silently | — | Medium: a pass with 0 ease is the kind of false confidence to avoid | The five states of §5, said in Properties from one domain function shared with DR8 (W5) |
 
 **Notifications.** On every shipped template and every realistic scenario the list is empty or
@@ -408,7 +408,7 @@ there in one undo step (SF-X1, SF-UI4).
 - **A mirrored pocket keeps its own copy of the requirement** (SF-H4). Clearing the original's
   leaves the counterpart warning. Share it with the original, as its geometry is, or keep copies
   and say so in Properties.
-- **A pocket problem's key ignores the requirement** (SF-H6). Harmless now; decisive for 9.16.
+- **A pocket problem's key ignores the requirement** (SF-H6). 9.16 does not rely on it alone: an acceptance stores the requirement and the ease (SF-H9).
 - **No template states a purpose** (SF-I2), so a maker can assume a card check that never ran.
 - **Hidden features are checked.** A hidden stitch line with a requirement still warns; consistent
   with every other rule, but hidden pieces are not cut.
@@ -431,7 +431,7 @@ in [the Smart Features backlog](superpowers/plans/2026-11-18-smart-features-back
 | 3 | Fix KD-1: one answer for a hole on the edge, whatever the orientation | S | SF-K3 asserts one list for all four; the rotation property extended to square corners |
 | 4 | L1, first step: Properties says what a full-insertion pass measured to (piece, rise), never "fits" | S | E2E: SF-E4's construction reads "below Panel's edge" |
 | 5 | Expose the hole set's start and end offsets, and reword `OUTSIDE_PART`'s fix for end holes. (Stopping a derived open run short of the edge instead changes what prints: a format version and a paper check) | S | §6's E2E for offsets |
-| 6 | 9.16 with a cause: an accepted warning stores its key **and** what it was found from (the requirement, the ease, the hole sets' iron), and returns when either changes | S | Scenarios: accept, edit the cause, warning back; edit something else, still accepted; save and reopen keeps it |
+| 6 | ✅ 9.16 with a cause: an accepted warning stores its key **and** what it was found from (the requirement, the ease, the hole sets' iron), and returns when either changes | S | Scenarios: accept, edit the cause, warning back; edit something else, still accepted; save and reopen keeps it |
 | 7 | The five states of §5 from one domain function DR8 calls; *Holds* kept visible while its line fails (L3) | S | §6's E2E for the states; a property that the lines and DR8 never disagree |
 | 8 | Discovery: the optional note; holes show their stitch line's requirement; *Stitched sides* names sides | S | §6's E2E |
 | 9 | L1, second step: DR8 reads declared seams for the lower opening | M | SF-E7 reports *too shallow*; SF-E6 unchanged |

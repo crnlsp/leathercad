@@ -1,9 +1,11 @@
 import {
+  acceptWarning,
   fixCommand,
   fixRefusal,
   proposeFix,
   type DocumentStore,
   type Fix,
+  unacceptWarning,
 } from '@leathercad/document';
 import {
   diagnose,
@@ -21,7 +23,8 @@ import { ReasonedButton } from './ReasonedButton.js';
 
 /**
  * Properties' list of what is wrong with the selection, each problem with the
- * one plainly safe fix it has, if any (9.17).
+ * one plainly safe fix it has, if any (9.17), and each warning with *Accept*
+ * or *Un-accept* (9.16).
  *
  * Pointing at a fix previews it through the store's gesture — never history —
  * and choosing it is one step. While it is previewed the list is the committed
@@ -111,18 +114,37 @@ export function ProblemSection({
         showWhere={showWhere}
         action={(diagnostic) => {
           const fix = fixOf(diagnostic);
-          if (fix === null) return null;
+          // A warning can be accepted, never an error (9.16).
+          const weighable = diagnostic.severity === 'warning';
+          if (fix === null && !weighable) return null;
+          const key = problemKey(diagnostic.problem);
+          const accepted = diagnostic.accepted === true;
           return (
             <span className="problem-action">
-              <ReasonedButton
-                testId="problem-fix"
-                reason={refused?.fix === fix ? refused.reason : null}
-                hint={t('fixes.hint')}
-                onPoint={(on) => point(fix, on)}
-                onClick={() => choose(fix)}
-              >
-                {fixText(fix, t)}
-              </ReasonedButton>
+              {fix !== null && (
+                <ReasonedButton
+                  testId="problem-fix"
+                  reason={refused?.fix === fix ? refused.reason : null}
+                  hint={t('fixes.hint')}
+                  onPoint={(on) => point(fix, on)}
+                  onClick={() => choose(fix)}
+                >
+                  {fixText(fix, t)}
+                </ReasonedButton>
+              )}
+              {weighable && (
+                <ReasonedButton
+                  testId={accepted ? 'problem-unaccept' : 'problem-accept'}
+                  reason={null}
+                  hint={t(accepted ? 'problems.unacceptHint' : 'problems.acceptHint')}
+                  onClick={() => {
+                    if (store.inTransaction) return;
+                    store.dispatch(accepted ? unacceptWarning(key) : acceptWarning(key));
+                  }}
+                >
+                  {t(accepted ? 'problems.unaccept' : 'problems.accept')}
+                </ReasonedButton>
+              )}
             </span>
           );
         }}

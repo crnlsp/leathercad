@@ -340,6 +340,11 @@ export const ProjectSchema = z
         }),
       )
       .optional(),
+    // Metadata (§4.5 rule 3): what the maker accepted, and the cause it was
+    // found from. Read only to mark a warning accepted (9.16).
+    acceptedWarnings: z
+      .array(z.looseObject({ problemKey: z.string().min(1), cause: z.json() }))
+      .optional(),
     guides: z
       .array(
         z.looseObject({

@@ -1372,8 +1372,15 @@
       "warning_one": "{{count}} warning",
       "warning_other": "{{count}} warnings",
       "info_one": "{{count}} to note",
-      "info_other": "{{count}} to note"
+      "info_other": "{{count}} to note",
+      "accepted_one": "{{count}} accepted",
+      "accepted_other": "{{count}} accepted"
     },
+    "accepted": "Accepted",
+    "accept": "Accept",
+    "acceptHint": "Stops counting this warning until what it was found from changes. One undo step.",
+    "unaccept": "Un-accept",
+    "unacceptHint": "Counts this warning again. One undo step.",
     "SEAM_NOT_A_HOLE_SET": {
       "title": "Seam needs stitching",
       "description": "A seam side must name a stitch hole set or its mirrored counterpart."
@@ -1617,6 +1624,8 @@
     "unlock_one": "Unlock",
     "unlock_other": "Unlock {{count}} features",
     "delete-part": "Delete part",
+    "accept-warning": "Accept warning",
+    "unaccept-warning": "Un-accept warning",
     "add-guide": "Add guide",
     "edit-guide": "Edit guide",
     "delete-guide": "Delete guide",

@@ -102,6 +102,8 @@ export type HistoryAction =
   | 'add-seam'
   | 'edit-seam'
   | 'remove-seam'
+  | 'accept-warning'
+  | 'unaccept-warning'
   | 'add-guide'
   | 'edit-guide'
   | 'delete-guide'

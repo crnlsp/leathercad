@@ -9,8 +9,9 @@ export type IndicatorState = 'clear' | Severity;
  * The problems indicator, from the counts the Problems drawer reads too
  * (`countBySeverity`): an error outranks warnings, which outrank what is only
  * to note, and its count is of that severity alone — the tooltip says the
- * rest. Clear only for an empty list, so it never says *nothing to fix* while
- * the drawer lists something.
+ * rest. Clear only when nothing is counted, so it never says *nothing to fix*
+ * while the drawer lists something it counts; a warning the maker accepted is
+ * listed there and not counted (9.16).
  */
 export function indicatorOf(counts: SeverityCounts): {
   readonly state: IndicatorState;
