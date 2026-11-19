@@ -584,12 +584,7 @@ export interface Project {
 
 /** A value as JSON holds it: what an acceptance stores of a warning's cause. */
 export type Cause =
-  | null
-  | boolean
-  | number
-  | string
-  | readonly Cause[]
-  | { readonly [key: string]: Cause };
+  null | boolean | number | string | readonly Cause[] | { readonly [key: string]: Cause };
 
 /**
  * A warning the maker accepted (9.16): which problem, and what it was found

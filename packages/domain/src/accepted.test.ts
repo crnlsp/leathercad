@@ -27,7 +27,14 @@ function stitchedPanel(inset: number, origin: Vec2 = { x: 0, y: 0 }): Feature[] 
       role: 'outer',
       source: {
         kind: 'shape',
-        shape: { type: 'rect', origin, width: 105, height: 75, radii: uniformRadii(8), rotation: 0 },
+        shape: {
+          type: 'rect',
+          origin,
+          width: 105,
+          height: 75,
+          radii: uniformRadii(8),
+          rotation: 0,
+        },
       },
     },
     {
@@ -176,7 +183,10 @@ describe('accepting a warning (9.16)', () => {
           expect(eased?.accepted).toBe(otherEase === ease ? true : undefined);
           // And so is what it holds, the same key (SF-H6) notwithstanding.
           const passport = narrow(
-            pocket({ content: { kind: 'size', widthMm: 125, heightMm: 88 }, easeMm: ease, fully: false }, width),
+            pocket(
+              { content: { kind: 'size', widthMm: 125, heightMm: 88 }, easeMm: ease, fully: false },
+              width,
+            ),
           );
           expect(passport?.accepted).toBeUndefined();
         },
@@ -211,14 +221,19 @@ describe('accepting a warning (9.16)', () => {
 
   it('survives a save: its numbers written to six decimals still match', () => {
     fc.assert(
-      fc.property(fc.integer({ min: 5, max: 14 }).map((t) => t / 10), (inset) => {
-        const features = stitchedPanel(inset);
-        const entry = saved(
-          acceptance(project(features), warningOf(project(features), 'HOLE_TOO_CLOSE_TO_EDGE')),
-        );
-        const found = diagnose(project(features, [entry]));
-        expect(found.find((d) => d.problem.code === 'HOLE_TOO_CLOSE_TO_EDGE')?.accepted).toBe(true);
-      }),
+      fc.property(
+        fc.integer({ min: 5, max: 14 }).map((t) => t / 10),
+        (inset) => {
+          const features = stitchedPanel(inset);
+          const entry = saved(
+            acceptance(project(features), warningOf(project(features), 'HOLE_TOO_CLOSE_TO_EDGE')),
+          );
+          const found = diagnose(project(features, [entry]));
+          expect(found.find((d) => d.problem.code === 'HOLE_TOO_CLOSE_TO_EDGE')?.accepted).toBe(
+            true,
+          );
+        },
+      ),
     );
   });
 

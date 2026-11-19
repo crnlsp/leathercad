@@ -15,7 +15,9 @@ import { DocumentStore } from './store.js';
 /** A panel stitched 1 mm in: its holes too near the edge (a warning). */
 function tooClose(): DocumentStore {
   const store = new DocumentStore(emptyDocument('project'));
-  store.dispatch(addPart(shapePart('panel', 'outline', 'Panel', rectShape({ x: 0, y: 0 }, 105, 70, 4))));
+  store.dispatch(
+    addPart(shapePart('panel', 'outline', 'Panel', rectShape({ x: 0, y: 0 }, 105, 70, 4))),
+  );
   store.dispatch(addStitchLine('panel', 'stitch', 'outline', 1));
   store.dispatch(addStitchHoles('panel', 'holes', 'stitch', { pitchMm: 3.85 }));
   return store;
@@ -28,7 +30,9 @@ const warningKey = (store: DocumentStore): string => {
   return problemKey(found.problem);
 };
 const accepted = (store: DocumentStore) =>
-  diagnose(project(store)).filter((d) => d.accepted === true).map((d) => d.problem.code);
+  diagnose(project(store))
+    .filter((d) => d.accepted === true)
+    .map((d) => d.problem.code);
 
 describe('accepting a warning (9.16)', () => {
   it('accept and un-accept are one undo step each', () => {

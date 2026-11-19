@@ -26,7 +26,10 @@ export function acceptance(project: Project, diagnostic: Diagnostic): AcceptedWa
   if (diagnostic.severity !== 'warning') {
     throw new RangeError(`only a warning can be accepted, not ${diagnostic.severity}`);
   }
-  return { problemKey: problemKey(diagnostic.problem), cause: causeOf(project, diagnostic.problem) };
+  return {
+    problemKey: problemKey(diagnostic.problem),
+    cause: causeOf(project, diagnostic.problem),
+  };
 }
 
 /** `diagnostics`, each warning whose stored acceptance still matches marked `accepted`. */

@@ -152,7 +152,10 @@ describe('H — editing a project that was checked before', () => {
       .do(accept('POCKET_TOO_NARROW', STITCH))
       .expect([accepted], 'accepted')
       .do(holdsCard(STITCH, 3))
-      .expect([narrowOn(STITCH)].map((e) => ({ ...e, facts: { neededMm: 88.6, easeMm: 3 } })), 'eased')
+      .expect(
+        [narrowOn(STITCH)].map((e) => ({ ...e, facts: { neededMm: 88.6, easeMm: 3 } })),
+        'eased',
+      )
       .undo()
       .expect([accepted], 'the ease undone')
       .do(holdsSize(STITCH, { widthMm: 125, heightMm: 88 }, 2))
