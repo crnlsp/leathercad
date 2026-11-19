@@ -24,7 +24,7 @@
  * the pinned Playwright container as `tools/visual.mjs` does, where a run takes ten seconds.
  */
 /* global document */
-import { copyFileSync, mkdtempSync } from 'node:fs';
+import { copyFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -39,7 +39,9 @@ const option = (name, fallback) => {
 const source = option('--project', resolve(root, 'fixtures/perf/strap-5800.lcp'));
 const appDir = option('--app', resolve(root, 'apps/desktop'));
 const label = args[0] ?? 'run';
-const project = join(mkdtempSync(join(tmpdir(), 'lc-perf-retention-')), 'Project.lcp');
+// One directory for the run, removed at its end, as perf-soak.mjs does.
+const home = mkdtempSync(join(tmpdir(), 'lc-perf-retention-'));
+const project = join(home, 'Project.lcp');
 copyFileSync(source, project);
 
 const app = await electron.launch({
@@ -54,8 +56,8 @@ const app = await electron.launch({
   cwd: appDir,
   env: {
     ...process.env,
-    XDG_CONFIG_HOME: mkdtempSync(join(tmpdir(), 'lc-perf-')),
-    XDG_STATE_HOME: mkdtempSync(join(tmpdir(), 'lc-perf-state-')),
+    XDG_CONFIG_HOME: join(home, 'config'),
+    XDG_STATE_HOME: join(home, 'state'),
   },
 });
 const window = await app.firstWindow();
@@ -148,4 +150,5 @@ console.log(JSON.stringify({ label, ...result }));
 // Nothing here needs a clean quit, and a plain kill leaves Electron waiting a minute and a half for
 // Playwright's debugger to disconnect, over the next run.
 app.process().kill('SIGKILL');
+rmSync(home, { recursive: true, force: true, maxRetries: 5 });
 process.exit(0);

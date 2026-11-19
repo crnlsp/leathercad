@@ -21,7 +21,7 @@
  * `tools/perf-retention.mjs` says.
  */
 /* global PerformanceObserver, performance, requestAnimationFrame */
-import { copyFileSync, existsSync, mkdtempSync, readdirSync, statSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdtempSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -36,9 +36,11 @@ const option = (name, fallback) => {
 const source = option('--project', resolve(root, 'fixtures/perf/traced-40x500.lcp'));
 const appDir = option('--app', resolve(root, 'apps/desktop'));
 const label = args[0] ?? 'run';
-const file = join(mkdtempSync(join(tmpdir(), 'lc-perf-save-')), 'Project.lcp');
+// One directory for the run, removed at its end, as perf-soak.mjs does.
+const home = mkdtempSync(join(tmpdir(), 'lc-perf-save-'));
+const file = join(home, 'Project.lcp');
 copyFileSync(source, file);
-const state = mkdtempSync(join(tmpdir(), 'lc-perf-save-state-'));
+const state = join(home, 'state');
 const recovery = join(state, 'leathercad', 'recovery');
 
 const app = await electron.launch({
@@ -52,7 +54,7 @@ const app = await electron.launch({
   cwd: appDir,
   env: {
     ...process.env,
-    XDG_CONFIG_HOME: mkdtempSync(join(tmpdir(), 'lc-perf-')),
+    XDG_CONFIG_HOME: join(home, 'config'),
     XDG_STATE_HOME: state,
     LEATHERCAD_RECOVERY_INTERVAL_MS: '3000',
   },
@@ -155,3 +157,4 @@ await app.evaluate(({ BrowserWindow }) => {
   for (const each of BrowserWindow.getAllWindows()) each.destroy();
 });
 await app.close();
+rmSync(home, { recursive: true, force: true, maxRetries: 5 });
