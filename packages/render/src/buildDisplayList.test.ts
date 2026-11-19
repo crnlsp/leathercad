@@ -186,6 +186,12 @@ describe('diagnostics on the canvas', () => {
     expect(list.items[list.items.length - 1]!.kind).toBe('marker');
   });
 
+  it('marks nothing for a warning the maker accepted (9.16)', () => {
+    const accepted = { ...crossings, severity: 'warning' as const, accepted: true as const };
+    const list = buildDisplayList(resolved([outline]), { diagnostics: [accepted] });
+    expect(markers(list.items)).toEqual([]);
+  });
+
   it('says nothing about a feature the user has hidden', () => {
     const list = buildDisplayList(resolved([{ ...outline, visible: false }]), {
       diagnostics: [crossings],

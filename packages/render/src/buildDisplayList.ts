@@ -338,6 +338,8 @@ export function buildDisplayList(
   // The evidence keeps its own look; the failure is the marker (§8.5).
   for (const diagnostic of options.diagnostics ?? []) {
     if (diagnostic.location === undefined) continue;
+    // A warning the maker accepted is quiet on the board too (9.16).
+    if (diagnostic.accepted === true) continue;
     if (diagnostic.featureId !== undefined && hidden.has(diagnostic.featureId)) continue;
 
     const colour = DIAGNOSTIC_COLOURS[diagnostic.severity];
