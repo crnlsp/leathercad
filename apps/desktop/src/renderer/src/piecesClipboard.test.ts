@@ -10,7 +10,13 @@ import { describe, expect, it } from 'vitest';
 
 import { createI18n } from '../../shared/i18n.js';
 import { historyText } from './historyText.js';
-import { copyNotice, copySelection, duplicateSelection, pasteCommand } from './piecesClipboard.js';
+import {
+  copyNotice,
+  copySelection,
+  duplicateSelection,
+  pasteClipboard,
+  pasteCommand,
+} from './piecesClipboard.js';
 
 const english = createI18n('en');
 
@@ -77,13 +83,13 @@ describe('copying and pasting pieces between projects (8.8b)', () => {
     expect(text).not.toContain(wallet.name);
   });
 
-  it('copies the pieces a selection of features is in', () => {
+  it('copies the pieces a selection is in when it holds an outline, which stands for its piece', () => {
     const wallet = fixture('bifold-wallet');
     const pocket = pocketOf(wallet);
 
-    const copied = copySelection(wallet, selectionOf([pocket.features[1]!.id]))!;
+    const copied = copySelection(wallet, selectionOf(pocket.features.map((f) => f.id)))!;
 
-    expect(copied.clipboard.count).toBe(1);
+    expect(copied.clipboard).toMatchObject({ kind: 'pieces', count: 1 });
   });
 
   it('copies nothing when nothing is selected', () => {
@@ -100,9 +106,9 @@ describe('copying and pasting pieces between projects (8.8b)', () => {
   });
 
   it('refuses a clipboard that is not a copy, by the file’s error', () => {
-    expect(() => pasteCommand({ text: '{"parts":[{}]}', count: 1 }, ids(), null)).toThrow(
-      InvalidProjectFileError,
-    );
+    expect(() =>
+      pasteCommand({ kind: 'pieces', text: '{"parts":[{}]}', count: 1 }, ids(), null),
+    ).toThrow(InvalidProjectFileError);
   });
 
   it('says nothing when the copy brings everything as it was', () => {
@@ -114,7 +120,7 @@ describe('copying and pasting pieces between projects (8.8b)', () => {
 
   it('names what will paste frozen and what will be left out, before it is pasted', () => {
     const copied = {
-      clipboard: { text: '', count: 1 },
+      clipboard: { kind: 'pieces', text: '', count: 1 } as const,
       frozen: [
         { featureName: 'Outline mirrored', partName: 'Left' },
         { featureName: 'Stitch line mirrored', partName: 'Left' },
@@ -131,7 +137,7 @@ describe('copying and pasting pieces between projects (8.8b)', () => {
 
   it('says of a duplicate what its copies, already made, came without', () => {
     const copied = {
-      clipboard: { text: '', count: 1 },
+      clipboard: { kind: 'pieces', text: '', count: 1 } as const,
       frozen: [{ featureName: 'Outline mirrored', partName: 'Left' }],
       dropped: [
         { featureName: 'Gap', partName: 'Left' },
@@ -168,7 +174,7 @@ describe('duplicating any set of pieces (8.8b)', () => {
 
         expect(next.parts).toHaveLength(project.parts.length + chosen.length);
         expect(next.parts.slice(0, project.parts.length)).toEqual(project.parts);
-        expect(made.partIds).toHaveLength(chosen.length);
+        expect(made.copies.ids.size).toBe(chosen.length);
 
         // Every id a feature or seam names is a feature that exists.
         const features = new Set(next.parts.flatMap((p) => p.features.map((f) => f.id)));
@@ -234,12 +240,90 @@ describe('duplicating any set of pieces (8.8b)', () => {
           .features.flatMap((f) => (f.ok ? [f.path] : []))[0]!,
       )!;
     holder.parts.forEach((part, i) => {
-      const [was, now] = [bottom(holder, part.id), bottom(next, made.partIds[i]!)];
+      const [was, now] = [bottom(holder, part.id), bottom(next, [...made.copies.ids][i]!)];
       expect(approxEq(now.minX, was.minX) && approxEq(now.minY, was.minY - 15)).toBe(true);
     });
   });
 
   it('does nothing for a selection in no piece', () => {
     expect(duplicateSelection(fixture('coaster'), selectionOf([]), ids())).toBeNull();
+  });
+});
+
+describe('copying and pasting features into a piece (8.8b-4)', () => {
+  const lining = (project: Project) => project.parts.find((p) => p.name === 'Lining')!;
+  const slot = (project: Project) => lining(project).features.find((f) => f.name === 'Cut-out')!;
+
+  it('copies features picked in one piece as features', () => {
+    const wallet = fixture('bifold-wallet');
+    const copied = copySelection(wallet, selectionOf([slot(wallet).id]))!;
+    expect(copied.clipboard).toMatchObject({ kind: 'features', count: 1 });
+  });
+
+  it('copies features picked across pieces as their pieces', () => {
+    const wallet = fixture('bifold-wallet');
+    const pocket = pocketOf(wallet);
+    const copied = copySelection(wallet, selectionOf([slot(wallet).id, pocket.features[1]!.id]))!;
+    expect(copied.clipboard).toMatchObject({ kind: 'pieces', count: 2 });
+  });
+
+  it("pastes the lining's slot into the card pocket, centred where it is pasted", () => {
+    const wallet = fixture('bifold-wallet');
+    const copied = copySelection(wallet, selectionOf([slot(wallet).id]))!;
+    const pocket = pocketOf(wallet);
+
+    const pasted = pasteClipboard(copied.clipboard, ids(), { x: 40, y: 20 }, pocket.id)!;
+    const next = pasted.command.apply({ ...emptyDocument('x'), project: wallet }).project;
+
+    const added = next.parts.find((p) => p.id === pocket.id)!.features.at(-1)!;
+    expect(pasted.copies).toEqual({ kind: 'features', ids: new Set([added.id]) });
+    const drawn = evaluate(next)
+      .parts.flatMap((p) => p.features)
+      .find((f) => f.feature.id === added.id)!;
+    const box = drawn.ok ? PathOps.bbox(drawn.path)! : null;
+    expect(box && approxEq((box.minX + box.maxX) / 2, 40)).toBe(true);
+  });
+
+  it('pastes features into no piece as nothing, for the app to say so', () => {
+    const wallet = fixture('bifold-wallet');
+    const copied = copySelection(wallet, selectionOf([slot(wallet).id]))!;
+    expect(pasteClipboard(copied.clipboard, ids(), null, undefined)).toBeNull();
+  });
+
+  it('duplicates a slot into its own lining, on top of it, one undo step named for features', () => {
+    const wallet = fixture('bifold-wallet');
+    const made = duplicateSelection(wallet, selectionOf([slot(wallet).id]), ids())!;
+    const next = made.command.apply({ ...emptyDocument('x'), project: wallet }).project;
+
+    expect(made.command.label).toEqual({ action: 'duplicate-features', count: 1 });
+    expect(lining(next).features).toHaveLength(lining(wallet).features.length + 1);
+    expect(historyText({ action: 'duplicate-features', count: 2 }, english.t)).toBe(
+      'Duplicate 2 features',
+    );
+    expect(historyText({ action: 'paste-features', count: 1 }, english.t)).toBe('Paste feature');
+  });
+
+  it('says of a stitch line copied without its outline that it pastes as drawn', () => {
+    const wallet = fixture('bifold-wallet');
+    const pocket = pocketOf(wallet);
+    const stitch = pocket.features.find((f) => f.kind === 'stitch-line')!;
+    const holes = pocket.features.find((f) => f.kind === 'stitch-hole-set')!;
+    // The pocket's stitch line is drawn; its holes follow it, so alone they cannot come.
+    expect(copyNotice(copySelection(wallet, selectionOf([holes.id]))!, english, 'copy')).toBe(
+      'Stitch holes in Card pocket needs something you did not copy and has no shape of its ' +
+        'own, so it will be left out.',
+    );
+    expect(
+      copyNotice(copySelection(wallet, selectionOf([stitch.id, holes.id]))!, english, 'copy'),
+    ).toBeNull();
+  });
+
+  it('names a feature frozen because what it follows stays behind', () => {
+    const wallet = fixture('bifold-wallet');
+    const outer = wallet.parts.find((p) => p.name === 'Outer')!;
+    const stitch = outer.features.find((f) => f.kind === 'stitch-line')!;
+    expect(copyNotice(copySelection(wallet, selectionOf([stitch.id]))!, english, 'duplicate')).toBe(
+      'Stitch line in Outer follows something you did not duplicate, so its copy is the shape it was.',
+    );
   });
 });

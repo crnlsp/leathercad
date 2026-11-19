@@ -2126,10 +2126,11 @@ export function relock(
       partIds.has(part.id)
         ? {
             ...part,
-            features: part.features.map((feature) => ({
-              ...feature,
-              locked: wasLocked.get(feature.id) ?? feature.locked,
-            })),
+            // Only what a lock changes is rebuilt, so evaluation keeps the rest.
+            features: part.features.map((feature) => {
+              const locked = wasLocked.get(feature.id) ?? feature.locked;
+              return locked === feature.locked ? feature : { ...feature, locked };
+            }),
           }
         : part,
     ),
@@ -2143,7 +2144,7 @@ export function relock(
  * in which case there is nothing to freeze to and the counterpart goes with
  * the fold instead.
  */
-function capturedLineOf(project: Project, foldId: FeatureId): MirrorAxis | null {
+export function capturedLineOf(project: Project, foldId: FeatureId): MirrorAxis | null {
   const entry = evaluate(project)
     .parts.flatMap((part) => part.features)
     .find((e) => e.feature.id === foldId);
@@ -2197,15 +2198,26 @@ const DUPLICATE_GAP_MM = 5;
 
 /** The evaluated box of some parts' features, or `null` when they draw nothing. */
 export function boxOfParts(project: Project, partIds: ReadonlySet<PartId>): Rect | null {
+  return boxOfFeatures(
+    project,
+    new Set(
+      project.parts
+        .filter((part) => partIds.has(part.id))
+        .flatMap((part) => part.features.map((feature) => feature.id)),
+    ),
+  );
+}
+
+/** The evaluated box of some features, or `null` when they draw nothing. */
+export function boxOfFeatures(project: Project, ids: ReadonlySet<FeatureId>): Rect | null {
   return RectOps.unionAll(
     evaluate(project)
-      .parts.filter((entry) => partIds.has(entry.part.id))
-      .flatMap((entry) =>
-        entry.features.flatMap((feature) => {
-          const box = feature.ok ? PathOps.bbox(feature.path) : null;
-          return box === null ? [] : [box];
-        }),
-      ),
+      .parts.flatMap((entry) => entry.features)
+      .filter((entry) => ids.has(entry.feature.id))
+      .flatMap((entry) => {
+        const box = entry.ok ? PathOps.bbox(entry.path) : null;
+        return box === null ? [] : [box];
+      }),
   );
 }
 
@@ -2236,10 +2248,26 @@ export function moveClear(project: Project, copies: readonly Part[]): Project {
  * follow anyway.
  */
 export function movePieces(project: Project, partIds: ReadonlySet<PartId>, deltaMm: Vec2): Project {
+  return moveTogether(
+    project,
+    project.parts
+      .filter((part) => partIds.has(part.id))
+      .flatMap((part) => part.features.map((feature) => feature.id)),
+    deltaMm,
+  );
+}
+
+/**
+ * Moves features as one, leaving where it is only what the move refuses —
+ * as `movePieces` moves pieces, for features pasted into a piece (8.8b-4).
+ */
+export function moveTogether(
+  project: Project,
+  featureIds: readonly FeatureId[],
+  deltaMm: Vec2,
+): Project {
   const matrix = MatOps.fromTranslation(deltaMm);
-  let ids = project.parts
-    .filter((part) => partIds.has(part.id))
-    .flatMap((part) => part.features.map((feature) => feature.id));
+  let ids = featureIds;
   // Each pass leaves out at least one feature, so this ends.
   for (;;) {
     const refused = new Set(refusedTransforms(project, ids, matrix).map((r) => r.featureId));

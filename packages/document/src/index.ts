@@ -102,8 +102,24 @@ export {
   translateFeatures,
 } from './commands.js';
 
-export type { CopiedPieces, CopyLoss, DrawnPiece, PasteIds, PiecesCopy } from './pieces.js';
-export { copyPieces, importPieces, pastePieces, pieceStep } from './pieces.js';
+export type {
+  CopiedFeatures,
+  CopiedPieces,
+  CopyLoss,
+  DrawnPiece,
+  FeaturesCopy,
+  PasteIds,
+  PiecesCopy,
+} from './pieces.js';
+export {
+  copyFeatures,
+  copyPieces,
+  featureStep,
+  importPieces,
+  pasteFeatures,
+  pastePieces,
+  pieceStep,
+} from './pieces.js';
 
 export type { PathPointEdit } from './pathPoints.js';
 export { editPathPoint, pathPointRefusal, pointEditingRefusal } from './pathPoints.js';

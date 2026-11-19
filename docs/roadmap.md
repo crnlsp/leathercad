@@ -105,7 +105,7 @@ as any item that will not make it does.
 - ✅ **8.8b Copy and paste whole pieces, across tabs** — Ctrl+C and Ctrl+V on the board, or the right-click menu (Paste alone on empty board); under the pointer, or clear of the drawing; new ids, every reference re-pointed, none dangling, seams between them kept; a mirrored piece without its original pastes as drawn geometry, said when copying; one undo step.
 - ✅ **8.8b Ctrl+D duplicates.** — Ctrl+D (⌘D on macOS, rebindable) does what the menu's Duplicate does, on the board: one piece, one undo step.
 - ✅ **8.8b Step and repeat** (P1) — Ctrl+D right after a duplicate that was then moved repeats that move on the new copy; forgotten by any other command, undo or redo.
-- ☐ **8.8b Copy features into another piece** (P1) — frozen when their source stays behind; Ctrl+D steps them, card slots down a lining.
+- ✅ **8.8b Copy features into another piece** (P1) — frozen when their source stays behind; Ctrl+D steps them, card slots down a lining.
 
 ### Stage 3 — Leathercraft intelligence ([plan](superpowers/plans/2026-11-03-release-1.7.md#stage-3--leathercraft-intelligence))
 
