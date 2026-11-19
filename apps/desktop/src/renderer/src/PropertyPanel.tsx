@@ -252,6 +252,7 @@ export function PropertyPanel({
             store={store}
             feature={feature}
             holes={resolved?.ok === true ? resolved.holes : undefined}
+            lineIsOpen={resolved?.ok === true && !resolved.path.closed}
             spacingReported={
               problems.find((d) => d.problem.code === 'HOLE_SPACING_DEVIATION')?.severity
             }

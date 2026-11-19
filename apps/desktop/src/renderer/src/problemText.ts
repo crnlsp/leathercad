@@ -229,8 +229,15 @@ const FIXES: { readonly [K in ProblemCode]?: MessageKey | Describe<K> } = {
   EMPTY_PART: 'problems.EMPTY_PART.fix',
   PART_HAS_NO_OUTER_CONTOUR: 'problems.PART_HAS_NO_OUTER_CONTOUR.fix',
   CUT_OUT_OUTSIDE_PART: 'problems.CUT_OUT_OUTSIDE_PART.fix',
-  OUTSIDE_PART: 'problems.OUTSIDE_PART.fix',
-  HOLE_TOO_CLOSE_TO_EDGE: 'problems.HOLE_TOO_CLOSE_TO_EDGE.fix',
+  // Only the end holes at fault: the offsets move them, where the inset moves every hole (Q47).
+  OUTSIDE_PART: (f, t) =>
+    t(
+      f.what === 'holes' && f.atEnds
+        ? 'problems.OUTSIDE_PART.fixEnds'
+        : 'problems.OUTSIDE_PART.fix',
+    ),
+  HOLE_TOO_CLOSE_TO_EDGE: (f, t) =>
+    t(f.atEnds ? 'problems.HOLE_TOO_CLOSE_TO_EDGE.fixEnds' : 'problems.HOLE_TOO_CLOSE_TO_EDGE.fix'),
   POCKET_TOO_NARROW: 'problems.POCKET_TOO_NARROW.fix',
   POCKET_TOO_SHALLOW: 'problems.POCKET_TOO_SHALLOW.fix',
   POCKET_NOT_MEASURABLE: 'problems.POCKET_NOT_MEASURABLE.fix',

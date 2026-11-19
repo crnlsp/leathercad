@@ -86,8 +86,9 @@ describe('problemKey: one occurrence, named by what it is about', () => {
       problem('SOURCE_FAILED', { ...named, sourceId, sourceName: 'x' });
     expect(problemKey(failed('f-2'))).not.toBe(problemKey(failed('f-3')));
 
-    const off = (what: 'holes' | 'line') => problem('OUTSIDE_PART', { ...named, what });
-    expect(problemKey(off('holes'))).not.toBe(problemKey(off('line')));
+    const holesOff = problem('OUTSIDE_PART', { ...named, what: 'holes', atEnds: false });
+    const lineOff = problem('OUTSIDE_PART', { ...named, what: 'line' });
+    expect(problemKey(holesOff)).not.toBe(problemKey(lineOff));
 
     const missing = (anchor: number) =>
       problem('ANCHOR_MISSING', { ...named, anchor, available: 2 });

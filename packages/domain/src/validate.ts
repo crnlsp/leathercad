@@ -509,7 +509,11 @@ function offMaterial(
   if (clearance !== null) {
     if (clearance.off.length > 0) {
       found.push({
-        problem: problem('OUTSIDE_PART', { ...about, what: 'holes' }),
+        problem: problem('OUTSIDE_PART', {
+          ...about,
+          what: 'holes',
+          atEnds: onlyEndHoles(entry, clearance.off),
+        }),
         points: clearance.off,
       });
       // Where a hole is off the material, how near the edge it sits is not
@@ -523,6 +527,7 @@ function offMaterial(
           ...about,
           clearanceMm: clearance.clearanceMm,
           minimumMm: MIN_HOLE_EDGE_CLEARANCE_MM,
+          atEnds: onlyEndHoles(entry, clearance.tight),
         }),
         points: clearance.tight,
       });
@@ -544,6 +549,31 @@ function offMaterial(
   }
 
   return found;
+}
+
+/**
+ * Whether the holes at fault are only the first and last of a hole set laid
+ * along an open line: what its start and end offsets move in (Q47), so the
+ * app can name them rather than the inset, which moves every hole. A closed
+ * line has no ends, and a mirror or a row of holes has no offsets of its own.
+ * The faulty points are the holes' own `point` objects (`punchesOf`).
+ */
+function onlyEndHoles(
+  entry: Extract<ResolvedFeature, { ok: true }>,
+  atFault: readonly Vec2[],
+): boolean {
+  const { feature, holes } = entry;
+  if (
+    holes === undefined ||
+    entry.path.closed ||
+    feature.source.kind !== 'derived' ||
+    feature.source.op.type !== 'stitch-holes'
+  ) {
+    return false;
+  }
+  const first = holes.holes[0]?.point;
+  const last = holes.holes.at(-1)?.point;
+  return atFault.every((point) => point === first || point === last);
 }
 
 /** Where a feature's holes sit against the edges of its material (DR2, Q33). */

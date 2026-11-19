@@ -237,6 +237,86 @@ describe('stitch holes', () => {
   });
 });
 
+describe('start and end offsets move the end holes of an open line, and only those (Q47)', () => {
+  /** A pocket's stitching: down, across and up, turning at two corners. */
+  const pocket = (depth: number, width: number) =>
+    PathOps.polyline(
+      [
+        { x: 0, y: depth },
+        { x: 0, y: 0 },
+        { x: width, y: 0 },
+        { x: width, y: depth },
+      ],
+      false,
+    );
+  const hasHoleAt = (holes: ReturnType<typeof distributeHoles>, x: number, y: number) =>
+    holes.holes.some((h) => Math.hypot(h.point.x - x, h.point.y - y) <= EPS_POINT);
+
+  it('keeps a hole on every corner, the first and last holes moved in from the ends', () => {
+    fc.assert(
+      fc.property(
+        fc.double({ min: 20, max: 80, noNaN: true }),
+        fc.double({ min: 20, max: 150, noNaN: true }),
+        fc.double({ min: 0, max: 8, noNaN: true }),
+        fc.double({ min: 0, max: 8, noNaN: true }),
+        (depth, width, startOffsetMm, endOffsetMm) => {
+          const holes = distributeHoles(pocket(depth, width), {
+            ...AT_CORNERS,
+            startOffsetMm,
+            endOffsetMm,
+          });
+          expect(hasHoleAt(holes, 0, 0)).toBe(true);
+          expect(hasHoleAt(holes, width, 0)).toBe(true);
+          expect(hasHoleAt(holes, 0, depth - startOffsetMm)).toBe(true);
+          expect(hasHoleAt(holes, width, depth - endOffsetMm)).toBe(true);
+          expect(holes.holes[0]?.alongMm).toBeCloseTo(startOffsetMm, 9);
+        },
+      ),
+    );
+  });
+
+  it('leaves the run between the corners as it was', () => {
+    const plain = distributeHoles(pocket(57, 94), AT_CORNERS);
+    const movedIn = distributeHoles(pocket(57, 94), {
+      ...AT_CORNERS,
+      startOffsetMm: 3,
+      endOffsetMm: 3,
+    });
+    expect(movedIn.runs[1]).toEqual(plain.runs[1]);
+    expect(movedIn.runs[0]?.lengthMm).toBeCloseTo(57, 9);
+  });
+
+  it('reports the spacing of the holes, not of the ends left clear', () => {
+    fc.assert(
+      fc.property(
+        fc.double({ min: 0, max: 8, noNaN: true }),
+        fc.double({ min: 0, max: 8, noNaN: true }),
+        (startOffsetMm, endOffsetMm) => {
+          const holes = distributeHoles(pocket(57, 94), {
+            ...AT_CORNERS,
+            startOffsetMm,
+            endOffsetMm,
+          });
+          const first = holes.holes[0]!.alongMm;
+          const last = holes.holes.at(-1)!.alongMm;
+          expect(holes.achievedPitchMm).toBeCloseTo((last - first) / (holes.count - 1), 9);
+        },
+      ),
+    );
+  });
+
+  it('moves both ends of a line with no corners, as before', () => {
+    const holes = distributeHoles(straightRun(40), {
+      ...AT_CORNERS,
+      mode: 'exact-pitch',
+      startOffsetMm: 3,
+      endOffsetMm: 4,
+    });
+    expect(holes.holes[0]?.point.x).toBeCloseTo(3, 9);
+    expect(holes.holes.at(-1)?.point.x).toBeLessThanOrEqual(36 + EPS_POINT);
+  });
+});
+
 describe('the pitch floor, at the one place holes are made (5.6)', () => {
   it('refuses to generate holes below the floor, at once, whoever the caller is', () => {
     // evaluate checks first and reports the hole set by name; this is the

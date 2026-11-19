@@ -43,9 +43,12 @@ export function StitchHoleSetEditor({
   holes,
   reported,
   irons,
+  open,
   onChange,
 }: {
   op: HolesOp;
+  /** Whether the line the holes follow has ends, which its offsets move the end holes in from (Q47). */
+  open: boolean;
   /** The maker's irons, from Settings › My tools (U.13): what the Iron menu offers. */
   irons: readonly Iron[];
   holes: StitchHoles | undefined;
@@ -134,6 +137,8 @@ export function StitchHoleSetEditor({
         </span>
       </label>
 
+      {open && <EndOffsets op={op} onChange={onChange} />}
+
       {holes !== undefined && (
         <>
           {/* The two numbers this panel is for — what gets punched, and how
@@ -168,6 +173,38 @@ export function StitchHoleSetEditor({
           )}
         </>
       )}
+    </>
+  );
+}
+
+/**
+ * How far the first and last holes sit in from the ends of an open line (Q47):
+ * what clears a square-cornered pocket's end holes off its cut edge, where the
+ * inset, which moves every hole, cannot. Nought is stored as no offset, so a
+ * set never moved in keeps the file it had.
+ */
+function EndOffsets({ op, onChange }: { op: HolesOp; onChange: (op: HolesOp) => void }) {
+  const { t } = useI18n();
+  const set = (key: 'startOffsetMm' | 'endOffsetMm', value: number): void => {
+    const { [key]: _dropped, ...rest } = op;
+    onChange(value > 0 ? { ...rest, [key]: value } : rest);
+  };
+  return (
+    <>
+      <NumberField
+        label={t('editor.startOffset')}
+        value={op.startOffsetMm ?? 0}
+        min={0}
+        step={0.5}
+        onCommit={(value) => set('startOffsetMm', value)}
+      />
+      <NumberField
+        label={t('editor.endOffset')}
+        value={op.endOffsetMm ?? 0}
+        min={0}
+        step={0.5}
+        onCommit={(value) => set('endOffsetMm', value)}
+      />
     </>
   );
 }

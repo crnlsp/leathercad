@@ -53,12 +53,15 @@ export function FeatureEditor({
   store,
   feature,
   holes,
+  lineIsOpen = false,
   spacingReported,
   irons,
 }: {
   store: DocumentStore;
   feature: Feature;
   holes: StitchHoles | undefined;
+  /** Whether the line a hole set follows has ends (Q47). */
+  lineIsOpen?: boolean;
   /** The maker's irons (U.13), for a hole set's Iron menu. */
   irons: readonly Iron[];
   /** How Problems rates a hole set's spacing, when it reports it at all. */
@@ -128,6 +131,7 @@ export function FeatureEditor({
             holes={holes}
             reported={spacingReported}
             irons={irons}
+            open={lineIsOpen}
             onChange={change}
           />
         );

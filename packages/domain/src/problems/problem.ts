@@ -319,11 +319,21 @@ export interface ProblemFacts {
   readonly EMPTY_PART: { readonly partId: PartId; readonly partName: string };
   readonly PART_HAS_NO_OUTER_CONTOUR: { readonly partId: PartId; readonly partName: string };
   readonly CUT_OUT_OUTSIDE_PART: About;
-  readonly OUTSIDE_PART: About & { readonly what: 'holes' | 'line' };
+  readonly OUTSIDE_PART: About &
+    (
+      | { readonly what: 'line' }
+      | {
+          readonly what: 'holes';
+          /** Only the end holes of an open hole set are off: its start and end offsets move them (Q47). */
+          readonly atEnds: boolean;
+        }
+    );
   readonly HOLE_TOO_CLOSE_TO_EDGE: About & {
     /** The nearest edge, in millimetres. */
     readonly clearanceMm: Mm;
     readonly minimumMm: Mm;
+    /** Only the end holes of an open hole set are too near: its start and end offsets move them (Q47). */
+    readonly atEnds: boolean;
   };
   /** DR8: the width between the stitch lines is less than the content's width and the ease. */
   readonly POCKET_TOO_NARROW: About & {

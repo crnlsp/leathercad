@@ -1,5 +1,10 @@
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
+import { emptyDocument, rectanglePart, rectShape } from '../packages/document/src/index.js';
+import { saveProject } from '../packages/persist/src/index.js';
 import { closeApp } from './closeApp.js';
 import { expectNoViolations, openApp } from './launchApp.js';
 
@@ -117,6 +122,112 @@ test('SF-UI2 · a pocket said to hold a card warns while it is too narrow, and u
     await expect(verdict).toHaveText('1 warning');
     await expect(listed).toHaveCount(1);
   } finally {
+    await closeApp(app);
+  }
+});
+
+/**
+ * Q44's pocket: 100 × 60, square corners, stitched 3 mm in on three sides and
+ * open at the top, so its two end holes sit on the cut edge (SF-K3).
+ */
+function squarePocket(): string {
+  const pocket = rectanglePart('pocket', 'outline', 'Pocket', rectShape({ x: 0, y: 0 }, 100, 60));
+  const file = join(mkdtempSync(join(tmpdir(), 'leathercad-q47-')), 'Pocket.lcp');
+  const base = { visible: true, locked: false } as const;
+  writeFileSync(
+    file,
+    saveProject(
+      {
+        ...emptyDocument('q47').project,
+        parts: [
+          {
+            ...pocket,
+            features: [
+              ...pocket.features,
+              {
+                ...base,
+                id: 'stitch',
+                name: 'Stitch line',
+                kind: 'stitch-line',
+                source: {
+                  kind: 'derived',
+                  sourceId: 'outline',
+                  op: {
+                    type: 'offset',
+                    distanceMm: 3,
+                    side: 'inward',
+                    run: { kind: 'between', fromAnchor: 2, toAnchor: 1 },
+                  },
+                },
+              },
+              {
+                ...base,
+                id: 'holes',
+                name: 'Stitch holes',
+                kind: 'stitch-hole-set',
+                source: {
+                  kind: 'derived',
+                  sourceId: 'stitch',
+                  op: {
+                    type: 'stitch-holes',
+                    pitchMm: 3.85,
+                    mode: 'fit-whole',
+                    corners: 'hole-at-corner',
+                  },
+                },
+              },
+            ],
+          },
+        ],
+      },
+      { applicationVersion: '1.7.0', now: () => new Date('2026-11-19T00:00:00.000Z') },
+    ),
+  );
+  return file;
+}
+
+test('SF-UI3 · end holes on the cut edge move in with Start offset and End offset, by keyboard, and undo brings them back (Q47)', async () => {
+  const { app, window } = await openApp({ args: [squarePocket()], size: [1440, 900] });
+  try {
+    const verdict = window.getByTestId('problems-verdict');
+    const panel = window.getByTestId('property-panel');
+    await expect(verdict).toHaveText('1 warning');
+
+    // F8 goes to the problem and selects the holes it is about.
+    await window.getByTestId('editor-canvas').focus();
+    await window.keyboard.press('F8');
+    const problems = panel.getByTestId('feature-problems');
+    await expect(problems).toContainText('Too near the edge');
+    await expect(problems).toContainText('raise Start offset and End offset');
+
+    const start = panel.getByRole('textbox', { name: 'Start offset' });
+    const end = panel.getByRole('textbox', { name: 'End offset' });
+    await expect(start).toHaveValue('0');
+    await expectNoViolations(window, 'a hole set with its offsets');
+
+    // Typed as a sum, read in millimetres; each field is its own undo step.
+    await start.focus();
+    await window.keyboard.press('ControlOrMeta+a');
+    await window.keyboard.type('1+2');
+    await window.keyboard.press('Enter');
+    await expect(start).toHaveValue('3');
+    await expect(verdict).toHaveText('1 warning');
+    await window.keyboard.press('Tab');
+    await expect(end).toBeFocused();
+    await window.keyboard.press('ControlOrMeta+a');
+    await window.keyboard.type('3');
+    await window.keyboard.press('Enter');
+    await expect(end).toHaveValue('3');
+    await expect(verdict).toHaveText('Nothing to fix.');
+
+    // Undo, from the board: the end offset goes, and the warning comes back.
+    await window.getByTestId('editor-canvas').focus();
+    await window.keyboard.press('ControlOrMeta+z');
+    await expect(verdict).toHaveText('1 warning');
+    await expect(end).toHaveValue('0');
+    await expect(start).toHaveValue('3');
+  } finally {
+    await window.screenshot({ path: test.info().outputPath('hole-offsets.png') });
     await closeApp(app);
   }
 });

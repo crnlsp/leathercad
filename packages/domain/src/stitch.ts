@@ -157,11 +157,19 @@ export function distributeHoles(line: Path, op: Distribution, usedHoles = 0): St
     const lengthMm = measure.totalLength();
     if (approxZero(lengthMm, EPS_LENGTH)) continue;
 
+    // The offsets move the line's own end holes in (Q47): the first run's
+    // start and the last run's end. Given to every run, they took the hole off
+    // every corner too. A ring cut at its corners has no ends; one not cut,
+    // continuous, takes the start offset as its phase.
+    const first = run === runs[0];
+    const last = run === runs.at(-1);
+    const startOffsetMm = first && (!line.closed || run.closed) ? op.startOffsetMm : undefined;
+    const endOffsetMm = last && !line.closed ? op.endOffsetMm : undefined;
     const distribution = distributeAlongPath(measure, {
       mode: op.mode,
       pitchMm: op.pitchMm,
-      ...(op.startOffsetMm === undefined ? {} : { startOffsetMm: op.startOffsetMm }),
-      ...(op.endOffsetMm === undefined ? {} : { endOffsetMm: op.endOffsetMm }),
+      ...(startOffsetMm === undefined ? {} : { startOffsetMm }),
+      ...(endOffsetMm === undefined ? {} : { endOffsetMm }),
       closed: run.closed,
     });
 
@@ -194,7 +202,11 @@ export function distributeHoles(line: Path, op: Distribution, usedHoles = 0): St
   // an open run has one fewer gap than holes. Counting per run and adding up
   // misses the gap that spans each corner, which belongs to neither run.
   const intervals = line.closed ? deduped.length : Math.max(1, deduped.length - 1);
-  const achievedPitchMm = deduped.length > 0 ? totalLength / intervals : 0;
+  // An open line's ends left clear by its offsets are not stitched (Q47).
+  const stitchedMm = line.closed
+    ? totalLength
+    : totalLength - (op.startOffsetMm ?? 0) - (op.endOffsetMm ?? 0);
+  const achievedPitchMm = deduped.length > 0 ? stitchedMm / intervals : 0;
 
   return {
     holes: deduped,
