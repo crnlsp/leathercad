@@ -14,7 +14,7 @@ of this section.
 | Ubuntu | the `.deb` | `sudo apt install ./LeatherCAD-*.deb` — the `./` makes apt install the file you downloaded, and fetch what it needs. It adds LeatherCAD to your applications menu and opens `.lcp` files by double-click, and it needs no FUSE. To remove it: `sudo apt remove leathercad`. |
 | Linux | or the `.AppImage` | Make it executable (`chmod +x`) and run it. It installs nothing; keep it anywhere. It needs FUSE 2 — see below. |
 | Linux | or the `.flatpak` | `flatpak install --user LeatherCAD-*.flatpak`. It adds LeatherCAD to your applications menu and opens `.lcp` files by double-click. It needs the Flathub remote, which most distributions have, and no FUSE. |
-| Windows | the `.exe` | Run it. It installs for your user only, with no administrator prompt. |
+| Windows | the `.exe` | Run it. It asks for whom — *Only for me*, the default, needs no administrator; *Anyone who uses this computer* asks for one — and where. Choose a new or empty folder: uninstalling removes the program's folder and everything in it, so the installer refuses one that holds anything else. An upgrade stays where LeatherCAD already is. |
 | macOS | the `.dmg` | Open it and drag LeatherCAD to Applications. It runs on Apple silicon and Intel. |
 
 **An AppImage needs FUSE 2.** A fresh Arch or Ubuntu does not have it, and the AppImage stops at once
@@ -40,6 +40,10 @@ developer:
 Once installed, **double-click a `.lcp` project to open it**: the Windows installer, the macOS app,
 the `.deb` and the Flatpak all register the file type. An AppImage registers nothing by itself; a
 tool such as AppImageLauncher adds it to your menu, and then it opens projects too.
+
+Uninstalling or upgrading never removes your settings, templates or kept unsaved work. On Windows
+they are in `%APPDATA%\leathercad`; deleting that folder resets the app. Your projects stay
+wherever you saved them.
 
 To check that a download is the one this repository's release workflow built, use GitHub's build
 provenance, with the [GitHub CLI](https://cli.github.com/):

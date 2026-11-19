@@ -5,6 +5,7 @@ import { pathToFileURL } from 'node:url';
 import { LCP_EXTENSION, LCP_MIME } from '@leathercad/persist';
 import { describe, expect, it } from 'vitest';
 
+import { SUPPORTED_LANGUAGES } from '../shared/i18n.js';
 import { APP_USER_MODEL_ID } from './appUserModelId.js';
 
 /**
@@ -27,6 +28,12 @@ interface BuilderConfig {
     extraFiles: { from: string; to: string }[];
   };
   win: { icon: string };
+  nsis: {
+    oneClick: boolean;
+    perMachine: boolean;
+    deleteAppDataOnUninstall: boolean;
+    installerLanguages: string[];
+  };
   mac: { icon: string };
   fileAssociations: { ext: string; icon: string; name: string }[];
   deb: { fpm: string[] };
@@ -97,6 +104,28 @@ describe('desktop integration', () => {
     // button, and the jump list's recent documents belong to neither.
     const { appId } = await config();
     expect(APP_USER_MODEL_ID).toBe(appId);
+  });
+
+  it("installs on Windows for this user unless asked, and never removes the maker's data (R12)", async () => {
+    // The data folder holds their templates and settings: the installer
+    // spec's §2 rule. build/installer.nsh guards the folder and the scope.
+    const { nsis } = await config();
+    expect(nsis).toMatchObject({
+      oneClick: false,
+      perMachine: false,
+      deleteAppDataOnUninstall: false,
+    });
+  });
+
+  it("speaks the app's languages in the Windows installer, for which installer.nsh has words", async () => {
+    const { nsis } = await config();
+    const nsh = readFileSync(join(DESKTOP, 'build/installer.nsh'), 'utf8');
+    expect(nsis.installerLanguages.map((lang) => lang.split('_')[0])).toEqual(
+      SUPPORTED_LANGUAGES.map(({ tag }) => tag),
+    );
+    expect(nsh.match(/^LangString leathercadFolderRule /gm)).toHaveLength(
+      SUPPORTED_LANGUAGES.length,
+    );
   });
 
   it('describes the Windows installer and its shortcuts as Linux does, not as the workspace package', async () => {

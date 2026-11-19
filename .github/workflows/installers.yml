@@ -18,7 +18,8 @@ name: Installers
 # universal, so its Intel half is never launched here. See
 # docs/release-checklist.md, *The build*. The .deb and the NSIS installer are
 # smoke-tested one step further, installed: see *Installed smoke test* — the
-# NSIS one over 1.6.0, then uninstalled, the maker's data kept (R13).
+# NSIS one over 1.6.0, then uninstalled, the maker's data kept (R13), and
+# refused an unsafe folder or a second scope (R12).
 #
 # Read-only on purpose: this runs every build-time dependency and the Flatpak
 # bundler, and holds nothing it could publish or sign with. Whoever calls it
@@ -226,9 +227,8 @@ jobs:
       # The installer a maker downloads, over the one tested above, then its
       # uninstaller (R13): the program, its shortcuts, its registry entries and
       # the .lcp type go; %APPDATA%\leathercad, the maker's settings and
-      # templates, stays byte for byte. Steps 5 and 6 of the spec, an unsafe
-      # folder and a second scope, wait for R12's assisted installer, which
-      # turns them on here.
+      # templates, stays byte for byte. The assisted installer (R12) upgrades
+      # silently, in the folder the registry names.
       - name: Upgrade to the shipped installer, then uninstall (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
@@ -243,9 +243,12 @@ jobs:
 
       # An installation with nothing before it, as a first-time maker has: the
       # shortcuts are the installer's own, so they carry the app's id (one
-      # taskbar button for a pin and its window) and its description (R14). An
-      # upgrade keeps the shortcuts it finds, so the steps above cannot tell.
-      - name: Fresh install of the shipped installer (Windows)
+      # taskbar button for a pin and its window) and its description (R14),
+      # and it goes to the assisted installer's default folder. An upgrade
+      # keeps the shortcuts it finds, so the steps above cannot tell. With it
+      # installed for this user, /allusers is refused with no second copy
+      # (the spec's step 6, R12), and then it is uninstalled.
+      - name: Fresh install of the shipped installer, and a second scope refused (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
@@ -255,7 +258,20 @@ jobs:
           $version = (Get-Content apps/desktop/package.json -Raw | ConvertFrom-Json).version
           ./tools/ci/windows-install.ps1 -Step Check -Version $version -Fresh
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          ./tools/ci/windows-install.ps1 -Step Scope -Installer $installer.FullName
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
           ./tools/ci/windows-install.ps1 -Step Uninstall
+
+      # With nothing installed, a silent install into a folder that holds a
+      # project is refused with exit code 2, and the project is untouched: an
+      # uninstall removes the whole install folder, so the installer never
+      # takes one that holds anything else (the spec's step 5, R12).
+      - name: An unsafe folder refused (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem apps/desktop/release/*.exe
+          ./tools/ci/windows-install.ps1 -Step Unsafe -Installer $installer.FullName
 
       # The Flatpak beside the AppImage (8.5). Its runtimes come from Flathub,
       # installed for this user by the bundler. apt's index is fresh from the

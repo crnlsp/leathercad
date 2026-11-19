@@ -154,7 +154,7 @@ as any item that will not make it does.
 - ☐ **U.25 The visual system and accessibility** — states, spacing, focus, contrast, the minimum window, HiDPI.
 - ✅ **U.26 Languages, ready** (P1) — production Polish/German/Russian/French/Spanish, English fallback and non-blocking coverage; PR #87 reconciled and credited. [Verification and review limits](localization-verification.md).
 - ✅ **R14 Windows pins, the installer's description, and an icon for `.lcp` files** — the app sets the installer's AppUserModelID; the installer says what the app is; a project file shows its own document icon on Windows, macOS, the `.deb` and the Flatpak; the Windows installer job asserts the icon, the description and the shortcuts' id.
-- ☐ **R12 The assisted Windows installer** — where and for whom, guarded, never removing the maker's data.
+- ✅ **R12 The assisted Windows installer** — asks for whom (only me by default, no administrator) and where; one install per account, no folder that holds anything but LeatherCAD, upgrades in place; CI refuses an unsafe folder and a second scope, and keeps the maker's data through upgrade and uninstall.
 - ☐ **B5 Microsoft Store readiness** (P1) — an MSIX whose templates survive reinstalling; the listing itself is the maintainer's.
 - ☐ **7.6c Printing from Windows** (conditional) — only with a Windows PC and printer to measure the gauge.
 
