@@ -25,7 +25,7 @@
  *
  * On Linux run it as `pnpm hidden-screen node tools/perf-startup.mjs`, never on the desktop.
  */
-/* global document */
+/* global document, performance */
 import { spawn, execFileSync } from 'node:child_process';
 import { copyFileSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { cpus, loadavg, release, tmpdir, type } from 'node:os';

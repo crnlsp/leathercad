@@ -118,7 +118,8 @@ export function seamedBifold(): Project {
 /**
  * An SVG pattern of `paths` paths (PERF-018), as a drawing program writes one
  * in millimetres: pieces of five paths each — a rounded outline in curves and
- * four slots — in rows of ten. `fixtures/perf/svg-300.svg` is `svgPattern(300)`.
+ * four slots — in rows of ten. `fixtures/perf/svg-300.svg` is `svgPattern(300)`,
+ * written by `node tools/perf-compute.mjs --fixtures`.
  */
 export function svgPattern(paths: number): string {
   const pieces = Array.from({ length: Math.ceil(paths / 5) }, (_, i) => {

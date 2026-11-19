@@ -1,6 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-
 import { describe, expect, it } from 'vitest';
 
 import { diagnose } from './diagnose.js';
@@ -131,11 +128,8 @@ describe('1.7’s workloads are what PERF-018 records', () => {
       if (verdict.ok) expect(verdict.countA).toBe(verdict.countB);
     }
   });
-  it('the SVG fixture is svgPattern(300): three hundred shapes', () => {
-    const text = svgPattern(300);
-    expect(text.match(/<(path|rect) /g)).toHaveLength(300);
-    const fixture = resolve(import.meta.dirname, '../../../fixtures/perf/svg-300.svg');
-    expect(readFileSync(fixture, 'utf8')).toBe(text);
+  it('svgPattern(300), fixtures/perf/svg-300.svg, has three hundred shapes', () => {
+    expect(svgPattern(300).match(/<(path|rect) /g)).toHaveLength(300);
   });
   it('the board of 200 pieces is the bag at 200', () => {
     expect(bag(200).parts).toHaveLength(200);

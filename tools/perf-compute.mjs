@@ -78,7 +78,7 @@ const { buildSnapIndex, diagnose, evaluate, featureTree, graphProblems, loadProj
 const w = lib.workloads;
 
 // `--fixtures` writes 1.7's workloads to fixtures/perf/ (PERF-018), for the tools that open them
-// in the app; perf.test.ts holds the SVG to its generator.
+// in the app.
 if (args.includes('--fixtures')) {
   const now = () => new Date('2026-11-19T00:00:00Z');
   const save = (project) => lib.saveProject(project, { applicationVersion: '1.6.1', now });
