@@ -141,7 +141,7 @@ switch ($Step) {
     $location = Get-InstallLocation $entry
     # An upgrade stays where the registry says, 1.6.0's one-click folder
     # (@leathercaddesktop); a fresh install goes to the assisted default (R12).
-    $expected = if ($Fresh) { Join-Path $env:LOCALAPPDATA 'Programs\LeatherCAD' } else { Get-Content (Join-Path $State 'location.txt') -Raw }
+    $expected = if ($Fresh) { Join-Path $env:LOCALAPPDATA 'Programs\leathercad' } else { Get-Content (Join-Path $State 'location.txt') -Raw }
     if ($location -ne $expected) { Fail "Installed in $location, not in $expected." }
     $executable = Join-Path $location 'leathercad.exe'
     if (-not (Test-Path $executable)) { Fail "No $executable." }
@@ -244,7 +244,7 @@ switch ($Step) {
     # Per machine, electron-builder writes the same keys under HKLM, in the
     # 64-bit view PowerShell reads, and installs under Program Files.
     $guid = $entry.PSChildName
-    foreach ($left in @("HKLM:\Software\$guid", "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\$guid", (Join-Path $env:ProgramFiles 'LeatherCAD'))) {
+    foreach ($left in @("HKLM:\Software\$guid", "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\$guid", (Join-Path $env:ProgramFiles 'leathercad'))) {
       if (Test-Path $left) { Fail "/allusers over a per-user install made $left." }
     }
     $after = Get-Entry

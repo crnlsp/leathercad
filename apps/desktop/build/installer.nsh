@@ -42,36 +42,40 @@ LangString leathercadFolderRule 3082 "LeatherCAD se instalará en la carpeta sig
 # and the uninstaller remove the whole install folder (`RMDir /r $INSTDIR`),
 # so a maker who chose their projects folder would lose it. A folder is safe
 # when it does not exist, is empty, or already holds LeatherCAD.
-# Push the folder; pops "1" when safe, "0" when not.
-Function leathercadInstallDirIsSafe
-  Exch $0
-  Push $1
-  Push $2
-  StrCpy $2 "1"
-  ${IfNot} ${FileExists} "$0\${APP_EXECUTABLE_FILENAME}"
-    ClearErrors
-    FindFirst $1 $0 "$0\*"
-    ${DoUntil} ${Errors}
-      ${if} $0 != "."
-      ${andIf} $0 != ".."
-        StrCpy $2 "0"
-        ${Break}
-      ${endif}
-      FindNext $1 $0
-    ${Loop}
-    FindClose $1
-  ${endif}
-  StrCpy $0 $2
-  Pop $2
-  Pop $1
-  Exch $0
-FunctionEnd
-
-# On the folder page: Next stays unavailable while the folder is unsafe. The
-# files go where electron-builder's instFilesPre puts them, into a LeatherCAD
-# subfolder unless the path already names the app, so that is the folder
-# checked. Defined here, after the folder page, where its StrContains is.
+#
+# On the folder page, Next stays unavailable while the folder is unsafe. The
+# files go where electron-builder's instFilesPre puts them, into a subfolder
+# named for the app unless the path already names it, so that is the folder
+# checked. Both functions are defined in this macro, which electron-builder
+# inserts after the folder page: this file is included before LogicLib,
+# common.nsh and StrContains, and a function is parsed where it stands.
+# customInit's Call is resolved when the script is linked.
 !macro customPageAfterChangeDir
+  # Push the folder; pops "1" when safe, "0" when not.
+  Function leathercadInstallDirIsSafe
+    Exch $0
+    Push $1
+    Push $2
+    StrCpy $2 "1"
+    ${IfNot} ${FileExists} "$0\${APP_EXECUTABLE_FILENAME}"
+      ClearErrors
+      FindFirst $1 $0 "$0\*"
+      ${DoUntil} ${Errors}
+        ${if} $0 != "."
+        ${andIf} $0 != ".."
+          StrCpy $2 "0"
+          ${Break}
+        ${endif}
+        FindNext $1 $0
+      ${Loop}
+      FindClose $1
+    ${endif}
+    StrCpy $0 $2
+    Pop $2
+    Pop $1
+    Exch $0
+  FunctionEnd
+
   Function .onVerifyInstDir
     Push $0
     Push $1
