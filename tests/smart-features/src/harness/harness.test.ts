@@ -92,6 +92,17 @@ describe('the diagnostic comparison', () => {
     expect(() => within(84, 1e-12)).toThrow(RangeError);
   });
 
+  it('reports an accepted warning not expected as one, and the other way round (9.16)', () => {
+    const quiet = { ...narrow, accepted: true as const };
+    expect(differences([quiet], [{ ...expectNarrow, accepted: true }])).toEqual([]);
+    expect(differences([quiet], [expectNarrow])).toEqual([
+      { finding: 'accepted', line: 'POCKET_TOO_NARROW on s — expected not accepted, got accepted' },
+    ]);
+    expect(differences([narrow], [{ ...expectNarrow, accepted: true }])).toEqual([
+      { finding: 'accepted', line: 'POCKET_TOO_NARROW on s — expected accepted, got not accepted' },
+    ]);
+  });
+
   it('reports a problem listed twice on one subject', () => {
     expect(differences([narrow, narrow], [expectNarrow, expectNarrow])).toEqual([
       { finding: 'duplicate', line: 'POCKET_TOO_NARROW:s on s — listed 2 times' },

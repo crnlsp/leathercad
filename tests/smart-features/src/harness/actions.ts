@@ -1,4 +1,5 @@
 import {
+  acceptWarning,
   addDrawnStitchLine,
   addHardwareHole,
   addPart,
@@ -14,9 +15,13 @@ import {
   transformFeatures,
   translateFeatures,
   type Command,
+  unacceptWarning,
 } from '@leathercad/document';
 import {
+  diagnose,
   findFeature,
+  problemKey,
+  type ProblemCode,
   type Derivation,
   type Feature,
   type FeatureId,
@@ -133,6 +138,22 @@ export function holdsSize(
   fully = false,
 ): Command {
   return setPocketRequirement(stitch, { content: { kind: 'size', ...size }, easeMm, fully });
+}
+
+/** *Accept* on the `code` warning about `on`, in Properties (9.16). */
+export function accept(code: ProblemCode, on: FeatureId) {
+  return (project: Project): Command => acceptWarning(keyOf(project, code, on));
+}
+
+/** *Un-accept* on it. */
+export function unaccept(code: ProblemCode, on: FeatureId) {
+  return (project: Project): Command => unacceptWarning(keyOf(project, code, on));
+}
+
+function keyOf(project: Project, code: ProblemCode, on: FeatureId): string {
+  const found = diagnose(project).find((d) => d.problem.code === code && d.featureId === on);
+  if (found === undefined) throw new Error(`no ${code} on ${on} to accept`);
+  return problemKey(found.problem);
 }
 
 /** Any requirement, as the editor commits it. */

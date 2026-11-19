@@ -124,6 +124,7 @@ export {
 export type { PathPointEdit } from './pathPoints.js';
 export { editPathPoint, pathPointRefusal, pointEditingRefusal } from './pathPoints.js';
 export { addGuide, setGuide, deleteGuide } from './guides.js';
+export { acceptWarning, unacceptWarning } from './accepted.js';
 export {
   arrangeFeatures,
   arrangementRefusal,

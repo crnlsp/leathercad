@@ -578,6 +578,27 @@ export interface Project {
   /** Absent in projects made before guides existed. */
   readonly guides?: readonly Guide[];
   readonly seams?: readonly Seam[];
+  /** Warnings the maker weighed and accepted (9.16). Absent: none. */
+  readonly acceptedWarnings?: readonly AcceptedWarning[];
+}
+
+/** A value as JSON holds it: what an acceptance stores of a warning's cause. */
+export type Cause =
+  | null
+  | boolean
+  | number
+  | string
+  | readonly Cause[]
+  | { readonly [key: string]: Cause };
+
+/**
+ * A warning the maker accepted (9.16): which problem, and what it was found
+ * from — so it returns when that changes, though its key does not (SF-H6).
+ * Metadata: nothing drawn, cut or printed reads it.
+ */
+export interface AcceptedWarning {
+  readonly problemKey: string;
+  readonly cause: Cause;
 }
 
 /** The layer role a feature kind belongs to. One kind, one role, always. */

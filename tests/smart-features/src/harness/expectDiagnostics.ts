@@ -21,6 +21,9 @@ import type { Vec2 } from '@leathercad/geometry';
  * `location` is where the board marks it and *go to* frames: `'path'` (the
  * feature's line), `'none'`, or `{ points }` — how many, or which, within
  * `EPS_LENGTH`. Where "which hole" is the thing a maker must act on, say it.
+ *
+ * `accepted` says the maker accepted it and its cause has not changed since
+ * (9.16): listed, and not counted. Absent, the diagnostic must not be accepted.
  */
 export interface Expected {
   readonly code: ProblemCode;
@@ -29,6 +32,7 @@ export interface Expected {
   readonly related?: readonly string[];
   readonly facts?: Readonly<Record<string, unknown>>;
   readonly location?: 'path' | 'none' | { readonly points: number | readonly Vec2[] };
+  readonly accepted?: true;
 }
 
 /** A number compared within a tolerance of the test's choosing, never looser than the code's. */
@@ -52,6 +56,7 @@ export type Finding =
   | 'missing'
   | 'unexpected'
   | 'severity'
+  | 'accepted'
   | 'target'
   | 'related'
   | 'facts'
@@ -154,6 +159,12 @@ function problemsOf(d: Diagnostic, e: Expected): Difference[] {
       line: `${about} — expected ${e.severity}, got ${d.severity}`,
     });
   }
+  if ((d.accepted === true) !== (e.accepted === true)) {
+    found.push({
+      finding: 'accepted',
+      line: `${about} — expected ${e.accepted === true ? 'accepted' : 'not accepted'}, got ${d.accepted === true ? 'accepted' : 'not accepted'}`,
+    });
+  }
   if (e.related !== undefined && !sameList(d.related, e.related)) {
     found.push({
       finding: 'related',
@@ -228,13 +239,15 @@ function show(value: unknown): string {
 /** One diagnostic on one line: severity, code, subject and its facts. */
 export function describe(d: Diagnostic): string {
   const related = d.related.length === 0 ? '' : ` related [${d.related.join(', ')}]`;
-  return `${d.problem.code} (${d.severity}) on ${targetOf(d)}${related} ${JSON.stringify(d.problem.facts)}`;
+  const accepted = d.accepted === true ? ' accepted' : '';
+  return `${d.problem.code} (${d.severity}${accepted}) on ${targetOf(d)}${related} ${JSON.stringify(d.problem.facts)}`;
 }
 
 function describeExpected(e: Expected): string {
   const related = e.related === undefined ? '' : ` related [${e.related.join(', ')}]`;
   const facts = e.facts === undefined ? '' : ` ${JSON.stringify(e.facts)}`;
-  return `${e.code} (${e.severity}) on ${e.on}${related}${facts}`;
+  const accepted = e.accepted === true ? ' accepted' : '';
+  return `${e.code} (${e.severity}${accepted}) on ${e.on}${related}${facts}`;
 }
 
 /**

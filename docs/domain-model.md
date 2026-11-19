@@ -1029,8 +1029,8 @@ those same strings. This is interface wording, not another validation rule.
 about, and, for a code that can occur twice on one subject, an id or parameter name that tells them
 apart (`PARAMETER_INVALID` by parameter, `SOURCE_FAILED` by the source it follows, `OUTSIDE_PART` by
 holes or line, and so on). It holds no coordinate, measured value, name or list position, so it
-survives moving, resizing, renaming and unrelated edits; the panel keys its rows by it and 9.16 will
-store it for an accepted warning. Limit: `ANCHOR_MISSING` is told apart by the anchor's index.
+survives moving, resizing, renaming and unrelated edits; the panel keys its rows by it and 9.16
+stores it, with the warning's cause, for an accepted warning. Limit: `ANCHOR_MISSING` is told apart by the anchor's index.
 
 **Refusals are problems too**, with the same codes and catalogue, but they are never diagnostics:
 they are refused at the gesture or by the loader, so they never exist in a document to be listed.
@@ -1217,8 +1217,12 @@ decisions still open. No schema is fixed here before its slice.
   evaluation; nothing the rule computes is stored. Built in 9.14b on the open stitch line that
   forms the pocket, with the maker's ease, which starts not set, as the leather's thickness does
   (U.13). A general requirements engine is not planned.
-- **Accepting a warning (9.16).** Kept in the project as a problem's code and the features it names,
-  never words (ADR 0018). It has to find its problem again after an edit, which is Q4.
+- **Accepting a warning (9.16) — built.** Kept in the project as `acceptedWarnings`: each a
+  problem's key (Q4) and what it was found from — DR8's requirement and ease, DR7's two sides'
+  pitch and stretch, otherwise the problem's facts less its names — never words (ADR 0018).
+  `diagnose` marks a warning `accepted` while both match, numbers to the storage quantum; it is
+  listed and not counted (`countBySeverity`, `badgesOf`). Only a warning: an error is never
+  accepted, whatever the file says (`domain/src/accepted.ts`).
 - **Fixes (9.17).** A fix is an ordinary command made from a diagnostic, previewed through the
   store's `preview` and `rollback`, and applied as one undo step — never without the maker.
   Built in `document` (`fixes.ts`), so the domain goes on reporting facts (§8.6). One is offered

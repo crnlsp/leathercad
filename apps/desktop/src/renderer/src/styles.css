@@ -3544,6 +3544,16 @@ button.problem-row[aria-current='true'] {
   background: var(--info);
 }
 
+/* An accepted warning keeps its row and loses its colour (9.16). */
+.problem-mark.accepted {
+  background: var(--text-dim);
+}
+
+.problem-accepted {
+  color: var(--text-dim);
+  font: var(--t-label);
+}
+
 .problem-text {
   display: flex;
   flex-direction: column;
@@ -3572,7 +3582,10 @@ button.problem-row[aria-current='true'] {
 
 /* A fix sits under the message it acts on, as wide as its words (9.17). */
 .problem-action {
+  display: flex;
+  flex-wrap: wrap;
   align-self: flex-start;
+  gap: var(--space-2);
   margin-top: var(--space-1);
 }
 

@@ -11,6 +11,7 @@ import { problemKey, type Diagnostic, type Project } from '@leathercad/domain';
 import { describe, expect, it } from 'vitest';
 
 import {
+  accept,
   at,
   holdsCard,
   holdsSize,
@@ -21,6 +22,7 @@ import {
   setInset,
   statesNothing,
   stitchOf,
+  unaccept,
 } from '../harness/actions.js';
 import { checkMatrixClaims } from '../harness/coverage.js';
 import { Bench } from '../harness/bench.js';
@@ -107,12 +109,12 @@ describe('H — editing a project that was checked before', () => {
   });
 
   /**
-   * Characterises what roadmap 9.16 (accepting a warning, not built) will key
-   * on: `problemKey` holds no part of the requirement, so a warning accepted
-   * for "a card" would still match after the maker asks for a passport. 9.16
-   * must re-raise an accepted warning when its requirement changes.
+   * `problemKey` holds no part of the requirement: a warning about "a card"
+   * keeps its key when the maker asks for a passport. So 9.16 does not rely on
+   * the key alone — an acceptance stores the requirement and the ease beside
+   * it, and SF-H9 holds that the warning returns when they change.
    */
-  it('SF-H6 · changing what the pocket holds keeps the same problem key (9.16 must not rely on it alone)', () => {
+  it('SF-H6 · changing what the pocket holds keeps the same problem key (9.16 does not rely on it alone)', () => {
     const bench = narrowPocket();
     const card = problemKey(bench.diagnostics[0]!.problem);
     bench.do(holdsSize(STITCH, { widthMm: 125, heightMm: 88 }, 0));
@@ -142,6 +144,56 @@ describe('H — editing a project that was checked before', () => {
     for (let i = 1; i <= steps.length; i++) {
       expect(bench.redo().diagnostics, `after redoing step ${i}`).toEqual(seen[i]);
     }
+  });
+
+  it('SF-H9 · an accepted pocket warning is back when what it holds or its ease changes (9.16)', () => {
+    const accepted = { ...narrowOn(STITCH), accepted: true } as const;
+    narrowPocket()
+      .do(accept('POCKET_TOO_NARROW', STITCH))
+      .expect([accepted], 'accepted')
+      .do(holdsCard(STITCH, 3))
+      .expect([narrowOn(STITCH)].map((e) => ({ ...e, facts: { neededMm: 88.6, easeMm: 3 } })), 'eased')
+      .undo()
+      .expect([accepted], 'the ease undone')
+      .do(holdsSize(STITCH, { widthMm: 125, heightMm: 88 }, 2))
+      .expect(
+        [narrowOn(STITCH)].map((e) => ({ ...e, facts: { content: 'size', neededMm: 127 } })),
+        'holding a passport',
+      )
+      .undo()
+      .do(unaccept('POCKET_TOO_NARROW', STITCH))
+      .expect([narrowOn(STITCH)], 'un-accepted');
+  });
+
+  it('SF-H10 · an accepted pocket warning stays accepted through every other edit (9.16)', () => {
+    narrowPocket()
+      .do(accept('POCKET_TOO_NARROW', STITCH))
+      .do(
+        resize('pocket', { width: 89, height: 70 }),
+        movePiece('pocket', at(30, -20)),
+        renameFeature(STITCH, 'Card slot stitching'),
+        ...cardPocket('other', { width: 120, height: 80, x: 200 }),
+      )
+      .expect([{ ...narrowOn(STITCH, 83), accepted: true }]);
+  });
+
+  it('SF-H11 · saved and opened again, an accepted warning is still accepted (9.16)', () => {
+    narrowPocket()
+      .do(accept('POCKET_TOO_NARROW', STITCH))
+      .saveAndReopen()
+      .expect([{ ...narrowOn(STITCH), accepted: true }]);
+  });
+
+  it('SF-H12 · an error cannot be accepted (9.16)', () => {
+    // Inset 45 mm into a 60 mm pocket: the stitching collapses, and its holes with it.
+    const bench = narrowPocket().do(setInset('pocket', 45));
+    const errors: Expected[] = [
+      { code: 'OFFSET_COLLAPSED', severity: 'error', on: STITCH },
+      { code: 'SOURCE_FAILED', severity: 'error', on: holesOf('pocket') },
+    ];
+    bench.expect(errors);
+    expect(() => bench.do(accept('OFFSET_COLLAPSED', STITCH))).toThrow(/changed nothing/);
+    bench.expect(errors);
   });
 
   it('SF-H8 · editing another piece leaves the pocket’s warning exactly as it was', () => {

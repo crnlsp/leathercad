@@ -193,6 +193,16 @@ the verdict are recomputed on every evaluation and never stored. Nothing it says
 printed, so format 13 is kept (§4.5 rule 3), and the released 1.6 schema carries it through open,
 edit and save with its unknown fields (`pockets.test.ts`).
 
+### 3.2c Accepted warnings — optional metadata (9.16)
+
+`acceptedWarnings?: { problemKey, cause }[]` is project-level. `problemKey` is the domain's identity
+of a problem (domain model §8); `cause` is plain JSON of what the warning was found from — a
+pocket's requirement, a seam's two sides' pitch and stretch, or the problem's facts less its names.
+The cause is a record of what the maker weighed, compared and never evaluated: nothing is drawn,
+cut or printed from it, so the format version is kept (§4.5 rule 3), and the released 1.6 schema
+carries it through open, edit and save (`accepted.test.ts`). An entry whose cause no longer matches
+is kept, not pruned, and simply marks nothing.
+
 ### 3.3 What is never stored
 
 | Never stored | Because |

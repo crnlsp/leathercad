@@ -45,21 +45,25 @@ export type SeverityCounts = Readonly<Record<Severity, number>>;
 /**
  * How many errors, warnings and infos a list holds — **the one place they are
  * counted**, so the Print button's indicator, the Problems drawer and the
- * export notice cannot give different numbers for the same list.
+ * export notice cannot give different numbers for the same list. A warning the
+ * maker accepted is not counted (9.16).
  */
 export function countBySeverity(diagnostics: readonly Diagnostic[]): SeverityCounts {
   const counts = { error: 0, warning: 0, info: 0 };
-  for (const diagnostic of diagnostics) counts[diagnostic.severity] += 1;
+  for (const diagnostic of diagnostics) {
+    if (diagnostic.accepted !== true) counts[diagnostic.severity] += 1;
+  }
   return counts;
 }
 
-/** Every badge in one pass over the one diagnostic list. */
+/** Every badge in one pass over the one diagnostic list; an accepted warning badges nothing (9.16). */
 export function badgesOf(diagnostics: readonly Diagnostic[]): Badges {
   const parts = new Map<PartId, Severity[]>();
   const features = new Map<FeatureId, Severity[]>();
   const all: Severity[] = [];
 
   for (const diagnostic of diagnostics) {
+    if (diagnostic.accepted === true) continue;
     all.push(diagnostic.severity);
     push(parts, diagnostic.partId, diagnostic.severity);
     if (diagnostic.featureId !== undefined) {

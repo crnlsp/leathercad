@@ -20,6 +20,8 @@ export type { LayerRole } from './layerRole.js';
 export { LAYER_ROLES, isCutting } from './layerRole.js';
 
 export type {
+  AcceptedWarning,
+  Cause,
   CutContour,
   Feature,
   FeatureBase,
@@ -92,6 +94,7 @@ export {
   validate,
 } from './validate.js';
 export { diagnose } from './diagnose.js';
+export { acceptance } from './accepted.js';
 export type { AlignmentMark } from './alignmentMarks.js';
 export { alignmentMarks } from './alignmentMarks.js';
 export {

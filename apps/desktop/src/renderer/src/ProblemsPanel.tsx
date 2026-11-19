@@ -47,7 +47,20 @@ export function ProblemsPanel({
   const { t } = i18n;
   const badge = badgesOf(diagnostics).project;
   const count = diagnostics.length;
-  const verdict = describeCounts(counts, i18n);
+  const counted = describeCounts(counts, i18n);
+  // Accepted warnings are listed, not counted (9.16): the handle still says
+  // they are there, so it never reads *nothing to fix* over a list.
+  const accepted = diagnostics.filter((d) => d.accepted === true).length;
+  const verdict =
+    accepted === 0
+      ? counted
+      : i18n.list(
+          [
+            ...(counted === null ? [] : [counted]),
+            t('problems.counts.accepted', { count: accepted }),
+          ],
+          'unit',
+        );
 
   return (
     <section

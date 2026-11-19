@@ -399,6 +399,8 @@ export interface Diagnostic {
   /** Other features the problem involves: what a `SOURCE_FAILED` follows. */
   readonly related: readonly FeatureId[];
   readonly location?: ProblemLocation;
+  /** A warning the maker accepted, its cause unchanged since (9.16). Absent otherwise. */
+  readonly accepted?: true;
 }
 
 /** The feature or part a problem is about, when it is about one. */
