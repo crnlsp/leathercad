@@ -351,6 +351,16 @@ describe('fitTo', () => {
     );
   });
 
+  it('frames as without the corner what already lies clear of it', () => {
+    const bounds = RectOps.fromCorners({ x: 0, y: 0 }, { x: 1000, y: 10 });
+    const plain = makeViewport();
+    plain.fitTo(bounds, 40);
+    const clear = makeViewport();
+    clear.fitTo(bounds, 40, corner);
+    expect(clear.scale).toBe(plain.scale);
+    expect(clear.centreMm).toEqual(plain.centreMm);
+  });
+
   it('gives up the side that costs the least zoom', () => {
     const wide = makeViewport();
     wide.fitTo(RectOps.fromCorners({ x: 0, y: 0 }, { x: 1000, y: 10 }), 0, corner);

@@ -163,8 +163,8 @@ export class Viewport {
    *
    * `clearOf` is a box held by a control floating over the board's
    * bottom-left corner — the legend (X32). The frame gives up either a band
-   * above it or a band beside it, whichever costs less zoom, so the drawing
-   * never lies under it.
+   * above it or a band beside it, whichever costs less zoom, and moves the
+   * drawing only as far as clears it, so the drawing never lies under it.
    */
   fitTo(bounds: Rect, paddingPx = 40, clearOf?: { widthPx: number; heightPx: number }): void {
     const width = RectOps.width(bounds);
@@ -191,13 +191,16 @@ export class Viewport {
     const bottom = Math.max(0, clearOf.heightPx - paddingPx);
     const above = scaleWithin(usableWidth, usableHeight - bottom);
     const beside = scaleWithin(usableWidth - left, usableHeight);
-    // Shifted by half the band given up, toward the free side; Y is up.
+    // Moved toward the free side only as far as clears the band, so what
+    // lies clear of the corner already frames as it would without it; Y is up.
     if (above >= beside) {
+      const over = (this.heightPx + height * above) / 2 - (this.heightPx - paddingPx - bottom);
       this.scale = above;
-      this.centreMm = { x: centre.x, y: centre.y - bottom / 2 / above };
+      this.centreMm = { x: centre.x, y: centre.y - Math.max(0, over) / above };
     } else {
+      const over = paddingPx + left - (this.widthPx - width * beside) / 2;
       this.scale = beside;
-      this.centreMm = { x: centre.x - left / 2 / beside, y: centre.y };
+      this.centreMm = { x: centre.x - Math.max(0, over) / beside, y: centre.y };
     }
   }
 
