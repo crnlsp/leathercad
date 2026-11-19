@@ -269,6 +269,13 @@ of an existing pair repeated (three card slots 15 mm apart, the third placed by 
   the gap is measured from), because the label would promise something the leather does not show.
 - Distribute (3.10) stays the exact, keyboard way to do it.
 
+*As built in 3.19:* `packages/editor/src/spacing.ts`, called from `alignMove`. A neighbour is
+the nearest extent below or above the moved one that overlaps it across — within reach, so a
+piece carried a little into its neighbour still has it; the repeated gap is that neighbour's own
+nearest neighbour's. Faces are other pieces' outlines for a whole piece, the host's cut-outs for
+a feature inside one; holes and labels are none, and a single hole is not spaced. Both labels
+show the candidate's one gap value, not each drawn gap measured again.
+
 ## 9. What is drawn
 
 - Overlay display items only (the tool's `buildOverlay`), never document geometry, exports,

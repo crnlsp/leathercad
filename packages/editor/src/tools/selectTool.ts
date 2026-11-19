@@ -375,7 +375,14 @@ export function createSelectTool(): Tool {
           items: [
             ...(state.aligned === null
               ? []
-              : alignmentOverlay(moved, state.aligned, targets, pxPerMm, ctx.alignmentWords)),
+              : alignmentOverlay(
+                  moved,
+                  state.aligned,
+                  targets,
+                  pxPerMm,
+                  ctx.alignmentWords,
+                  ctx.distanceWords,
+                )),
             ...distanceOverlay(state.readout?.rays ?? [], pxPerMm, ctx.distanceWords),
           ],
         };
