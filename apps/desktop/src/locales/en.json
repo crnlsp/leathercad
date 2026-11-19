@@ -1519,7 +1519,13 @@
       "between": "Between corners",
       "from": "From corner",
       "to": "To corner",
-      "corner": "Corner {{number}}"
+      "corner": "Corner {{number}}",
+      "open": {
+        "top": "Open at the top",
+        "bottom": "Open at the bottom",
+        "left": "Open on the left",
+        "right": "Open on the right"
+      }
     }
   },
   "fixes": {

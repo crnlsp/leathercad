@@ -22,7 +22,7 @@ import type {
 import type { Iron } from '@leathercad/platform';
 import type { JSX } from 'react';
 
-import { offsetRunAnchors, offsetRunRefusal } from '../offsetRun.js';
+import { offsetRunAnchors, openSides, offsetRunRefusal } from '../offsetRun.js';
 import { useI18n } from '../i18n.js';
 import { useKeysInSentences } from '../keyCaps.js';
 import { ReasonedButton } from '../ReasonedButton.js';
@@ -121,6 +121,8 @@ export function FeatureEditor({
             onChange={change}
             canChooseRun={feature.kind === 'stitch-line'}
             anchors={offsetRunAnchors(store.getState().document.project, feature)}
+            sides={openSides(store.getState().document.project, feature)}
+            cornersOf={source.sourceId}
             refusal={(op) => offsetRunRefusal(store.getState().document.project, feature, op)}
           />
         );

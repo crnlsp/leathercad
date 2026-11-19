@@ -389,3 +389,59 @@ test('SF-UI4 · Holds says which edge it measured to, says no ease, and stays wh
     await closeApp(app);
   }
 });
+
+/** The board's pixels, as Electron paints them. */
+async function boardPixels(window: Page): Promise<Buffer> {
+  return window.getByTestId('editor-canvas').screenshot({ animations: 'disabled' });
+}
+
+test('SF-UI4 · Stitched sides names the open side of a rectangle, and the board numbers its corners while one is chosen (Q48)', async () => {
+  const { app, window } = await openApp({ size: [1440, 900] });
+  try {
+    const panel = window.getByTestId('property-panel');
+    // A pocket from a blank rectangle: 100 × 60, square corners, stitched 3 mm in.
+    await drawRectangles(window, [[80, 120, 380, 320]]);
+    await enter(panel.getByLabel('Width'), '100');
+    await enter(panel.getByLabel('Height'), '60');
+    await window.getByTestId('selection-bar-step').click();
+    await enter(panel.getByLabel('Edge margin'), '3');
+
+    // Named, not numbered: the opening is the top, 94 mm across between the sides.
+    const sides = panel.getByTestId('stitch-run');
+    await sides.selectOption({ label: 'Open at the top' });
+    await expect(sides.locator('option:checked')).toHaveText('Open at the top');
+    await expect(panel.getByLabel('From corner', { exact: true })).toHaveValue('2');
+    await expect(panel.getByLabel('To corner', { exact: true })).toHaveValue('1');
+    await expect(panel.getByTestId('pocket-width')).toHaveText('94 mm');
+    // Held fully, the depth is read from the opening the run leaves, which is
+    // the panel's edge at the stitch ends: 57 mm down, nothing above them.
+    await panel.getByTestId('pocket-holds').selectOption('id-1');
+    await panel.getByTestId('pocket-fully').check();
+    await expect(panel.getByTestId('pocket-down')).toHaveText(
+      "57 mm below Panel's edge, 0 mm above the stitch ends; 53.98 mm stated.",
+    );
+    await expectNoViolations(window, 'Stitched sides named on a rectangle');
+
+    // The corners are numbered while a corner field has focus, and go after.
+    const before = await boardPixels(window);
+    await panel.getByLabel('From corner', { exact: true }).focus();
+    await expect.poll(async () => (await boardPixels(window)).equals(before)).toBe(false);
+    await panel.getByLabel('Edge margin').focus();
+    await expect.poll(async () => (await boardPixels(window)).equals(before)).toBe(true);
+
+    // Chosen by corners instead, the select says so while they are edited,
+    // even when the pair chosen is a named side: it never jumps to the name.
+    await sides.selectOption('between');
+    await expect(sides).toHaveValue('between');
+    await expect(panel.getByLabel('From corner', { exact: true })).toHaveValue('0');
+    await expect(panel.getByLabel('To corner', { exact: true })).toHaveValue('3');
+    await panel.getByLabel('From corner', { exact: true }).selectOption({ label: 'Corner 3' });
+    await panel.getByLabel('To corner', { exact: true }).selectOption({ label: 'Corner 2' });
+    await expect(sides).toHaveValue('between');
+    await expect(panel.getByLabel('To corner', { exact: true })).toHaveValue('1');
+    await expect(panel.getByTestId('pocket-width')).toHaveText('94 mm');
+  } finally {
+    await window.screenshot({ path: test.info().outputPath('open-at-the-top.png') });
+    await closeApp(app);
+  }
+});

@@ -86,11 +86,13 @@ test('partial stitching controls explain a seam refusal, then edit in one undo s
     await fromProjectMenu(window, 'new-template');
     await window.getByTestId('template-builtin:card-holder').dblclick();
     await window.getByTestId('feature-row-pocket-stitch').click();
-    await expect(window.getByTestId('stitch-run')).toHaveValue('between');
+    // The pocket is stitched from corner 3 round to corner 2 of a rectangle
+    // square to the board, so it reads as the side it leaves open (Q48).
+    await expect(window.getByTestId('stitch-run')).toHaveValue('open-top');
     await expect(window.getByLabel('From corner', { exact: true })).toHaveValue('2');
     await expect(window.getByLabel('To corner', { exact: true })).toHaveValue('1');
     await window.getByTestId('stitch-run').selectOption('whole');
-    await expect(window.getByTestId('stitch-run')).toHaveValue('between');
+    await expect(window.getByTestId('stitch-run')).toHaveValue('open-top');
     await expect(window.getByTestId('stitch-run-refusal')).toBeVisible();
     await window.getByTestId('feature-row-pocket-holes').click();
     for (let i = 0; i < 3; i++) await window.getByTestId('seam-unsew').first().click();
@@ -98,7 +100,7 @@ test('partial stitching controls explain a seam refusal, then edit in one undo s
     await window.getByTestId('stitch-run').selectOption('whole');
     await expect(window.getByTestId('stitch-run')).toHaveValue('whole');
     await window.getByTestId('undo').click();
-    await expect(window.getByTestId('stitch-run')).toHaveValue('between');
+    await expect(window.getByTestId('stitch-run')).toHaveValue('open-top');
     await expectNoViolations(window, 'partial stitching controls');
   } finally {
     await closeApp(app);
