@@ -30,15 +30,25 @@ export function productionRows(summary: ProductionSummary, { t, locale }: I18n):
       id: 'pieces',
       label: t('production.pieces'),
       value: number.format(summary.toCut),
-      details: summary.pieces.map((piece) =>
-        piece.holes === 0
+      details: summary.pieces.map((piece) => {
+        if (piece.turnedOver > 0) {
+          const pair = {
+            name: piece.name,
+            drawn: piece.quantity - piece.turnedOver,
+            turned: piece.turnedOver,
+          };
+          return piece.holes === 0
+            ? t('production.pieceLineMirroredNoHoles', pair)
+            : t('production.pieceLineMirrored', { ...pair, count: piece.holes });
+        }
+        return piece.holes === 0
           ? t('production.pieceLineNoHoles', { name: piece.name, quantity: piece.quantity })
           : t('production.pieceLine', {
               name: piece.name,
               quantity: piece.quantity,
               count: piece.holes,
-            }),
-      ),
+            });
+      }),
     },
     { id: 'holes', label: t('production.holes'), value: number.format(summary.holes), details: [] },
     {

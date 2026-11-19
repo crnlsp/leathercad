@@ -15,6 +15,7 @@ import {
   renameFeature,
   setSource,
   setPartName,
+  setPartMirroredPair,
   setPartQuantity,
   selectedFeatureIds,
 } from '@leathercad/document';
@@ -513,6 +514,20 @@ function PartFields({
         precision={0}
         onCommit={(value) => store.dispatch(setPartQuantity(part.id, value))}
       />
+      <label className="field">
+        <span className="field-label">{t('properties.mirroredPair')}</span>
+        <input
+          type="checkbox"
+          data-testid="part-mirrored-pair"
+          checked={part.mirroredPair === true}
+          onChange={(event) => store.dispatch(setPartMirroredPair(part.id, event.target.checked))}
+        />
+      </label>
+      {part.mirroredPair === true && (
+        <p className="panel-note" data-testid="part-mirrored-pair-note">
+          {t('properties.mirroredPairNote')}
+        </p>
+      )}
     </section>
   );
 }

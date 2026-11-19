@@ -155,6 +155,8 @@ export type HistoryAction =
   | 'resize-label'
   | 'change-paper'
   | 'set-quantity'
+  | 'cut-mirrored-pair'
+  | 'cut-alike'
   | 'change-fold-direction'
   | 'change-fold-thickness'
   | 'change-pocket-requirement'

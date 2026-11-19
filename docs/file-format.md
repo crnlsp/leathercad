@@ -326,9 +326,23 @@ stored (§3.3).
 The v13→v14 migration is an identity: no older hole set has a tooth, and none is invented on open
 (D26). The version increases because SVG and DXF cut it (§4.5 rule 2): a format-13 build would
 carry the field through as unknown data and cut 1 mm centre marks. So every file saved from here
-on is format 14, which an older build refuses with its *update LeatherCAD* sentence.
+on was format 14 (15 from §4.1g), which an older build refuses with its *update LeatherCAD* sentence.
 `fixtures/format/v14.lcp` gives the v13 panel's hole set an inverse Japanese slit and the pocket's
 a round prong.
+
+### 4.1g Version 15 — a piece cut as a mirrored pair
+
+A part may carry `"mirroredPair": true` (Q21, seams spec §11): half its `quantity` is cut with the
+template turned over. Present only when true, and only on an even quantity — the schema refuses
+`false`, any other value, and an odd count with the flag. Which pieces are turned over, and the
+caption that says so (*Pocket — cut 2, turn the template over for the second*), are worded on every
+print, never stored (§3.3), and the file holds no words for them.
+
+The v14→v15 migration is an identity: no older piece is a mirrored pair, and none is made one on
+open. The version increases because the caption prints (§4.5 rule 2): a format-14 build would
+carry the flag through as unknown data and print *cut 2*, and a maker would cut two lefts. So every
+file saved from here on is format 15, which an older build refuses with its *update LeatherCAD*
+sentence. `fixtures/format/v15.lcp` makes the v14 pocket, cut twice, a mirrored pair.
 
 ### 4.2 The rules
 

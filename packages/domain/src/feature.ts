@@ -534,6 +534,11 @@ export interface Part {
   readonly id: PartId;
   readonly name: string;
   readonly quantity: number;
+  /**
+   * Cut as a mirrored pair (Q21): half the count with the template turned
+   * over. Only on an even count; absent for a piece cut alike.
+   */
+  readonly mirroredPair?: true;
   readonly features: readonly Feature[];
 }
 

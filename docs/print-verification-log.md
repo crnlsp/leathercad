@@ -149,3 +149,41 @@ plan, the PDF, the SVG and the DXF. None of that is the printer.
 | Date | Build | OS, viewer and scale setting | Printer, paper | Readings N · O · P · Q (left; right) | Result |
 |---|---|---|---|---|---|
 | _pending_ | | | | | |
+
+## A mirrored pair's caption — Q21
+
+Q21 prints a new caption under a piece cut as a mirrored pair, and a longer caption can move a piece
+on the sheet, so it is measured on paper (seams spec §11). Until a row below carries real readings,
+Q21 is not done and its roadmap line stays ◐.
+
+**What is checked automatically.** `packages/export/src/mirroredPair.test.ts` checks the caption's
+words for two, four and six pieces, that it reaches the sheet the PDF draws at 2.8 mm, and that the
+SVG and the DXF differ from a piece cut alike in their annotation layer only — the cut, stitching
+and holes are byte for byte the same. None of that is the printer.
+
+**The procedure**, about five minutes, with the steel rule of the procedure above:
+
+1. **Open** `fixtures/projects/card-holder.lcp` in the build under test, pick *Pocket* in Parts
+   and tick *Cut as a mirrored pair* in Properties. Parts now reads *Pocket 1 + 1 mirrored*. Note
+   the version in the status bar.
+2. **Sheets** shows one A4 portrait sheet: *Outer*, and *Pocket* captioned *Pocket — cut 2, turn
+   the template over for the second*.
+3. **Print** as step 3 above (on Windows, *Save PDF…* and print at *Actual size*). Never scaled.
+4. **Measure and read**, to the nearest half millimetre:
+
+   | # | Where | What | Expected |
+   |---|---|---|---|
+   | A, B | The gauge | As above | 100.0 × 5.0 mm |
+   | S | *Pocket* | Width across the outline, left cut edge to right | 105.0 mm |
+   | T | *Pocket* | Height of the outline, bottom cut edge to top | 47.3 mm |
+   | U | *Pocket* | Height of a capital letter of its caption | 2.0 mm, give or take 0.3 |
+   | V | *Pocket*'s caption | Whole, on one line, above the piece, touching neither its cut line nor another piece's, inside the sheet's margins | Yes |
+
+5. **Cut** the pocket out of the paper twice: once as printed, once with the template turned
+   over. The two must stack edge to edge, printed sides facing.
+6. **Record** a row. The check passes when A, B, S and T are each within 0.5 mm of expected, U is
+   legible at arm's length, and V is yes.
+
+| Date | Build | OS, viewer and scale setting | Printer, paper | Readings A · B · S · T · U · V | Result |
+|---|---|---|---|---|---|
+| _pending_ | | | | | |

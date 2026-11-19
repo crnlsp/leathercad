@@ -7,7 +7,15 @@ import {
   setPartVisible,
   type DocumentStore,
 } from '@leathercad/document';
-import type { Badge, Badges, Feature, Part, PartId, Project } from '@leathercad/domain';
+import {
+  turnedOver,
+  type Badge,
+  type Badges,
+  type Feature,
+  type Part,
+  type PartId,
+  type Project,
+} from '@leathercad/domain';
 
 import {
   useEffect,
@@ -26,6 +34,7 @@ import type { PartPrintStatus } from '@leathercad/export';
 import { intoMenu } from './fieldMenu.js';
 import type { RightClicked } from './contextMenu.js';
 import { CountBadge } from './CountBadge.js';
+import type { Translate } from '../../shared/i18n.js';
 import { useI18n } from './i18n.js';
 import { IS_MAC, useKeysInSentences } from './keyCaps.js';
 import { keysOf, matches, type CommandId } from './keymap.js';
@@ -521,7 +530,13 @@ function PieceRow({
           // The name and its ×N give way together, the ×N after the name's last word.
           <span className="part-title">
             <span className="part-label">{part.name}</span>
-            {part.quantity > 1 && <span className="badge">×{part.quantity}</span>}
+            {/*
+              A space before a pair's words, so the row's text reads as its
+              name does, "Pocket 1 + 1 mirrored", not "Pocket1"; "×2" needs
+              none, the sign parts the words, and its rows stay as they were.
+            */}
+            {part.mirroredPair === true && ' '}
+            {part.quantity > 1 && <span className="badge">{cutBadge(part, t)}</span>}
           </span>
         )}
         {/*
@@ -912,4 +927,12 @@ function IconToggle({
       </button>
     </Tooltip>
   );
+}
+
+/** A piece's count beside its name: ×2, or 1 + 1 mirrored for a pair (Q21). */
+function cutBadge(part: Part, t: Translate): string {
+  const turned = turnedOver(part);
+  return turned > 0
+    ? t('parts.mirroredPair', { drawn: part.quantity - turned, turned })
+    : `×${String(part.quantity)}`;
 }

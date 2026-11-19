@@ -795,3 +795,22 @@ export function fixtureProjectV14(): Project {
     })),
   };
 }
+
+/**
+ * Version 15 — a piece cut as a mirrored pair (Q21).
+ *
+ * The pocket, cut twice, is a left and a right: one with the template turned
+ * over. What the file holds is the flag; the caption that says so is worded on
+ * every print.
+ */
+export function fixtureProjectV15(): Project {
+  const previous = fixtureProjectV14();
+  return {
+    ...previous,
+    id: 'fixture-v15',
+    name: 'Format baseline v15',
+    parts: previous.parts.map((part) =>
+      part.id === 'part-pocket' ? { ...part, mirroredPair: true as const } : part,
+    ),
+  };
+}
