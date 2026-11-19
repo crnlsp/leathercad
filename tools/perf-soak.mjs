@@ -155,7 +155,11 @@ async function sample(cycles, durations) {
       heapMiB: Number((usedSize / 2 ** 20).toFixed(2)),
       ...dom,
       processes: processes.length,
-      rssMiB: Number(Object.values(rss).reduce((a, b) => a + b, 0).toFixed(1)),
+      rssMiB: Number(
+        Object.values(rss)
+          .reduce((a, b) => a + b, 0)
+          .toFixed(1),
+      ),
       rssByTypeMiB: rss,
       lastCycleMs: durations.at(-1) ?? null,
       medianCycleMs: sorted.length === 0 ? null : sorted[sorted.length >> 1],
@@ -171,7 +175,8 @@ console.log(
     project: source.slice(root.length + 1),
     minutes,
     every,
-    commit: git('rev-parse', '--short', 'HEAD') + (git('status', '--porcelain') ? ' + changes' : ''),
+    commit:
+      git('rev-parse', '--short', 'HEAD') + (git('status', '--porcelain') ? ' + changes' : ''),
     cpu: `${cpus()[0]?.model.trim()} × ${cpus().length}`,
     os: `${type()} ${release()} ${process.arch}`,
     runtime: await app.evaluate(() => process.versions),

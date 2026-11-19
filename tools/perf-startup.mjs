@@ -47,7 +47,9 @@ const runs = Number(option('--runs', '5'));
 const idleSeconds = Number(option('--idle', '60'));
 const plain = args.includes('--plain');
 const label = args.find((a) => !a.startsWith('--')) ?? 'run';
-const VERSION = JSON.parse(readFileSync(resolve(root, 'apps/desktop/package.json'), 'utf8')).version;
+const VERSION = JSON.parse(
+  readFileSync(resolve(root, 'apps/desktop/package.json'), 'utf8'),
+).version;
 
 /** Linux: drops the app's own files from the page cache, so the next launch reads the disk. */
 function evict(dir) {
@@ -55,7 +57,8 @@ function evict(dir) {
   for (const entry of readdirSync(dir, { withFileTypes: true, recursive: true })) {
     if (!entry.isFile()) continue;
     const file = join(entry.parentPath, entry.name);
-    if (statSync(file).size > 0) execFileSync('dd', [`if=${file}`, 'iflag=nocache', 'count=0'], { stdio: 'ignore' });
+    if (statSync(file).size > 0)
+      execFileSync('dd', [`if=${file}`, 'iflag=nocache', 'count=0'], { stdio: 'ignore' });
   }
   return true;
 }
@@ -132,8 +135,14 @@ async function instrumented(cache) {
       cache,
       firstFrameMs: Math.round(paint - started),
       versionMs: Math.round(shown - started),
-      rssMiB: Number(Object.values(rss).reduce((a, b) => a + b, 0).toFixed(1)),
-      rssByTypeMiB: Object.fromEntries(Object.entries(rss).map(([k, v]) => [k, Number(v.toFixed(1))])),
+      rssMiB: Number(
+        Object.values(rss)
+          .reduce((a, b) => a + b, 0)
+          .toFixed(1),
+      ),
+      rssByTypeMiB: Object.fromEntries(
+        Object.entries(rss).map(([k, v]) => [k, Number(v.toFixed(1))]),
+      ),
       // cumulativeCPUUsage is CPU seconds since each process started.
       idleCpuPercent: Number(
         (((cpuSeconds(after) - cpuSeconds(before)) / idleSeconds) * 100).toFixed(2),
@@ -183,10 +192,13 @@ console.log(
     mode: plain ? 'plain' : 'instrumented',
     executable: relative(root, executable),
     version: VERSION,
-    commit: git('rev-parse', '--short', 'HEAD') + (git('status', '--porcelain') ? ' + changes' : ''),
+    commit:
+      git('rev-parse', '--short', 'HEAD') + (git('status', '--porcelain') ? ' + changes' : ''),
     cpu: `${cpus()[0]?.model.trim()} × ${cpus().length}`,
     os: `${type()} ${release()} ${process.arch}`,
-    load: loadavg().map((l) => l.toFixed(2)).join(' '),
+    load: loadavg()
+      .map((l) => l.toFixed(2))
+      .join(' '),
   }),
 );
 for (let run = 0; run < runs; run++) {

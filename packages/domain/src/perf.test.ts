@@ -1,10 +1,13 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import { diagnose } from './diagnose.js';
 import { evaluate, resolvedFeatures } from './evaluate.js';
 import { validate } from './validate.js';
 import type { Project } from './feature.js';
-import { bag, seamedBag, strap, tracedOutline } from './workloads.js';
+import { bag, seamedBag, seamedBifold, strap, svgPattern, tracedOutline } from './workloads.js';
 import { resolveSeam, seamVerdict } from './seams.js';
 import { alignmentMarks } from './alignmentMarks.js';
 
@@ -114,5 +117,27 @@ describe('what an edit costs the panel', () => {
     expect([...resolvedFeatures(resolved)].length).toBe(3);
     expect(diagnose(project)).toEqual(expect.arrayContaining([...diagnostics]));
     expect(validateMs).toBeLessThan(500);
+  });
+});
+
+describe('1.7’s workloads are what PERF-018 records', () => {
+  it('a bifold of six pieces sews six seams, each pairing every hole exactly', () => {
+    const project = seamedBifold();
+    expect(project.parts).toHaveLength(6);
+    const verdicts = (project.seams ?? []).map((seam) => seamVerdict(project, seam));
+    expect(verdicts).toHaveLength(6);
+    for (const verdict of verdicts) {
+      expect(verdict).toMatchObject({ ok: true, severity: 'info', driftMm: 0 });
+      if (verdict.ok) expect(verdict.countA).toBe(verdict.countB);
+    }
+  });
+  it('the SVG fixture is svgPattern(300): three hundred shapes', () => {
+    const text = svgPattern(300);
+    expect(text.match(/<(path|rect) /g)).toHaveLength(300);
+    const fixture = resolve(import.meta.dirname, '../../../fixtures/perf/svg-300.svg');
+    expect(readFileSync(fixture, 'utf8')).toBe(text);
+  });
+  it('the board of 200 pieces is the bag at 200', () => {
+    expect(bag(200).parts).toHaveLength(200);
   });
 });
