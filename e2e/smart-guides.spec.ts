@@ -6,7 +6,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { loadProject } from '../packages/persist/src/index.js';
 
 import { boardMap } from './boardMap.js';
-import { withApp } from './launchApp.js';
+import { drawAPanel, withApp } from './launchApp.js';
 import { fromProjectMenu } from './projectMenu.js';
 
 /**
@@ -128,5 +128,45 @@ test('Escape while dragging puts the pocket back, and leaves nothing to undo (3.
     // The one step left is the typed Left; undoing it puts the pocket at 0.
     await window.getByTestId('undo').click();
     await expect(left(window)).toHaveValue('0');
+  }, ROOM);
+});
+
+test('a third pocket dragged near the gap of the first two repeats it exactly, in one undo step (3.19)', async () => {
+  await withApp(async (window) => {
+    for (const at of [100, 300, 500]) await drawAPanel(window, { left: at });
+    await expect(window.getByTestId('part-count')).toHaveText('3');
+    await window.getByTestId('tool-select').click();
+    // Three 40 × 30 pockets in a row: the first two 15 mm apart, the third away.
+    const rows = window.locator('[data-testid^="feature-row-"]');
+    const field = async (label: string, value: number): Promise<void> => {
+      await panel(window).getByLabel(label).fill(String(value));
+      await panel(window).getByLabel(label).press('Enter');
+    };
+    const place = async (index: number, x: number): Promise<void> => {
+      await rows.nth(index).click();
+      await field('Width', 40);
+      await field('Height', 30);
+      await field('X', x);
+      await field('Y', 0);
+    };
+    await place(0, 0);
+    await place(1, 55);
+    await place(2, 200);
+    await window.getByTestId('zoom-fit').click();
+    const board = await boardMap(window);
+
+    // Raw, the third's left side would land at 111.2: 1.2 mm past repeating 15 mm.
+    const from = board({ x: 220, y: 15 });
+    const to = board({ x: 220 - 88.8, y: 15 });
+    await window.mouse.move(from.x, from.y);
+    await window.mouse.down();
+    await window.mouse.move(to.x, to.y, { steps: 8 });
+    await window.mouse.up();
+    await rows.nth(2).click();
+    await expect(panel(window).getByLabel('X')).toHaveValue('110');
+
+    await window.getByTestId('undo').click();
+    await rows.nth(2).click();
+    await expect(panel(window).getByLabel('X')).toHaveValue('200');
   }, ROOM);
 });
