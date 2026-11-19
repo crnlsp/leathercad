@@ -29,6 +29,7 @@
 import { spawn, execFileSync } from 'node:child_process';
 import { copyFileSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { cpus, loadavg, release, tmpdir, type } from 'node:os';
+import { setTimeout as sleep } from 'node:timers/promises';
 import { dirname, join, relative, resolve } from 'node:path';
 
 import { _electron as electron, chromium } from '@playwright/test';
@@ -99,6 +100,32 @@ const metrics = (app) =>
     })),
   );
 
+/**
+ * Ends a launch and waits until it is gone, or the next one meets its single-instance lock and
+ * exits at once. On Windows the process Playwright started is not the app's main process, and
+ * killing it leaves the app running (`e2e/closeApp.ts`): the whole tree goes, and the main one.
+ */
+async function stop(...pids) {
+  for (const pid of pids) {
+    try {
+      if (process.platform === 'win32') {
+        execFileSync('taskkill', ['/T', '/F', '/PID', String(pid)], { stdio: 'ignore' });
+      } else process.kill(pid, 'SIGKILL');
+    } catch {
+      // Already gone with its parent's tree.
+    }
+  }
+  const alive = (pid) => {
+    try {
+      process.kill(pid, 0);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  while (pids.some(alive)) await sleep(50);
+}
+
 async function instrumented(cache) {
   const { home, project, env } = profile();
   const started = Date.now();
@@ -109,6 +136,7 @@ async function instrumented(cache) {
     chromiumSandbox: false,
     env,
   });
+  const main = await app.evaluate(() => process.pid);
   try {
     const window = await app.firstWindow();
     const shown = await (
@@ -151,8 +179,8 @@ async function instrumented(cache) {
       idleFrames: frames,
     };
   } finally {
-    // As in the other perf tools: a plain close waits for the debugger to let go.
-    app.process().kill('SIGKILL');
+    // As in the other perf tools, not a close: that waits for the debugger to let go.
+    await stop(app.process().pid, main);
     rmSync(home, { recursive: true, force: true, maxRetries: 5 });
   }
 }
@@ -180,7 +208,7 @@ async function uninstrumented(cache) {
     const paint = await (await firstPaint(page)).jsonValue();
     return { cache, firstFrameMs: Math.round(paint - started) };
   } finally {
-    child.kill('SIGKILL');
+    await stop(child.pid);
     rmSync(home, { recursive: true, force: true, maxRetries: 5 });
   }
 }
