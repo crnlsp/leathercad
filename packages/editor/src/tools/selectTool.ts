@@ -14,13 +14,21 @@ import type { FeatureId } from '@leathercad/domain';
 import {
   dependentsOf,
   evaluate,
-  type Feature,
+  materialOf,
   type Guide,
   type PartId,
   type Problem,
   type Project,
 } from '@leathercad/domain';
-import { MatOps, RectOps, Shapes, type Rect, type Vec2 } from '@leathercad/geometry';
+import {
+  MatOps,
+  RectOps,
+  Shapes,
+  Vec2Ops,
+  type Path,
+  type Rect,
+  type Vec2,
+} from '@leathercad/geometry';
 import { CANVAS, cssPxPerMm, pathItem, type DisplayList } from '@leathercad/render';
 
 import {
@@ -30,6 +38,15 @@ import {
   collectHostTargets,
   type AlignTargets,
 } from '../align.js';
+import {
+  clearanceOf,
+  distanceOverlay,
+  hostPart,
+  isOutline,
+  punchedBy,
+  rayDistances,
+  type MoveReadout,
+} from '../distances.js';
 import { featuresWithin, pickAt } from '../hitTest.js';
 import type { SnapCandidate, Snapped } from '../snap.js';
 import { means, type Tool, type ToolContext } from '../tool.js';
@@ -52,6 +69,8 @@ type State =
       /** What the last move lined up, held by the next (hysteresis). */
       readonly aligned: Snapped | null;
       readonly delta: Vec2;
+      /** How far it went and how near the edges it is, while it is not refused (3.17). */
+      readonly readout: MoveReadout | null;
     } & Grab)
   | {
       readonly kind: 'band';
@@ -64,6 +83,18 @@ interface Guides {
   readonly targets: AlignTargets;
   /** A single hole or circle, which lines up by its centre alone. */
   readonly centreOnly: boolean;
+  /** Features moved inside a piece: what their distances are measured to (3.17). */
+  readonly inside: Inside | null;
+}
+
+/** What a move inside a piece measures against, collected when it begins (3.17). */
+interface Inside {
+  /** The piece's outline, which the rays reach. */
+  readonly outline: Path;
+  /** A single hole's radius: its rays start at its rim. Null for anything else. */
+  readonly rimMm: number | null;
+  /** What moves and what moves with it: whose holes the clearance is of. */
+  readonly punched: ReadonlySet<string>;
 }
 
 /** What a press took hold of, from the press to the release. */
@@ -194,6 +225,7 @@ export function createSelectTool(): Tool {
           guides: guidesFor(project, state.moving),
           aligned: null,
           delta: { x: 0, y: 0 },
+          readout: null,
         };
       }
 
@@ -229,14 +261,14 @@ export function createSelectTool(): Tool {
           state.moving,
           MatOps.fromTranslation(delta),
         );
+        ctx.store.preview(translateFeatures(state.moving, delta));
         state = {
           ...state,
           refusal,
           aligned: refusal === null ? (alignment?.snapped ?? null) : null,
           delta,
+          readout: refusal === null ? readoutOf(ctx, state.guides, delta) : null,
         };
-
-        ctx.store.preview(translateFeatures(state.moving, delta));
         ctx.invalidate();
       }
     },
@@ -249,7 +281,9 @@ export function createSelectTool(): Tool {
         const existing = event.shiftKey ? selectedFeatureIds(document.project, selection) : [];
         ctx.store.select([...existing, ...found]);
       } else if (state.kind === 'moving' || state.kind === 'guide') {
+        const kept = ctx.store.inTransaction;
         ctx.store.commit();
+        if (kept && state.kind === 'moving' && state.readout !== null) ctx.moved?.(state.readout);
       }
 
       state = { kind: 'idle' };
@@ -328,23 +362,22 @@ export function createSelectTool(): Tool {
       return state.kind === 'moving' ? state.refusal : null;
     },
 
+    readout() {
+      return state.kind === 'moving' ? state.readout : null;
+    },
+
     buildOverlay(ctx): DisplayList {
-      if (state.kind === 'moving' && state.guides !== null && state.aligned !== null) {
-        const { box, targets } = state.guides;
-        const moved = {
-          minX: box.minX + state.delta.x,
-          maxX: box.maxX + state.delta.x,
-          minY: box.minY + state.delta.y,
-          maxY: box.maxY + state.delta.y,
-        };
+      if (state.kind === 'moving' && state.guides !== null) {
+        const pxPerMm = cssPxPerMm(ctx.viewport.toView());
+        const { targets } = state.guides;
+        const moved = RectOps.translate(state.guides.box, state.delta);
         return {
-          items: alignmentOverlay(
-            moved,
-            state.aligned,
-            targets,
-            cssPxPerMm(ctx.viewport.toView()),
-            ctx.alignmentWords,
-          ),
+          items: [
+            ...(state.aligned === null
+              ? []
+              : alignmentOverlay(moved, state.aligned, targets, pxPerMm, ctx.alignmentWords)),
+            ...distanceOverlay(state.readout?.rays ?? [], pxPerMm, ctx.distanceWords),
+          ],
         };
       }
       if (state.kind !== 'band') return { items: [] };
@@ -399,36 +432,61 @@ function guidesFor(project: Project, moving: readonly FeatureId[]): Guides | nul
   const { about } = pieceScope(project, moving);
   const box = about.length === 0 ? null : selectionBox(project, about);
   if (box === null) return null;
-  const outer = (feature: Feature): boolean =>
-    feature.kind === 'cut-contour' && feature.role === 'outer';
-  const owners = new Map(
-    project.parts.flatMap((part) =>
-      part.features.map((feature) => [feature.id, { part, feature }]),
-    ),
+  const features = new Map(
+    project.parts.flatMap((part) => part.features.map((feature) => [feature.id, feature])),
   );
-  const held = about.map((id) => owners.get(id));
+  const held = about.map((id) => features.get(id));
+  const resolved = evaluate(project);
 
-  if (held.every((each) => each !== undefined && outer(each.feature))) {
+  if (held.every((feature) => feature !== undefined && isOutline(feature))) {
     return {
       box,
-      targets: collectAlignTargets(evaluate(project), new Set(moving)),
+      targets: collectAlignTargets(resolved, new Set(moving)),
       centreOnly: false,
+      inside: null,
     };
   }
-  const host = held[0]?.part;
-  if (host === undefined || !held.every((each) => each?.part === host && !outer(each.feature))) {
-    return null;
-  }
-  const only = held.length === 1 ? held[0]?.feature : undefined;
+  const host = hostPart(project, about);
+  if (host === null) return null;
+  const only = held.length === 1 ? held[0] : undefined;
+  const circle =
+    only?.source.kind === 'shape' && only.source.shape.type === 'circle' ? only.source.shape : null;
+  const outline = resolved.parts.find((part) => part.part.id === host.id);
+  const material = outline === undefined ? null : materialOf(outline);
   return {
     box,
     // What moves with the selection — a counterpart across a fold — is not
     // where it will be, so it is no target either.
     targets: collectHostTargets(
-      evaluate(project),
+      resolved,
       host.id,
       new Set([...moving, ...dependentsOf(project, moving)]),
     ),
-    centreOnly: only?.source.kind === 'shape' && only.source.shape.type === 'circle',
+    centreOnly: circle !== null,
+    inside:
+      material === null || material.outer === null
+        ? null
+        : {
+            outline: material.outer,
+            rimMm: circle?.radius ?? null,
+            punched: punchedBy(project, moving),
+          },
+  };
+}
+
+/**
+ * What a move reads now (3.17, spec §7), after its preview: the distance as it
+ * will be stored, and for features inside a piece their four gaps to its
+ * outline and their holes' clearance — read from the previewed document by the
+ * domain's own judgement, so the warning is what Problems lists after the drop.
+ */
+function readoutOf(ctx: ToolContext, guides: Guides | null, delta: Vec2): MoveReadout {
+  const deltaMm = Vec2Ops.quantiseVec(delta);
+  const inside = guides?.inside ?? null;
+  if (guides === null || inside === null) return { deltaMm, rays: [], clearance: null };
+  return {
+    deltaMm,
+    rays: rayDistances(inside.outline, RectOps.translate(guides.box, deltaMm), inside.rimMm),
+    clearance: clearanceOf(evaluate(ctx.store.getState().document.project), inside.punched),
   };
 }

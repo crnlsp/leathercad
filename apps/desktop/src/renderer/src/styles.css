@@ -4211,6 +4211,40 @@ button.problem-row[aria-current='true'] {
   pointer-events: none;
 }
 
+/* A move under way (3.17): how far, and a hole's clearance, beside the pointer
+   in the value chips' pill (U.14) — on the ground, in its ink, so the warning
+   stands apart from the numbers around it. The
+   clearance the rule warns of takes the ground's warning, and its words say
+   the rule, so the tone is never alone. */
+.move-chip {
+  position: absolute;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 3px var(--space-1);
+  border: 1px solid color-mix(in srgb, var(--role-annotation) 45%, var(--ground));
+  border-radius: var(--r-sm);
+  background: var(--ground);
+  color: var(--ink);
+  font: var(--t-label);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.move-clearance[data-tone='warning'] {
+  color: var(--warning-ground);
+  font-weight: 600;
+}
+
+/* The move's distance in the status bar, beside the cursor's place. */
+.status-move {
+  flex: none;
+  color: var(--text);
+  font: var(--t-num-micro);
+}
+
 /* ——— F.7: the legend ——————————————————————————————————————————————————————
    The key to the drawing sits on the drafting ground and speaks its plane: the
    ground, its ink, and the accent's ground value for focus (§5). Top-right,

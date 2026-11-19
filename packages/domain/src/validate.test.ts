@@ -17,7 +17,8 @@ import {
 } from './feature.js';
 import type { Diagnostic } from './problems/index.js';
 import type { RunReport, StitchHoles } from './stitch.js';
-import { MIN_HOLE_EDGE_CLEARANCE_MM, validate } from './validate.js';
+import { materialOf } from './material.js';
+import { MIN_HOLE_EDGE_CLEARANCE_MM, edgeClearance, validate } from './validate.js';
 
 // ——— Builders ————————————————————————————————————————————————————————————
 
@@ -1096,6 +1097,50 @@ describe('a hardware hole is measured by its rim, not its centre (Q33)', () => {
           const after = verdict(holeCodes(outline, hardware(centre, radius * shrink)));
 
           expect(rank[after]).toBeLessThanOrEqual(rank[before]);
+        },
+      ),
+    );
+  });
+
+  it('gives the editor the verdict and clearance validation reports, wherever the hole is (3.17)', () => {
+    // The live readout reads `edgeClearance`; Problems reads `validate`. Not
+    // kept clear of the thresholds: the two must agree to the last bit.
+    fc.assert(
+      fc.property(
+        fc.double({ min: -0.1, max: 1.1, noNaN: true }),
+        fc.double({ min: -0.1, max: 1.1, noNaN: true }),
+        fc.double({ min: 0.5, max: 10, noNaN: true }),
+        fc.boolean(),
+        (u, v, radius, withSlot) => {
+          const slot: Feature = {
+            ...base('hole-1', 'Thumb slot'),
+            kind: 'cut-contour',
+            role: 'inner',
+            source: {
+              kind: 'shape',
+              shape: { type: 'circle', centre: { x: 70, y: 37 }, radius: 12 },
+            },
+          };
+          const features = [panel(105, 75, 8), ...(withSlot ? [slot] : [])];
+          const hole = hardware({ x: 105 * u, y: 75 * v }, radius);
+          const resolved = evaluate(project([...features, hole]));
+          const [part] = resolved.parts;
+          const entry = part!.features.find((each) => each.feature.id === 'rivet-1');
+          if (entry?.ok !== true) throw new Error('the rivet did not resolve');
+
+          const found = edgeClearance(entry, materialOf(part!));
+          const expected = verdict(holeCodes(...features, hole));
+          const said: Verdict =
+            found === null || found.off.length > 0
+              ? 'outside'
+              : found.tight.length > 0
+                ? 'too-close'
+                : 'fine';
+
+          expect(said).toBe(expected);
+          if (expected === 'too-close') {
+            expect(found?.clearanceMm).toBe(clearanceOf(...features, hole));
+          }
         },
       ),
     );

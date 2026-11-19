@@ -1,7 +1,7 @@
 # Smart guides, nudging and exact placement — design for 1.7 (3.13 – 3.20)
 
 **Status:** design, for the 1.7 plan ([`2026-11-03-release-1.7.md`](../plans/2026-11-03-release-1.7.md)).
-Built so far: §3 (3.13), §4 (3.14, 3.15), §5 (3.20) and §6, for whole pieces (3.16) and inside a piece (3.18). Where this and the code disagree once a slice lands, the slice updates this
+Built so far: §3 (3.13), §4 (3.14, 3.15), §5 (3.20), §6, for whole pieces (3.16) and inside a piece (3.18), §7 and §11's announcement (3.17). Where this and the code disagree once a slice lands, the slice updates this
 file in the same pull request.
 
 **What it covers:** picking a piece by its body (3.13), keyboard movement (3.14), typed position
@@ -237,6 +237,25 @@ While a move is under way:
 Labels hide when the gap they measure is under 24 CSS px on screen, so a zoomed-out board is not
 covered in numbers.
 
+*As built in 3.17:* `packages/editor/src/distances.ts`. The move's Δ and a hole's clearance are in
+a chip beside the pointer (the DOM, in the value chips' pill and the ground's ink), Δ also in the
+status bar beside the cursor's place; the four gaps are drawn on the board, in the tools' live
+colour, each label left of an upright line so the chip does not cover it. A ray is cast from the
+middle of each side of the extent, or for a single hole from its centre, less its radius, so a rim
+on the edge still finds it; it crosses the outline only, not cut-outs. The clearance is
+`edgeClearance`, exported from `validate.ts` and now the one judgement `OUTSIDE_PART` (holes) and
+`HOLE_TOO_CLOSE_TO_EDGE` are made from, read from the previewed document — what moves and what
+moves with it, a rivet's counterpart across a fold included — so the readout and Problems agree by
+construction; a property drives the Select tool to random drops and holds them equal. Its states:
+*N mm from the edge*, *N mm from the edge · Too near the edge* in the ground's warning tone, and
+*Off the material* for a hole whose cut leaves the leather — a rim, or since Q46 a stitch tooth, through an edge. A whole piece reads its Δ alone: its
+holes' clearance does not change as it moves. Work per move: four ray crossings, each a scan of
+the outline's segment boxes and the exact crossing of those that meet the ray, and one clearance
+per moved hole; on the 1,000-point traced outline 1.98 ms a move
+(`editor/readout-drag-host-traced-1000`, one run on the Linux development machine), beside the
+5.9 ms a piece carried beside that outline already pays to evaluate and index its snaps
+(`editor/snap-drag-beside-traced`, the same run).
+
 ## 8. Equal spacing (3.19)
 
 When a piece (or a feature inside a piece) is moved along one axis between two neighbours whose
@@ -283,6 +302,13 @@ by Tab and the Parts tree, nudge (3.14), type X/Y or Move by (3.15), Align and D
 and a hardware hole's typed centre. When a move commits, the existing announcer says what moved
 and where it ended ("Rivet moved 12.0 mm right; 3.5 mm from the edge"). Colour is never the only
 sign: a warning label carries the rule's words, not only the tone.
+
+*As built in 3.17:* the live region is the board's own (`move-announcer`, polite), beside the
+project bar's: a kept drag or nudge says "Moved 12.0 mm right and 3.0 mm down; 3.50 mm from the
+edge." — the directions, and the clearance in the readout's words when holes moved inside a piece.
+What moved is not named: the selection says it, and a piece and a feature would need two
+sentences for no new fact. Each announcement is a new node, so two equal nudges are both said. A
+refused move says its refusal, as before, and nothing more.
 
 ## 12. Correctness rules
 

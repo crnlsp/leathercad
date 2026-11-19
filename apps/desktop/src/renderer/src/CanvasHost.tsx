@@ -31,6 +31,7 @@ import {
   type EditPointsOptions,
   type HardwareOptions,
   type MakerDefaults,
+  type MoveReadout,
   type PointerInput,
   type SizeDraft,
   type Viewport,
@@ -56,6 +57,7 @@ import { flushSync } from 'react-dom';
 import { selectedParts } from './sheetContents.js';
 import { useI18n } from './i18n.js';
 import { describeProblem } from './problemText.js';
+import { announceMove, clearanceWords, deltaWords, gapWords } from './moveWords.js';
 import type { RightClicked } from './contextMenu.js';
 import { designContent } from './designContent.js';
 import { CanvasFrames } from './canvasFrames.js';
@@ -214,6 +216,7 @@ export function CanvasHost({
   nextId,
   onStatus,
   cursor,
+  move,
   panelOver = null,
   selectionBar = null,
   cameras,
@@ -268,6 +271,12 @@ export function CanvasHost({
    * the Sheets view.
    */
   cursor: PointerValue<Vec2 | null>;
+  /**
+   * The move under way and how near the edges it is (3.17), for the chip
+   * beside the pointer and the status bar: set each frame a move draws, kept
+   * out of the status for the cursor's reason (PERF-007). Null between moves.
+   */
+  move: PointerValue<MoveReadout | null>;
   /** A panel open over the board (U.5), by its class: the value chips keep clear of it. */
   panelOver?: string | null;
   /**
@@ -604,6 +613,8 @@ export function CanvasHost({
     [nextId],
   );
 
+  /** What the live region last said of a move kept (3.17), and how many have been. */
+  const [announced] = useState(() => new PointerValue<Announcement | null>(null));
   const managerRef = useRef<ToolManager | null>(null);
   if (managerRef.current === null) {
     managerRef.current = new ToolManager(
@@ -617,6 +628,12 @@ export function CanvasHost({
         smartGuides: () => smartGuidesRef.current,
         alignmentWords: (label) =>
           tRef.current(label === 'centre' ? 'alignment.centre' : 'alignment.extentCentre'),
+        distanceWords: gapWords,
+        moved: (readout) =>
+          announced.set({
+            words: announceMove(readout, i18nRef.current),
+            count: (announced.get()?.count ?? 0) + 1,
+          }),
         requestDelete: (ids) => requestDeleteRef.current(ids),
         requestDeletePart: (partId) => requestDeletePartRef.current(partId),
       },
@@ -767,13 +784,14 @@ export function CanvasHost({
     // when it says the same thing stops the chrome re-rendering every frame.
     const next = managerRef.current?.notice() ?? null;
     setNotice((current) => (sameProblem(current, next) ? current : next));
+    move.set(managerRef.current?.readout() ?? null);
     // The shape being typed over, for the chips and for Properties (U.16): set
     // only when a number moved, not on every frame.
     const sizing = managerRef.current?.sizing() ?? null;
     setDrawing((current) => (sameDraft(current, sizing) ? current : sizing));
     setUnderway(managerRef.current?.underway() ?? false);
     renderRulers(context, view, DEFAULT_RULER_STYLE, pointerRef.current);
-  }, [store, paintSheets, chipRoom, content]);
+  }, [store, paintSheets, chipRoom, content, move]);
 
   useEffect(() => frames.start(paint), [frames, paint]);
 
@@ -871,7 +889,13 @@ export function CanvasHost({
   }, [notice, onStatus, sheetUnder, zoom, drawing, underway]);
 
   // The readout is the window's: blank once this board goes, for another tab or for none.
-  useEffect(() => () => cursor.set(null), [cursor]);
+  useEffect(
+    () => () => {
+      cursor.set(null);
+      move.set(null);
+    },
+    [cursor, move],
+  );
 
   // Keyboard goes to the document: the board is one Tab stop (U.14), but
   // Escape or Delete should work wherever focus and the pointer happen to be.
@@ -1336,6 +1360,8 @@ export function CanvasHost({
       {notice !== null && (
         <CanvasNotice problem={notice} pointer={pointerCss} bounds={containerSize} />
       )}
+      <MoveChip move={move} pointer={pointerCss} bounds={containerSize} />
+      <MoveAnnouncer said={announced} />
     </div>
   );
 }
@@ -1393,6 +1419,88 @@ function CanvasNotice({
       }}
     >
       {describeProblem(problem, t)}
+    </div>
+  );
+}
+
+/** A move kept, as the live region says it: counted, so the same words are said again. */
+interface Announcement {
+  readonly words: string;
+  readonly count: number;
+}
+
+/**
+ * How far a move has gone, and a hole's clearance from the edge, beside the
+ * pointer while it goes (3.17, smart-guides spec §7). The clearance carries
+ * the rule's name where the rule warns of it, in the warning tone besides.
+ * Not live: the live region says the move once it is kept.
+ */
+function MoveChip({
+  move,
+  pointer,
+  bounds,
+}: {
+  move: PointerValue<MoveReadout | null>;
+  pointer: PointerValue<CssPoint | null>;
+  bounds: { width: number; height: number };
+}) {
+  const readout = usePointerValue(move);
+  // Only a move under way follows the pointer: a hover renders nothing here (PERF-007).
+  return readout === null ? null : (
+    <MoveChipAt readout={readout} pointer={pointer} bounds={bounds} />
+  );
+}
+
+function MoveChipAt({
+  readout,
+  pointer,
+  bounds,
+}: {
+  readout: MoveReadout;
+  pointer: PointerValue<CssPoint | null>;
+  bounds: { width: number; height: number };
+}) {
+  const { t } = useI18n();
+  const at = usePointerValue(pointer);
+  if (at === null) return null;
+  const { clearance } = readout;
+  const right = at.x + 16 + NOTICE_WIDTH_PX > bounds.width;
+  const below = at.y + 20 + NOTICE_HEIGHT_PX > bounds.height;
+  return (
+    <div
+      className="move-chip"
+      data-testid="move-chip"
+      style={{
+        left: right ? undefined : at.x + 16,
+        right: right ? Math.max(8, bounds.width - at.x + 12) : undefined,
+        top: below ? undefined : at.y + 20,
+        bottom: below ? Math.max(8, bounds.height - at.y + 12) : undefined,
+      }}
+    >
+      <span data-testid="move-delta">{deltaWords(readout, t)}</span>
+      {clearance !== null && (
+        <span
+          className="move-clearance"
+          data-testid="move-clearance"
+          data-tone={clearance.verdict === 'clear' ? undefined : 'warning'}
+        >
+          {clearanceWords(clearance, t)}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Says a move once it is kept — a drag's or a nudge's — in the readout's words
+ * (smart-guides spec §11). A fresh node for each, keyed by its count, so two
+ * nudges of the same step are both said.
+ */
+function MoveAnnouncer({ said }: { said: PointerValue<Announcement | null> }) {
+  const announcement = usePointerValue(said);
+  return (
+    <div className="visually-hidden" aria-live="polite" data-testid="move-announcer">
+      {announcement !== null && <span key={announcement.count}>{announcement.words}</span>}
     </div>
   );
 }

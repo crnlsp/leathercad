@@ -82,7 +82,9 @@ export { draftDimensionLine } from './dimensionLine.js';
 
 export { motionBetween, transformShape, transformTextSource } from './transformShape.js';
 
+export type { EdgeClearance } from './validate.js';
 export {
+  edgeClearance,
   MIN_HOLE_EDGE_CLEARANCE_MM,
   MIN_HOLES_IN_A_SET,
   SPACING_DEVIATION_FRACTION,

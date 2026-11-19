@@ -10,6 +10,7 @@ import {
   type Page,
 } from '@playwright/test';
 
+import { boardMap } from '../boardMap.js';
 import { closeApp } from '../closeApp.js';
 import { fromProjectMenu } from '../projectMenu.js';
 import { drawAPanel, freshStateHome } from '../launchApp.js';
@@ -266,6 +267,48 @@ test('a piece moved into line with another, its smart guide drawn (3.16)', async
     );
     expect(Buffer.from(png, 'base64')).toMatchSnapshot('smart-guide-move.png');
     await window.mouse.up();
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('a rivet carried near the key fob’s edge, its gaps and its clearance read (3.17)', async () => {
+  const { app, window } = await launch();
+  try {
+    await fromProjectMenu(window, 'new-template');
+    await window.getByTestId('template-builtin:key-fob').dblclick();
+    await expect(window.getByTestId('project-name')).toHaveText('Key fob');
+    await window.getByTestId('tool-select').click();
+    const board = await boardMap(window);
+    const canvas = window.getByTestId('editor-canvas');
+    const box = await canvas.boundingBox();
+    if (box === null) throw new Error('canvas is missing');
+    // Pressed on the rivet's rim at 0°, carried 20 mm right and 10 mm up with
+    // Ctrl held: its rim 1 mm under the strap's top edge, warned of.
+    const from = board({ x: 16, y: 13 });
+    const to = board({ x: 36, y: 23 });
+    await window.mouse.move(from.x, from.y);
+    await window.mouse.down();
+    await window.keyboard.down('Control');
+    await window.mouse.move(to.x, to.y, { steps: 5 });
+    await expect(window.getByTestId('move-clearance')).toHaveAttribute('data-tone', 'warning');
+    // Electron's own capture, as for 3.16's: held mid-drag.
+    const png = await app.evaluate(
+      async ({ BrowserWindow }, rect) => {
+        const page = BrowserWindow.getAllWindows()[0];
+        if (page === undefined) throw new Error('app window required');
+        return (await page.webContents.capturePage(rect)).toPNG().toString('base64');
+      },
+      {
+        x: Math.round(box.x),
+        y: Math.round(box.y),
+        width: Math.round(box.width),
+        height: Math.round(box.height),
+      },
+    );
+    expect(Buffer.from(png, 'base64')).toMatchSnapshot('live-distances-move.png');
+    await window.mouse.up();
+    await window.keyboard.up('Control');
   } finally {
     await closeApp(app);
   }
