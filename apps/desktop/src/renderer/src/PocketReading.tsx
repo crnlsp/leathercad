@@ -9,7 +9,8 @@ import { useI18n } from './i18n.js';
  * Nothing at all for stitching that makes no pocket — a strap's straight run
  * is the commonest open line, and a note there would only be noise — unless
  * the maker said what it holds (`stated`): then Properties keeps the section,
- * with no reading, so the requirement can be seen and taken away (9.14b).
+ * with no reading, so the requirement can be seen and taken away (9.14b) —
+ * also while the stitch line fails to build and there is no path (Q49).
  */
 export function PocketReading({
   path,
@@ -17,14 +18,14 @@ export function PocketReading({
   stated = false,
   children,
 }: {
-  path: Path;
+  path: Path | null;
   compact?: boolean;
   stated?: boolean;
   /** What the pocket holds, under the reading in Properties. */
   children?: ReactNode;
 }) {
   const { t, locale } = useI18n();
-  const size = useMemo(() => pocketSize(path), [path]);
+  const size = useMemo(() => (path === null ? null : pocketSize(path)), [path]);
   if (size === null && (compact || !stated)) return null;
   const number = new Intl.NumberFormat(locale, { maximumFractionDigits: 2 });
   const reading = size !== null && (

@@ -2,7 +2,6 @@ import type { Mm } from '@leathercad/core';
 import {
   ID1_CARD,
   contentSize,
-  depthBelowOpening,
   type PocketRequirement,
   type ResolvedPart,
 } from '@leathercad/domain';
@@ -44,20 +43,4 @@ export function outlineOf(part: ResolvedPart | undefined): Path | null {
     (f) => f.feature.kind === 'cut-contour' && f.feature.role === 'outer',
   );
   return entry?.ok === true ? entry.path : null;
-}
-
-/**
- * How far the content stands above the pocket's opening — negative when it
- * goes in below it — or null when no opening is found. Geometric, as the
- * template audit gives it: the card holder's 53.98 mm card shows 9.6313 mm.
- * Ease is not subtracted; it is room around the content, not part of it.
- */
-export function standsProud(
-  stitch: Path,
-  outline: Path | null,
-  holds: PocketRequirement,
-): Mm | null {
-  if (outline === null) return null;
-  const depthMm = depthBelowOpening(stitch, outline);
-  return depthMm === null ? null : contentSize(holds.content).heightMm - depthMm;
 }

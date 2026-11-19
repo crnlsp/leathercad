@@ -4,6 +4,7 @@ import { EPS_LENGTH } from '@leathercad/core';
 import {
   diagnose,
   evaluate,
+  pocketOpening,
   type Feature,
   type PocketRequirement,
   type Project,
@@ -11,7 +12,7 @@ import {
 import { loadProject } from '@leathercad/persist';
 import { describe, expect, it } from 'vitest';
 
-import { choiceOf, outlineOf, standsProud, withChoice } from './pocketRequirement.js';
+import { choiceOf, outlineOf, withChoice } from './pocketRequirement.js';
 
 const shipped = (name: string): Project =>
   loadProject(
@@ -47,18 +48,25 @@ describe('the shipping pockets against a payment card (9.14b)', () => {
   });
 
   it.each([
-    // The template audit's figure: 53.98 − 44.3487 mm from the bottom stitching to the opening.
-    ['card-holder', 9.6313],
-    // 53 mm of stitching stopping 4 mm under the square opening: the card goes in 3.02 mm below it.
-    ['bifold-wallet', -3.02],
-  ])('reads how far a card in the %s stands above its opening', (name, expected) => {
-    const project = holding(shipped(name), card(0));
-    const part = evaluate(project).parts.find((p) => p.part.id === 'pocket');
-    const stitch = part?.features.find((f) => f.feature.id === 'pocket-stitch');
-    if (stitch?.ok !== true) throw new Error('the shipping pocket stitching must resolve');
-    const proud = standsProud(stitch.path, outlineOf(part), card(0));
-    expect(Math.abs((proud ?? Infinity) - expected)).toBeLessThanOrEqual(EPS_LENGTH);
-  });
+    // The template audit's figure: 44.3487 mm from the bottom stitching to an opening 3 mm up.
+    ['card-holder', 44.3487, 3],
+    // 53 mm of stitching stopping 4 mm under the square opening.
+    ['bifold-wallet', 57, 4],
+  ])(
+    'reads the %s pocket to its own piece’s edge, and how far above the stitch ends it is',
+    (name, depthMm, riseMm) => {
+      const part = evaluate(holding(shipped(name), card(0))).parts.find(
+        (p) => p.part.id === 'pocket',
+      );
+      const stitch = part?.features.find((f) => f.feature.id === 'pocket-stitch');
+      const outline = outlineOf(part);
+      if (stitch?.ok !== true || outline === null)
+        throw new Error('the shipping pocket must resolve');
+      const opening = pocketOpening(stitch.path, outline);
+      expect(Math.abs((opening?.depthMm ?? Infinity) - depthMm)).toBeLessThanOrEqual(EPS_LENGTH);
+      expect(Math.abs((opening?.riseMm ?? Infinity) - riseMm)).toBeLessThanOrEqual(EPS_LENGTH);
+    },
+  );
 });
 
 describe('the Holds menu', () => {

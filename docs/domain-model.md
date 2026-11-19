@@ -1188,16 +1188,17 @@ payment card (ID-1, 85.60 × 53.98 mm, `ID1_CARD`) or a typed width and height, 
 DR8 checks it on every evaluation and stores nothing it finds.
 
 - `POCKET_TOO_NARROW` when `pocketSize`'s width is under the content's width plus the ease.
-- With `fully`, `POCKET_TOO_SHALLOW` when `depthBelowOpening` is under the content's height. The
+- With `fully`, `POCKET_TOO_SHALLOW` when `pocketOpening`'s depth is under the content's height. The
   ease is not counted there (D22): it is the leather wrapping the content's faces, which costs
   width. Without `fully`, depth is not judged (D15).
 - `POCKET_NOT_MEASURABLE` when there is a requirement and no reading to check it against: the
   stitching has no `pocketSize`, or, held fully, no opening is found. A requirement is never
   passed silently.
 
-**The opening** (`depthBelowOpening`) is read from the leather, not assumed at the stitch ends:
+**The opening** (`pocketOpening`) is read from the leather, not assumed at the stitch ends:
 from each stitch end, straight out of the pocket and square to the endpoint chord, to the part's
-outline, and the lower of the two. The card holder's is 3 mm above its stitch ends, so 44.3487 mm
+outline, and the lower of the two. It gives the depth below the opening and the opening's rise
+above the stitch ends, so Properties can say what a reading measured to (Q49). The card holder's is 3 mm above its stitch ends, so 44.3487 mm
 below it; the bifold's 4 mm, so 57 mm. A thumb scoop between the sides does not lower it; one that
 reaches over a side does. Cut-outs are not read, so a pocket entered through a slit cut into the
 piece reads its depth to the outer edge and overstates it (D21's limit). A stitch end off the

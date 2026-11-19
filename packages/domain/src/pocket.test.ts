@@ -12,7 +12,10 @@ import {
 } from '@leathercad/geometry';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { ID1_CARD, contentSize, depthBelowOpening, pocketSize } from './pocket.js';
+import { ID1_CARD, contentSize, pocketOpening, pocketSize } from './pocket.js';
+
+const depthBelowOpening = (stitch: Path, outline: Path) =>
+  pocketOpening(stitch, outline)?.depthMm ?? null;
 
 const u = (width: number, depth: number): Path =>
   PathOps.polyline([
@@ -207,7 +210,7 @@ const piece = (width: number, height: number, inset: number, rise: number) => ({
 });
 const placed = (path: Path, matrix: Mat2x3) => PathOps.transform(path, matrix);
 
-describe('depthBelowOpening', () => {
+describe('pocketOpening', () => {
   it('reads from the opening the leather makes, not from the stitch ends', () => {
     const { outline, stitch } = piece(99, 47.3487, 3, 3);
     close(depthBelowOpening(stitch, outline) ?? undefined, 44.3487);
@@ -230,7 +233,10 @@ describe('depthBelowOpening', () => {
           );
           const moved = placed(stitch, matrix);
           for (const candidate of [moved, PathOps.reverse(moved)]) {
-            close(depthBelowOpening(candidate, placed(outline, matrix)) ?? undefined, depth + rise);
+            const opening = pocketOpening(candidate, placed(outline, matrix));
+            close(opening?.depthMm, depth + rise);
+            // The rise is said on its own (Q49): how far above the stitch ends the edge is.
+            close(opening?.riseMm, rise);
           }
         },
       ),
@@ -251,6 +257,7 @@ describe('depthBelowOpening', () => {
     // The ray from the left end meets the slanted top 2.0566 mm up, the right 7.9434.
     const leftRise = 2 + (3 * 6) / 106;
     close(depthBelowOpening(stitch, outline) ?? undefined, 40 + leftRise);
+    close(pocketOpening(stitch, outline)?.riseMm, leftRise);
   });
 
   it('is not lowered by a thumb scoop between the sides', () => {
@@ -270,6 +277,36 @@ describe('depthBelowOpening', () => {
   it('is the stitch depth when the stitching ends on the cut edge', () => {
     const { outline, stitch } = piece(99, 43, 3, 0);
     close(depthBelowOpening(stitch, outline) ?? undefined, 40);
+    expect(pocketOpening(stitch, outline)?.riseMm).toBe(0);
+  });
+
+  it('is always the stitch depth plus a rise that is never negative', () => {
+    // Whatever the outline above the stitch ends, the opening only adds to the stitching's own depth.
+    fc.assert(
+      fc.property(
+        fc.double({ min: 10, max: 200, noNaN: true }),
+        fc.double({ min: 5, max: 100, noNaN: true }),
+        fc.double({ min: 0, max: 30, noNaN: true }),
+        fc.double({ min: 0, max: 30, noNaN: true }),
+        (width, depth, leftTop, rightTop) => {
+          const stitch = u(width, depth);
+          const outline = PathOps.polyline(
+            [
+              { x: -3, y: leftTop },
+              { x: -3, y: -depth - 3 },
+              { x: width + 3, y: -depth - 3 },
+              { x: width + 3, y: rightTop },
+            ],
+            true,
+          );
+          const opening = pocketOpening(stitch, outline);
+          const size = pocketSize(stitch);
+          expect(opening).not.toBeNull();
+          expect(opening?.riseMm ?? -1).toBeGreaterThanOrEqual(0);
+          close(opening?.depthMm, (size?.depthMm ?? NaN) + (opening?.riseMm ?? NaN));
+        },
+      ),
+    );
   });
 
   it.each([
@@ -297,13 +334,13 @@ describe('depthBelowOpening', () => {
       Shapes.rect({ x: -3, y: -43 }, 106, 47),
     ],
   ])('has no opening for %s', (_name, stitch, outline) => {
-    expect(depthBelowOpening(stitch, outline)).toBeNull();
+    expect(pocketOpening(stitch, outline)).toBeNull();
   });
 
   it('does not mutate either path', () => {
     const { outline, stitch } = piece(99, 47, 3, 3);
     const before = structuredClone({ outline, stitch });
-    depthBelowOpening(stitch, outline);
+    pocketOpening(stitch, outline);
     expect({ outline, stitch }).toEqual(before);
   });
 });

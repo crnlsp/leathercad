@@ -267,13 +267,18 @@ export function PropertyPanel({
         {resolved?.ok === true && feature.kind === 'stitch-hole-set' && (
           <PocketReading path={resolved.path} />
         )}
-        {resolved?.ok === true && feature.kind === 'stitch-line' && (
-          // What it holds is the stitch line's, so it is said here and not on its holes.
-          <PocketReading path={resolved.path} stated={feature.holds !== undefined}>
+        {resolved !== undefined && feature.kind === 'stitch-line' && (
+          // What it holds is the stitch line's, so it is said here and not on its holes;
+          // and while the line fails to build, it is still shown, to be seen and taken away (L3).
+          <PocketReading
+            path={resolved.ok ? resolved.path : null}
+            stated={feature.holds !== undefined}
+          >
             <PocketRequirementEditor
               store={store}
               feature={feature}
-              path={resolved.path}
+              piece={part.name}
+              path={resolved.ok ? resolved.path : null}
               outline={outlineOf(resolvedFor(project).parts.find((p) => p.part.id === part.id))}
               makerEaseMm={tools.pocketEaseMm}
             />

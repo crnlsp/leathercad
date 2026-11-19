@@ -20,7 +20,7 @@ import {
 import { Bench } from '../harness/bench.js';
 import { checkMatrixClaims } from '../harness/coverage.js';
 import type { Expected } from '../harness/expectDiagnostics.js';
-import { cardPocket, depthFromOpening, stitchReading } from './support.js';
+import { cardPocket, depthFromOpening, openingOf, stitchReading } from './support.js';
 
 /**
  * A card pocket, from a blank project (scenarios B, C, E and F).
@@ -214,7 +214,11 @@ describe('E — a requirement on stitching that makes no measurable pocket', () 
     const bench = new Bench()
       .do(...panelStitchedThrough(), holdsCard(stitchOf('panel'), 2, true))
       .expect([]);
-    expect(depthFromOpening(bench.project, 'panel', stitchOf('panel'))).toBe(117);
+    // Properties says what this pass measured to (Q49): Panel's edge, 78 mm above the stitch ends.
+    expect(openingOf(bench.project, 'panel', stitchOf('panel'))).toEqual({
+      depthMm: 117,
+      riseMm: 78,
+    });
   });
 
   it('SF-E6 · the same pocket with its own stitching, the requirement on it, is too shallow by its own edge', () => {

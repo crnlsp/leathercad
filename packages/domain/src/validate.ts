@@ -15,7 +15,7 @@ import type { Feature, FeatureId, PartId, Tooth } from './feature.js';
 import type { ResolvedFeature, ResolvedProject } from './evaluate.js';
 import { distanceToEdge, isOnMaterial, materialOf, type Material } from './material.js';
 import { hasOuterContour } from './partStructure.js';
-import { contentSize, depthBelowOpening, pocketSize } from './pocket.js';
+import { contentSize, pocketOpening, pocketSize } from './pocket.js';
 import type { StitchHole, StitchHoles } from './stitch.js';
 import { toothOutline } from './tooth.js';
 import {
@@ -308,7 +308,7 @@ function pocketFit(
     );
   }
   if (!fully) return found;
-  const depthMm = outer === null ? null : depthBelowOpening(entry.path, outer);
+  const depthMm = outer === null ? null : (pocketOpening(entry.path, outer)?.depthMm ?? null);
   if (depthMm === null) {
     found.push(here(problem('POCKET_NOT_MEASURABLE', { ...about, reading: 'opening' })));
     return found;

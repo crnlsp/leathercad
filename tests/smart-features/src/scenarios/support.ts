@@ -1,5 +1,5 @@
 import {
-  depthBelowOpening,
+  pocketOpening,
   evaluate,
   pocketSize,
   type FeatureId,
@@ -67,7 +67,12 @@ export function stitchReading(project: Project, stitch: FeatureId): PocketSize |
 
 /** The depth from the opening the leather makes to the farthest stitching, as DR8 reads it. */
 export function depthFromOpening(project: Project, piece: string, stitch: FeatureId) {
+  return openingOf(project, piece, stitch)?.depthMm ?? null;
+}
+
+/** The opening as Properties says it: the depth below it, and its rise above the stitch ends (Q49). */
+export function openingOf(project: Project, piece: string, stitch: FeatureId) {
   const path = pathOf(project, stitch);
   const outline = pathOf(project, outlineOf(piece));
-  return path === null || outline === null ? null : depthBelowOpening(path, outline);
+  return path === null || outline === null ? null : pocketOpening(path, outline);
 }

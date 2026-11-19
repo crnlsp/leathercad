@@ -21,6 +21,7 @@ import {
   setInset,
   sew,
   stitchAllRound,
+  statesNothing,
   stitchOf,
 } from '../harness/actions.js';
 import { Bench } from '../harness/bench.js';
@@ -37,30 +38,28 @@ import { cardPocket } from './support.js';
 checkMatrixClaims();
 
 describe('X — what a check reads cannot be built', () => {
-  it('SF-X1 · stitching inset past its piece fails at the root, its requirement waits unchecked, and is checked again once it builds', () => {
+  it('SF-X1 · stitching inset past its piece fails at the root, its requirement waits unchecked, is checked again once it builds, and can be taken away while it fails', () => {
     // 90 mm wide: a 46 mm inset meets itself. The holes follow the line that
     // failed. The requirement is not judged while there is no line to judge,
     // and is not lost: brought back to 3 mm, the pocket is too narrow again.
+    const collapsed = [
+      {
+        code: 'OFFSET_COLLAPSED',
+        severity: 'error',
+        on: stitchOf('pocket'),
+        facts: { distanceMm: 46 },
+      },
+      {
+        code: 'SOURCE_FAILED',
+        severity: 'error',
+        on: holesOf('pocket'),
+        related: [stitchOf('pocket')],
+      },
+    ] as const;
     const bench = new Bench()
       .do(...cardPocket('pocket', { width: 90, height: 60 }), holdsCard(stitchOf('pocket'), 2))
       .do(setInset('pocket', 46))
-      .expect(
-        [
-          {
-            code: 'OFFSET_COLLAPSED',
-            severity: 'error',
-            on: stitchOf('pocket'),
-            facts: { distanceMm: 46 },
-          },
-          {
-            code: 'SOURCE_FAILED',
-            severity: 'error',
-            on: holesOf('pocket'),
-            related: [stitchOf('pocket')],
-          },
-        ],
-        'with the stitching collapsed',
-      );
+      .expect(collapsed, 'with the stitching collapsed');
     expect(findFeature(bench.project, stitchOf('pocket'))?.feature).toMatchObject({
       holds: { content: { kind: 'id-1' }, easeMm: 2 },
     });
@@ -75,6 +74,20 @@ describe('X — what a check reads cannot be built', () => {
       ],
       'with the stitching back',
     );
+
+    // L3 (Q49): Properties keeps *Holds* while the line fails, so the maker can
+    // take it away there, in one undo step. Undone, it is back and still
+    // waiting; taken away again and the line rebuilt, nothing is checked.
+    bench
+      .do(setInset('pocket', 46))
+      .do(statesNothing(stitchOf('pocket')))
+      .expect(collapsed, 'taken away while the stitching is collapsed');
+    expect(findFeature(bench.project, stitchOf('pocket'))?.feature).not.toHaveProperty('holds');
+    bench.undo().expect(collapsed, 'taking it away undone');
+    expect(findFeature(bench.project, stitchOf('pocket'))?.feature).toMatchObject({
+      holds: { content: { kind: 'id-1' }, easeMm: 2 },
+    });
+    bench.redo().do(setInset('pocket', 3)).expect([], 'the stitching back, with nothing stated');
   });
 
   it('SF-X2 · a tooth longer than the iron’s pitch fails its hole set, its seam says the side is missing, and a true tooth mends both', () => {
