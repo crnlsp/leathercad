@@ -428,6 +428,18 @@ test('SF-UI4 · Stitched sides names the open side of a rectangle, and the board
     await expect.poll(async () => (await boardPixels(window)).equals(before)).toBe(false);
     await panel.getByLabel('Edge margin').focus();
     await expect.poll(async () => (await boardPixels(window)).equals(before)).toBe(true);
+
+    // Chosen by corners instead, the select says so while they are edited,
+    // even when the pair chosen is a named side: it never jumps to the name.
+    await sides.selectOption('between');
+    await expect(sides).toHaveValue('between');
+    await expect(panel.getByLabel('From corner', { exact: true })).toHaveValue('0');
+    await expect(panel.getByLabel('To corner', { exact: true })).toHaveValue('3');
+    await panel.getByLabel('From corner', { exact: true }).selectOption({ label: 'Corner 3' });
+    await panel.getByLabel('To corner', { exact: true }).selectOption({ label: 'Corner 2' });
+    await expect(sides).toHaveValue('between');
+    await expect(panel.getByLabel('To corner', { exact: true })).toHaveValue('1');
+    await expect(panel.getByTestId('pocket-width')).toHaveText('94 mm');
   } finally {
     await window.screenshot({ path: test.info().outputPath('open-at-the-top.png') });
     await closeApp(app);

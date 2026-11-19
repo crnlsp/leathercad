@@ -56,8 +56,13 @@ export function StitchLineEditor({
     if (reason === null) onChange(next);
   };
   const run = op.run;
+  // Chosen by corners, it reads *Between corners* while the maker edits them,
+  // even through a pair that is a named side: the select never jumps under
+  // them. A run opened, or chosen by name, reads as its side.
+  const [byCorners, setByCorners] = useState(false);
   const named = sides?.find(
     ([, side]) =>
+      !byCorners &&
       run.kind === 'between' &&
       side.fromAnchor === run.fromAnchor &&
       side.toAnchor === run.toAnchor,
@@ -103,6 +108,7 @@ export function StitchLineEditor({
               aria-label={t('editor.run.label')}
               value={named === undefined ? run.kind : `open-${named[0]}`}
               onChange={(event) => {
+                setByCorners(event.target.value === 'between');
                 const first = anchors[0];
                 const second = anchors.at(-1);
                 const side = sides?.find(([name]) => `open-${name}` === event.target.value);
