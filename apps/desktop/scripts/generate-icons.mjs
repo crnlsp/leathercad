@@ -46,7 +46,10 @@ function render(svg, size) {
 
 /** Windows' icon: PNG-compressed 16–256 px images in one file. */
 function writeIco(svg, file) {
-  execFileSync('magick', [...[16, 24, 32, 48, 64, 128, 256].map((size) => render(svg, size)), file]);
+  execFileSync('magick', [
+    ...[16, 24, 32, 48, 64, 128, 256].map((size) => render(svg, size)),
+    file,
+  ]);
 }
 
 /**
