@@ -413,12 +413,12 @@ test('SF-UI4 · Stitched sides names the open side of a rectangle, and the board
     await expect(panel.getByLabel('From corner', { exact: true })).toHaveValue('2');
     await expect(panel.getByLabel('To corner', { exact: true })).toHaveValue('1');
     await expect(panel.getByTestId('pocket-width')).toHaveText('94 mm');
-    // A card held fully sits below the opening the run leaves: the opening is
-    // above the stitch ends, not the bottom between them.
+    // Held fully, the depth is read from the opening the run leaves, which is
+    // the panel's edge at the stitch ends: 57 mm down, nothing above them.
     await panel.getByTestId('pocket-holds').selectOption('id-1');
     await panel.getByTestId('pocket-fully').check();
-    await expect(panel.getByTestId('pocket-proud')).toHaveText(
-      'What it holds goes 3.02 mm below the opening.',
+    await expect(panel.getByTestId('pocket-down')).toHaveText(
+      "57 mm below Panel's edge, 0 mm above the stitch ends; 53.98 mm stated.",
     );
     await expectNoViolations(window, 'Stitched sides named on a rectangle');
 
