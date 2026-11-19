@@ -13,6 +13,7 @@ import {
   type Part,
   type PocketRequirement,
   type Project,
+  type Tooth,
 } from './feature.js';
 import type { Diagnostic } from './problems/index.js';
 import type { RunReport, StitchHoles } from './stitch.js';
@@ -1202,6 +1203,308 @@ describe('a mirrored hardware hole is checked like its original (Q45)', () => {
     );
   });
 });
+
+// ——— A stitch tooth is the hole it cuts (Q46) —————————————————————————————————
+
+describe('a stitch tooth that cuts through the edge is off the leather (Q46)', () => {
+  /** Turns a point about the origin, so a piece can face any way. */
+  const turn = (p: Vec2, angle: number): Vec2 => ({
+    x: p.x * Math.cos(angle) - p.y * Math.sin(angle),
+    y: p.x * Math.sin(angle) + p.y * Math.cos(angle),
+  });
+
+  /** A 100 × 60 square-cornered piece, turned by `angle`. */
+  const piece = (angle = 0): Feature =>
+    drawn(
+      'cut-contour',
+      [
+        { x: 0, y: 0 },
+        { x: 100, y: 0 },
+        { x: 100, y: 60 },
+        { x: 0, y: 60 },
+      ].map((p) => turn(p, angle)),
+      true,
+    );
+
+  /** A straight stitch line `inset` above the bottom edge, drawn left to right. */
+  const alongTheBottom = (inset: number, angle = 0): Feature =>
+    drawn(
+      'stitch-line',
+      [
+        { x: 20, y: inset },
+        { x: 80, y: inset },
+      ].map((p) => turn(p, angle)),
+      false,
+    );
+
+  const toothedHoles = (tooth: Tooth, pitchMm = 3.85): Feature => ({
+    ...base('holes-1', 'Stitch holes'),
+    kind: 'stitch-hole-set',
+    source: {
+      kind: 'derived',
+      sourceId: 'stitch-1',
+      op: { type: 'stitch-holes', pitchMm, mode: 'fit-whole', corners: 'continuous', tooth },
+    },
+  });
+
+  const prong = (diameterMm: number): Tooth => ({ kind: 'round', diameterMm });
+  const slit = (lengthMm: number, slantDeg = 45, widthMm = 0.4): Tooth => ({
+    kind: 'slit',
+    lengthMm,
+    widthMm,
+    slantDeg,
+  });
+
+  const onHoles = (...features: Feature[]) =>
+    validate(evaluate(project(features)))
+      .filter(
+        (d) => d.problem.code === 'OUTSIDE_PART' || d.problem.code === 'HOLE_TOO_CLOSE_TO_EDGE',
+      )
+      .map((d) => ({
+        code: d.problem.code,
+        severity: d.severity,
+        points: d.location?.kind === 'points' ? d.location.points.length : 0,
+        clearanceMm:
+          d.problem.code === 'HOLE_TOO_CLOSE_TO_EDGE' ? d.problem.facts.clearanceMm : undefined,
+      }));
+
+  const holeCount = (...features: Feature[]): number => {
+    const set = evaluate(project(features)).parts[0]!.features.find(
+      (f) => f.feature.id === 'holes-1',
+    );
+    return set?.ok === true ? (set.holes?.count ?? 0) : 0;
+  };
+
+  it('reports a 4 mm prong 1.6 mm in as off the leather, at every hole (SF-K4)', () => {
+    const features = [panel(100, 60, 0), stitchLine(1.6), toothedHoles(prong(4))];
+    const count = holeCount(...features);
+
+    expect(count).toBeGreaterThan(50);
+    expect(onHoles(...features)).toEqual([
+      { code: 'OUTSIDE_PART', severity: 'error', points: count, clearanceMm: undefined },
+    ]);
+  });
+
+  it('says nothing once the prong is raised to clear its own radius', () => {
+    expect(onHoles(panel(100, 60, 0), stitchLine(2), toothedHoles(prong(4)))).toEqual([]);
+  });
+
+  it('reports a slit whose tip cuts the edge, though its centre clears it', () => {
+    // A 3 mm slit at 45° reaches 1.06 mm across the line: 0.8 mm in, it cuts.
+    expect(onHoles(piece(), alongTheBottom(0.8), toothedHoles(slit(3))).map((d) => d.code)).toEqual(
+      ['OUTSIDE_PART'],
+    );
+  });
+
+  it('measures clearance from the centre still, for a tooth that stays on the leather', () => {
+    // The same slit 1.2 mm in clears the edge by 0.14 mm: too close, said from
+    // the centre (the backlog's D32 asks whether to measure from the tooth).
+    const [found, ...rest] = onHoles(piece(), alongTheBottom(1.2), toothedHoles(slit(3)));
+
+    expect(rest).toEqual([]);
+    expect(found?.code).toBe('HOLE_TOO_CLOSE_TO_EDGE');
+    expect(found?.clearanceMm).toBeCloseTo(1.2, 9);
+  });
+
+  it('takes a tooth whose tip touches the edge as on the leather (D29)', () => {
+    // Square to the line, a 2 mm slit's tip lands on the edge 1 mm away.
+    expect(
+      onHoles(piece(), alongTheBottom(1), toothedHoles(slit(2, 90))).map((d) => d.code),
+    ).toEqual(['HOLE_TOO_CLOSE_TO_EDGE']);
+    // A thousandth further and it cuts.
+    expect(
+      onHoles(piece(), alongTheBottom(1), toothedHoles(slit(2.002, 90))).map((d) => d.code),
+    ).toEqual(['OUTSIDE_PART']);
+  });
+
+  it('reports a toothed hole centred on the cut edge as off; one whose iron is not said stays a warning (D29)', () => {
+    const onTheEdge = (holes: Feature) =>
+      onHoles(piece(), alongTheBottom(0), holes).map((d) => d.code);
+
+    expect(onTheEdge(toothedHoles(slit(1.9)))).toEqual(['OUTSIDE_PART']);
+    expect(onTheEdge(toothedHoles(prong(1.2)))).toEqual(['OUTSIDE_PART']);
+    expect(onTheEdge(holeSet())).toEqual(['HOLE_TOO_CLOSE_TO_EDGE']);
+  });
+
+  it('reports a tooth that cuts into a cut-out', () => {
+    const window: Feature = {
+      ...base('window-1', 'Window'),
+      kind: 'cut-contour',
+      role: 'inner',
+      source: {
+        kind: 'shape',
+        shape: {
+          type: 'rect',
+          origin: { x: 10, y: 30 },
+          width: 80,
+          height: 20,
+          radii: uniformRadii(0),
+          rotation: 0,
+        },
+      },
+    };
+    // 0.5 mm below the window's bottom edge, with a slit reaching 0.67 mm.
+    expect(
+      onHoles(piece(), window, alongTheBottom(29.5), toothedHoles(slit(1.9))).map((d) => d.code),
+    ).toEqual(['OUTSIDE_PART']);
+  });
+
+  it('reports a blade one storage quantum thin that crosses the edge', () => {
+    // Nothing of it is a quantum inside its own outline, but its tip is 0.5 mm
+    // past the edge: judged by the inradius, it was never off.
+    expect(
+      onHoles(piece(), alongTheBottom(0.5), toothedHoles(slit(2, 90, QUANTUM_MM))).map(
+        (d) => d.code,
+      ),
+    ).toEqual(['OUTSIDE_PART']);
+  });
+
+  it('reports a tooth with a cut-out smaller than itself inside it, at that hole alone', () => {
+    // The line's first hole is at (20, 10); its 3 mm slit, along the line,
+    // runs from x 18.5 to 21.5 and holds the 0.1 mm pinhole at (21, 10) whole.
+    const pinhole: Feature = {
+      ...base('pin-1', 'Pinhole'),
+      kind: 'cut-contour',
+      role: 'inner',
+      source: { kind: 'shape', shape: { type: 'circle', centre: { x: 21, y: 10 }, radius: 0.05 } },
+    };
+
+    expect(onHoles(piece(), pinhole, alongTheBottom(10), toothedHoles(slit(3, 0)))).toEqual([
+      { code: 'OUTSIDE_PART', severity: 'error', points: 1, clearanceMm: undefined },
+    ]);
+  });
+
+  it('reads a mirrored hole set’s tooth, which a mirror carries from its source', () => {
+    const mirrored: Feature = {
+      ...base('holes-2', 'Stitch holes'),
+      kind: 'stitch-hole-set',
+      source: {
+        kind: 'derived',
+        sourceId: 'holes-1',
+        op: {
+          type: 'mirror',
+          axis: { kind: 'line', origin: { x: 0, y: 31.25 }, angleRad: 0 },
+          glideMm: 0,
+        },
+      },
+    };
+    // The source sits 3 mm in, clear; its mirror lands 0.5 mm below the top.
+    const found = validate(
+      evaluate(project([piece(), alongTheBottom(3), toothedHoles(prong(2)), mirrored])),
+    );
+
+    expect(found.filter((d) => d.featureId === 'holes-1')).toEqual([]);
+    expect(found.filter((d) => d.featureId === 'holes-2').map((d) => d.problem.code)).toEqual([
+      'OUTSIDE_PART',
+    ]);
+  });
+
+  // —— Properties ——
+
+  /** Kept clear of the thresholds, where the answer is decided by the last bit. */
+  const MARGIN = 1e-3;
+
+  const arbTooth: fc.Arbitrary<{ tooth: Tooth; pitchMm: number }> = fc
+    .double({ min: 2, max: 7, noNaN: true })
+    .chain((pitchMm) =>
+      fc
+        .oneof(
+          fc
+            .record({
+              length: fc.double({ min: 0.2, max: 1, noNaN: true }),
+              widthMm: fc.double({ min: 0.1, max: 1.5, noNaN: true }),
+              slantDeg: fc.double({ min: -180, max: 180, noNaN: true }),
+            })
+            .map(({ length, widthMm, slantDeg }) => slit(length * pitchMm, slantDeg, widthMm)),
+          fc.double({ min: 0.3, max: 6, noNaN: true }).map(prong),
+        )
+        .map((tooth) => ({ tooth, pitchMm })),
+    );
+
+  /** How far a tooth reaches across a straight line it sits on, square to it. */
+  const reachAcross = (tooth: Tooth): number => {
+    if (tooth.kind === 'round') return tooth.diameterMm / 2;
+    const slant = (tooth.slantDeg * Math.PI) / 180;
+    return Math.max(
+      (tooth.lengthMm / 2) * Math.abs(Math.sin(slant)),
+      (tooth.widthMm / 2) * Math.abs(Math.cos(slant)),
+    );
+  };
+
+  const outside = (found: ReturnType<typeof onHoles>) =>
+    found.some((d) => d.code === 'OUTSIDE_PART');
+
+  it('says a tooth is off exactly when it reaches past the edge, however the piece faces', () => {
+    fc.assert(
+      fc.property(
+        arbTooth,
+        fc.double({ min: 0, max: 8, noNaN: true }),
+        fc.double({ min: -Math.PI, max: Math.PI, noNaN: true }),
+        ({ tooth, pitchMm }, inset, angle) => {
+          const overMm = reachAcross(tooth) - inset;
+          fc.pre(Math.abs(overMm) > MARGIN);
+
+          const found = onHoles(
+            piece(angle),
+            alongTheBottom(inset, angle),
+            toothedHoles(tooth, pitchMm),
+          );
+          expect(outside(found)).toBe(overMm > 0);
+        },
+      ),
+    );
+  });
+
+  it('never turns a pass into OUTSIDE_PART when a toothed set moves inward', () => {
+    fc.assert(
+      fc.property(
+        arbTooth,
+        fc.double({ min: 0, max: 10, noNaN: true }),
+        fc.double({ min: 0, max: 10, noNaN: true }),
+        fc.double({ min: -Math.PI, max: Math.PI, noNaN: true }),
+        ({ tooth, pitchMm }, inset, further, angle) => {
+          const at = (mm: number) =>
+            outside(onHoles(piece(angle), alongTheBottom(mm, angle), toothedHoles(tooth, pitchMm)));
+          if (!at(inset)) expect(at(inset + further)).toBe(false);
+        },
+      ),
+    );
+  });
+
+  it('asks the edge nothing more for a tooth that clears it than for a hole with no tooth', () => {
+    // PERF-005: a tooth is measured against the edges only where the hole's
+    // centre is nearer an edge than the tooth reaches. Starter teeth 3.5 mm in
+    // never are, so a long strap's toothed holes cost what its points cost.
+    const readsOf = (holes: Feature): number => {
+      const resolved = evaluate(project([panel(1000, 40, 4), stitchLine(3.5), holes]));
+      const reads = { count: 0 };
+      const part = resolved.parts[0]!;
+      const counted = part.features.map((entry) =>
+        entry.ok && entry.feature.kind === 'cut-contour'
+          ? { ...entry, path: countedPath(entry.path, reads) }
+          : entry,
+      );
+      validate({ ...resolved, parts: [{ ...part, features: counted }] });
+      return reads.count;
+    };
+
+    expect(readsOf(toothedHoles(slit(2.39)))).toBe(readsOf(holeSet()));
+    expect(readsOf(toothedHoles(prong(1.2)))).toBe(readsOf(holeSet()));
+  });
+});
+
+/** A path whose segments count every time one is read. */
+function countedPath(p: Path, reads: { count: number }): Path {
+  return {
+    closed: p.closed,
+    segments: new Proxy([...p.segments], {
+      get(target, key, receiver) {
+        if (typeof key === 'string' && /^\d+$/.test(key)) reads.count++;
+        return Reflect.get(target, key, receiver) as unknown;
+      },
+    }),
+  };
+}
 
 describe('validation reused across revisions (PERF-005)', () => {
   /** A marking line with nothing to cut it from. */

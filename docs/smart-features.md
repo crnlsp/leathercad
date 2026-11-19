@@ -42,7 +42,7 @@ Verified against the code, not the documents. Where they differ, it says so.
   checked, and Properties hides it (**L3**, SF-X1).
 - `validate.ts` says edge clearance is "measured from where the leather is cut"; domain-model §8.6
   says from a stitch hole's point. Since 9.26 a stitch hole's cut is its tooth, and a tooth through
-  the edge is not reported (**KD-3**).
+  the edge was not reported (**KD-3**, fixed by Q46; clearance is still from the point).
 - Q33 says a hardware hole is judged by its rim. A hardware hole that is a mirror — across a fold,
   as the key fob's second rivet is — was not judged at all (**KD-2**, fixed by Q45).
 - Nothing says a hole on the cut edge is judged by which way the piece faces, and it was
@@ -83,7 +83,7 @@ pocket's opening (L1) — is a statement to add, not a layer.
 | W1 | Which piece's edge is a pocket's opening is not modelled; DR8 takes the stitching's own piece. Exact for a pocket stitched on its own piece, an upper bound otherwise — even when a declared seam joins the two | SF-E4, SF-E6, SF-E7, the depth property (L1) |
 | W2 | Points exactly on an edge have no defined answer in `containsPoint`, and stitch holes were asked it — fixed by Q44: `isOnMaterial` puts a point within a storage quantum of an edge on the leather (D29) | SF-K3 (KD-1) |
 | W3 | Mirrored hardware holes were never asked where they sit — fixed by Q45 | SF-J3, SF-J7 (KD-2) |
-| W8 | A stitch hole is judged at its centre, though 9.26 knows the tooth that cuts it and SVG and DXF cut that tooth | SF-K4–K6 (KD-3) |
+| W8 | A stitch hole was judged at its centre, though 9.26 knows the tooth that cuts it and SVG and DXF cut that tooth — fixed by Q46 for whether it is on the leather; its clearance is still from the centre | SF-K4–K6 (KD-3) |
 | W4 | A pocket problem's identity (`problemKey`) holds nothing of the requirement, so 9.16 cannot tell an accepted warning from a new one by key alone | SF-H6 |
 | W5 | A pass is silence. The domain returns no record of which checks ran, passed, or could not run, so the app cannot say "checked: 94 mm across, 87.6 mm needed" without computing again | Properties shows readings and notes, never a verdict line |
 | W6 | A requirement is copied, not shared, when its stitching is mirrored, then diverges | SF-H4 |
@@ -158,7 +158,7 @@ fails if a design rule or a seam or pocket outcome is added to the registry with
 | `SEAM_SIDE_MISSING` | E3 · error | A declared seam | A side's hole set is gone or failed (an older version's delete) | The app's own delete removes the seam too | — |
 | `SEAM_RUNS_OFF_THE_LINE` | E4 · error | A seam side following the other's length | That length runs past the end of its line | — | — |
 | `HOLE_TOO_CLOSE_TO_EDGE` | DR2 · warning | Holes in a piece with an outline | A stitch hole's point, or a hardware or row hole's rim, within 1.5 mm of an edge | Clear of every edge | A stitch hole exactly on the edge — the outline's or a cut-out's — is this at 0 mm, whichever way the piece faces (D29; **KD-1**, fixed by Q44). A stitch hole is read at its centre, not its tooth (contract, §7) |
-| `OUTSIDE_PART` | DR2 · error for holes, warning for lines | A piece with an outline | Holes off the leather; a line leaving it (sampled, §8.4) | Lines that end on the edge, within a storage quantum | As above; a stitch tooth through the edge is not read (**KD-3**) |
+| `OUTSIDE_PART` | DR2 · error for holes, warning for lines | A piece with an outline | Holes off the leather — a hardware or row hole by its rim, a stitch hole whose iron is said by its tooth's outline, exactly (**KD-3**, fixed by Q46); a line leaving it (sampled, §8.4) | Lines that end on the edge, a rim or tooth that meets it, within a storage quantum | A toothed stitch hole centred on the edge is this, an error (D29); one whose iron is not said is `HOLE_TOO_CLOSE_TO_EDGE` there |
 | `CUT_OUT_OUTSIDE_PART` | DR2 · error | A cut-out and an outline | Part of the cut-out lies outside the outline (sampled) | — | — |
 | `PART_HAS_NO_OUTER_CONTOUR` | DR1 · error | A piece with features | None of them is its outline | An empty piece (that is `EMPTY_PART`) | — |
 | `CONTOUR_SELF_INTERSECTS` | DR3 · error | An outline or cut-out | It crosses itself | — | — |
@@ -187,7 +187,7 @@ LeatherCAD must not say more than it knows. Each threshold, and what kind of cla
 | What the pocket holds, and the ease | **The maker's requirement** | *Holds*, *Pocket ease* in My tools | Ease left at 0: a pass then means "not narrower than the card" and nothing more |
 | `POCKET_TOO_NARROW` / its absence | **Verified constraint**, geometric | DR8 | Its absence is taken as "the card fits". It says only that the stitch centres are as far apart as the content and its ease |
 | Depth below the opening | **Geometric fact about the stitching's own piece**, and an **upper bound** on the pocket's (D21) | `depthBelowOpening` | Read as the pocket's depth when its front is another piece (L1: SF-E4, SF-E7) or it opens through a slit (D21). *Too shallow* is never wrong; a pass is "not disproved" |
-| A stitch hole's clearance from an edge | **Contract**: measured from the hole's centre (domain-model §8.6) | DR2 | The tooth is wider than the hole's point: at the 1.5 mm minimum the shipped styles' teeth come within 0.66–0.9 mm of the edge, and a typed tooth can cut through it (KD-3) |
+| A stitch hole's clearance from an edge | **Contract**: measured from the hole's centre (domain-model §8.6) | DR2 | The tooth is wider than the hole's point: at the 1.5 mm minimum the shipped styles' teeth come within 0.66–0.9 mm of the edge. A tooth that cuts through it is `OUTSIDE_PART` (Q46, once KD-3); whether to measure clearance from the tooth is the backlog's D32 |
 | 1.5 mm between a hole and an edge | **Expert recommendation**, not universal | `MIN_HOLE_EDGE_CLEARANCE_MM` | Thin firm leather carries less; soft thick leather needs more. The warning says so |
 | Spacing within 25 % of the iron; runs within 5 % | **Heuristic** | DR4 constants | — |
 | Seam drift within 0.5 mm | **The maintainer's decision** (D4): one graduation of the steel rule | `SEAM_DRIFT_LIMIT_MM` | Checked in leather on one card holder (the [log](print-verification-log.md)); the limit's general adequacy is not established |
@@ -307,7 +307,8 @@ written beside it. `it.fails` was used first and was too forgiving — a scenari
 (a renamed id) stayed green as an "expected failure". Pinned, a broken setup, a different wrong
 answer and the fix all fail it; the fix then asserts `correct` and removes the entry from
 `KNOWN_DEFECTS`, in the same change. `matrix.test.ts` refuses `it.fails` anywhere in the scenarios,
-and holds each defect to its title (`'SF-K4 · KNOWN DEFECT KD-3 · …'`), its pin and §7.
+and holds each defect to its title (`'SF-Kn · KNOWN DEFECT KD-n · …'`), its pin and §7. None is
+pinned since Q46 fixed KD-3.
 
 A **limit** — the model lacks something, and reads what it has correctly — is asserted as it
 behaves, with a comment naming the limit (SF-E4, SF-E7); so is behaviour still awaiting a decision
@@ -365,7 +366,11 @@ edge at all 80 holes; the same punch placed as a rivet is `OUTSIDE_PART`, an err
 through the edge is a fact, not a clearance to choose. Scenario **SF-K4**. *Direction:* where a
 hole set has a tooth, ask whether its outline leaves the material, as for hardware. Reachable only
 with a typed tooth: every style the app fills, at every starter iron, stays clear at the 1.5 mm
-minimum (SF-K6).
+minimum (SF-K6). *Fixed by Q46:* a hole set with a tooth is judged by the outline SVG and DXF cut
+(`toothOutline`), on each hole as placed, a mirror's included; one whose outline leaves the
+material by more than a storage quantum is `OUTSIDE_PART` at that hole, exactly, as a rim is.
+Clearance is still measured from the centre. SF-K4 asserts the error at all 80 holes and that
+moving the stitching 2 mm in clears it; SF-K6 stays silent.
 
 ### Limits: the model reads correctly what it has
 

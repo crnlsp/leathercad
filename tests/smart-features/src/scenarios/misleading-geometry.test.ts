@@ -10,6 +10,7 @@ import {
   outlineOf,
   punchHardware,
   punchHoles,
+  setInset,
   stitchAllRound,
   stitchLeavingOpen,
   stitchOf,
@@ -170,27 +171,42 @@ describe('K — holes on, and teeth across, the cut edge', () => {
   });
 
   /**
-   * KNOWN DEFECT KD-3 (docs/smart-features.md §7). Since 9.26 a hole set
-   * knows its tooth, and SVG and DXF cut its true outline (D27). The rules
-   * still read each stitch hole as its centre: a typed 4 mm round prong 1.6 mm
-   * in passes the 1.5 mm edge rule and cuts a notch out of the edge at all 80
-   * holes, which the same punch placed as a rivet reports as off the leather
-   * (SF-K5). A cut through the edge is a fact, not a clearance to choose: the
-   * correct list is DR2's, as for hardware.
+   * Since 9.26 a hole set knows its tooth, and SVG and DXF cut its true
+   * outline (D27). A typed 4 mm round prong 1.6 mm in cuts a notch out of the
+   * edge at all 80 holes, which the same punch placed as a rivet reports as
+   * off the leather (SF-K5); so does the stitching (Q46, once KD-3). Raised to
+   * 2 mm the prong's rim meets the edge and no more, and its centre clears
+   * the 1.5 mm rule, which is still measured from the centre: nothing is said.
    */
-  it('SF-K4 · KNOWN DEFECT KD-3 · stitch teeth that cut through the edge are not said to leave the leather', () => {
-    toothed(1.6, fourMillimetreProng).expectDefect('KD-3', {
-      now: [],
-      correct: [
-        {
-          code: 'OUTSIDE_PART',
-          severity: 'error',
-          on: holesOf('panel'),
-          facts: { what: 'holes' },
-          location: { points: 80 },
-        },
-      ],
-    });
+  it('SF-K4 · stitch teeth that cut through the edge are off the leather, until the stitching is moved in to clear them', () => {
+    toothed(1.6, fourMillimetreProng)
+      .expect(
+        [
+          {
+            code: 'OUTSIDE_PART',
+            severity: 'error',
+            on: holesOf('panel'),
+            facts: { what: 'holes' },
+            location: { points: 80 },
+          },
+        ],
+        '1.6 mm in',
+      )
+      .do(setInset('panel', 2))
+      .expect([], '2 mm in')
+      .undo()
+      .expect(
+        [
+          {
+            code: 'OUTSIDE_PART',
+            severity: 'error',
+            on: holesOf('panel'),
+            facts: { what: 'holes' },
+            location: { points: 80 },
+          },
+        ],
+        'after undo',
+      );
   });
 
   it('SF-K6 · every tooth a maker can pick by style, at every starter iron, stays on the leather 1.5 mm in, and is told nothing', () => {

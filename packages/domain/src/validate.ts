@@ -2,6 +2,7 @@ import { EPS_LENGTH, QUANTUM_MM, approxGte, type Mm } from '@leathercad/core';
 import {
   PathOps,
   SegmentOps,
+  intersectPaths,
   selfIntersections,
   type Intersection,
   type Path,
@@ -10,12 +11,13 @@ import {
 } from '@leathercad/geometry';
 import { FONT, missingGlyphs } from '@leathercad/typography';
 
-import type { Feature, FeatureId, PartId } from './feature.js';
+import type { Feature, FeatureId, PartId, Tooth } from './feature.js';
 import type { ResolvedFeature, ResolvedProject } from './evaluate.js';
 import { distanceToEdge, isOnMaterial, materialOf, type Material } from './material.js';
 import { hasOuterContour } from './partStructure.js';
 import { contentSize, depthBelowOpening, pocketSize } from './pocket.js';
-import type { StitchHoles } from './stitch.js';
+import type { StitchHole, StitchHoles } from './stitch.js';
+import { toothOutline } from './tooth.js';
 import {
   PROBLEM_CODES,
   problem,
@@ -511,7 +513,7 @@ function offMaterial(
     const off: Vec2[] = [];
     const tight: Vec2[] = [];
     let clearanceMm = Number.POSITIVE_INFINITY;
-    for (const { centre, radiusMm } of punched) {
+    for (const { centre, radiusMm, toothed } of punched) {
       if (!isOnMaterial(material, centre)) {
         off.push(centre);
         continue;
@@ -519,8 +521,12 @@ function offMaterial(
       // A circle whose centre is on the leather stays on it unless an edge
       // passes nearer the centre than its radius — exact, not sampled. A rim
       // within a storage quantum of an edge is on it, as for a line (Q2).
-      const rimMm = distanceToEdge(material, centre) - radiusMm;
-      if (rimMm < -QUANTUM_MM) {
+      const edgeMm = distanceToEdge(material, centre);
+      const rimMm = edgeMm - radiusMm;
+      if (
+        rimMm < -QUANTUM_MM ||
+        (toothed !== undefined && toothCutsAnEdge(toothed.hole, toothed.tooth, edgeMm, material))
+      ) {
         off.push(centre);
         continue;
       }
@@ -567,23 +573,34 @@ function offMaterial(
   return found;
 }
 
-/** A hole the leather is cut by: a circle, or a point where the radius is 0. */
+/**
+ * A hole the leather is cut by: a circle, or a point where the radius is 0.
+ * Its clearance is measured from the rim, or from the point.
+ */
 interface Punch {
   readonly centre: Vec2;
   readonly radiusMm: Mm;
+  /** The tooth that cuts a stitch hole whose iron is said (9.26), judged on or off (Q46). */
+  readonly toothed?: { readonly hole: StitchHole; readonly tooth: Tooth };
 }
 
 /**
  * Where this feature is punched, or null when it punches nothing.
  *
- * A hole set is its holes, each a point where the iron's tooth goes in. A
- * hardware hole is its whole circle, because a 6 mm punch centred 2 mm in from
- * the edge cuts through it (Q33), and so is each hole of a row (4.14).
+ * A hole set is its holes, each a point where the iron's tooth goes in, and
+ * where the iron is said, the tooth too: a mirror carries its source's (9.26).
+ * A hardware hole is its whole circle, because a 6 mm punch centred 2 mm in
+ * from the edge cuts through it (Q33), and so is each hole of a row (4.14).
  */
 function punchesOf(entry: Extract<ResolvedFeature, { ok: true }>): readonly Punch[] | null {
   if (entry.holes !== undefined) {
+    const { tooth } = entry.holes;
     const radiusMm = entry.holes.radiusMm ?? 0;
-    return entry.holes.holes.map((hole) => ({ centre: hole.point, radiusMm }));
+    return entry.holes.holes.map((hole) =>
+      tooth === undefined
+        ? { centre: hole.point, radiusMm }
+        : { centre: hole.point, radiusMm, toothed: { hole, tooth } },
+    );
   }
 
   // Judged by the circle it resolves to, not by its source: a mirror — across
@@ -594,6 +611,43 @@ function punchesOf(entry: Extract<ResolvedFeature, { ok: true }>): readonly Punc
     return [{ centre: only.centre, radiusMm: only.radius }];
   }
   return null;
+}
+
+/**
+ * Whether a stitch hole's tooth cuts through an edge of the material, its
+ * centre being on the leather and `edgeMm` from the nearest edge (Q46).
+ *
+ * Read from the outline SVG and DXF cut (`toothOutline`, D27), so the rule and
+ * the cut cannot disagree. Exact, not sampled, as the rim is: a tooth whose
+ * centre is further from every edge than its farthest point cannot reach one,
+ * so only a hole that near pays for more (PERF-005); a round tooth is then
+ * decided, as a rim. Within a storage quantum of an edge is on it (D29): the
+ * slit is judged shrunk about its centre by a quantum of its reach, which
+ * moves no point of it further than that, so a tip that meets an edge stays
+ * on and nothing cutting deeper is missed, however thin the blade. It cuts an
+ * edge that meets the shrunk slit, or lies wholly inside it — a cut-out
+ * smaller than the tooth.
+ */
+function toothCutsAnEdge(hole: StitchHole, tooth: Tooth, edgeMm: Mm, material: Material): boolean {
+  const reachMm =
+    tooth.kind === 'round' ? tooth.diameterMm / 2 : Math.max(tooth.lengthMm, tooth.widthMm) / 2;
+  if (edgeMm >= reachMm - QUANTUM_MM) return false;
+  if (tooth.kind === 'round') return true;
+
+  const k = 1 - QUANTUM_MM / reachMm;
+  const inside = toothOutline(hole, {
+    ...tooth,
+    lengthMm: tooth.lengthMm * k,
+    widthMm: tooth.widthMm * k,
+  });
+  const edges = material.outer === null ? material.holes : [material.outer, ...material.holes];
+  return edges.some((edge) => {
+    const first = PathOps.start(edge);
+    return (
+      intersectPaths(edge, inside).length > 0 ||
+      (first !== null && PathOps.containsPoint(inside, first))
+    );
+  });
 }
 
 /**
