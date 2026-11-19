@@ -1,5 +1,5 @@
 import { EPS_LENGTH, approxEq, type Mm } from '@leathercad/core';
-import type { Part, ResolvedPart } from '@leathercad/domain';
+import { turnedOver, type Part, type ResolvedPart } from '@leathercad/domain';
 
 /**
  * What a part is called **on paper**: "Card pocket — cut 2".
@@ -12,7 +12,14 @@ import type { Part, ResolvedPart } from '@leathercad/domain';
  */
 export function describePart(part: Part): string {
   const name = part.name.trim() === '' ? 'Part' : part.name.trim();
-  return part.quantity > 1 ? `${name} — cut ${part.quantity}` : name;
+  if (part.quantity <= 1) return name;
+  // A mirrored pair (Q21): the sheet says which to turn over, so no maker cuts
+  // two lefts.
+  const turned = turnedOver(part);
+  if (turned === 0) return `${name} — cut ${part.quantity}`;
+  return turned === 1
+    ? `${name} — cut 2, turn the template over for the second`
+    : `${name} — cut ${part.quantity}, ${turned} with the template turned over`;
 }
 
 /** Holes at one pitch: a line of a piece's caption on the board. */

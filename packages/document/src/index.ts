@@ -89,6 +89,7 @@ export {
   setMeasurement,
   setPartVisible,
   setPartQuantity,
+  setPartMirroredPair,
   setPageSetup,
   setProjectName,
   setDerivation,

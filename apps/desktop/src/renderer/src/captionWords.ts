@@ -1,5 +1,5 @@
 import { formatMm } from '@leathercad/core';
-import type { ResolvedPart } from '@leathercad/domain';
+import { turnedOver, type ResolvedPart } from '@leathercad/domain';
 import { stitchingOf, type Caption } from '@leathercad/render';
 
 import type { I18n } from '../../shared/i18n.js';
@@ -18,8 +18,14 @@ export function captionOf({ t, list }: I18n, part: ResolvedPart): Caption {
   const stitching = stitchingOf(part).map(({ holes, pitchMm }) =>
     t('caption.holes', { count: holes, pitch: formatMm(pitchMm) }),
   );
+  const turned = turnedOver(part.part);
   return {
-    name: quantity > 1 ? t('caption.cut', { name, quantity }) : name,
+    name:
+      turned > 0
+        ? t('caption.cutMirrored', { name, drawn: quantity - turned, turned })
+        : quantity > 1
+          ? t('caption.cut', { name, quantity })
+          : name,
     detail: stitching.length === 0 ? null : list(stitching, 'unit'),
   };
 }

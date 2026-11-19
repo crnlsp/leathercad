@@ -281,12 +281,20 @@ const feature = z.discriminatedUnion('kind', [
   }),
 ]);
 
-const part = z.looseObject({
-  id: z.string().min(1),
-  name: z.string(),
-  quantity: z.number().int().min(1),
-  features: z.array(feature),
-});
+const part = z
+  .looseObject({
+    id: z.string().min(1),
+    name: z.string(),
+    quantity: z.number().int().min(1),
+    // Version 15 (Q21): cut as a mirrored pair. Present only when true, and
+    // only on an even count: half a piece cannot be turned over.
+    mirroredPair: z.literal(true).optional(),
+    features: z.array(feature),
+  })
+  .refine((one) => one.mirroredPair !== true || one.quantity % 2 === 0, {
+    message: 'A mirrored pair needs an even quantity',
+    path: ['quantity'],
+  });
 
 const settings = z.looseObject({
   gridSpacingMm: nonNegativeMm,

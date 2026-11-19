@@ -279,6 +279,10 @@ second*, Parts and the summary say *1 + 1 mirrored*. It changes what is printed:
 its own (rule 2). Mirrored counterparts built with 4.8 are already separate pieces with their own
 captions and are not affected.
 
+*As built (Q21):* format 15. Paper keeps its caption's form, *Pocket — cut 2, turn the template
+over for the second*, and above two says how many: *cut 4, 2 with the template turned over*. An odd
+count ticked as a pair rounds up to the next even one; the plan's *As built* note has the rest.
+
 ## 12. Tests
 
 - **Properties:** a seam's verdict is the same with sides swapped; unchanged by moving, turning or

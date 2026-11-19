@@ -73,3 +73,14 @@ describe('captionOf', () => {
     );
   });
 });
+
+describe('a mirrored pair on the board (Q21)', () => {
+  it('reads "Side 1 + 1 mirrored", and "Side 2 + 2 mirrored" for four', () => {
+    expect(captionOf(english, bare({ name: 'Side', quantity: 2, mirroredPair: true })).name).toBe(
+      'Side 1 + 1 mirrored',
+    );
+    expect(captionOf(english, bare({ name: 'Side', quantity: 4, mirroredPair: true })).name).toBe(
+      'Side 2 + 2 mirrored',
+    );
+  });
+});

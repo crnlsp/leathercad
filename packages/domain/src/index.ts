@@ -116,6 +116,7 @@ export {
 export { diagnosticTarget, MIN_FRAME_MM, type DiagnosticTarget } from './diagnosticTarget.js';
 export { exportReadiness, type ExportReadiness, type OmittedFeature } from './exportReadiness.js';
 export { overlappingParts } from './overlappingParts.js';
+export { turnedOver } from './mirroredPair.js';
 export {
   THREAD_ROUND_MM,
   THREAD_STITCH_FACTOR,

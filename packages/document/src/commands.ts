@@ -1267,11 +1267,32 @@ export function setPartName(id: PartId, name: string): Command {
 
 export function setPartQuantity(id: PartId, quantity: number): Command {
   return command({ action: 'set-quantity' }, (document) => ({
-    project: mapPart(document.project, id, (part) => ({
-      ...part,
+    project: mapPart(document.project, id, (part) => {
       // A part you cut zero of is a part you should delete instead.
-      quantity: Math.max(1, Math.round(quantity)),
-    })),
+      const cut = Math.max(1, Math.round(quantity));
+      // An odd count is no mirrored pair (Q21): it is cut alike again.
+      if (part.mirroredPair === true && cut % 2 !== 0) {
+        const { mirroredPair: _pair, ...alike } = part;
+        return { ...alike, quantity: cut };
+      }
+      return { ...part, quantity: cut };
+    }),
+  }));
+}
+
+/**
+ * Cut a part as a mirrored pair, half with the template turned over (Q21), or
+ * alike again. A pair needs an even count, so an odd one rounds up to it: one
+ * cut becomes a left and a right.
+ */
+export function setPartMirroredPair(id: PartId, mirrored: boolean): Command {
+  return command({ action: mirrored ? 'cut-mirrored-pair' : 'cut-alike' }, (document) => ({
+    project: mapPart(document.project, id, (part) => {
+      const { mirroredPair: _pair, ...alike } = part;
+      if (!mirrored) return alike;
+      const quantity = part.quantity % 2 === 0 ? part.quantity : part.quantity + 1;
+      return { ...alike, quantity, mirroredPair: true };
+    }),
   }));
 }
 

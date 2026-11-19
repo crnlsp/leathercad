@@ -106,3 +106,24 @@ describe('the key fob', () => {
     ]);
   });
 });
+
+describe('the card holder with its pockets cut as a mirrored pair (Q21)', () => {
+  const project = template('card-holder');
+  const paired: Project = {
+    ...project,
+    parts: project.parts.map((part) =>
+      part.name === 'Pocket' ? { ...part, mirroredPair: true as const } : part,
+    ),
+  };
+  const summary = summaryOf(paired);
+
+  it('still cuts three pieces and punches as many holes', () => {
+    expect(summary.toCut).toBe(3);
+    expect(summary.holes).toBe(86 + 2 * 49);
+  });
+
+  it('says the pocket is 1 + 1 mirrored', () => {
+    const pieces = productionRows(summary, english).find((row) => row.id === 'pieces');
+    expect(pieces?.details).toEqual(['Outer ×1, 86 holes', 'Pocket 1 + 1 mirrored, 49 holes']);
+  });
+});

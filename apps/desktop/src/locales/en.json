@@ -841,6 +841,7 @@
   },
   "parts": {
     "actions": "Actions for {{name}}",
+    "mirroredPair": "{{drawn}} + {{turned}} mirrored",
     "count_one": "{{count}} piece",
     "count_other": "{{count}} pieces",
     "duplicateNote": "A copy beside this one, with its own stitching",
@@ -900,6 +901,8 @@
     },
     "cut": "Cut",
     "cutSuffix": "off",
+    "mirroredPair": "Cut as a mirrored pair",
+    "mirroredPairNote": "Half are cut with the template turned over, so you get lefts and rights. Paper says so under the piece.",
     "drawing": "Rectangle being drawn",
     "flipLabel": "Flip",
     "foldMirror": "Mirror across fold",
@@ -985,6 +988,9 @@
     "pieceLine_one": "{{name}} ×{{quantity}}, {{count}} hole",
     "pieceLine_other": "{{name}} ×{{quantity}}, {{count}} holes",
     "pieceLineNoHoles": "{{name}} ×{{quantity}}",
+    "pieceLineMirrored_one": "{{name}} {{drawn}} + {{turned}} mirrored, {{count}} hole",
+    "pieceLineMirrored_other": "{{name}} {{drawn}} + {{turned}} mirrored, {{count}} holes",
+    "pieceLineMirroredNoHoles": "{{name}} {{drawn}} + {{turned}} mirrored",
     "pieces": "To cut",
     "textTitle": "{{name}}: production",
     "thread": "Thread",
@@ -1013,6 +1019,7 @@
   },
   "caption": {
     "cut": "{{name}} ×{{quantity}}",
+    "cutMirrored": "{{name}} {{drawn}} + {{turned}} mirrored",
     "holes_one": "{{count}} hole · {{pitch}}",
     "holes_other": "{{count}} holes · {{pitch}}",
     "unnamed": "Part"
@@ -1616,6 +1623,8 @@
     "round-corner": "Round corner",
     "scale": "Scale",
     "set-quantity": "Set quantity",
+    "cut-mirrored-pair": "Cut as a mirrored pair",
+    "cut-alike": "Cut alike",
     "sharpen-corner": "Sharpen corner",
     "show_one": "Show feature",
     "show_other": "Show {{count}} features",

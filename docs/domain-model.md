@@ -34,7 +34,7 @@ Project                                     built
 ├── settings          grid, default stitch margin, default iron pitch
 ├── guides[]          origin, angle — non-printing construction lines (3.10)
 └── parts[]
-     └── Part         name, quantity         built
+     └── Part         name, quantity         built   (a mirrored pair: Q21)
           └── features[]
                ├── CutContour                built   (outer, and cut-outs: designed 4.3)
                ├── StitchLine                built   (drawn roots: designed 4.9)
@@ -685,7 +685,10 @@ that names it fails with `ANCHOR_MISSING`.
   a second piece. Fold symmetry is for what is **inside** a piece: slots, stitching, hardware.
 - **`Part.quantity` must never stand in for a mirrored pair.** It means "cut this many of this
   shape", and a left and a right are two *different* shapes — cutting two of one would give the maker
-  two left gussets. A mirrored part is a separate part with `quantity: 1`.
+  two left gussets. A mirrored part is a separate part with `quantity: 1` — or, when one template
+  is cut both ways, the same part marked `mirroredPair` (Q21, even quantities only): half are cut
+  with the template turned over, and every caption says so (`turnedOver`). The flag, never the
+  count, says it is a pair.
 - **`Mirror ↔` and `Mirror ↕` are a placement, not a symmetry constraint.** They capture an axis from
   the selection's world-aligned bounding box **at the moment they are used**, and that axis then stays
   where it was put. So changing the original afterwards changes the gap between the pair, and growing

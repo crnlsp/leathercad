@@ -22,6 +22,7 @@ import {
   fixtureProjectV12,
   fixtureProjectV13,
   fixtureProjectV14,
+  fixtureProjectV15,
 } from './makeFixture.js';
 import { CURRENT_FORMAT_VERSION } from './migrations/index.js';
 
@@ -39,6 +40,7 @@ const FIXTURE_V11 = resolve(import.meta.dirname, '../../../fixtures/format/v11.l
 const FIXTURE_V12 = resolve(import.meta.dirname, '../../../fixtures/format/v12.lcp');
 const FIXTURE_V13 = resolve(import.meta.dirname, '../../../fixtures/format/v13.lcp');
 const FIXTURE_V14 = resolve(import.meta.dirname, '../../../fixtures/format/v14.lcp');
+const FIXTURE_V15 = resolve(import.meta.dirname, '../../../fixtures/format/v15.lcp');
 
 // Fixed, so regenerating an unchanged fixture produces no diff and a real
 // change to the format is visible in review.
@@ -65,9 +67,9 @@ describe('the format baseline fixture', () => {
       // Only the *current* version's fixture is ever regenerated. v1 to v4 are
       // real old files, and rewriting any of them would delete the only proof
       // that a file from that version still opens.
-      mkdirSync(dirname(FIXTURE_V14), { recursive: true });
-      writeFileSync(FIXTURE_V14, saveProject(fixtureProjectV14(), OPTIONS));
-      expect(existsSync(FIXTURE_V14)).toBe(true);
+      mkdirSync(dirname(FIXTURE_V15), { recursive: true });
+      writeFileSync(FIXTURE_V15, saveProject(fixtureProjectV15(), OPTIONS));
+      expect(existsSync(FIXTURE_V15)).toBe(true);
     });
   }
 
@@ -497,7 +499,10 @@ it('stores which pairs are marked, never where the marks are (§3.3)', () => {
 });
 
 it('holds a slit and a round tooth in the version 14 fixture', () => {
-  expect(readManifest(readFileSync(FIXTURE_V14)).formatVersion).toBe(CURRENT_FORMAT_VERSION);
+  // v14 stopped being current when a piece could be cut as a mirrored pair
+  // (Q21). Never regenerated: it is the proof a file from before pairs opens.
+  expect(readManifest(readFileSync(FIXTURE_V14)).formatVersion).toBe(14);
+  expect(CURRENT_FORMAT_VERSION).toBeGreaterThan(14);
   const project = loadProject(readFileSync(FIXTURE_V14)).project;
   expect(project).toEqual(fixtureProjectV14());
   const teeth = evaluate(project)
@@ -506,6 +511,17 @@ it('holds a slit and a round tooth in the version 14 fixture', () => {
       entry.ok && entry.holes?.tooth !== undefined ? [entry.holes.tooth.kind] : [],
     );
   expect(teeth.sort()).toEqual(['round', 'slit']);
+});
+
+it('holds a mirrored pair in the version 15 fixture, as a flag and never its caption', () => {
+  expect(readManifest(readFileSync(FIXTURE_V15)).formatVersion).toBe(CURRENT_FORMAT_VERSION);
+  expect(loadProject(readFileSync(FIXTURE_V15)).project).toEqual(fixtureProjectV15());
+  const raw = strFromU8(unzipSync(new Uint8Array(readFileSync(FIXTURE_V15)))['document.json']!);
+  const parts = (JSON.parse(raw) as { parts: { id: string; mirroredPair?: unknown }[] }).parts;
+  expect(parts.filter((part) => part.mirroredPair !== undefined)).toMatchObject([
+    { id: 'part-pocket', mirroredPair: true },
+  ]);
+  expect(raw).not.toMatch(/turn|template over/i);
 });
 
 it('stores a tooth as its values, never its outlines or a style (§3.3, D25)', () => {

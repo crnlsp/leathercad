@@ -1,5 +1,5 @@
 import { isPartVisible } from '@leathercad/document';
-import { materialOf, type Feature, type Part, type Project } from '@leathercad/domain';
+import { materialOf, turnedOver, type Feature, type Part, type Project } from '@leathercad/domain';
 import type { Path } from '@leathercad/geometry';
 import { thumbnailPath } from '@leathercad/render';
 import type { MouseEvent, ReactNode } from 'react';
@@ -182,6 +182,14 @@ export function PartsStrip({
 
 /** "Card pocket ×2", as the board's caption names it (R-01). */
 export function pieceName(part: Part, t: Translate): string {
+  const turned = turnedOver(part);
+  if (turned > 0) {
+    return t('caption.cutMirrored', {
+      name: part.name,
+      drawn: part.quantity - turned,
+      turned,
+    });
+  }
   return part.quantity > 1
     ? t('caption.cut', { name: part.name, quantity: part.quantity })
     : part.name;

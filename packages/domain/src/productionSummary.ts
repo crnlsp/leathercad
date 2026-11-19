@@ -4,6 +4,7 @@ import { PathOps } from '@leathercad/geometry';
 import type { ResolvedProject } from './evaluate.js';
 import type { FeatureId, HardwareHole, PartId } from './feature.js';
 import { materialOf } from './material.js';
+import { turnedOver } from './mirroredPair.js';
 import { resolveSeam } from './seams.js';
 
 /**
@@ -18,6 +19,8 @@ export interface ProductionPiece {
   readonly partId: PartId;
   readonly name: string;
   readonly quantity: number;
+  /** Of the quantity, how many are cut with the template turned over (Q21). */
+  readonly turnedOver: number;
   /** Holes in one piece: stitch holes and rows of holes, as the job's totals count them. */
   readonly holes: number;
   /** One piece's leather: the outline's area less its cut-outs. Never negative. */
@@ -101,6 +104,7 @@ export function productionSummary(resolved: ResolvedProject): ProductionSummary 
       partId: part.part.id,
       name: part.part.name,
       quantity,
+      turnedOver: turnedOver(part.part),
       holes,
       areaMm2: Math.max(0, PathOps.area(outer.path) - cutOut),
     });
