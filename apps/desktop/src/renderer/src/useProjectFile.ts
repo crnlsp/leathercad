@@ -166,8 +166,8 @@ export function useProjectFile(
    * a project of its own, with a new id. The template is never written.
    */
   newFromTemplate: (id: string) => Promise<void>;
-  /** Saves a tab's project as one of the maker's templates (8.12). */
-  saveAsTemplate: (tab: ProjectTab, name: string, replace: boolean) => Promise<TemplateSave>;
+  /** Saves a project — a tab's, or pieces of one (9.7) — as one of the maker's templates (8.12). */
+  saveAsTemplate: (project: Project, name: string, replace: boolean) => Promise<TemplateSave>;
   /**
    * Opens a recovered project **untitled and unsaved** (5.3b): it has no path,
    * so *Save* asks where, and the file it once came from is never written.
@@ -515,9 +515,9 @@ export function useProjectFile(
   );
 
   const saveAsTemplate = useCallback(
-    async (tab: ProjectTab, name: string, replace: boolean): Promise<TemplateSave> => {
+    async (project: Project, name: string, replace: boolean): Promise<TemplateSave> => {
       const bytes = await encodeProject({
-        project: tab.store.committedDocument.project,
+        project,
         applicationVersion: appVersion,
         at: new Date().toISOString(),
       });

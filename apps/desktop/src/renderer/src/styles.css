@@ -1192,6 +1192,22 @@ body {
   border-top: 1px solid var(--shell-line);
 }
 
+/* Inserting pieces (9.7): which of the template's pieces come. */
+.template-pieces {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.template-piece {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
 .template-words-actions {
   display: flex;
   gap: var(--space-1);

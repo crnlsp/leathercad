@@ -43,6 +43,7 @@ function actions(): SelectionActions & { dispatched: Command[] } {
     dispatch: (command) => dispatched.push(command),
     duplicatePieces: vi.fn(),
     copyPieces: vi.fn(),
+    saveAsTemplate: vi.fn(),
     deleteFeatures: vi.fn(),
     deletePart: vi.fn(),
   };
@@ -92,6 +93,7 @@ describe('the right-click menu (8.8)', () => {
     const expected = [
       'context-duplicate-part',
       'context-copy-pieces',
+      'context-save-template',
       'separator',
       'context-flip-horizontal',
       'context-flip-vertical',
@@ -191,6 +193,18 @@ describe('the right-click menu (8.8)', () => {
     expect(item(entries, 'context-copy-pieces').label).toBe('Copy 2 pieces');
     item(entries, 'context-copy-pieces').onChoose();
     expect(on.copyPieces).toHaveBeenCalledOnce();
+  });
+
+  it('saves the pieces a selection is in as a template, and refuses features alone (9.7)', () => {
+    const { entries, on } = menu(selectionOf(['cut-a', 'cut-b']));
+    const save = item(entries, 'context-save-template');
+    expect(save.label).toBe('Save 2 pieces as template…');
+    expect(save.refusal).toBeUndefined();
+    save.onChoose();
+    expect(on.saveAsTemplate).toHaveBeenCalledOnce();
+
+    const loose = item(menu(selectionOf(['stitch-a'])).entries, 'context-save-template');
+    expect(loose.refusal).toBe('Select the whole piece to save it as a template.');
   });
 
   it('offers Paste beside Copy once something is copied, and not before (8.8b)', () => {

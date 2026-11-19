@@ -72,7 +72,9 @@ import {
   pasteClipboard,
   selectCopies,
   type PiecesClipboard,
+  type Copied,
 } from './piecesClipboard.js';
+import { insertPieces, PIECE_TAG, pieceTemplate } from './partLibrary.js';
 import { listenForContextMenuKeys } from './keyboardContextMenu.js';
 import { refusalText, svgName } from './svgImport.js';
 import { SvgImportDialog, type ImportTarget } from './SvgImportDialog.js';
@@ -729,7 +731,19 @@ export function App({
   // The templates (8.12): the picker, open with what the main process listed,
   // and the tab being saved as one.
   const [templateList, setTemplateList] = useState<readonly TemplateChoice[] | null>(null);
-  const [savingTemplate, setSavingTemplate] = useState<ProjectTab | null>(null);
+  // What *Save as template…* saves, and its name to begin with: a tab's
+  // project, or pieces of one (9.7) with what their copy could not take.
+  const [savingTemplate, setSavingTemplate] = useState<{
+    project: Project;
+    name: string;
+    copied?: Copied;
+  } | null>(null);
+  const saveTabAsTemplate = (tab: ProjectTab | null): void =>
+    setSavingTemplate(
+      tab === null ? null : { project: tab.store.committedDocument.project, name: tabName(tab, t) },
+    );
+  // The picker chooses pieces to insert (9.7) rather than a project to start.
+  const [insertingPieces, setInsertingPieces] = useState(false);
   // Each template read and loaded, so the picker can draw it. One that does
   // not load is still listed, without its picture.
   const listTemplates = useCallback(async (): Promise<TemplateChoice[]> => {
@@ -750,6 +764,7 @@ export function App({
     );
   }, []);
   const showTemplates = useCallback(() => {
+    setInsertingPieces(false);
     void listTemplates()
       .then(setTemplateList)
       .catch(() => undefined);
@@ -1438,6 +1453,37 @@ export function App({
     [piecesClipboard, nextId, store, t],
   );
 
+  /** *Save as template…* on pieces (9.7): only them, as *Copy* takes them. */
+  const savePiecesAsTemplate = (): void => {
+    const { document, selection } = store.getState();
+    const partIds = [...selectedParts(document.project, selection)];
+    const [only] =
+      partIds.length === 1 ? document.project.parts.filter((p) => p.id === partIds[0]) : [];
+    const name = only?.name ?? document.project.name;
+    const { project, copied } = pieceTemplate(document.project, partIds, nextId(), name);
+    setSavingTemplate({ project, name, copied });
+  };
+
+  /**
+   * *Insert pieces from template…* (9.7): the chosen pieces through 8.8b's
+   * paste, one undo step, selected and framed as an import's are.
+   */
+  const insertFromTemplate = (id: string, partIds: readonly string[]): void => {
+    const template = templateList?.find((choice) => choice.entry.id === id)?.project;
+    setTemplateList(null);
+    if (template === null || template === undefined) return;
+    const made = insertPieces(template, partIds, nextId);
+    store.dispatch(made.command);
+    selectCopies(store, made.copies);
+    runZoom('fitSelection');
+    const said = copyNotice(made.copied, i18n, 'duplicate');
+    if (said !== null) setNotice({ title: t('templates.insertedTitle'), text: said });
+    // It leads *Recently used*, as a project made from it would (8.14).
+    void getPlatformHost()
+      .templateUsed(id)
+      .catch(() => undefined);
+  };
+
   /**
    * An import's pieces, as one undo step (9.20b): into the open project,
    * selected and framed as a paste is, or as a new project's first step.
@@ -1603,7 +1649,13 @@ export function App({
               onOpen={() => void openProject()}
               onImportSvg={() => void importSvg()}
               onSaveAs={() => (active === null ? undefined : void file.save(active, true))}
-              onSaveAsTemplate={() => setSavingTemplate(active)}
+              onInsertPieces={() => {
+                setInsertingPieces(true);
+                void listTemplates()
+                  .then(setTemplateList)
+                  .catch(() => undefined);
+              }}
+              onSaveAsTemplate={() => saveTabAsTemplate(active)}
               onRename={setRenaming}
               // The main process checks it is on the list, grants it, and
               // hands it back through onOpenFile, which opens it in a tab.
@@ -2156,6 +2208,7 @@ export function App({
                       sewTogether: startSewing,
                       duplicatePieces: duplicateSelected,
                       copyPieces,
+                      saveAsTemplate: savePiecesAsTemplate,
                       paste: pasteChoice,
                       deleteFeatures: requestDelete,
                       deletePart: requestDeletePart,
@@ -2204,22 +2257,39 @@ export function App({
             pinnedFolded={preferences.templatePinnedFolded}
             onFoldPinned={(templatePinnedFolded) => changePreferences({ templatePinnedFolded })}
             actions={templateActions}
+            insert={insertingPieces ? insertFromTemplate : undefined}
             onClose={() => setTemplateList(null)}
           />
         )}
 
         {savingTemplate !== null && (
           <SaveTemplateDialog
-            initialName={tabName(savingTemplate, t)}
+            initialName={savingTemplate.name}
             onSave={async (name, replace) => {
+              const { project, copied } = savingTemplate;
               const outcome = await file
-                .saveAsTemplate(savingTemplate, name, replace)
+                .saveAsTemplate(project, name, replace)
+                .then(async (saved) => {
+                  // Pieces are tagged so, beside what the maker said of it before (9.7).
+                  if (saved.kind === 'saved' && copied !== undefined) {
+                    const host = getPlatformHost();
+                    const id = `mine:${saved.name}`;
+                    const was = (await host.listTemplates()).find((entry) => entry.id === id);
+                    await host.describeTemplate(id, was?.description ?? '', [
+                      ...(was?.tags ?? []),
+                      PIECE_TAG,
+                    ]);
+                  }
+                  return saved;
+                })
                 .catch((error: unknown) => ({ kind: 'failed' as const, error }));
               if (outcome.kind === 'failed') {
                 return { said: fileErrorText(outcome.error, t), taken: false };
               }
               if (outcome.kind === 'saved') {
                 setSavingTemplate(null);
+                const said = copied === undefined ? null : copyNotice(copied, i18n, 'duplicate');
+                if (said !== null) setNotice({ title: t('templates.savedTitle'), text: said });
                 return null;
               }
               if (outcome.kind === 'exists') {
@@ -2268,7 +2338,7 @@ export function App({
               },
               save: () => void file.save(menuTab),
               saveAs: () => void file.save(menuTab, true),
-              saveAsTemplate: () => setSavingTemplate(menuTab),
+              saveAsTemplate: () => saveTabAsTemplate(menuTab),
               reload: () =>
                 void confirmDiscard('reload', menuTab).then((proceed) =>
                   proceed ? file.reload(menuTab) : undefined,

@@ -485,7 +485,7 @@ pinned to the top of the list, in the order pinned, kept by *Clear list*. The ma
 templates (8.14) are ordinary `.lcp` files in `templates/` beside this file, each named as the
 maker named it; the ones that ship are inside the app. `templates/templates.json` keeps what the
 app knows about each template beyond its file, by its id (`builtin:<id>` or `mine:<name>`): the
-maker's `description` and `tags`, whether it is `pinned`, and `usedAt`, when a project was last made
+maker's `description` and `tags` (pieces saved as a template, 9.7, are tagged `piece`), whether it is `pinned`, and `usedAt`, when a project was last made
 from it. A damaged one is read as empty. `templateSort` and `templateShow` here are how the picker
 was last ordered and filtered. The rail's collapse applies to a wide window
 only; below 1280 px it collapses by itself, and opening it there lasts the session. `partsFolded`

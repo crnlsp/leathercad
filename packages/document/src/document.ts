@@ -140,6 +140,7 @@ export type HistoryAction =
   | 'duplicate-part'
   | 'paste'
   | 'duplicate-pieces'
+  | 'insert-pieces'
   | 'paste-features'
   | 'duplicate-features'
   | 'import'

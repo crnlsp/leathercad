@@ -44,6 +44,8 @@ export interface SelectionActions {
   duplicatePieces(): void;
   /** Copies what `copyScope` says the selection takes, for any open project (8.8b). */
   copyPieces(): void;
+  /** Saves the selected pieces as one of the maker's templates (9.7). */
+  saveAsTemplate(): void;
   /** What was copied, when anything was: *Paste* puts it where the menu was opened. */
   paste?: PasteChoice | undefined;
   /** Asks first when something depends on them (ADR 0009). */
@@ -159,6 +161,14 @@ export function selectionMenu(
       onChoose: actions.copyPieces,
     },
     ...(actions.paste === undefined ? [] : [pasteItem(i18n, actions.paste)]),
+    // Pieces, for any project to come (9.7); features alone are not a piece.
+    {
+      kind: 'item',
+      id: 'context-save-template',
+      label: t('contextMenu.saveAsTemplate', { count: parts.length }),
+      refusal: loose ? t('contextMenu.saveAsTemplateFeatures') : undefined,
+      onChoose: actions.saveAsTemplate,
+    },
     { kind: 'separator' },
     flip('horizontal'),
     flip('vertical'),
