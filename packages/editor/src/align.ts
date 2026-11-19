@@ -1,4 +1,4 @@
-import { EPS_ANGLE, EPS_POINT, approxEq } from '@leathercad/core';
+import { EPS_ANGLE, EPS_POINT, approxEq, type Mm } from '@leathercad/core';
 import type { Feature, ResolvedProject } from '@leathercad/domain';
 import { CANVAS, boardTextItem, pathItem, type DisplayItem } from '@leathercad/render';
 import {
@@ -19,6 +19,7 @@ import {
   type Measured,
   type Snapped,
 } from './snap.js';
+import { isSpacing, spacingFor, type Face, type Gap } from './spacing.js';
 
 /**
  * Smart guides for a moved piece (3.16, smart-guides spec §6): the moving
@@ -65,6 +66,8 @@ interface AxisTargets {
 export interface AlignTargets {
   readonly x: AxisTargets;
   readonly y: AxisTargets;
+  /** What a gap is measured to, for equal spacing (3.19), in document order. */
+  readonly faces: readonly Face[];
 }
 
 export interface Alignment {
@@ -91,14 +94,16 @@ export function collectAlignTargets(
   moving: ReadonlySet<string>,
 ): AlignTargets {
   const list: AlignTarget[] = [];
+  const faces: Face[] = [];
   const add = numbered(list);
   for (const part of resolved.parts) {
     const outline = outlineOf(part);
     if (outline === null || moving.has(outline.feature.id)) continue;
     addExtent(add, outline.feature.id, outline.path, 'piece-centre', 'piece-edge', false);
+    addFace(faces, outline.feature.id, outline.path);
   }
   addGuides(add, resolved);
-  return indexTargets(list);
+  return indexTargets(list, faces);
 }
 
 /**
@@ -116,6 +121,7 @@ export function collectHostTargets(
   moving: ReadonlySet<string>,
 ): AlignTargets {
   const list: AlignTarget[] = [];
+  const faces: Face[] = [];
   const add = numbered(list);
   const part = resolved.parts.find((candidate) => candidate.part.id === partId);
   const outline = part === undefined ? null : outlineOf(part);
@@ -126,6 +132,8 @@ export function collectHostTargets(
       if (!PLACED(entry.feature)) continue;
       const box = PathOps.bbox(entry.path);
       if (box === null) continue;
+      // A cut-out is a face a gap is measured to; a hole's rim and a label's glyphs are not.
+      if (entry.feature.kind === 'cut-contour') addFace(faces, entry.feature.id, entry.path);
       for (const axis of AXES) {
         const [low, high] = sides(box, axis);
         add({
@@ -139,7 +147,7 @@ export function collectHostTargets(
     }
   }
   addGuides(add, resolved);
-  return indexTargets(list);
+  return indexTargets(list, faces);
 }
 
 /** What is placed inside a piece and has a centre worth placing by: holes, cut-outs and labels. */
@@ -201,6 +209,21 @@ function addExtent(
   }
 }
 
+/** A piece or a cut-out as something equal spacing measures a gap to (3.19). */
+function addFace(faces: Face[], featureId: string, path: Path): void {
+  const box = PathOps.bbox(path);
+  if (box === null) return;
+  faces.push({
+    featureId,
+    order: faces.length,
+    box,
+    straight: {
+      x: straightSides(path, 'x', box.minX, box.maxX),
+      y: straightSides(path, 'y', box.minY, box.maxY),
+    },
+  });
+}
+
 /** Every level or upright guide, on the axis it fixes. */
 function addGuides(add: Adder, resolved: ResolvedProject): void {
   for (const guide of resolved.project.guides ?? []) {
@@ -213,8 +236,11 @@ function addGuides(add: Adder, resolved: ResolvedProject): void {
   }
 }
 
-/** Targets sorted per axis, as a move searches them. */
-export function indexTargets(list: readonly AlignTarget[]): AlignTargets {
+/** Targets sorted per axis, as a move searches them, and the faces equal spacing measures to. */
+export function indexTargets(
+  list: readonly AlignTarget[],
+  faces: readonly Face[] = [],
+): AlignTargets {
   const index = (axis: Axis): AxisTargets => {
     const all = list
       .filter((target) => target.axis === axis)
@@ -228,7 +254,7 @@ export function indexTargets(list: readonly AlignTarget[]): AlignTargets {
     });
     return { all, offered };
   };
-  return { x: index('x'), y: index('y') };
+  return { x: index('x'), y: index('y'), faces };
 }
 
 /**
@@ -286,6 +312,12 @@ export function alignMove(
         });
       }
     }
+    // A single hole lines up by its centre alone: its rim is no face (spec §6).
+    if (options.centreOnly === true) continue;
+    for (const spaced of spacingFor(targets.faces, box, raw, axis, reach)) {
+      reference.set(spaced.candidate, spaced.reference);
+      found.push(spaced);
+    }
   }
 
   const snapped = decideSnap([], found, held, options);
@@ -302,7 +334,9 @@ export function alignMove(
  * the snap colour from the moved extent to the farthest piece lined up at that
  * value, and a small × where each of them meets it. Screen-constant, in CSS
  * pixels; overlay only. A host piece's centre line is named at its far end,
- * in the app's words (3.18); without `words`, it is drawn unnamed.
+ * in the app's words (3.18); without `words`, it is drawn unnamed. Equal
+ * spacing draws its two gaps instead, each labelled with the one gap both are
+ * (3.19) — through `gapWords`, without which they are drawn unlabelled.
  */
 export function alignmentOverlay(
   moved: Rect,
@@ -310,11 +344,18 @@ export function alignmentOverlay(
   targets: AlignTargets,
   pxPerMm: number,
   words?: (label: AlignLabel) => string,
+  gapWords?: (mm: Mm) => string,
 ): DisplayItem[] {
   const items: DisplayItem[] = [];
   for (const axis of AXES) {
     const caught = snapped[axis];
     if (caught === null) continue;
+    if (isSpacing(caught)) {
+      for (const gap of caught.gaps) {
+        items.push(...gapItems(gap, axis, caught.gapMm, pxPerMm, gapWords));
+      }
+      continue;
+    }
     const all = targets[axis].all;
     const spans: (readonly [number, number])[] = [sides(moved, other(axis))];
     let label: AlignLabel | undefined;
@@ -357,6 +398,56 @@ export function alignmentOverlay(
             ),
       );
     }
+  }
+  return items;
+}
+
+/**
+ * One equal gap: a line in the snap colour between the two faces, a × at each,
+ * and its width — above a level line, left of an upright one.
+ */
+function gapItems(
+  gap: Gap,
+  axis: Axis,
+  gapMm: Mm,
+  pxPerMm: number,
+  words?: (mm: Mm) => string,
+): DisplayItem[] {
+  const at = (along: number): Vec2 =>
+    axis === 'x' ? { x: along, y: gap.across } : { x: gap.across, y: along };
+  const items: DisplayItem[] = [
+    pathItem('construction', polyline([at(gap.from), at(gap.to)]), {
+      colour: CANVAS.overlay.snap,
+      widthPx: 1,
+      dashMm: [],
+    }),
+    ...snapGlyph({ kind: 'intersection', point: at(gap.from) }, pxPerMm, { sizePx: 7 }),
+    ...snapGlyph({ kind: 'intersection', point: at(gap.to) }, pxPerMm, { sizePx: 7 }),
+  ];
+  if (words !== undefined) {
+    const middle = at((gap.from + gap.to) / 2);
+    const off = LABEL_GAP_PX / pxPerMm;
+    items.push(
+      axis === 'x'
+        ? boardTextItem(
+            { x: middle.x, y: middle.y + off },
+            words(gapMm),
+            CANVAS.text.value,
+            CANVAS.overlay.snap,
+            {
+              align: 'center',
+            },
+          )
+        : boardTextItem(
+            { x: middle.x - off, y: middle.y },
+            words(gapMm),
+            CANVAS.text.value,
+            CANVAS.overlay.snap,
+            {
+              align: 'right',
+            },
+          ),
+    );
   }
   return items;
 }

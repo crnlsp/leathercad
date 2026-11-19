@@ -21,8 +21,8 @@ export type SnapKind =
 /**
  * A value one axis of a moving reference caught: alignment, ranks 2 to 8 of
  * the smart-guides spec §5, decided by the same table and the same rules as
- * points. 3.16 collects the piece kinds and 3.18 the host kinds; 3.19 will
- * collect equal spacing.
+ * points. 3.16 collects the piece kinds and 3.18 the host kinds;
+ * 3.19 equal spacing.
  */
 export type AxisKind =
   | 'guide-axis'

@@ -38,6 +38,7 @@ function harness(
     addPart(rectanglePart('pocket', 'pocket-cut', 'Pocket', rectShape({ x: 30, y: 20 }, 40, 30))),
   ],
   alignmentWords?: (label: AlignLabel) => string,
+  distanceWords?: (mm: number) => string,
 ) {
   const store = new DocumentStore(emptyDocument('proj'));
   const commands: Command[] = [...scene, ...extra];
@@ -52,6 +53,7 @@ function harness(
     invalidate: () => {},
     smartGuides: () => smartGuides,
     ...(alignmentWords === undefined ? {} : { alignmentWords }),
+    ...(distanceWords === undefined ? {} : { distanceWords }),
   };
   const tool = createSelectTool();
   const manager = new ToolManager(ctx, tool, [tool]);
@@ -320,5 +322,82 @@ describe('placing inside a piece (3.18)', () => {
       .overlay()
       .items.flatMap((item) => (item.kind === 'overlay-text' ? [item.text] : []));
     expect(words).toEqual(['Centre of its extent']);
+  });
+});
+
+/**
+ * 3.19: a piece moved beside others snaps to equal gaps (smart-guides spec
+ * §8). Three 40 × 30 card pockets in a row, level: the first two 15 mm apart,
+ * the third away to the right. At 4 px/mm the pick radius is 2.5 mm.
+ */
+function cardPockets(smartGuides = true) {
+  const words: string[] = [];
+  const { store, manager } = harness(
+    [],
+    smartGuides,
+    [
+      addPart(rectanglePart('one', 'one-cut', 'One', rectShape({ x: 0, y: 0 }, 40, 30))),
+      addPart(rectanglePart('two', 'two-cut', 'Two', rectShape({ x: 55, y: 0 }, 40, 30))),
+      addPart(rectanglePart('three', 'three-cut', 'Three', rectShape({ x: 200, y: 0 }, 40, 30))),
+    ],
+    undefined,
+    (mm) => {
+      words.push(`${mm}`);
+      return `${mm} mm`;
+    },
+  );
+  return { store, manager, words };
+}
+
+const third = (store: DocumentStore) => boxOf(store.getState().document.project, 'three-cut');
+const THIRD: Vec2 = { x: 220, y: 15 };
+
+describe('equal spacing while moving a piece (3.19)', () => {
+  it('places a third pocket the gap of the first two along, exactly, in one undo step', () => {
+    const { store, manager } = cardPockets();
+    const before = store.getState().document;
+    // Raw, its left side would land at 111.2: 1.2 mm past repeating the 15 mm.
+    drag(manager, THIRD, { x: THIRD.x - 88.8, y: THIRD.y });
+    expect(third(store).minX).toBe(110);
+    store.undo();
+    expect(store.getState().document).toBe(before);
+  });
+
+  it('centres a pocket between two neighbours, with equal gaps', () => {
+    const { store, manager } = harness([], true, [
+      addPart(rectanglePart('one', 'one-cut', 'One', rectShape({ x: 0, y: 0 }, 40, 30))),
+      addPart(rectanglePart('three', 'three-cut', 'Three', rectShape({ x: 200, y: 0 }, 40, 30))),
+      addPart(rectanglePart('two', 'two-cut', 'Two', rectShape({ x: 300, y: 0 }, 40, 30))),
+    ]);
+    // Between 40 and 200 a 40-wide pocket is centred at 100–140, 60 mm each
+    // side; carried to 101.7–141.7.
+    drag(manager, { x: 320, y: 15 }, { x: 121.7, y: 15 });
+    const two = boxOf(store.getState().document.project, 'two-cut');
+    expect(two.minX).toBe(100);
+    expect(two.minX - 40).toBe(200 - two.maxX);
+  });
+
+  it('Ctrl suspends it: the pocket goes where the pointer took it', () => {
+    const { store, manager } = cardPockets();
+    drag(manager, THIRD, { x: THIRD.x - 88.8, y: THIRD.y }, true);
+    expect(third(store).minX).toBeCloseTo(111.2, 9);
+  });
+
+  it('with Smart guides off, the pocket goes where the pointer took it', () => {
+    const { store, manager } = cardPockets(false);
+    drag(manager, THIRD, { x: THIRD.x - 88.8, y: THIRD.y });
+    expect(third(store).minX).toBeCloseTo(111.2, 9);
+  });
+
+  it('labels both gaps with the same number while it is caught', () => {
+    const { manager, words } = cardPockets();
+    manager.pointerDown(pointer(THIRD));
+    manager.pointerMove(pointer({ x: THIRD.x - 88.8, y: THIRD.y }));
+    words.length = 0;
+    const lines = manager
+      .overlay()
+      .items.filter((item) => item.kind === 'path' && item.stroke.colour === CANVAS.overlay.snap);
+    expect(lines.length).toBeGreaterThan(0);
+    expect(words).toEqual(['15', '15']);
   });
 });
