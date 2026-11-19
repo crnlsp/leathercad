@@ -95,10 +95,10 @@ export const MATRIX: { readonly [code: string]: RuleCoverage } = {
     transition: ['SF-A4'],
   },
   OUTSIDE_PART: {
-    positive: ['SF-E3', 'SF-K5', 'SF-A11'],
-    negative: ['SF-A2', 'SF-K1'],
+    positive: ['SF-E3', 'SF-K4', 'SF-K5', 'SF-A11'],
+    negative: ['SF-A2', 'SF-K1', 'SF-K6'],
     notApplicable: { exempt: UNIVERSAL },
-    transition: ['SF-A11'],
+    transition: ['SF-A11', 'SF-K4'],
   },
   CUT_OUT_OUTSIDE_PART: {
     positive: ['SF-A10'],
@@ -170,9 +170,7 @@ export const DECLARED_OUTCOME_PREFIXES = ['SEAM_', 'POCKET_'] as const;
  * The fix fails that scenario on purpose; it then asserts the correct list and
  * takes its entry out of here, in the same change.
  */
-export const KNOWN_DEFECTS: readonly { readonly id: string; readonly scenario: string }[] = [
-  { id: 'KD-3', scenario: 'SF-K4' },
-];
+export const KNOWN_DEFECTS: readonly { readonly id: string; readonly scenario: string }[] = [];
 
 export function isCovered(coverage: Coverage): coverage is readonly string[] {
   return Array.isArray(coverage);
