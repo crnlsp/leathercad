@@ -91,6 +91,7 @@ export function TemplateDialog({
   pinnedFolded,
   onFoldPinned,
   actions,
+  insert,
   onClose,
 }: {
   templates: readonly TemplateChoice[];
@@ -102,6 +103,11 @@ export function TemplateDialog({
   pinnedFolded: boolean;
   onFoldPinned: (folded: boolean) => void;
   actions: TemplateActions;
+  /**
+   * *Insert pieces from template…* (9.7): the picker chooses pieces of a
+   * template to insert into the open project, rather than a project to start.
+   */
+  insert?: ((id: string, partIds: readonly string[]) => void) | undefined;
   onClose: () => void;
 }) {
   const i18n = useI18n();
@@ -181,6 +187,23 @@ export function TemplateDialog({
     );
   };
 
+  // The chosen template's pieces left out of an insert, forgotten as another is chosen.
+  const [skipped, setSkipped] = useState<{ id: string; parts: ReadonlySet<string> } | null>(null);
+  const kept = (row: Row): readonly string[] =>
+    (row.project?.parts ?? [])
+      .map((part) => part.id)
+      .filter((id) => skipped?.id !== row.entry.id || !skipped.parts.has(id));
+  const toggle = (row: Row, partId: string): void => {
+    const parts = new Set(skipped?.id === row.entry.id ? skipped.parts : []);
+    if (!parts.delete(partId)) parts.add(partId);
+    setSkipped({ id: row.entry.id, parts });
+  };
+  const insertCount = chosen === null ? 0 : kept(chosen).length;
+  const use = (row: Row): void => {
+    if (insert === undefined) actions.use(row.entry.id);
+    else if (kept(row).length > 0) insert(row.entry.id, kept(row));
+  };
+
   const order = (nextSort: TemplateSort, nextShow: TemplateShow): void =>
     onOrder(nextSort, nextShow);
 
@@ -211,7 +234,7 @@ export function TemplateDialog({
         className="template-choice"
         data-selected={selected}
         onClick={() => setPicked(row.entry.id)}
-        onDoubleClick={() => actions.use(row.entry.id)}
+        onDoubleClick={() => use(row)}
       >
         <div
           role="option"
@@ -287,7 +310,7 @@ export function TemplateDialog({
             chosen !== null &&
             !(event.target instanceof HTMLButtonElement)
           ) {
-            actions.use(chosen.entry.id);
+            use(chosen);
           } else if (
             event.key === 'Delete' &&
             event.target !== search.current &&
@@ -299,7 +322,9 @@ export function TemplateDialog({
         }}
       >
         <div className="template-head">
-          <h2 id="template-dialog-title">{t('templates.title')}</h2>
+          <h2 id="template-dialog-title">
+            {t(insert === undefined ? 'templates.title' : 'templates.insertTitle')}
+          </h2>
           <Tooltip text={t('templates.importTooltip')}>
             <button
               type="button"
@@ -459,6 +484,11 @@ export function TemplateDialog({
                 onRemove={remove}
                 // Renamed, it has a new id: still the one chosen, not the first row.
                 onRenamed={setPicked}
+                pieces={
+                  insert === undefined
+                    ? undefined
+                    : { kept: kept(chosen), toggle: (partId) => toggle(chosen, partId) }
+                }
               />
             )}
           </div>
@@ -489,10 +519,12 @@ export function TemplateDialog({
             type="button"
             className="tool primary"
             data-testid="template-use"
-            disabled={chosen === null}
-            onClick={() => (chosen === null ? undefined : actions.use(chosen.entry.id))}
+            disabled={chosen === null || (insert !== undefined && insertCount === 0)}
+            onClick={() => (chosen === null ? undefined : use(chosen))}
           >
-            {t('templates.use')}
+            {insert === undefined
+              ? t('templates.use')
+              : t('templates.insert', { count: insertCount })}
           </button>
         </div>
       </div>
@@ -526,12 +558,16 @@ function Detail({
   actions,
   onRemove,
   onRenamed,
+  pieces,
 }: {
   row: Row;
   dates: Intl.DateTimeFormat;
   actions: TemplateActions;
   onRemove: (row: Row) => void;
   onRenamed: (id: string) => void;
+  /** Inserting (9.7): the pieces to insert, chosen here. */
+  pieces?:
+    { readonly kept: readonly string[]; readonly toggle: (partId: string) => void } | undefined;
 }) {
   const { t } = useI18n();
   const mine = row.entry.kind === 'mine';
@@ -769,6 +805,22 @@ function Detail({
             </>
           )}
         </dl>
+        {pieces !== undefined && row.project !== null && (
+          <fieldset className="template-pieces" data-testid="template-pieces">
+            <legend className="template-heading">{t('templates.piecesToInsert')}</legend>
+            {row.project.parts.map((part) => (
+              <label key={part.id} className="template-piece">
+                <input
+                  type="checkbox"
+                  data-testid={`template-piece-${part.id}`}
+                  checked={pieces.kept.includes(part.id)}
+                  onChange={() => pieces.toggle(part.id)}
+                />
+                {part.name}
+              </label>
+            ))}
+          </fieldset>
+        )}
         {!mine && <p className="template-note">{t('templates.builtInLocked')}</p>}
         {mine && editing && (
           <form

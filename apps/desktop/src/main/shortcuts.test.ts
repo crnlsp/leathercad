@@ -37,6 +37,7 @@ describe('the keyboard shortcut map', () => {
           newFromTemplate: noop,
           open: noop,
           importSvg: noop,
+          insertPieces: noop,
           saveAs: noop,
           saveAsTemplate: noop,
           rename: noop,

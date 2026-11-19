@@ -167,7 +167,9 @@
     "newFromTemplate": "New project from template…",
     "saveAsTemplate": "Save as template…",
     "importSvg": "Import SVG pattern…",
-    "importSvgNote": "Inkscape or Illustrator drawings, at their true size"
+    "importSvgNote": "Inkscape or Illustrator drawings, at their true size",
+    "insertPieces": "Insert pieces from template…",
+    "insertPiecesNote": "Your saved pieces, or any template's"
   },
   "macMenu": {
     "edit": "Edit",
@@ -1436,6 +1438,9 @@
     "label": "Selection",
     "copy_one": "Copy piece",
     "copy_other": "Copy {{count}} pieces",
+    "saveAsTemplate_one": "Save piece as template…",
+    "saveAsTemplate_other": "Save {{count}} pieces as template…",
+    "saveAsTemplateFeatures": "Select the whole piece to save it as a template.",
     "paste_one": "Paste piece",
     "paste_other": "Paste {{count}} pieces",
     "copyFeatures_one": "Copy feature",
@@ -1558,6 +1563,8 @@
     "duplicate-part": "Duplicate part",
     "duplicate-pieces_one": "Duplicate piece",
     "duplicate-pieces_other": "Duplicate {{count}} pieces",
+    "insert-pieces_one": "Insert piece",
+    "insert-pieces_other": "Insert {{count}} pieces",
     "paste_one": "Paste piece",
     "paste_other": "Paste {{count}} pieces",
     "paste-features_one": "Paste feature",
@@ -1708,6 +1715,12 @@
     "title": "New project from template",
     "mineEmpty": "Save any project as a template, from the Project menu or its tab’s menu, and it is listed here.",
     "use": "Use template",
+    "insertTitle": "Insert pieces from template",
+    "insert_one": "Insert piece",
+    "insert_other": "Insert {{count}} pieces",
+    "piecesToInsert": "Pieces to insert",
+    "savedTitle": "Saved as template",
+    "insertedTitle": "Inserted",
     "remove": "Remove {{name}}",
     "bifoldWallet": {
       "name": "Bifold wallet",
