@@ -95,10 +95,7 @@ function outcome(bytes: Uint8Array): 'loaded' | 'refused' {
       expect(error.refusal.kind).toBeTypeOf('string');
       return 'refused';
     }
-    if (
-      error instanceof NewerFormatError ||
-      error instanceof ResourceLimitError
-    ) {
+    if (error instanceof NewerFormatError || error instanceof ResourceLimitError) {
       return 'refused';
     }
     throw error;
