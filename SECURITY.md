@@ -32,7 +32,7 @@ of fixes — security fixes among them — when they are released. When you ask 
 asks GitHub for the latest release (`api.github.com/repos/crnlsp/leathercad/releases/latest`). The
 request carries nothing about you or your patterns, and nothing is downloaded or installed: a newer
 release is only named, with a link to its page. The Flatpak never makes it, since Flathub keeps it
-up to date. See
+up to date, and nor does the Microsoft Store's copy, which the Store updates. See
 [ADR 0020](docs/adr/0020-update-discovery.md).
 
 The things most worth reporting are:

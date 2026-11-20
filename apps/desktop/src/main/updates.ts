@@ -1,4 +1,4 @@
-import type { UpdateAnswer, UpdateStatus } from '@leathercad/platform';
+import type { UpdateAnswer, UpdateStatus, Updater } from '@leathercad/platform';
 
 /**
  * Where the latest release is asked for (8.9). GitHub's `latest` is the newest
@@ -72,6 +72,20 @@ export function statusFrom(body: unknown, running: string, checkedAt: number): U
 }
 
 /**
+ * What else keeps this copy up to date, or null when nothing does and the app
+ * may ask GitHub (B5). Flathub sets `FLATPAK_ID` in every Flatpak; Electron
+ * sets `process.windowsStore` in a copy the MSIX package installed, which the
+ * Store updates.
+ */
+export function managedBy(
+  env: Readonly<Record<string, string | undefined>>,
+  windowsStore: boolean,
+): Updater | null {
+  if (env['FLATPAK_ID'] !== undefined) return 'flathub';
+  return windowsStore ? 'store' : null;
+}
+
+/**
  * The update check (8.9): one GET for the latest release, which says nothing
  * about the maker or their patterns. It downloads and installs nothing.
  *
@@ -90,8 +104,8 @@ export class UpdateChecker {
       readonly fetch: Fetch;
       /** The version running, `app.getVersion()`. */
       readonly running: string;
-      /** Something else updates this copy — the Flatpak's Flathub — so never ask. */
-      readonly managed: boolean;
+      /** What else updates this copy (`managedBy`), so never ask; null: nothing. */
+      readonly managedBy: Updater | null;
       /** Another address than GitHub's, for the tests. */
       readonly url?: string;
       /** Milliseconds since the epoch; `Date.now` but in a test. */
@@ -101,7 +115,8 @@ export class UpdateChecker {
 
   /** The last check's answer, waited for while it runs; `idle` when none was asked. */
   status(): Promise<UpdateStatus> {
-    if (this.options.managed) return Promise.resolve({ state: 'managed' });
+    const by = this.options.managedBy;
+    if (by !== null) return Promise.resolve({ state: 'managed', by });
     return this.last ?? Promise.resolve({ state: 'idle' });
   }
 
@@ -111,7 +126,8 @@ export class UpdateChecker {
    * back. A failed check is never kept that way: it can be tried again at once.
    */
   check(): Promise<UpdateStatus> {
-    if (this.options.managed) return Promise.resolve({ state: 'managed' });
+    const by = this.options.managedBy;
+    if (by !== null) return Promise.resolve({ state: 'managed', by });
     const answered = this.answered;
     if (this.last !== null && answered === null) return this.last;
     if (answered !== null && 'againAt' in answered && this.now() < answered.againAt) {

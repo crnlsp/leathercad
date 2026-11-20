@@ -222,6 +222,32 @@ export default {
     // words are written in; any other system language gets English.
     installerLanguages: ['en_US', 'pl_PL', 'de_DE', 'ru_RU', 'fr_FR', 'es_ES'],
   },
+  // The Microsoft Store's package (B5, ADR 0024), built by `pnpm package:msix`
+  // apart from `pnpm package`: electron-builder's `appx` target, written as
+  // .msix. It is never attached to a release; the maintainer uploads it to
+  // Partner Center, and the Store signs it. build/AppxManifest.xml leaves
+  // %APPDATA%\leathercad unvirtualized, so templates and settings survive
+  // reinstalling and are the .exe's too; that needs `unvirtualizedResources`.
+  // The .lcp association comes from `fileAssociations` above.
+  appx: {
+    artifactName: '${productName}-${version}-${arch}.msix',
+    customManifestPath: 'AppxManifest.xml',
+    capabilities: ['runFullTrust', 'unvirtualizedResources'],
+    // Partner Center's identity for the reserved name replaces these three
+    // (docs/store-listing.md). Until then they name a package CI signs with a
+    // throwaway certificate whose subject is this publisher.
+    identityName: 'crnlsp.LeatherCAD',
+    publisher: 'CN=crnlsp',
+    publisherDisplayName: 'crnlsp',
+    applicationId: 'LeatherCAD',
+    displayName: 'LeatherCAD',
+    backgroundColor: 'transparent',
+    languages: ['en-US', 'pl-PL', 'de-DE', 'ru-RU', 'fr-FR', 'es-ES'],
+    // Windows 10 1903, the first to read desktop6's switch; the latest tested
+    // is Windows 11 24H2, so Windows 11 reads the folder exclusion.
+    minVersion: '10.0.18362.0',
+    maxVersionTested: '10.0.26100.0',
+  },
   // macOS (8.6a): one dmg for Apple silicon and Intel. Flipping the fuses
   // rewrites the binary and invalidates Electron's own signature, and an
   // arm64 app with no valid signature will not start at all — so, with no
