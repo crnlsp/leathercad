@@ -177,7 +177,11 @@ export function PrintPreview({
         if (!ended.signal.aborted) setCalibrationPage({ paper, error });
       }
     })();
-    return () => ended.abort();
+    return () => {
+      ended.abort();
+      // Its document is destroyed with the effect: never show it again (X25).
+      setCalibrationPage(null);
+    };
   }, [calibrating, paper, appVersion]);
   const calibration = calibrating && calibrationPage?.paper === paper ? calibrationPage : null;
 
