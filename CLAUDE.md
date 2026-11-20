@@ -118,7 +118,8 @@ No package below them imports `ui`, `editor` or `apps/desktop`. `export` and `pr
 
 `tests/smart-features` is a workspace of tests, not a layer: projects built with `document`'s
 commands, saved through `persist`, and checked against `domain`'s whole diagnostic list
-(`docs/smart-features.md` §6). Nothing imports it.
+(`docs/smart-features.md` §6). Nothing imports it but R16's E2E journeys, which hold the app's
+saved projects to its diagnostic-list matcher (`e2e/journeys.ts`).
 
 ## Conventions
 

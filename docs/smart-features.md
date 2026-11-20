@@ -231,6 +231,7 @@ keep saying what is not counted.
 | `tests/smart-features/` | A workspace of its own, no layer: it uses `document`, `domain` and `persist` together, as the app does |
 | `pnpm test:smart` | The suite alone, about two seconds. Also part of `pnpm test` and `pnpm check`, so CI runs it with everything else |
 | `e2e/smart-features.spec.ts` | The few journeys that must be seen in the app; `pnpm build && pnpm exec playwright test smart-features` |
+| `e2e/journey-*.spec.ts` | R16's manufacturing journeys: projects made in the app, saved, and their whole diagnostic lists compared with this suite's matcher |
 
 Three layers, each where it is cheapest:
 
