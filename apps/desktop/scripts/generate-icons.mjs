@@ -17,7 +17,8 @@
  * - `icons/<n>x<n>.png`, 16–512 px: the AppImage's icon set, so a launcher or
  *   menu gets a size drawn for it rather than a 1024 px image scaled down;
  * - `icon.ico`, 16–256 px, for Windows;
- * - `icon.icns`, 16–1024 px, for macOS.
+ * - `icon.icns`, 16–1024 px, for macOS;
+ * - `appx/*.png`, the MSIX package's tiles and Store logo (B5).
  *
  * And, from `build/document.svg`, the `.lcp` document's icon (R14): `lcp.ico`
  * and `lcp.icns`, which electron-builder finds by the extension's name, and
@@ -94,6 +95,28 @@ try {
   }
   writeIco(icon, join(build, 'icon.ico'));
   writeIcns(icon, join(build, 'icon.icns'));
+
+  // The MSIX package's tiles and Store logo (B5), named as electron-builder's
+  // appx target looks for them in build/appx/; the wide tile is the icon on a
+  // transparent band.
+  mkdirSync(join(build, 'appx'), { recursive: true });
+  for (const [name, size] of [
+    ['StoreLogo', 50],
+    ['Square44x44Logo', 44],
+    ['Square150x150Logo', 150],
+  ]) {
+    copyFileSync(render(icon, Number(size)), join(build, 'appx', `${name}.png`));
+  }
+  execFileSync('magick', [
+    render(icon, 150),
+    '-background',
+    'none',
+    '-gravity',
+    'center',
+    '-extent',
+    '310x150',
+    join(build, 'appx', 'Wide310x150Logo.png'),
+  ]);
 
   const document = join(build, 'document.svg');
   mkdirSync(join(build, 'document'), { recursive: true });

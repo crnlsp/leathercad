@@ -398,8 +398,8 @@ export interface KeptSession {
 
 /**
  * Whether a newer LeatherCAD has been released (8.9) — a fact, which the app
- * words. `managed`: something else keeps this copy up to date (the Flatpak,
- * Flathub), so the app never asks. `failed` covers no network, GitHub
+ * words. `managed`: something else keeps this copy up to date — Flathub the
+ * Flatpak, the Microsoft Store its MSIX package (B5) — so the app never asks. `failed` covers no network, GitHub
  * refusing and an answer that could not be read: none of them is news.
  */
 export type UpdateStatus =
@@ -413,7 +413,10 @@ export type UpdateStatus =
       readonly url: string;
     } & UpdateAnswer)
   | { readonly state: 'failed' }
-  | { readonly state: 'managed' };
+  | { readonly state: 'managed'; readonly by: Updater };
+
+/** What keeps a managed copy up to date (B5). */
+export type Updater = 'flathub' | 'store';
 
 /**
  * When an answer came, and when the app will ask again (8.9). Until `againAt`

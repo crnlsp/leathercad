@@ -608,8 +608,9 @@ function Language({ preferences, onPreferences, systemLanguages }: Props) {
  * presses it, or the version in the status bar, never by itself, and not
  * again for five minutes after an answer — the button says how long is left.
  * What the check found stands above it, as a card with the status bar's
- * glyph. It links to the release and installs nothing. The Flatpak has none:
- * Flathub updates it, and this says so.
+ * glyph. It links to the release and installs nothing. The Flatpak and the
+ * Store's copy have none: Flathub or the Store updates them, and this says
+ * which.
  */
 function Updates({ updates, onCheckUpdates }: Props) {
   const { t } = useI18n();
@@ -618,7 +619,7 @@ function Updates({ updates, onCheckUpdates }: Props) {
   if (updates.state === 'managed') {
     return (
       <p className="setting-note" data-testid="updates-managed">
-        {t('settings.updates.managed')}
+        {t(updates.by === 'store' ? 'settings.updates.managedByStore' : 'settings.updates.managed')}
       </p>
     );
   }

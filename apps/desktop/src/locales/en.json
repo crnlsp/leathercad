@@ -546,7 +546,8 @@
       "checking": "Checking…",
       "again_one": "Check again in {{count}} minute",
       "again_other": "Check again in {{count}} minutes",
-      "managed": "Flathub keeps this copy of LeatherCAD up to date, so it does not check for itself."
+      "managed": "Flathub keeps this copy of LeatherCAD up to date, so it does not check for itself.",
+      "managedByStore": "The Microsoft Store keeps this copy of LeatherCAD up to date, so it does not check for itself."
     }
   },
   "about": {

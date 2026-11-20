@@ -37,7 +37,7 @@ export function VersionButton({
         : updates.state === 'available'
           ? t('updates.available', { version: updates.version })
           : null;
-  // The Flatpak's copy is Flathub's to update: the version is only the version.
+  // A copy Flathub or the Store updates: the version is only the version.
   if (updates.state === 'managed') {
     return (
       <>

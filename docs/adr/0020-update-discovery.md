@@ -43,7 +43,8 @@ the running version (`apps/desktop/src/main/updates.ts`).
   had, or could not be read, is said there just as quietly, and the app carries on.
 - **Who is left out.** The Flatpak never asks: Flathub keeps it up to date, and its sandbox has
   no network. Settings › Updates says so instead of offering *Check now*, and its version in the
-  status bar is plain text.
+  status bar is plain text. *(Amended 2026-11-20, B5: nor does the Microsoft Store's MSIX package,
+  which the Store updates; Settings names the Store instead, ADR 0024.)*
 - **The renderer still connects to nothing.** It hears the answer over IPC. Its
   Content-Security-Policy keeps `connect-src 'self'`.
 
