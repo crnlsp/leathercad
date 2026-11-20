@@ -91,9 +91,12 @@ export function ProblemsPanel({
             from what it shows rather than by an aria-label, which would have
             to leave out the badge's digit that is seen (WCAG 2.5.3).
           */}
-          <span className="drawer-badge" aria-hidden="true">
-            <CountBadge badge={badge} />
-          </span>
+          {badge !== null && (
+            // Only with a badge: an empty flex item would add a gap before the verdict.
+            <span aria-hidden="true">
+              <CountBadge badge={badge} />
+            </span>
+          )}
           <span className="drawer-verdict" data-testid="problems-verdict">
             {verdict ?? t('problems.panel.none')}
           </span>
