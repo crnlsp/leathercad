@@ -17,7 +17,7 @@ import { fromProjectMenu } from './projectMenu.js';
 
 /**
  * R11's second print test, measured on the page the way `printTest.ts` measures
- * the first: `fixtures/projects/print-test-assembly.lcp` exported through the
+ * the first: `fixtures/projects/paper-check-assembly.lcp` exported through the
  * app, rasterised by poppler, and every number read off ink.
  *
  * On A4 portrait it is six sheets: the hole row, the assembly map, and a 300 ×
@@ -27,7 +27,7 @@ import { fromProjectMenu } from './projectMenu.js';
 
 export const PRINT_TEST_ASSEMBLY = resolve(
   import.meta.dirname,
-  '../fixtures/projects/print-test-assembly.lcp',
+  '../fixtures/projects/paper-check-assembly.lcp',
 );
 
 export interface AssemblyMeasurements {
@@ -120,7 +120,9 @@ function holeRow(image: Gray): AssemblyMeasurements['holeRow'] {
     .filter((s) => s.at < image.height / PX_PER_MM - 25)
     .sort((a, b) => a.at - b.at);
   const [top, bottom] = [edges[0]!, edges.at(-1)!];
-  const [y0, y1] = [Math.ceil((top.at + 1) * PX_PER_MM), Math.floor((bottom.at - 1) * PX_PER_MM)];
+  // Only the band the circles are in: the labels above and below them are text, not holes.
+  const middle = (top.at + bottom.at) / 2;
+  const [y0, y1] = [Math.ceil((middle - 2.6) * PX_PER_MM), Math.floor((middle + 2.6) * PX_PER_MM)];
 
   const spans: number[] = [];
   for (let x = 0; x < image.width; x++) {

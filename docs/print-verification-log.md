@@ -21,7 +21,7 @@ against the packaged binary, on Linux in CI and on Windows and macOS in the Pack
 | The strap, sheet 2's end to the join plus the join to sheet 3's end | 275.0 mm |
 | Each registration cross | on its join line, at the same place on the strap on both sheets |
 
-`fixtures/projects/print-test-assembly.lcp` (R11) is exported and measured the same way, on A4
+`fixtures/projects/paper-check-assembly.lcp` (R11) is exported and measured the same way, on A4
 portrait, six sheets, at 10 px/mm:
 
 | On the PDF | Measured |
@@ -125,9 +125,11 @@ printer.
 
 **The procedure**, about an hour with the calibration, with the steel rule of the procedure above:
 
-1. **Open** `fixtures/projects/print-test-assembly.lcp` in the build under test, on A4 portrait.
+1. **Open** `fixtures/projects/paper-check-assembly.lcp` in the build under test, on A4 portrait.
    Note the version in the status bar. *Sheets* shows six sheets: *Hole row* on sheet 1, the
    assembly map of sheets 3–6 on sheet 2, and *Panel* taped 2 × 2 across sheets 3–6.
+   Each piece carries short labels naming the check and its expected value (`I = 4.0 hole
+   diameter`, `J = 300.0 edge to edge after taping`), so the paper explains itself.
 2. **Print** as step 3 above (on Windows, *Save PDF…* and print at *Actual size*). Never scaled.
    **Print the calibration page** from the print preview's *Calibrate this printer…* only for L
    and M; I to K are printed uncorrected, from a printer with no correction stored.

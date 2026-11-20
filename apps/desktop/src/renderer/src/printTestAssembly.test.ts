@@ -5,6 +5,7 @@ import {
   addHoleRow,
   addMarkingLine,
   addPart,
+  addTextLabel,
   emptyDocument,
   rectShape,
   rectanglePart,
@@ -29,7 +30,7 @@ import { describe, expect, it } from 'vitest';
 
 const FIXTURE = resolve(
   import.meta.dirname,
-  '../../../../../fixtures/projects/print-test-assembly.lcp',
+  '../../../../../fixtures/projects/paper-check-assembly.lcp',
 );
 const SAVE = { applicationVersion: '0.0.0', now: () => new Date('2026-11-20T00:00:00.000Z') };
 
@@ -48,10 +49,22 @@ function assemblyProject(): Project {
       path: PathOps.polyline([at(10, 15), at(110, 15)], false),
     }),
     addHoleRow('strip', 'strip-holes', 'strip-line'),
+    // What each check measures, on the paper beside it (ASCII, inside the outline,
+    // clear of the holes at y = 15 and the panel's joins).
+    addTextLabel('strip', 'strip-label-diameter', at(5, 23), 'I = 4.0 hole diameter', 3),
+    addTextLabel('strip', 'strip-label-length', at(5, 6), 'I = 100.0 first to last hole', 3),
+    addTextLabel(
+      'panel',
+      'panel-label-edge',
+      at(10, 280),
+      'J = 300.0 edge to edge after taping',
+      3,
+    ),
+    addTextLabel('panel', 'panel-label-map', at(10, 270), 'K = sheet 2 map is NOT to scale', 3),
   ];
   return commands.reduce(
     (document, command) => command.apply(document),
-    emptyDocument('print-test-assembly'),
+    emptyDocument('paper-check-assembly'),
   ).project;
 }
 
