@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   guideCrossing,
+  guidePlaceAxes,
   guideSides,
   guideThrough,
   parallelGuide,
@@ -147,5 +148,81 @@ describe('construction guides', () => {
       projectToGuide({ ...guide, origin: { x: Infinity, y: 0 } }, { x: 0, y: 0 }),
     ).toThrow(RangeError);
     expect(() => projectToGuide(guide, { x: 0, y: NaN })).toThrow(RangeError);
+  });
+});
+
+describe('which coordinates place a guide (U.24c, X8)', () => {
+  const turns = fc.integer({ min: -4, max: 4 });
+
+  it('a level guide is placed by its y alone, at any half turn', () => {
+    fc.assert(
+      fc.property(point, turns, (origin, k) => {
+        expect(guidePlaceAxes({ origin, angleRad: k * Math.PI })).toEqual(['y']);
+      }),
+    );
+  });
+
+  it('an upright guide is placed by its x alone, at any half turn', () => {
+    fc.assert(
+      fc.property(point, turns, (origin, k) => {
+        expect(guidePlaceAxes({ origin, angleRad: Math.PI / 2 + k * Math.PI })).toEqual(['x']);
+      }),
+    );
+  });
+
+  it('a diagonal guide needs both', () => {
+    expect(guidePlaceAxes({ origin: { x: 0, y: 0 }, angleRad: Math.PI / 4 })).toEqual(['x', 'y']);
+    expect(guidePlaceAxes({ origin: { x: 0, y: 0 }, angleRad: 1e-6 })).toEqual(['x', 'y']);
+  });
+
+  it('within EPS_ANGLE of level or upright counts as level or upright', () => {
+    expect(guidePlaceAxes({ origin: { x: 0, y: 0 }, angleRad: 1e-10 })).toEqual(['y']);
+    expect(guidePlaceAxes({ origin: { x: 0, y: 0 }, angleRad: Math.PI / 2 - 1e-10 })).toEqual([
+      'x',
+    ]);
+  });
+
+  it('moving the origin along a coordinate it does not name leaves the same line', () => {
+    fc.assert(
+      fc.property(point, angle, coordinate, (origin, angleRad, by) => {
+        const guide = { origin, angleRad };
+        const axes = guidePlaceAxes(guide);
+        for (const axis of ['x', 'y'] as const) {
+          if (axes.includes(axis)) continue;
+          const moved = { ...origin, [axis]: origin[axis] + by };
+          expect(dist(projectToGuide(guide, moved), moved)).toBeLessThan(1e-6);
+        }
+      }),
+    );
+  });
+
+  it('moving it along a coordinate it names moves the line', () => {
+    fc.assert(
+      fc.property(
+        point,
+        angle,
+        fc.double({ min: 1, max: 100, noNaN: true }),
+        (origin, angleRad, by) => {
+          const guide = { origin, angleRad };
+          const axes = guidePlaceAxes(guide);
+          // A guide a hair off level moves only a hair when its x does: a
+          // diagonal one is taken far enough from level and upright to measure.
+          fc.pre(
+            axes.length === 1 ||
+              (Math.abs(Math.sin(angleRad)) > 1e-6 && Math.abs(Math.cos(angleRad)) > 1e-6),
+          );
+          for (const axis of axes) {
+            const moved = { ...origin, [axis]: origin[axis] + by };
+            expect(dist(projectToGuide(guide, moved), moved)).toBeGreaterThan(EPS_POINT);
+          }
+        },
+      ),
+    );
+  });
+
+  it('refuses a guide that is not finite', () => {
+    expect(() => guidePlaceAxes({ origin: { x: 0, y: 0 }, angleRad: Number.NaN })).toThrow(
+      RangeError,
+    );
   });
 });

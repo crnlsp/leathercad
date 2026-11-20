@@ -39,7 +39,8 @@ import { GuidesPanel } from './GuidesPanel.js';
 import { ArrangePanel, PositionFields } from './ArrangePanel.js';
 import { ProblemSection } from './ProblemSection.js';
 import { ProductionSummary } from './ProductionSummary.js';
-import { jobTotals, trailOf } from './propertyFacts.js';
+import { jobTotals, selectedCount, trailOf } from './propertyFacts.js';
+import { manySelectedText } from './selectionWords.js';
 import { ReasonedButton, ReasonedRow, type ReasonedButtonProps } from './ReasonedButton.js';
 import { resolvedFor } from './sheets.js';
 import { FeatureEditor } from './featureEditors/index.js';
@@ -130,11 +131,9 @@ export function PropertyPanel({
         <p className="panel-empty">
           {store.getState().selection.guide !== undefined
             ? t('guides.selected')
-            : selected.size > 1
-              ? t('properties.manySelected', { count: selected.size })
-              : parts.length > 1
-                ? t('properties.manyPartsSelected', { count: parts.length })
-                : t('properties.nothingSelected', keys)}
+            : selected.size > 1 || parts.length > 1
+              ? manySelectedText(selectedCount(project, selected, selectedParts), t)
+              : t('properties.nothingSelected', keys)}
         </p>
         {(selected.size > 1 || parts.length > 1) && (
           <ArrangePanel

@@ -81,6 +81,7 @@ import { SelectionBar, type SelectionBarHandle } from './SelectionBar.js';
 import type { MakerTools } from './irons.js';
 import { cornerFocus } from './cornerFocus.js';
 import { PointerValue, usePointerValue } from './pointerValue.js';
+import { guideFromRuler, guideLandsOnBoard } from './rulerDrag.js';
 
 /**
  * The canvas's viewport, as much of it as anything outside may touch.
@@ -1143,11 +1144,11 @@ export function CanvasHost({
       const rect = event.currentTarget.getBoundingClientRect();
       const x = event.clientX - rect.left;
       const y = event.clientY - rect.top;
-      const thickness = DEFAULT_RULER_STYLE.thicknessPx;
-      if (event.button === 0 && (x < DEFAULT_RULER_STYLE.leftThicknessPx || y < thickness)) {
+      const angleRad = event.button === 0 ? guideFromRuler({ x, y }, DEFAULT_RULER_STYLE) : null;
+      if (angleRad !== null) {
         managerRef.current?.activate('select');
         onToolChange('select');
-        const guide = { id: nextId(), angleRad: y < thickness ? 0 : Math.PI / 2 };
+        const guide = { id: nextId(), angleRad };
         rulerGuideRef.current = guide;
         store.begin({ action: 'add-guide' });
         store.preview(addGuide({ ...guide, origin: rulerGuideAt(event, guide.id) }));
@@ -1326,10 +1327,7 @@ export function CanvasHost({
         const y = event.clientY - rect.top;
         if (
           event.type === 'pointercancel' ||
-          x < DEFAULT_RULER_STYLE.leftThicknessPx ||
-          y < DEFAULT_RULER_STYLE.thicknessPx ||
-          x > rect.width ||
-          y > rect.height
+          !guideLandsOnBoard({ x, y }, rect, DEFAULT_RULER_STYLE)
         ) {
           store.rollback();
         } else {

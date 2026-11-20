@@ -4886,17 +4886,10 @@ button.problem-row,
   gap: var(--space-2);
 }
 
-.arrange-actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-2);
-}
-
-.arrange-actions button {
-  width: 100%;
-  justify-content: center;
-  padding: var(--space-1) var(--space-2);
-  white-space: normal;
+/* Align and distribute: one row of icons per axis (U.24c), the rows' icons
+   in one column whichever label is longer. */
+.arrange-row > .toolbar > .field-label {
+  min-width: 6em;
 }
 
 .guide-list button[aria-pressed='true'] {

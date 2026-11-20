@@ -71,6 +71,7 @@ export {
 export type { GuideSide } from './guides.js';
 export {
   guideCrossing,
+  guidePlaceAxes,
   guideSides,
   guideThrough,
   parallelGuide,
