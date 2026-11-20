@@ -147,7 +147,7 @@ as any item that will not make it does.
 - ☐ **U.24b The template picker and its management, refined.**
 - ☐ **U.24c Guides and Arrange, refined** — a level guide shows only its y; Arrange as icons.
 - ✅ **U.24d Parts, Properties and the selection bar, refined** — a new piece beside a namesake is "Panel 2"; *Fit* keeps the drawing out of the open legend's corner; the selection bar goes over or beside the selection rather than cover the next piece; the corner radius fields are named for a screen reader (X32, X33, X35, X40).
-- ☐ **U.24e Problems, refined.**
+- ✅ **U.24e Problems, refined** — the drawer's handle reads "Problems 1 error"; Previous and Next share its line, so at the minimum window a problem and the piece it names are both in view (X22, X23).
 - ☐ **U.24f The export dialogs, refined.**
 - ☐ **U.24g Print Preview, Sheets and calibration, refined.**
 - ☐ **U.24h Save, recovery and notices, refined.**
