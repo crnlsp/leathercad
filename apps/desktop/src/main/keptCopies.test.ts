@@ -8,17 +8,19 @@ import { KeptCopies } from './keptCopies.js';
 
 /** Unsaved work kept as the window closes (8.12), against a real folder. */
 
+let root: string;
 let dir: string;
 const WALLET = '01JB5M00000000000000WALLET';
 const BELT = '01JB5M000000000000000BELT0';
 const bytes = (text: string): Uint8Array => new TextEncoder().encode(text);
 
 beforeEach(() => {
-  dir = join(mkdtempSync(join(tmpdir(), 'leathercad-kept-')), 'unsaved');
+  root = mkdtempSync(join(tmpdir(), 'leathercad-kept-'));
+  dir = join(root, 'unsaved');
 });
 
 afterEach(() => {
-  rmSync(dir, { recursive: true, force: true });
+  rmSync(root, { recursive: true, force: true });
 });
 
 describe('kept copies', () => {
