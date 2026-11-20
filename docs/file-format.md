@@ -171,7 +171,7 @@ of its ~120 hole positions. Three parameter blocks regenerate all of it.
 `seams?: Seam[]` is project-level, beside `guides` and `parts`. Each seam stores its id and two
 sides: a hole-set id and a stretch between anchors, from an anchor for the other side’s length,
 or `whole` for a closed line (approved D18;
-[domain model §7](domain-model.md#7-assembly-and-seams--built-96ab)). No hole distances, resolved stretches, counts or geometry are stored. Unknown fields on seams, sides and stretches
+[domain model §7](domain-model.md#7-assembly-and-seams--built-96ab-marks-913)). No hole distances, resolved stretches, counts or geometry are stored. Unknown fields on seams, sides and stretches
 are preserved like every other object (§4.3). A stretch reference is a non-negative corner index
 or `'start'` / `'end'` for an open line's geometric boundaries. Endpoint references do not
 renumber existing corners or store any derived position (approved D17).
@@ -222,6 +222,9 @@ mark the file dirty, and every save would produce a diff. Session state stays ou
 ## 4. Versioning and migration
 
 ### 4.1 The runner
+
+The shape of it, as it stood at version 4; the chain itself, to version 15 today, is
+`packages/persist/src/migrations/index.ts`.
 
 ```ts
 const CURRENT_FORMAT_VERSION = 4;
@@ -309,8 +312,8 @@ fall, and which way they point, are read from the holes on every load (§3.3).
 
 The v12→v13 migration is an identity: no older seam has marks, and none are invented on open. The
 version increases because marks print (§4.5 rule 2): a 1.6 build would carry the field through as
-unknown data and print the pattern without them. So every file 1.7 saved was format 13 (14 from §4.1f), which 1.6
-refuses with its *update LeatherCAD* sentence. `fixtures/format/v13.lcp` sews the v12 pocket's new
+unknown data and print the pattern without them. So a file saved from here on was format 13 until §4.1f, and 1.6
+refuses it with its *update LeatherCAD* sentence. `fixtures/format/v13.lcp` sews the v12 pocket's new
 hole set to the panel's with a mark at every fifth pair.
 
 ### 4.1f Version 14 — the iron's tooth
@@ -325,8 +328,8 @@ stored (§3.3).
 
 The v13→v14 migration is an identity: no older hole set has a tooth, and none is invented on open
 (D26). The version increases because SVG and DXF cut it (§4.5 rule 2): a format-13 build would
-carry the field through as unknown data and cut 1 mm centre marks. So every file saved from here
-on was format 14 (15 from §4.1g), which an older build refuses with its *update LeatherCAD* sentence.
+carry the field through as unknown data and cut 1 mm centre marks. So a file saved from here on
+was format 14 until §4.1g, and an older build refuses it with its *update LeatherCAD* sentence.
 `fixtures/format/v14.lcp` gives the v13 panel's hole set an inverse Japanese slit and the pocket's
 a round prong.
 
@@ -466,8 +469,9 @@ Application preferences go in `$XDG_CONFIG_HOME/leathercad/` (falling back to `~
 ~/.config/leathercad/
 ├── preferences.json      the frame as the maker left it, My tools, and the recent projects (8.2, 8.7, U.13)
 ├── printers.json         per-printer calibration factors — see printing.md §8
-└── library/
-    └── parts/*.lcpart    saved part templates
+└── templates/            the maker's templates, saved pieces among them (8.14, 9.7)
+    ├── *.lcp
+    └── templates.json
 ```
 
 `preferences.json` (8.2) and `printers.json` (7.5) exist so far. The first is written by the main process alone, atomically,
@@ -648,8 +652,9 @@ size — belongs in preferences.
 
 ## 8. Companion formats
 
-- **`.lcpart`** — a single saved part for the user library. Same JSON shape as one `parts[]` entry
-  plus the `manifest`, in the same ZIP container. Same migration chain.
+- **`.lcpart`** — reserved, not built. It was to be a single saved part for a user library; D5
+  (the 1.7 plan) made that library the maker's templates instead, so a saved piece is an ordinary
+  `.lcp` tagged `piece` (9.7, [domain-model.md](domain-model.md) §9).
 - **`.lcp.json`** — an *export* option that writes the document as plain, pretty-printed JSON with
   no container. Not the native format, but worth having: it makes projects diffable in git, which
   open-source users and anyone version-controlling their patterns will want. Read support too, so

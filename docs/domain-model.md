@@ -1128,6 +1128,12 @@ panel.
 `PARTS_OVERLAP_ON_SHEET`, once planned beside seams, is not a diagnostic: since 7.4a the sheet
 plan places every piece itself, so two cannot overlap on a sheet.
 
+**Not reported, and known** (the [Smart Features audit](smart-features.md) §7): two stitch holes
+whose typed teeth meet (L2) — no rule reads one tooth against its neighbour's, as `HOLES_OVERLAP`
+reads a row's holes, and no built-in iron's teeth can meet; and DR8's depth is read to the edge of
+the piece the stitching is on (L1) and past a slit (D21's limit), so a pass is an upper bound.
+Makers read both in [getting-started](getting-started.md#known-limitations).
+
 **An audit test holds the catalogue to this section** (`problems/audit.test.ts`, 4.12a). It reads
 the registry and the repository, so nothing in it depends on another test having run first:
 
@@ -1140,11 +1146,14 @@ the registry and the repository, so nothing in it depends on another test having
 
 ## 9. Templates
 
-**First (roadmap 9.7):** save a part to a user library, insert a library part into a project. A
-copy, with no live link to the library, stored as `.lcp`-shaped JSON in the user config directory.
-Inserting re-points the part's internal derivations to the copies, exactly as duplicating does
-(§4.7). Copy and paste (8.8b) carries a part the same way, between projects too; and a template to
-start a project from (9.18) is a whole project opened untitled, as the sample is.
+**Built (9.7, D5):** no library of its own. *Save piece as template…* saves the selected pieces as
+an ordinary template, a project tagged `piece`, lifted by copy and paste's `copyPieces`, so nothing
+in it points outside it; *Insert pieces from template…* pastes the pieces ticked from any template,
+the maker's or built in, through `pastePieces`: new ids, internal references re-pointed as
+duplicating re-points them (§4.7), seams between them kept, one undo step. A copy, with no live
+link to the template. Copy and paste (8.8b) carries pieces the same way between open projects;
+and a template to start a project from (9.18) is a whole project opened untitled, as the sample
+is. `.lcpart` stays reserved (file-format §8).
 
 **Exploring:** parameterised templates, whose named parameters (`cardWidth`, `stitchMargin`) are read
 by shapes and derivations instead of literals. A named value that several shapes read is one step
@@ -1170,8 +1179,9 @@ reuse.
 | Layer roles and export presets | Built | |
 | Corner policies `continuous` and `hole-at-corner` | Built | Radius-aware (*Also later*) |
 | Validation, the §8.6 catalogue | Built: 4.12a–4.12; text size (Q34), seam pairing (9.6b), pocket requirements (9.14b) | |
-| Templates as copies | Later: 9.7 (was 8.1) | Parameterised: *Exploring* |
-| `Seam` and assembly | Model, checks, creation, editing and deletion (9.6a–b) | Alignment marks (9.13) |
+| Templates as copies | Built 9.7, through templates and paste | Parameterised: *Exploring* |
+| `Seam` and assembly | Model, checks, creation, editing and deletion (9.6a–b); alignment marks (9.13); fixes (9.17) | |
+| The iron's tooth, a mirrored pair | Built: 9.26, Q21 | |
 | Material thickness compensation | Fields stored | 9.1 |
 | Hardware library | `hardwareType` only | 9.3 |
 

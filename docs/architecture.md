@@ -164,7 +164,8 @@ Strict, one-directional dependency graph. An arrow means "may import".
      domain   ──depends on──▶ typography, to ask whether a string can be printed (DR5)
      render   ──depends on──▶ typography, for document text and part captions
      export   ──depends on──▶ domain, geometry, render (captions, display-list types), typography
-     import   ──depends on──▶ domain, geometry   (headless: a plain tree in, pieces out — ADR 0023)
+     import   ──depends on──▶ core, geometry   (headless: a plain tree in, pieces out — ADR 0023;
+                                                 domain allowed by rule 9, not used yet)
      print    ──depends on──▶ export
      ui, cli  ──depend on───▶ platform, for file and dialog access
      cli      ──depends on──▶ everything except ui/editor/desktop

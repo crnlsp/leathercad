@@ -79,10 +79,14 @@ async function viewOf(window: Page): Promise<(xMm: number, yMm: number) => [numb
 }
 
 function field(window: Page, label: string) {
-  return window
-    .getByTestId('property-panel')
-    .locator('label', { hasText: new RegExp(`^${label}`) })
-    .locator('input');
+  return (
+    window
+      .getByTestId('property-panel')
+      .locator('label', { hasText: new RegExp(`^${label}`) })
+      // A label's own field, never a checkbox beside it: "Cut" also starts
+      // "Cut as a mirrored pair" (Q21).
+      .locator('input:not([type=checkbox])')
+  );
 }
 
 /** Types a value the way a person does, so the demo shows it being typed. */

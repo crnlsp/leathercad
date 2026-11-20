@@ -41,7 +41,7 @@ Get the file for your system from the
 |---|---|
 | Ubuntu | `.deb` |
 | Any Linux | `.AppImage` (needs FUSE 2) or `.flatpak` |
-| Windows 10 and 11 | `.exe` |
+| Windows 10 and 11 | `.exe` (the Microsoft Store listing is not live yet) |
 | macOS 12 or newer, Apple silicon and Intel | `.dmg` |
 
 The installers aren't code-signed, so Windows and macOS warn the first time you open LeatherCAD.
@@ -71,14 +71,24 @@ The demo is recorded from the real app by a script, so it always shows what Leat
   drawn on.
 - **Stitching that follows the edge.** A stitch line is an inset of its outline, with a hole on
   every corner. Make a panel 110 mm instead of 105 and its stitching updates itself.
+- **Seams that line up.** Sew two pieces together and LeatherCAD says whether their holes pair, by
+  count and by how far they drift apart, with alignment marks to glue them by.
+- **Pockets that hold their card.** Say what a pocket is for, and it is checked against the
+  stitching (geometrically: see the [known limitations](docs/getting-started.md#known-limitations)).
 - **Problems stated, not hidden.** Holes too close to the edge, or spacing far from the iron's
-  pitch, are listed. Select one to see where it is.
+  pitch, are listed, each with why it matters and what to do; some offer a fix. Select one to see
+  where it is.
+- **Placed like a drawing program, exact like CAD.** Smart guides line pieces up as you drag them,
+  arrow keys nudge, and a typed position or distance puts a piece exactly. Copy and paste between
+  projects, duplicate and repeat.
+- **Bring patterns in, and reuse them.** Import an SVG from Inkscape or Illustrator at its true
+  size, and save a piece as a template to insert into any project.
 - **See the paper first.** It says what each paper choice prints, such as *3 sheets of A4*. A part
   bigger than a sheet is tiled across several sheets with registration crosses, never scaled to fit.
 - **Print without a print dialog.** On Linux and macOS, LeatherCAD sends the PDF to the printer with
   scaling turned off. On Windows and in the Flatpak, save the PDF and print it at 100 %.
 - **Export for cutters and editors.** A vector PDF on A5, A4, A3, Letter or Legal. SVG and DXF in
-  millimetres, with one layer for each role.
+  millimetres, with one layer for each role; a hole set given its iron's tooth is cut as that tooth.
 - **Your work is kept.** Closing with unsaved changes asks first. After a crash, LeatherCAD offers
   your unsaved work back.
 
