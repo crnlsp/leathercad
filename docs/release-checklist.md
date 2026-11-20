@@ -140,6 +140,14 @@ Follow the procedure in [`print-verification-log.md`](print-verification-log.md)
    - the sheets read *Sheet 1 of 3*, *Sheet 2 of 3*, *Sheet 3 of 3* at their foot;
    - each sheet carries what the Sheets view showed on it.
 
+4. **1.6's printing, I to M:** with `fixtures/projects/print-test-assembly.lcp` and the log's
+   section *1.6's printing — checks I to M (R11)*, record its row:
+   - the hole row: each hole **4.0**, first to last **100.0**;
+   - the panel taped 2 × 2, assembled on its crosses and arrows: **300.0 × 300.0**;
+   - the assembly map says *not to scale* and is not cut from;
+   - calibrate, print the print test corrected, and A to F still read as expected;
+   - *Remove correction*, print again: uncorrected.
+
 ### 4. Every paper, on the print test
 
 For each paper, check three things agree: the paper button's count, the Sheets view's summary, and
@@ -192,7 +200,8 @@ Build a bifold, as in [`getting-started.md`](getting-started.md):
    - The Sheets view shows it as a 2 × 2 group.
    - The board shows its joins both ways, labelled *Tape join*.
 2. Print it, and assemble the four sheets on the crosses. The centre cross meets on all four.
-3. Measure **300.0 × 300.0**.
+3. Measure **300.0 × 300.0**. Check **J** of the print-verification log does this on
+   `fixtures/projects/print-test-assembly.lcp`: record it there.
 
 ### 7. Printing one sheet again
 

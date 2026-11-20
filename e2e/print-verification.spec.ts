@@ -6,6 +6,11 @@ import { expect, test } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
 import { launchApp } from './launchApp.js';
+import {
+  expectAssemblyAccurate,
+  exportPrintTestAssembly,
+  measurePrintTestAssembly,
+} from './printTestAssembly.js';
 import { expectAccurate, exportPrintTest, measurePrintTest } from './printTest.js';
 
 /**
@@ -41,6 +46,34 @@ test('the print test measures true on every sheet: gauge, dimension, holes and t
       contentType: 'application/json',
     });
     expectAccurate(measured);
+  } finally {
+    await closeApp(app);
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+/**
+ * R11: what 1.6 added to paper - a row of 4 mm holes 25 mm apart, and a 300 mm
+ * panel taped 2 x 2 behind an assembly map - measured on the page, as above.
+ * The paper half is checks I to M in `docs/print-verification-log.md`.
+ */
+test('the assembly print test measures true: a hole row, and a panel taped 2 x 2', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'leathercad-e2e-r11-'));
+  const pdf = join(dir, 'print-test-assembly.pdf');
+  const app = await launchApp();
+
+  try {
+    const window = await app.firstWindow();
+    await window.waitForLoadState('domcontentloaded');
+    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+
+    await exportPrintTestAssembly(app, window, pdf);
+    const measured = measurePrintTestAssembly(pdf);
+    await test.info().attach('measurements', {
+      body: JSON.stringify(measured, null, 2),
+      contentType: 'application/json',
+    });
+    expectAssemblyAccurate(measured);
   } finally {
     await closeApp(app);
     rmSync(dir, { recursive: true, force: true });

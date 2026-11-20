@@ -21,6 +21,16 @@ against the packaged binary, on Linux in CI and on Windows and macOS in the Pack
 | The strap, sheet 2's end to the join plus the join to sheet 3's end | 275.0 mm |
 | Each registration cross | on its join line, at the same place on the strap on both sheets |
 
+`fixtures/projects/print-test-assembly.lcp` (R11) is exported and measured the same way, on A4
+portrait, six sheets, at 10 px/mm:
+
+| On the PDF | Measured |
+|---|---|
+| The gauge, every sheet | 100.0 × 5.0 mm |
+| Sheet 1: the row of holes | 5 holes, each 4.0 mm across, 25.0 mm apart, 100.0 mm first to last |
+| Sheet 2: the assembly map | the panel's outline drawn smaller than 250 mm: the one drawing on paper not to scale |
+| Sheets 3–6: the 300 × 300 mm panel taped 2 × 2 | edge to the join plus the join to the far edge: 300.0 mm across (sheets 3 and 4) and 300.0 mm down (sheets 3 and 5) |
+
 The same check fails on the same PDF refitted to Letter, as a "fit to page" viewer would print it:
 it reads the square as 47.0 mm and the ruler as 94.0 mm.
 
@@ -99,6 +109,59 @@ not 250: a row recorded before it read A as the square, across × up, B as the r
 landscape sheet measured true on a Brother laser, and the same printer scaled a viewer's print of
 the same PDF to 96 % before 7.6. **Windows and macOS are not verified** (R8): until a row above
 carries real readings for each, the project must not claim verified 1:1 output on it.
+
+## 1.6's printing — checks I to M (R11)
+
+1.6 changed four things that print: rows of holes (4.14), taped sheets with arrows and an assembly
+map (7.2), dimension arrowheads (4.10b, check D above) and printer calibration (7.5). R11 measures
+them on paper. Until a row below carries real readings for I to M, and the row above for A to F is
+re-taken after L, R11 is not done and its roadmap line stays ☐.
+
+**What is checked automatically.** `printTestAssembly.test.ts` holds the fixture to the commands
+that build it, and the sheets it plans (a hole row on sheet 1, the map on sheet 2, four tiles);
+`packages/export`'s tests hold the map's words. `e2e/print-verification.spec.ts` exports the
+fixture through the app and measures the PDF through poppler (table above). None of that is the
+printer.
+
+**The procedure**, about an hour with the calibration, with the steel rule of the procedure above:
+
+1. **Open** `fixtures/projects/print-test-assembly.lcp` in the build under test, on A4 portrait.
+   Note the version in the status bar. *Sheets* shows six sheets: *Hole row* on sheet 1, the
+   assembly map of sheets 3–6 on sheet 2, and *Panel* taped 2 × 2 across sheets 3–6.
+2. **Print** as step 3 above (on Windows, *Save PDF…* and print at *Actual size*). Never scaled.
+   **Print the calibration page** from the print preview's *Calibrate this printer…* only for L
+   and M; I to K are printed uncorrected, from a printer with no correction stored.
+3. **Measure**, each to the nearest half millimetre:
+
+   | # | Where | What | Expected |
+   |---|---|---|---|
+   | I | Sheet 1, *Hole row* | Each hole's diameter, across the circle | 4.0 mm |
+   | I | Sheet 1 | Centre of the first hole to centre of the last: 5 holes, 4 gaps of 25 | 100.0 mm |
+   | J | Sheets 3–6, *Panel* | Cut each sheet on its dashed lines, lay it over the next with the crosses together and the arrows pointing at each other, tape the four; then the panel's bottom edge, corner to corner | 300.0 mm |
+   | J | The same, assembled | Its left edge, corner to corner | 300.0 mm |
+   | J | The same, assembled | The centre cross: all four sheets meet on it | Yes |
+   | K | Sheet 2 | The assembly map is headed *assembly map of sheets 3–6* and says *Not to scale: a map of how the sheets join. Never cut from it.* The panel on it is not 300 mm | Yes, and it is smaller |
+   | K | Sheet 2 | Nothing on it is traced or cut from | The map is the one drawing here that is not 1:1 |
+   | L | The calibration page | Print it from *Calibrate this printer…*, measure both lines end to end with the rule, enter the readings, save. Then print the first print test (`print-test.lcp`, A4 portrait) corrected, and measure A to F | A to F: as above, within 0.5 mm. The foot of each sheet reads *corrected for its printer* |
+   | M | The same printer | *Remove correction*, and print the print test again: A to F | As the first print, uncorrected; the foot reads *1:1* again |
+
+   Check D's arrowheads: measure the dimension *Outer panel*'s *100.0*, arrowhead tip to arrowhead
+   tip, as before 1.6 it was measured between its extension lines, and note whether the two
+   readings differ.
+
+   The calibration page's lines are 190 × 200 mm on A4. Note both readings and the correction the
+   step shows (*scaled … % across the paper and … % along it*). A printer whose readings are exact
+   stores nothing: say so in the row, and try again with a printer or a paper that is off.
+
+4. **Find out, and note in the row:** whether the printer's own driver applies a correction of its
+   own (compare the calibration page printed corrected and uncorrected), and whether D reads the
+   same tip to tip as between the extension lines.
+5. **Record** a row. A reading more than **0.5 mm** from expected is a failure: investigate it
+   (a 1:1 bug holds every printing slice) and either fix it or explain it in the row.
+
+| Date | Build | OS, viewer and scale setting | Printer, driver, paper | I (diameter · first to last) | J (across · up · centre cross) | K | L (calibration readings x · y, then A–F) | M (A–F) | Result |
+|---|---|---|---|---|---|---|---|---|---|
+| _pending_ | | | | | | | | | |
 
 ## Built-in template construction — 8.14b
 
