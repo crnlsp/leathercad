@@ -1,6 +1,7 @@
 import { mkdir, readFile, readdir, stat, unlink } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 
+import { REFUSAL } from '../shared/refusals.js';
 import { writeFileAtomic } from './atomicWrite.js';
 import { projectFileName, renameProjectFile } from './renameFile.js';
 
@@ -171,7 +172,7 @@ export class Templates {
   /** A template written to a file chosen in a dialog, to share it. */
   async exportTo(id: string, path: string): Promise<void> {
     const from = this.pathOf(id);
-    if (from === null) throw new Error('No such template.');
+    if (from === null) throw new Error(REFUSAL.noSuchTemplate);
     // Over a file the maker chose, which may be one they already had: whole or untouched.
     await writeFileAtomic(path, await readFile(from));
   }

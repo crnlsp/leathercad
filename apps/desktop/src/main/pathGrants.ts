@@ -1,5 +1,7 @@
 import { extname, isAbsolute, resolve } from 'node:path';
 
+import { REFUSAL } from '../shared/refusals.js';
+
 /** What the renderer asks to do with a path. */
 export type PathUse = 'read' | 'write' | 'view';
 
@@ -48,12 +50,10 @@ export class PathGrants {
     return use !== 'view' || VIEWABLE.has(extname(target).toLowerCase());
   }
 
-  /** As `allows`, but throws the error the renderer shows. */
+  /** As `allows`, but throws the refusal the renderer words. */
   check(path: unknown, use: PathUse): string {
     if (!this.allows(path, use)) {
-      throw new Error(
-        `LeatherCAD only ${use === 'view' ? 'opens a PDF' : 'reads and writes files'} chosen in its own dialogs.`,
-      );
+      throw new Error(use === 'view' ? REFUSAL.notViewable : REFUSAL.notGranted);
     }
     return path as string;
   }

@@ -1152,6 +1152,10 @@ test('deleting an outline asks what to do with what follows it', async () => {
     await expect(dialog).toBeVisible();
     await expect(dialog).toContainText('Stitch line');
     await expect(dialog).toContainText('Stitch holes');
+    // One word for one thing, the glossary's (X26): what the button keeps frozen,
+    // the sentence above it says can be kept frozen.
+    await expect(dialog).toContainText('can be kept frozen');
+    await expect(dialog.getByTestId('delete-freeze')).toHaveText('Keep 1 frozen');
     await expect(window.getByTestId('feature-count')).toHaveText('3');
 
     await dialog.getByTestId('delete-all').click();

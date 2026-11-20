@@ -15,7 +15,7 @@ export {
   migrate,
 } from './migrations/index.js';
 
-export type { LoadedProject, SaveOptions } from './lcp.js';
+export type { FileRefusal, LoadedProject, SaveOptions } from './lcp.js';
 export {
   InvalidProjectFileError,
   LCP_EXTENSION,

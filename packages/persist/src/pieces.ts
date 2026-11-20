@@ -50,7 +50,9 @@ export function readFeatures(text: string): Features {
   const pieces = checkedPieces([{ id: 'features', name: '', quantity: 1, features }], seams);
   const read = pieces.parts[0]?.features ?? [];
   if (read.some((f) => f.kind === 'cut-contour' && f.role === 'outer')) {
-    throw new InvalidProjectFileError('The copied features hold an outline.');
+    throw new InvalidProjectFileError('The copied features hold an outline.', {
+      kind: 'not-the-copy',
+    });
   }
   return { features: read, seams: pieces.seams };
 }
@@ -62,6 +64,7 @@ function parsed(text: string, what: string): Record<string, unknown> {
   } catch (error) {
     throw new InvalidProjectFileError(
       `The copied ${what} are not valid JSON: ${error instanceof Error ? error.message : String(error)}`,
+      { kind: 'not-the-copy' },
     );
   }
   checkJsonSize(raw);
@@ -92,7 +95,9 @@ function checkedPieces(parts: unknown, seams: unknown): Pieces {
 function checkedSeams(features: readonly Feature[], seams: readonly Seam[]): readonly Seam[] {
   const holeSets = new Set(features.map((f) => f.id));
   if (seams.some((seam) => !holeSets.has(seam.a.holeSetId) || !holeSets.has(seam.b.holeSetId))) {
-    throw new InvalidProjectFileError('The copied pieces hold a seam to holes they do not hold.');
+    throw new InvalidProjectFileError('The copied pieces hold a seam to holes they do not hold.', {
+      kind: 'not-the-copy',
+    });
   }
   return seams;
 }

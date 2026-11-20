@@ -31,14 +31,35 @@ export interface SaveOptions {
   readonly createdUtc?: string;
 }
 
+/**
+ * Why a file was refused, as a fact the app puts into the maker's words
+ * (ADR 0018). The error's message says the same in English, for a log and a
+ * test, and never reaches the screen.
+ */
+export type FileRefusal =
+  /** The bytes are not a ZIP archive: another kind of file, or one cut short. */
+  | { readonly kind: 'not-an-archive' }
+  /** An archive, but its `mimetype` names something other than a project. */
+  | { readonly kind: 'not-a-project' }
+  /** An archive without one of the entries a project has. */
+  | { readonly kind: 'entry-missing'; readonly entry: string }
+  /** An entry that is not JSON. */
+  | { readonly kind: 'not-json'; readonly entry: string }
+  /** JSON that breaks the format's schema; `where` holds the first paths, as `parts[2].name`. */
+  | { readonly kind: 'schema'; readonly entry: string; readonly where: readonly string[] }
+  /** A design whose reference graph is broken: the error's `problems` say how. */
+  | { readonly kind: 'design' }
+  /** A copy on the clipboard that is not what was copied (`readPieces`, `readFeatures`). */
+  | { readonly kind: 'not-the-copy' };
+
 export class InvalidProjectFileError extends Error {
   /**
-   * `problems` are the design's, when its reference graph is what is broken —
-   * facts the app puts into the maker's words (ADR 0018). Empty for a file
-   * broken below that: bytes, JSON, the schema, which the message describes.
+   * `problems` are the design's, when its reference graph is what is broken
+   * (`refusal.kind` is `design`); empty for a file broken below that.
    */
   constructor(
     message: string,
+    readonly refusal: FileRefusal,
     readonly problems: readonly Problem[] = [],
   ) {
     super(message);
@@ -101,6 +122,7 @@ export function loadProject(bytes: Uint8Array): LoadedProject {
     if (error instanceof ResourceLimitError) throw error;
     throw new InvalidProjectFileError(
       `Not a readable .lcp archive: ${error instanceof Error ? error.message : String(error)}`,
+      { kind: 'not-an-archive' },
     );
   }
 
@@ -108,10 +130,11 @@ export function loadProject(bytes: Uint8Array): LoadedProject {
   if (mimetype !== undefined && strFromU8(mimetype).trim() !== LCP_MIME) {
     throw new InvalidProjectFileError(
       `Not a LeatherCAD project: mimetype reads "${strFromU8(mimetype).trim()}".`,
+      { kind: 'not-a-project' },
     );
   }
 
-  const manifest = parseEntry(entries, MANIFEST_ENTRY, ManifestSchema, 'manifest');
+  const manifest = parseEntry(entries, MANIFEST_ENTRY, ManifestSchema);
   const rawDocument = parseJson(entries, DOCUMENT_ENTRY);
   checkJsonSize(rawDocument);
 
@@ -136,9 +159,7 @@ export function loadProject(bytes: Uint8Array): LoadedProject {
  */
 export function checkedProject(raw: unknown): Project {
   const result = ProjectSchema.safeParse(raw);
-  if (!result.success) {
-    throw new InvalidProjectFileError(`document.json is not valid: ${describe(result.error)}`);
-  }
+  if (!result.success) throw schemaRefusal(DOCUMENT_ENTRY, result.error);
 
   // The schema checks the shape of the file; this checks its reference graph
   // (S1–S4). A file can satisfy one and break the other, and everything past
@@ -154,6 +175,7 @@ export function checkedProject(raw: unknown): Project {
   if (problems.length > 0) {
     throw new InvalidProjectFileError(
       `document.json is not valid: ${problems.map(named).join('; ')}`,
+      { kind: 'design' },
       problems,
     );
   }
@@ -170,19 +192,23 @@ function named(p: Problem): string {
 /** Reads only the manifest — cheap, and enough for a version check. */
 export function readManifest(bytes: Uint8Array): Manifest {
   const entries = readArchive(bytes, [MANIFEST_ENTRY]);
-  return parseEntry(entries, MANIFEST_ENTRY, ManifestSchema, 'manifest');
+  return parseEntry(entries, MANIFEST_ENTRY, ManifestSchema);
 }
 
 function parseJson(entries: Record<string, Uint8Array>, name: string): unknown {
   const raw = entries[name];
   if (raw === undefined) {
-    throw new InvalidProjectFileError(`The archive has no ${name}.`);
+    throw new InvalidProjectFileError(`The archive has no ${name}.`, {
+      kind: 'entry-missing',
+      entry: name,
+    });
   }
   try {
     return JSON.parse(strFromU8(raw));
   } catch (error) {
     throw new InvalidProjectFileError(
       `${name} is not valid JSON: ${error instanceof Error ? error.message : String(error)}`,
+      { kind: 'not-json', entry: name },
     );
   }
 }
@@ -193,36 +219,43 @@ function parseEntry<T>(
   schema: {
     safeParse(value: unknown): { success: true; data: T } | { success: false; error: unknown };
   },
-  label: string,
 ): T {
   const result = schema.safeParse(parseJson(entries, name));
-  if (!result.success) {
-    throw new InvalidProjectFileError(`The ${label} is not valid: ${describe(result.error)}`);
-  }
+  if (!result.success) throw schemaRefusal(name, result.error);
   return result.data;
 }
 
-/**
- * A path-qualified message.
- *
- * "parts[2].features[0].source.width: expected number, received string" tells
- * someone what to fix; "invalid file" tells them to give up.
- */
-function describe(error: unknown): string {
-  const issues = (error as { issues?: Array<{ path: Array<string | number>; message: string }> })
-    .issues;
-  if (issues === undefined || issues.length === 0) return String(error);
+interface Issue {
+  readonly path: ReadonlyArray<PropertyKey>;
+  readonly message: string;
+}
 
-  return issues
-    .slice(0, 5)
-    .map((issue) => {
-      const where = issue.path
-        .map((part) => (typeof part === 'number' ? `[${part}]` : `.${part}`))
-        .join('')
-        .replace(/^\./, '');
-      return where === '' ? issue.message : `${where}: ${issue.message}`;
-    })
-    .join('; ');
+/**
+ * A refusal naming where the schema broke.
+ *
+ * "parts[2].features[0].source.width" tells someone what to fix; "invalid
+ * file" tells them to give up. The path is a fact; zod's own words about it
+ * stay in the message, for the log.
+ */
+function schemaRefusal(entry: string, error: unknown): InvalidProjectFileError {
+  const issues = ((error as { issues?: readonly Issue[] }).issues ?? []).slice(0, 5);
+  const where = issues.map((issue) =>
+    issue.path
+      .map((part) => (typeof part === 'number' ? `[${part}]` : `.${String(part)}`))
+      .join('')
+      .replace(/^\./, ''),
+  );
+  const said =
+    issues.length === 0
+      ? String(error)
+      : issues
+          .map((issue, i) => (where[i] === '' ? issue.message : `${where[i]}: ${issue.message}`))
+          .join('; ');
+  return new InvalidProjectFileError(`${entry} is not valid: ${said}`, {
+    kind: 'schema',
+    entry,
+    where: where.filter((path) => path !== ''),
+  });
 }
 
 /**

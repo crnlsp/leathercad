@@ -447,6 +447,11 @@ and everything past the loader assumes a sound graph
 **Principle: recover where recovery is unambiguous; refuse where it is not.** A user's project file
 is hours of their work.
 
+Every refusal says why as a fact, `InvalidProjectFileError.refusal` — not an archive, not a
+project, an entry missing or not JSON, the schema broken at a path, or the design's reference
+graph (with its `problems`) — which the app words (ADR 0018). The error's message says the same in
+English for a log and a test, and is never shown.
+
 Operational work limits are checked separately from the schemas: ZIP expansion and JSON/project
 counts are bounded before expensive preparation, with a typed `ResourceLimitError` rather than a
 partially opened project. Schema-valid files beyond the capacity limits are refused without

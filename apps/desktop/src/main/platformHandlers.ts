@@ -7,6 +7,7 @@ import { app, dialog, ipcMain, shell, type BrowserWindow } from 'electron';
 import log from 'electron-log/main';
 
 import { IPC } from '../shared/ipc.js';
+import { REFUSAL } from '../shared/refusals.js';
 import { writeFileAtomic } from './atomicWrite.js';
 import { stateDirectory } from './diagnostics.js';
 import type { PathGrants, PathUse } from './pathGrants.js';
@@ -329,7 +330,7 @@ export function registerPlatformHandlers(
   });
   ipcMain.handle(IPC.trashProjectFile, async (_event, path: unknown) => {
     const target = guard(grants, path, 'write');
-    if (!isProjectPath(target)) throw new Error('Only a project file is moved to the Trash.');
+    if (!isProjectPath(target)) throw new Error(REFUSAL.notAProject);
     await shell.trashItem(target);
     await preferences.forgetRecent(target);
     log.info(`moved a project file to the Trash: ${JSON.stringify(target)}`);

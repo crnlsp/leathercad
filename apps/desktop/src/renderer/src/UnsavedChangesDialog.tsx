@@ -67,7 +67,7 @@ export function UnsavedChangesDialog({
           <button
             ref={saveRef}
             type="button"
-            className="tool"
+            className="tool primary"
             data-testid="unsaved-save"
             onClick={onSave}
           >

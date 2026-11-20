@@ -69,7 +69,7 @@ export function RecoveryDialog({
           <button
             ref={recoverRef}
             type="button"
-            className="tool"
+            className="tool primary"
             data-testid="recovery-recover"
             onClick={onRecover}
             disabled={!canRecover}

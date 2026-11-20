@@ -3,7 +3,13 @@ import { PathOps, Shapes, uniformRadii } from '@leathercad/geometry';
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
 
-import { InvalidProjectFileError, loadProject, readManifest, saveProject } from './lcp.js';
+import {
+  InvalidProjectFileError,
+  loadProject,
+  readManifest,
+  saveProject,
+  type FileRefusal,
+} from './lcp.js';
 import { CURRENT_FORMAT_VERSION, NewerFormatError, migrate } from './migrations/index.js';
 
 /** What a file's reference graph broke, as the loader reports it: facts, for the app to word. */
@@ -15,6 +21,17 @@ function problemsOf(bytes: Uint8Array): readonly Problem[] {
     throw error;
   }
   return [];
+}
+
+/** Why the loader refused a file. */
+function refusalOf(bytes: Uint8Array): FileRefusal {
+  try {
+    loadProject(bytes);
+  } catch (error) {
+    if (error instanceof InvalidProjectFileError) return error.refusal;
+    throw error;
+  }
+  throw new Error('the file loaded');
 }
 
 const FIXED_CLOCK = (): Date => new Date('2026-09-04T10:00:00.000Z');
@@ -302,6 +319,45 @@ describe('rejecting bad input', () => {
   });
 });
 
+/**
+ * Why a file is refused, as a fact (ADR 0018, U.24h): the app words the
+ * reason, so no sentence of the loader's ever reaches the screen.
+ */
+describe('a refusal says why, as a fact', () => {
+  it('bytes that are not an archive are not an archive', () => {
+    expect(refusalOf(new Uint8Array([1, 2, 3, 4]))).toEqual({ kind: 'not-an-archive' });
+  });
+
+  it('an archive of something else is not a project', () => {
+    const bytes = zipSync({ mimetype: strToU8('application/epub+zip') });
+    expect(refusalOf(bytes)).toEqual({ kind: 'not-a-project' });
+  });
+
+  it('an archive without its manifest names the entry missing', () => {
+    const bytes = zipSync({ 'document.json': strToU8('{}') });
+    expect(refusalOf(bytes)).toEqual({ kind: 'entry-missing', entry: 'manifest.json' });
+  });
+
+  it('an entry that is not JSON is named', () => {
+    const entries = unzipSync(saveProject(sampleProject(), options));
+    const bytes = zipSync({ ...entries, 'document.json': strToU8('{"parts": [') });
+    expect(refusalOf(bytes)).toEqual({ kind: 'not-json', entry: 'document.json' });
+  });
+
+  it('a document that breaks the schema names the entry, and where in it', () => {
+    const bytes = archive(withBrokenSource({ kind: 'shape', shape: { type: 'rect' } }));
+    const refusal = refusalOf(bytes);
+    expect(refusal).toMatchObject({ kind: 'schema', entry: 'document.json' });
+    expect(refusal.kind === 'schema' ? refusal.where[0] : '').toMatch(/^parts\[0\]\.features\[0\]/);
+  });
+
+  it('a manifest that breaks the schema names the manifest', () => {
+    const entries = unzipSync(saveProject(sampleProject(), options));
+    const bytes = zipSync({ ...entries, 'manifest.json': strToU8('{"formatVersion": "one"}') });
+    expect(refusalOf(bytes)).toMatchObject({ kind: 'schema', entry: 'manifest.json' });
+  });
+});
+
 describe('arcs', () => {
   it('round-trips an arbitrary angle to within the serialiser’s six decimals', () => {
     // Real arcs come from three clicked points, so their angles are arbitrary
@@ -515,6 +571,7 @@ describe('loading a project whose reference graph is broken', () => {
     const bytes = withFeatures([stitchFrom('s1', 'Orphan stitch', 'nowhere')]);
     expect(() => loadProject(bytes)).toThrow(InvalidProjectFileError);
     expect(() => loadProject(bytes)).toThrow(/SOURCE_MISSING \(Orphan stitch\)/);
+    expect(refusalOf(bytes)).toEqual({ kind: 'design' });
     expect(problemsOf(bytes)).toContainEqual({
       code: 'SOURCE_MISSING',
       facts: { featureId: 's1', featureName: 'Orphan stitch' },

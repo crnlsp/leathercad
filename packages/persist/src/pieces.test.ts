@@ -90,4 +90,10 @@ describe('readFeatures (8.8b-4)', () => {
   it('refuses what is not JSON', () => {
     expect(() => readFeatures('{"features": [')).toThrow(InvalidProjectFileError);
   });
+
+  it('says a copy that is not one is not the copy, as a fact', () => {
+    expect(() => readFeatures('{"features": [')).toThrow(
+      expect.objectContaining({ refusal: { kind: 'not-the-copy' } }),
+    );
+  });
 });
