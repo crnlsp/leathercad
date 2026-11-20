@@ -150,7 +150,7 @@ as any item that will not make it does.
 - ✅ **U.24e Problems, refined** — the drawer's handle reads "Problems 1 error"; Previous and Next share its line, so at the minimum window a problem and the piece it names are both in view (X22, X23).
 - ☐ **U.24f The export dialogs, refined.**
 - ☐ **U.24g Print Preview, Sheets and calibration, refined.**
-- ☐ **U.24h Save, recovery and notices, refined.**
+- ✅ **U.24h Save, recovery and notices, refined** — an unreadable or damaged file, a missing one, a full or read-only disk are each said in the interface's words, in its language; the delete dialog says *frozen* throughout; *Save* and *Recover* are primary, as *Save all* is (X26, X30).
 - ☐ **U.25 The visual system and accessibility** — states, spacing, focus, contrast, the minimum window, HiDPI.
 - ✅ **U.26 Languages, ready** (P1) — production Polish/German/Russian/French/Spanish, English fallback and non-blocking coverage; PR #87 reconciled and credited. [Verification and review limits](localization-verification.md).
 - ✅ **R14 Windows pins, the installer's description, and an icon for `.lcp` files** — the app sets the installer's AppUserModelID; the installer says what the app is; a project file shows its own document icon on Windows, macOS, the `.deb` and the Flatpak; the Windows installer job asserts the icon, the description and the shortcuts' id.
