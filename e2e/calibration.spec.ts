@@ -8,7 +8,7 @@ import { expect, test } from '@playwright/test';
 import { closeApp } from './closeApp.js';
 import { ONE_PRINTER, fakeCups } from './fakeCups.js';
 import { launchApp } from './launchApp.js';
-import { measurePrintTest, openPrintTest } from './printTest.js';
+import { inkOn, measurePrintTest, openPrintTest } from './printTest.js';
 
 /**
  * 7.5: calibrating a printer from the Print Preview (docs/printing.md §8.2).
@@ -53,7 +53,34 @@ test('a printer calibrated in the preview prints corrected, and says so, until t
     await expect(step).toContainText(
       'a horizontal line 190 mm long and a vertical line 200 mm long',
     );
-    await step.getByTestId('calibration-print').click();
+    // The page looked at is the calibration page, not the project's sheets (X25),
+    // and the dialog's Cancel is the one way out of the step.
+    await expect(preview.getByTestId('print-thumb')).toHaveCount(0);
+    const page = preview.getByTestId('print-page').locator('canvas');
+    await expect(page).toHaveAttribute('data-page', '1');
+    await expect.poll(() => page.evaluate(inkOn)).toBeGreaterThan(100);
+    await expect(preview.getByRole('button', { name: 'Cancel' })).toHaveCount(1);
+    await expect(preview.getByTestId('print-submit')).toHaveCount(0);
+    // Nothing measured yet, nothing to save (X24).
+    const across = step.getByLabel('Horizontal line, drawn 190 mm');
+    const along = step.getByLabel('Vertical line, drawn 200 mm');
+    await expect(across).toHaveValue('');
+    await expect(along).toHaveValue('');
+    await expect(step.getByTestId('calibration-save')).toBeDisabled();
+    await expect(step.getByTestId('calibration-result')).toHaveCount(0);
+
+    // Cancel leaves the step for the preview, as Escape does.
+    await preview.getByRole('button', { name: 'Cancel' }).click();
+    await expect(step).toHaveCount(0);
+    await expect(preview.getByTestId('print-calibrate')).toBeFocused();
+    await expect(preview.getByTestId('print-thumb')).toHaveCount(3);
+    await preview.getByTestId('print-calibrate').click();
+
+    // Sent from the keys, the focus stays in the step (X19). Back in the step,
+    // its page is written again before it can be sent.
+    await expect(step.getByTestId('calibration-print')).toBeEnabled();
+    await step.getByTestId('calibration-print').focus();
+    await window.keyboard.press('Enter');
     await expect(step.getByTestId('calibration-sent')).toHaveText(
       'Sent to LeatherCAD_Test as job LeatherCAD_Test-7.',
     );
@@ -75,11 +102,13 @@ test('a printer calibrated in the preview prints corrected, and says so, until t
     ]);
     expect(pagesOf(cups.job)).toEqual(['595.276 x 841.89 pt, rotated 0']);
 
+    await expect(step.getByRole('heading')).toBeFocused();
+
     // A reading 3 % short is a print setting, and is refused (§8.2).
-    const across = step.getByLabel('Horizontal line, drawn 190 mm');
-    const along = step.getByLabel('Vertical line, drawn 200 mm');
     await across.fill('184');
     await across.press('Enter');
+    await along.fill('200');
+    await along.press('Enter');
     await expect(step.getByTestId('calibration-too-far')).toContainText(
       'This is almost certainly a print-settings problem, not a printer problem.',
     );

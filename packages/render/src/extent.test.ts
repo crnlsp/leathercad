@@ -329,6 +329,9 @@ describe('what the board leaves out (itemsReachingView)', () => {
       },
       fillText: (text, x, y) => word(text, x, y, 0),
       strokeText: (text, x, y) => word(text, x, y, (ctx.lineWidth * scale()) / 2),
+      measureText: (text) => ({
+        width: layoutText(text, Number(/([\d.e+-]+)px/.exec(ctx.font)?.[1])).widthMm,
+      }),
       setLineDash: () => undefined,
       lineWidth: 1,
       strokeStyle: '',

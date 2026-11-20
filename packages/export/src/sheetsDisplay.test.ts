@@ -263,6 +263,8 @@ describe('the Sheets view (7.4c)', () => {
     const frame = layout5.frames[0]!;
     expect(item!.at).toEqual({ x: frame.origin.x, y: frame.origin.y - 2 });
     expect(item!.colour).toBe(GROUND.label);
+    // Wrapped inside its own sheet, so at Fit it never runs under the next (X36).
+    expect(item!.kind === 'overlay-text' && item!.wrap?.widthMm).toBe(frame.widthMm);
     // Without the app's words, a package words nothing.
     expect(caption()).toEqual([]);
   });

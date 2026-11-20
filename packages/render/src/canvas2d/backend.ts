@@ -6,6 +6,7 @@ import { foldTickShape, hatchLines, linkTickShape } from '../leather.js';
 import { markerShape } from '../marker.js';
 import { CANVAS, GROUND, screenDash } from '../theme/index.js';
 import { cssPxPerMm, worldToCss, worldToScreen, type ViewportView } from '../view.js';
+import { wrapLines } from '../wrapLines.js';
 
 /**
  * The slice of CanvasRenderingContext2D this backend actually uses.
@@ -39,6 +40,7 @@ export interface Canvas2DLike {
   fillRect(x: number, y: number, w: number, h: number): void;
   fillText(text: string, x: number, y: number): void;
   strokeText(text: string, x: number, y: number): void;
+  measureText(text: string): { readonly width: number };
   setLineDash(segments: number[]): void;
   lineWidth: number;
   // Widened to the DOM's own union so CanvasRenderingContext2D satisfies this
@@ -260,15 +262,29 @@ export function renderDisplayList(
         ctx.font = `${String(item.weight ?? 500)} ${item.sizePx}px ${options.fontFamily ?? vendoredFamily()}`;
         ctx.textAlign = item.align ?? 'left';
         ctx.textBaseline = item.baseline ?? 'alphabetic';
-        if (item.halo !== undefined) {
-          // The ground, out from every glyph's edge, so the words read over a
-          // line or a piece (R-01). Round, or a corner of the stroke spikes.
-          ctx.strokeStyle = item.halo.colour;
-          ctx.lineWidth = item.halo.widthPx * 2;
-          ctx.lineJoin = 'round';
-          ctx.strokeText(item.text, at.x, at.y);
-        }
-        ctx.fillText(item.text, at.x, at.y);
+        // A sheet's caption, broken to its sheet's width at this zoom (U.24g).
+        const lines =
+          item.wrap === undefined
+            ? [item.text]
+            : wrapLines(
+                item.text,
+                item.wrap.widthMm * perMm,
+                (line) => ctx.measureText(line).width,
+              );
+        const lineHeightPx = item.wrap?.lineHeightPx ?? 0;
+        const firstY = at.y - (item.baseline === 'bottom' ? (lines.length - 1) * lineHeightPx : 0);
+        lines.forEach((line, i) => {
+          const y = firstY + i * lineHeightPx;
+          if (item.halo !== undefined) {
+            // The ground, out from every glyph's edge, so the words read over a
+            // line or a piece (R-01). Round, or a corner of the stroke spikes.
+            ctx.strokeStyle = item.halo.colour;
+            ctx.lineWidth = item.halo.widthPx * 2;
+            ctx.lineJoin = 'round';
+            ctx.strokeText(line, at.x, y);
+          }
+          ctx.fillText(line, at.x, y);
+        });
         continue;
       }
 
