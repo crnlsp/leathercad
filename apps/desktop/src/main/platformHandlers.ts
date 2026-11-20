@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import type { OpenSession, RecentOutcome } from '@leathercad/platform';
@@ -375,11 +375,21 @@ export function registerPlatformHandlers(
   // opened because it is on this list — `openRecent` checks — so the
   // renderer cannot name its way to any other file.
   ipcMain.handle(IPC.getRecentFiles, () =>
-    // The pinned first, in the order pinned (8.12), then the recent ones.
-    [
-      ...preferences.pinnedFiles.map((path) => ({ path, pinned: true })),
-      ...preferences.recentFiles.map((path) => ({ path, pinned: false })),
-    ].map((entry) => ({ ...entry, shown: shownPath(entry.path, app.getPath('home')) })),
+    // The pinned first, in the order pinned (8.12), then the recent ones, each
+    // with when it was last saved (U.23): a file moved away has no date.
+    Promise.all(
+      [
+        ...preferences.pinnedFiles.map((path) => ({ path, pinned: true })),
+        ...preferences.recentFiles.map((path) => ({ path, pinned: false })),
+      ].map(async (entry) => ({
+        ...entry,
+        shown: shownPath(entry.path, app.getPath('home')),
+        modified: await stat(entry.path).then(
+          (info) => info.mtimeMs,
+          () => null,
+        ),
+      })),
+    ),
   );
   ipcMain.handle(IPC.openRecent, (_event, path: unknown) =>
     typeof path === 'string' ? openRecent(path) : 'unlisted',

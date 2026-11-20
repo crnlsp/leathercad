@@ -273,6 +273,32 @@ jobs:
           $installer = Get-ChildItem apps/desktop/release/*.exe
           ./tools/ci/windows-install.ps1 -Step Unsafe -Installer $installer.FullName
 
+      # The Microsoft Store's package (B5, ADR 0024), every fuse as shipped:
+      # signed here with a throwaway certificate, installed, started from
+      # Start, a template saved inside it, removed and installed again — and
+      # the template is still there, because the package does not virtualize
+      # %APPDATA%\leathercad (decision D16). tools/ci/windows-msix.ps1 says how.
+      - name: MSIX, installed, removed and reinstalled (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          pnpm --filter @leathercad/desktop package:msix
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          $package = Get-ChildItem apps/desktop/release/*.msix
+          ./tools/ci/windows-msix.ps1 -Package $package.FullName
+
+      # Kept apart from installers-Windows, which release.yml attaches: the
+      # .msix is for Partner Center, and signed here only for the test above.
+      - name: Keep the MSIX (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: msix-Windows
+          path: apps/desktop/release/*.msix
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
       # The Flatpak beside the AppImage (8.5). Its runtimes come from Flathub,
       # installed for this user by the bundler. apt's index is fresh from the
       # poppler step.

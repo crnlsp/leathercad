@@ -35,6 +35,7 @@ interface BuilderConfig {
     installerLanguages: string[];
   };
   mac: { icon: string };
+  appx: { customManifestPath: string; capabilities: string[]; languages: string[] };
   fileAssociations: { ext: string; icon: string; name: string }[];
   deb: { fpm: string[] };
   flatpak: { files: [string, string][]; finishArgs: string[] };
@@ -145,6 +146,44 @@ describe('desktop integration', () => {
     expect(xml).toContain(`<id>${appId}</id>`);
     expect(xml).toContain(`<launchable type="desktop-id">${executableName}.desktop</launchable>`);
     expect(xml).toContain(`<mediatype>${LCP_MIME}</mediatype>`);
+  });
+});
+
+describe('the Microsoft Store package (B5)', () => {
+  it("leaves the maker's data folder unvirtualized, on Windows 11 and on Windows 10", async () => {
+    // Otherwise the package's new files in %APPDATA%\leathercad are private to
+    // it and go with it: a reinstall loses every template (decision D16).
+    const { appx, directories } = await config();
+    const manifest = readFileSync(
+      join(DESKTOP, directories.buildResources, appx.customManifestPath),
+      'utf8',
+    );
+    expect(manifest).toContain(
+      '<virtualization:ExcludedDirectory>$(KnownFolder:RoamingAppData)\\leathercad</virtualization:ExcludedDirectory>',
+    );
+    expect(manifest).toContain(
+      '<desktop6:FileSystemWriteVirtualization>disabled</desktop6:FileSystemWriteVirtualization>',
+    );
+    expect(manifest).toContain('IgnorableNamespaces="desktop6 virtualization"');
+    expect(appx.capabilities).toContain('unvirtualizedResources');
+  });
+
+  it("speaks the app's languages", async () => {
+    const { appx } = await config();
+    expect(appx.languages.map((lang) => lang.split('-')[0])).toEqual(
+      SUPPORTED_LANGUAGES.map(({ tag }) => tag),
+    );
+  });
+
+  it('has its tiles and Store logo at the sizes the manifest names', () => {
+    for (const [name, size] of [
+      ['StoreLogo', [50, 50]],
+      ['Square44x44Logo', [44, 44]],
+      ['Square150x150Logo', [150, 150]],
+      ['Wide310x150Logo', [310, 150]],
+    ] as const) {
+      expect(pngSize(readFileSync(join(DESKTOP, 'build/appx', `${name}.png`)))).toEqual(size);
+    }
   });
 });
 

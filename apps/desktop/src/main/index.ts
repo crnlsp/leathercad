@@ -28,7 +28,7 @@ import { Templates } from './templates.js';
 import { PreferencesStore } from './preferences.js';
 import { ProjectWatch } from './projectWatch.js';
 import { RecoveryStore } from './recovery.js';
-import { UpdateChecker } from './updates.js';
+import { UpdateChecker, managedBy } from './updates.js';
 import { xdgHome } from './xdg.js';
 
 // Electron derives userData from the npm package name, which would give
@@ -48,8 +48,11 @@ app.setPath(
     'leathercad',
   ),
 );
-// The installer's shortcuts carry this id; the windows must too (R14).
-if (process.platform === 'win32') app.setAppUserModelId(APP_USER_MODEL_ID);
+// The installer's shortcuts carry this id; the windows must too (R14). The
+// Store's package has its own, which Windows gives it and its tiles (B5).
+if (process.platform === 'win32' && process.windowsStore !== true) {
+  app.setAppUserModelId(APP_USER_MODEL_ID);
+}
 
 // One LeatherCAD at a time (8.11). A second launch — a `.lcp` double-clicked
 // on Linux or Windows while the app runs, or the Start menu — hands its
@@ -359,12 +362,12 @@ app.whenReady().then(() => {
   // The update check (8.9, ADR 0020): the app's one network request, made
   // only when the maker asks for it, through Chromium's stack so a system
   // proxy applies. The Flatpak never asks — Flathub updates it, and it has no
-  // network. The tests point it elsewhere.
+  // network — nor does the Store's package (B5). The tests point it elsewhere.
   const releasesUrl = process.env['LEATHERCAD_RELEASES_URL'];
   const updates = new UpdateChecker({
     fetch: (url, init) => net.fetch(url, init),
     running: app.getVersion(),
-    managed: process.env['FLATPAK_ID'] !== undefined,
+    managedBy: managedBy(process.env, process.windowsStore === true),
     ...(releasesUrl !== undefined && releasesUrl !== '' ? { url: releasesUrl } : {}),
   });
 

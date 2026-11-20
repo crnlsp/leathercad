@@ -29,6 +29,8 @@ const PACKAGING = [
   /^apps\/desktop\/build\//,
   /^apps\/desktop\/src\/main\//,
   /^assets\/fonts\//,
+  // What installers.yml installs on Windows with, which only Windows runs.
+  /^tools\/ci\/windows-[^/]+\.ps1$/,
 ];
 // Documents a test reads, so an edit to one can turn a check red:
 // packages/domain/src/problems/audit.test.ts holds the problem codes to

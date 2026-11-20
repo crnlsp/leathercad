@@ -75,7 +75,7 @@ describe('the Project and Help menus (8.7)', () => {
   it('puts the actions first and the recent projects after, so the actions stay put', () => {
     const entries = projectMenu(
       actions,
-      [{ path: '/p/Wallet.lcp', shown: '/p/Wallet.lcp', pinned: false }],
+      [{ path: '/p/Wallet.lcp', shown: '/p/Wallet.lcp', pinned: false, modified: null }],
       t,
     );
     expect(entries.map((entry) => (entry.kind === 'item' ? entry.id : entry.kind))).toEqual([
@@ -100,7 +100,7 @@ describe('the Project and Help menus (8.7)', () => {
     const opened: string[] = [];
     const entries = projectMenu(
       { ...actions, openRecent: (path) => opened.push(path) },
-      [{ path: '/home/m/Wallet.lcp', shown: '~/Wallet.lcp', pinned: false }],
+      [{ path: '/home/m/Wallet.lcp', shown: '~/Wallet.lcp', pinned: false, modified: null }],
       t,
     );
     const group = entries.at(-1)!;

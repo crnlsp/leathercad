@@ -17,6 +17,7 @@
     "package:deb": "electron-vite build && electron-builder --config electron-builder.config.mjs --linux deb",
     "package:e2e:deb": "LEATHERCAD_PACKAGE_FOR_E2E=1 pnpm run package:deb",
     "package:e2e:win": "LEATHERCAD_PACKAGE_FOR_E2E=1 pnpm run package",
+    "package:msix": "electron-vite build && electron-builder --config electron-builder.config.mjs --win appx",
     "generate:icons": "node scripts/generate-icons.mjs"
   },
   "devDependencies": {
