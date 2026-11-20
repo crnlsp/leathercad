@@ -7,7 +7,15 @@ import { expect, type Page } from '@playwright/test';
  */
 export async function fromProjectMenu(
   window: Page,
-  item: 'new' | 'open' | 'save-as' | 'rename' | 'new-template' | 'save-template' | 'insert-pieces',
+  item:
+    | 'new'
+    | 'open'
+    | 'save-as'
+    | 'rename'
+    | 'new-template'
+    | 'save-template'
+    | 'insert-pieces'
+    | 'import-svg',
 ): Promise<void> {
   await window.getByTestId('project-menu').click();
   await window.getByTestId(item).click();

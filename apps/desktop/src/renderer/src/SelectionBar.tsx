@@ -210,7 +210,15 @@ export const SelectionBar = memo(function SelectionBar({
   const make = (step: StepId): void => {
     runStep(store, nextId, chain, step, tools);
     // The keys stay in the bar, on the next step: F6, Enter, Enter makes two.
-    requestAnimationFrame(focusInside);
+    // A frame later, once the next step's button is drawn — unless the maker
+    // has gone to another control since: a field they went to keeps its keys,
+    // or its Enter would make the next step.
+    requestAnimationFrame(() => {
+      const now = document.activeElement;
+      if (now === null || now === document.body || barRef.current?.contains(now) === true) {
+        focusInside();
+      }
+    });
   };
 
   const facts: ReactNode[] = [];

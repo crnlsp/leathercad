@@ -187,3 +187,58 @@ and holes are byte for byte the same. None of that is the printer.
 | Date | Build | OS, viewer and scale setting | Printer, paper | Readings A · B · S · T · U · V | Result |
 |---|---|---|---|---|---|
 | _pending_ | | | | | |
+
+## A card holder from blank — R16
+
+R16 builds the card holder from a blank project and prints it, so it is checked in leather once:
+cut, punched and stitched, its holes lining up (the 1.7 plan, R16). Until a row below carries a
+real result, R16 is not done and its roadmap line stays ◐.
+
+**What is checked automatically.** `e2e/journey-card-holder.spec.ts` makes the steps below in the
+built app and reads the result back: 86 holes on the outer and 49 on the pocket, its three seams
+12 = 12, 27 = 27 and 12 = 12 holes with no drift, nothing in Problems, and the exported PDF read
+piece by piece from its content stream (`e2e/pdfPieces.ts`) — the outer 105.000 × 70.000 mm with
+86 hole marks, the pocket 105.000 × 47.349 mm with 49. None of that is the printer, the leather or
+the iron.
+
+**The procedure**, about an hour with the cutting, punching and stitching, with the steel rule of
+the procedure above:
+
+1. **Build** the card holder in the build under test, from a blank *New project*, as the journey
+   does. Note the version in the status bar.
+   1. Draw a rectangle. In Properties: *Width* 105, *Height* 70, each corner radius 4, the piece
+      named `Outer`. In the selection bar, *Stitch line*; *Edge margin* 3; then *Stitch holes*.
+      Parts says 86 holes.
+   2. Draw a second rectangle. *Width* 105, *Height* 47.3487, the top-left and top-right corner
+      radius 3, the bottom two 4, named `Pocket`, *Cut* 2. *Stitch line*, *Edge margin* 3,
+      *Stitched sides* *Open at the top*; then *Stitch holes*. Parts says 49 holes.
+   3. Select the pocket's *Stitch holes*, Shift-click the outer's, *Sew together…*, and sew each
+      side with a run of its own (*Between corners or ends…*, or *Part of a run, from a corner or
+      end…*): the left, *Pocket* from *Corner 4* to *Start* and *Outer* from *Corner 4*, *Back
+      along the line*; the bottom, *Corner 4* to *Corner 1* on both; the right, *Pocket* from
+      *Corner 1* to *End* and *Outer* from *Corner 1*, *Forward along the line*. The
+      seam panel reads 12 = 12, 27 = 27 and 12 = 12 holes, drift 0 mm, and Problems *Nothing to
+      fix.*
+2. **Print** as step 3 above (on Windows, *Save PDF…* and print at *Actual size*). One A4 sheet:
+   *Outer*, and *Pocket — cut 2*. Never scaled.
+3. **Measure** the paper, to the nearest half millimetre:
+
+   | # | Where | What | Expected |
+   |---|---|---|---|
+   | A, B | The gauge | As above | 100.0 × 5.0 mm |
+   | W | *Outer* | Width of the outline, cut edge to cut edge | 105.0 mm |
+   | X | *Outer* | Height of the outline | 70.0 mm |
+   | Y | *Pocket* | Width of the outline | 105.0 mm |
+   | Z | *Pocket* | Height of the outline | 47.3 mm |
+
+4. **Make it.** Cut the outer once and the pocket twice in leather from the paper, mark the holes
+   through the paper at their centres, punch them with the iron, and stitch a pocket to each face
+   of the outer along its left side, bottom and right side.
+5. **Record** a row. The check passes when A, B and W to Z are each within 0.5 mm of expected and,
+   on both faces, every pocket hole meets an outer hole on all three seams (12, 27 and 12 pairs):
+   the thread runs through without a hole skipped or a stitch pulled sideways. Note the leather
+   and its thickness, the iron, and whether a payment card goes in.
+
+| Date | Build | OS, viewer and scale setting | Printer, paper | Readings A · B · W · X · Y · Z | Leather, iron | Holes line up (left · bottom · right, both faces) | Result |
+|---|---|---|---|---|---|---|---|
+| _pending_ | | | | | | | |

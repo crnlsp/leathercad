@@ -177,6 +177,36 @@ test('a new outline offers its stitch line, then its holes, each one click and o
   }
 });
 
+test('a control gone to straight after a step keeps the keys: the bar never takes them a frame later (R16)', async () => {
+  const { app, window } = await launch();
+  try {
+    const box = (await window.getByTestId('editor-canvas').boundingBox())!;
+    await window.getByTestId('tool-rectangle').click();
+    await window.mouse.move(box.x + 250, box.y + 150);
+    await window.mouse.down();
+    await window.mouse.move(box.x + 430, box.y + 270, { steps: 5 });
+    await window.mouse.up();
+    await window.getByTestId('tool-select').click();
+    await expect(step(window)).toHaveAttribute('data-step', 'stitchLine');
+
+    // The step, and then another control, within one frame — as a script
+    // does it, or a click and a keystroke racing a slow frame. The bar's own
+    // focus, a frame later, took the keys back to its next step: a margin
+    // typed and entered straight after punched the holes instead.
+    const canvas = window.getByTestId('editor-canvas');
+    await window.evaluate(() => {
+      document.querySelector<HTMLButtonElement>('[data-testid="selection-bar-step"]')?.click();
+      document.querySelector<HTMLCanvasElement>('[data-testid="editor-canvas"]')?.focus();
+    });
+    await nextFrame(window);
+    await expect(canvas).toBeFocused();
+    await window.keyboard.press('Enter');
+    await expect(step(window)).toHaveAttribute('data-step', 'holes');
+  } finally {
+    await closeApp(app);
+  }
+});
+
 test('F6 goes from the board into the bar and back; Esc goes back too (U.17)', async () => {
   const { app, window } = await launch();
   try {

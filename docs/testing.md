@@ -328,6 +328,10 @@ principles:
   shares nothing with the writer (`e2e/vectorFiles.ts`). The files are written with one line
   ending each (`\n` for SVG, `\r\n` for DXF), and a test holds it, so the cross-platform job sees
   the same bytes.
+- **Read a PDF's pieces back the same way.** R16's journeys export through the app and read
+  each piece from the PDF's content stream with `zlib` alone (`e2e/pdfPieces.ts`): its outline's
+  size and the hole marks inside it, compared with the saved project. It complements poppler's
+  rendering, which measures the print test's ink, by naming what is on the sheet piece by piece.
 
 The strongest of these checks rasterise the PDF with poppler and measure the result in pixels,
 which is stronger than parsing our own numbers back out: it proves the file means what we think,
