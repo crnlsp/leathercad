@@ -148,7 +148,7 @@ as any item that will not make it does.
 - ✅ **U.24c Guides and Arrange, refined** — a level guide shows only its y, an upright one only its x; a press in the rulers' corner is the tool's, never a guide; Arrange as one row of icons per axis; selected outlines read as pieces (X7, X8, X9).
 - ✅ **U.24d Parts, Properties and the selection bar, refined** — a new piece beside a namesake is "Panel 2"; *Fit* keeps the drawing out of the open legend's corner; the selection bar goes over or beside the selection rather than cover the next piece; the corner radius fields are named for a screen reader (X32, X33, X35, X40).
 - ✅ **U.24e Problems, refined** — the drawer's handle reads "Problems 1 error"; Previous and Next share its line, so at the minimum window a problem and the piece it names are both in view (X22, X23).
-- ☐ **U.24f The export dialogs, refined.**
+- ✅ **U.24f The export dialogs, refined** — re-inspected at 860 × 600 and 1440 × 900 for SVG and DXF (PDF has no dialog): names, Tab order, axe, the live page size and Q43's overlap warning held; `e2e/export-dialog-sizes.spec.ts` keeps them (X39).
 - ☐ **U.24g Print Preview, Sheets and calibration, refined.**
 - ✅ **U.24h Save, recovery and notices, refined** — an unreadable or damaged file, a missing one, a full or read-only disk are each said in the interface's words, in its language; the delete dialog says *frozen* throughout; *Save* and *Recover* are primary, as *Save all* is (X26, X30).
 - ☐ **U.25 The visual system and accessibility** — states, spacing, focus, contrast, the minimum window, HiDPI.
