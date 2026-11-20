@@ -29,6 +29,20 @@ export function guideThrough(a: Vec2, b: Vec2): GuideLine | null {
   return { origin: a, angleRad: Vec2Ops.angleOf(Vec2Ops.sub(b, a)) };
 }
 
+/**
+ * The coordinates of its origin that place a guide, as Properties offers
+ * them (U.24c): a level guide is wherever its y says, whatever its x, so it
+ * has only a y; an upright one only an x; a diagonal one needs both. Level
+ * and upright are judged to within EPS_ANGLE, the tolerance a guide's angle
+ * is compared with everywhere else.
+ */
+export function guidePlaceAxes(guide: GuideLine): readonly ('x' | 'y')[] {
+  const along = direction(guide);
+  if (approxZero(along.y, EPS_ANGLE)) return ['y'];
+  if (approxZero(along.x, EPS_ANGLE)) return ['x'];
+  return ['x', 'y'];
+}
+
 export type GuideSide = 'above' | 'below' | 'left' | 'right';
 
 const TOWARDS: Readonly<Record<GuideSide, Vec2>> = {

@@ -19,7 +19,7 @@ import { loadProject } from '@leathercad/persist';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
-import { jobTotals, trailOf } from './propertyFacts.js';
+import { jobTotals, selectedCount, trailOf } from './propertyFacts.js';
 import { sheetPlanFor } from './sheets.js';
 
 /**
@@ -176,5 +176,34 @@ describe('trailOf', () => {
     if (axis === null) throw new Error('The outer can be mirrored.');
     const project = sample(mirrorFeatures(['outer-outline'], ['copy-outline'], axis, ['copy']));
     expect(trailOf(project, feature(project, 'copy-outline'))).toEqual(['Outer']);
+  });
+});
+
+describe('selectedCount', () => {
+  const project = sample();
+  const outlines = project.parts.flatMap((part) =>
+    part.features.filter((f) => f.kind === 'cut-contour' && f.role === 'outer').map((f) => f.id),
+  );
+  const none = new Set<string>();
+
+  it('counts the pieces whose outlines are selected as pieces (X9)', () => {
+    expect(outlines).toHaveLength(3);
+    expect(selectedCount(project, new Set(outlines), none)).toEqual({ of: 'pieces', count: 3 });
+  });
+
+  it('counts pieces picked by their headings as pieces', () => {
+    expect(selectedCount(project, none, new Set(['outer', 'pocket']))).toEqual({
+      of: 'pieces',
+      count: 2,
+    });
+  });
+
+  it('counts an outline with anything else as features', () => {
+    const other = project.parts[0]?.features.find((f) => !outlines.includes(f.id));
+    if (other === undefined) throw new Error('the sample has more than an outline');
+    expect(selectedCount(project, new Set([outlines[1] ?? '', other.id]), none)).toEqual({
+      of: 'features',
+      count: 2,
+    });
   });
 });

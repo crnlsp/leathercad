@@ -108,9 +108,12 @@ test('a diagonal construction guide and its exact controls', async () => {
   try {
     await window.getByTestId('tool-guide').click();
     await window.getByTestId('guide-add-horizontal').click();
+    // Level, it has only a y; turned, an x too (X8). The angle typed again
+    // last, so focus ends where it always has.
     for (const [label, value] of [
-      ['Guide x', '60'],
       ['Guide y', '40'],
+      ['Guide angle', '45'],
+      ['Guide x', '60'],
       ['Guide angle', '45'],
     ]) {
       if (label === undefined || value === undefined) throw new Error('missing guide field');

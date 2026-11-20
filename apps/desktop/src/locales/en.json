@@ -985,8 +985,8 @@
       "toCut_one": "{{count}} to cut",
       "toCut_other": "{{count}} to cut"
     },
-    "manyPartsSelected_one": "{{count}} part selected. Select one to edit it.",
-    "manyPartsSelected_other": "{{count}} parts selected. Select one to edit it."
+    "manyPartsSelected_one": "{{count}} piece selected. Select one to edit it.",
+    "manyPartsSelected_other": "{{count}} pieces selected. Select one to edit it."
   },
   "production": {
     "copied": "Copied",
@@ -1911,6 +1911,10 @@
       "centre": "Centre vertically",
       "max": "Align top",
       "distribute": "Equal vertical gaps"
+    },
+    "row": {
+      "x": "Horizontal",
+      "y": "Vertical"
     },
     "reason": {
       "count_one": "Select at least {{count}} independent item.",

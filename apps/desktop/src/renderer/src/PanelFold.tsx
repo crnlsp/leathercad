@@ -13,6 +13,8 @@ import { FeatureMark, MarkOf } from './icons/marks.js';
 import { KeyCap } from './keyCaps.js';
 import type { CommandId } from './keymap.js';
 import type { Panel } from './panelLayout.js';
+import { selectedCount } from './propertyFacts.js';
+import { manySelectedText } from './selectionWords.js';
 import { resolvedFor } from './sheets.js';
 import { Tooltip } from './Tooltip.js';
 
@@ -224,11 +226,11 @@ export function PropertiesStrip({
     first !== undefined
       ? features.length === 1
         ? t('panels.featureIn', { feature: first.feature.name, part: pieceName(first.part, t) })
-        : t('properties.manySelected', { count: features.length })
+        : manySelectedText(selectedCount(project, selected, selectedParts), t)
       : parts.length === 1
         ? pieceName(parts[0]!, t)
         : parts.length > 1
-          ? t('properties.manyPartsSelected', { count: parts.length })
+          ? manySelectedText(selectedCount(project, selected, selectedParts), t)
           : null;
   const count = first !== undefined ? features.length : parts.length;
   return (

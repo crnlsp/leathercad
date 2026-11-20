@@ -14,8 +14,11 @@ import {
 import type { Project } from '@leathercad/domain';
 
 import { useI18n } from './i18n.js';
+import { ARRANGE_ICON } from './icons/arrange.js';
+import { Icon } from './icons/Icon.js';
 import { NumberField } from './NumberField.js';
 import { describeProblem } from './problemText.js';
+import { Tooltip } from './Tooltip.js';
 
 const AXES: readonly ArrangeAxis[] = ['x', 'y'];
 const MODES: readonly ArrangeMode[] = ['min', 'centre', 'max', 'distribute'];
@@ -56,40 +59,56 @@ export function ArrangePanel({
       <h3 className="panel-heading">{t('arrange.title')}</h3>
       <p className="panel-note">{t('arrange.help')}</p>
       <PositionFields store={store} project={project} ids={ids} />
-      {AXES.map((axis) => (
-        <div key={axis} className="arrange-actions">
-          {MODES.map((mode) => {
-            const refusal = refusals.get(`${axis}-${mode}`) ?? null;
-            const reason =
-              refusal === null
-                ? null
-                : refusal.kind === 'transform'
-                  ? describeProblem(refusal.problem, t)
-                  : refusal.kind === 'count'
-                    ? t('arrange.reason.count', { count: refusal.minimum })
-                    : t(`arrange.reason.${refusal.kind}`);
-            const id = `${reasonId}-${axis}-${mode}`;
-            return (
-              <div key={mode}>
-                <button
-                  className="tool"
-                  data-testid={`arrange-${axis}-${mode}`}
-                  disabled={reason !== null}
-                  aria-describedby={reason === null ? undefined : id}
-                  onClick={() => store.dispatch(arrangeFeatures(ids, axis, mode))}
-                >
-                  {t(`arrange.${axis}.${mode}`)}
-                </button>
-                {reason !== null && (
-                  <p id={id} className="reason">
-                    {reason}
-                  </p>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      ))}
+      {AXES.map((axis) => {
+        const reasons = MODES.map((mode) => {
+          const refusal = refusals.get(`${axis}-${mode}`) ?? null;
+          return refusal === null
+            ? null
+            : refusal.kind === 'transform'
+              ? describeProblem(refusal.problem, t)
+              : refusal.kind === 'count'
+                ? t('arrange.reason.count', { count: refusal.minimum })
+                : t(`arrange.reason.${refusal.kind}`);
+        });
+        // A reason shared by the row — too few pieces, say — is said once,
+        // beneath it, as ReasonedRow says Flip's and Mirror's.
+        const sentences = [...new Set(reasons.filter((reason) => reason !== null))];
+        const idFor = (reason: string) =>
+          `${reasonId}-${axis}-${String(sentences.indexOf(reason))}`;
+        return (
+          <div key={axis} className="reasoned-row arrange-row">
+            <div className="toolbar" role="group" aria-label={t(`arrange.row.${axis}`)}>
+              <span className="field-label" aria-hidden="true">
+                {t(`arrange.row.${axis}`)}
+              </span>
+              {MODES.map((mode, index) => {
+                const reason = reasons[index] ?? null;
+                const name = t(`arrange.${axis}.${mode}`);
+                return (
+                  <Tooltip key={mode} text={reason === null ? name : null}>
+                    <button
+                      type="button"
+                      className="tool icon-only"
+                      data-testid={`arrange-${axis}-${mode}`}
+                      aria-label={name}
+                      disabled={reason !== null}
+                      aria-describedby={reason === null ? undefined : idFor(reason)}
+                      onClick={() => store.dispatch(arrangeFeatures(ids, axis, mode))}
+                    >
+                      <Icon of={ARRANGE_ICON[axis][mode]} />
+                    </button>
+                  </Tooltip>
+                );
+              })}
+            </div>
+            {sentences.map((sentence) => (
+              <p key={sentence} id={idFor(sentence)} className="reason">
+                {sentence}
+              </p>
+            ))}
+          </div>
+        );
+      })}
     </section>
   );
 }

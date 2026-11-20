@@ -1,7 +1,13 @@
 import { useState } from 'react';
 import { formatNumber } from '@leathercad/core';
 import { addGuide, deleteGuide, setGuide, type DocumentStore } from '@leathercad/document';
-import { guideSides, parallelGuide, type GuideSide, type Project } from '@leathercad/domain';
+import {
+  guidePlaceAxes,
+  guideSides,
+  parallelGuide,
+  type GuideSide,
+  type Project,
+} from '@leathercad/domain';
 
 import { NumberField } from './NumberField.js';
 import { useI18n } from './i18n.js';
@@ -63,20 +69,17 @@ export function GuidesPanel({
       )}
       {picked !== undefined && (
         <div data-testid="guide-editor">
-          <NumberField
-            label={t('guides.x')}
-            value={picked.origin.x}
-            onCommit={(x) =>
-              store.dispatch(setGuide({ ...picked, origin: { ...picked.origin, x } }))
-            }
-          />
-          <NumberField
-            label={t('guides.y')}
-            value={picked.origin.y}
-            onCommit={(y) =>
-              store.dispatch(setGuide({ ...picked, origin: { ...picked.origin, y } }))
-            }
-          />
+          {/* Only what places it: a level guide's x would move nothing (X8). */}
+          {guidePlaceAxes(picked).map((axis) => (
+            <NumberField
+              key={axis}
+              label={t(`guides.${axis}`)}
+              value={picked.origin[axis]}
+              onCommit={(value) =>
+                store.dispatch(setGuide({ ...picked, origin: { ...picked.origin, [axis]: value } }))
+              }
+            />
+          ))}
           <NumberField
             label={t('guides.angle')}
             value={(picked.angleRad * 180) / Math.PI}

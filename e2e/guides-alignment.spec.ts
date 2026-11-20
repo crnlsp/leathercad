@@ -41,13 +41,28 @@ test('guides can be placed, edited diagonally, undone, saved and reopened (3.10)
       await window.mouse.click(box.x + 220, box.y + 200);
       await expect(window.getByTestId('guide-editor')).toBeVisible();
       await expect(window.getByTestId('selected-count')).toHaveText('1');
-      await number(window, 'Guide x', 25);
+      // A level guide is placed by its y alone; turned, it needs its x too (X8).
+      const guideX = window.getByTestId('guide-editor').getByLabel('Guide x');
+      await expect(guideX).toHaveCount(0);
       await number(window, 'Guide y', 30);
       await number(window, 'Guide angle', 45);
+      await expect(guideX).toBeVisible();
+      await number(window, 'Guide x', 25);
+      // Each typed value is one step of undo.
+      await window.getByTestId('undo').click();
+      await expect(guideX).not.toHaveValue('25');
       await window.getByTestId('undo').click();
       await expect(window.getByLabel('Guide angle')).toHaveValue('0');
+      await expect(guideX).toHaveCount(0);
+      await expect(window.getByLabel('Guide y')).toHaveValue('30');
+      await window.getByTestId('redo').click();
       await window.getByTestId('redo').click();
       await expect(window.getByLabel('Guide angle')).toHaveValue('45');
+      await expect(guideX).toHaveValue('25');
+      await number(window, 'Guide angle', 90);
+      await expect(window.getByLabel('Guide y')).toHaveCount(0);
+      await expect(guideX).toHaveValue('25');
+      await number(window, 'Guide angle', 45);
       await expectNoViolations(window, 'guide controls');
       await app.evaluate(({ dialog }, path) => {
         dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
@@ -99,6 +114,25 @@ test('dragging a guide from a ruler is one undo step and Escape cancels creation
   });
 });
 
+test('a drag from the rulers’ corner square is the tool’s, never a guide (U.24c, X7)', async () => {
+  await withApp(async (window) => {
+    await drawAPanel(window, { parts: '1' });
+    await window.getByTestId('tool-select').click();
+    await window.keyboard.press('Escape');
+    await expect(window.getByTestId('selected-count')).toHaveText('0');
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+    if (box === null) throw new Error('canvas is missing');
+    // Pressed where the two rulers meet and dragged past the panel: a box
+    // round it, as from anywhere else on the board.
+    await window.mouse.move(box.x + 4, box.y + 4);
+    await window.mouse.down();
+    await window.mouse.move(box.x + 420, box.y + 320, { steps: 8 });
+    await window.mouse.up();
+    await expect(window.getByTestId('guide-editor')).toHaveCount(0);
+    await expect(window.getByTestId('selected-count')).toHaveText('1');
+  });
+});
+
 test('independent pieces align and distribute with equal gaps, and undo restores them (3.10)', async () => {
   await withApp(async (window) => {
     const canvas = window.getByTestId('editor-canvas');
@@ -126,6 +160,15 @@ test('independent pieces align and distribute with equal gaps, and undo restores
       await expect(window.getByTestId('arrange-panel')).toBeVisible();
     };
     await selectAll();
+    // Pieces, called pieces, and each axis one row of named icons (X9).
+    await expect(window.getByTestId('property-panel')).toContainText('3 pieces selected');
+    const arrange = window.getByTestId('arrange-panel');
+    const across = await Promise.all(
+      ['Align left', 'Centre horizontally', 'Align right', 'Equal horizontal gaps'].map((name) =>
+        arrange.getByRole('button', { name, exact: true }).boundingBox(),
+      ),
+    );
+    for (const button of across) expect(button?.y).toBe(across[0]?.y);
     await window.getByTestId('arrange-y-max').click();
     const rows = window.locator('[data-testid^="feature-row-"]');
     const positions: number[] = [];

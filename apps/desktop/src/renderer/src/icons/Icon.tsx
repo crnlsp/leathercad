@@ -108,6 +108,41 @@ const mirrored = (
   </>
 );
 
+/*
+ * Align and distribute (U.24c), as every drawing program draws them: the
+ * edge the boxes meet, and two boxes of different lengths against it. Drawn
+ * left to right, about an upright line; each is turned a quarter for the
+ * vertical row, so a left edge comes round to the bottom, as the board's Y
+ * goes up. A centre is a centre line, in the dash-dot drafting gives one
+ * and the fold's axis already takes. Distribution keeps its outer two and
+ * evens the gaps, so even gaps are what is drawn.
+ */
+const aligned = (edge: string, long: number, short: number) => (
+  <>
+    <path d={edge} />
+    <rect x={long} y="3.5" width="7" height="3" rx=".5" />
+    <rect x={short} y="9.5" width="4.5" height="3" rx=".5" />
+  </>
+);
+const alignLeft = aligned('M2.25 1.75v12.5', 4, 4);
+const alignRight = aligned('M13.75 1.75v12.5', 5, 7.5);
+const alignCentre = (
+  <>
+    <path d="M8 1.5v13" strokeWidth="1" strokeDasharray="2.5 1 .75 1" strokeLinecap="butt" />
+    <rect x="4.5" y="3.5" width="7" height="3" rx=".5" />
+    <rect x="5.75" y="9.5" width="4.5" height="3" rx=".5" />
+  </>
+);
+// Three boxes of three lengths, the same gap between each.
+const distributed = (
+  <>
+    <rect x="2" y="5" width="2" height="6" rx=".5" />
+    <rect x="7" y="2.5" width="2" height="11" rx=".5" />
+    <rect x="12" y="4" width="2" height="8" rx=".5" />
+  </>
+);
+const quarter = (glyph: ReactElement) => <g transform="rotate(-90 8 8)">{glyph}</g>;
+
 /**
  * LeatherCAD's icons (ADR 0021), each the inside of a 16-unit box drawn with
  * a 1.5 stroke in the current colour. The outline is the one people already
@@ -234,6 +269,14 @@ const GLYPHS = {
   // A mirror adds a counterpart: both drawn.
   'mirror-lr': mirrored,
   'mirror-ud': <g transform="rotate(90 8 8)">{mirrored}</g>,
+  'align-left': alignLeft,
+  'align-centre-x': alignCentre,
+  'align-right': alignRight,
+  'distribute-x': distributed,
+  'align-bottom': quarter(alignLeft),
+  'align-centre-y': quarter(alignCentre),
+  'align-top': quarter(alignRight),
+  'distribute-y': quarter(distributed),
 
   // Seeing and holding.
   visible: eye,

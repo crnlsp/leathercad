@@ -93,3 +93,22 @@ export function trailOf(project: Project, feature: Feature): readonly string[] {
     isOutline(f) && partOf.get(f.id) !== home ? (partOf.get(f.id)?.name ?? f.name) : f.name,
   );
 }
+
+/**
+ * What several selected things are, counted as Properties says it (U.24c,
+ * X9): pieces when every one is a piece's outline — Arrange moves a piece
+ * whole — or the pieces were picked by their headings; features otherwise.
+ */
+export function selectedCount(
+  project: Project,
+  features: ReadonlySet<string>,
+  parts: ReadonlySet<string>,
+): { readonly of: 'pieces' | 'features'; readonly count: number } {
+  if (features.size === 0) return { of: 'pieces', count: parts.size };
+  const picked = project.parts.flatMap((part) =>
+    part.features.filter((f) => features.has(f.id)).map((feature) => ({ part, feature })),
+  );
+  return picked.every(({ feature }) => feature.kind === 'cut-contour' && feature.role === 'outer')
+    ? { of: 'pieces', count: new Set(picked.map(({ part }) => part.id)).size }
+    : { of: 'features', count: features.size };
+}
