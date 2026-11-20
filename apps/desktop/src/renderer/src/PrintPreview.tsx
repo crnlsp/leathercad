@@ -8,6 +8,7 @@ import {
   type PaperName,
   type Project,
 } from '@leathercad/domain';
+import { exportCalibrationPdf } from '@leathercad/export';
 import type { PrinterList } from '@leathercad/platform';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import {
@@ -154,6 +155,36 @@ export function PrintPreview({
   }, [calibrating]);
   const [correctionFailed, setCorrectionFailed] = useState<string | null>(null);
 
+  // While calibrating, the page looked at is the calibration page, on the
+  // project's paper, and the bytes shown are the bytes the step sends (X25).
+  const [calibrationPage, setCalibrationPage] = useState<
+    | { paper: PaperName; bytes: Uint8Array; doc: PDFDocumentProxy }
+    | { paper: PaperName; error: unknown }
+    | null
+  >(null);
+  useEffect(() => {
+    if (!calibrating) return;
+    const ended = new AbortController();
+    void (async () => {
+      try {
+        const { bytes } = await exportCalibrationPdf(PAPER_SIZES[paper], {
+          applicationVersion: appVersion,
+          now: () => new Date(),
+        });
+        const doc = await openPdf(bytes, ended.signal);
+        if (!ended.signal.aborted) setCalibrationPage({ paper, bytes, doc });
+      } catch (error) {
+        if (!ended.signal.aborted) setCalibrationPage({ paper, error });
+      }
+    })();
+    return () => {
+      ended.abort();
+      // Its document is destroyed with the effect: never show it again (X25).
+      setCalibrationPage(null);
+    };
+  }, [calibrating, paper, appVersion]);
+  const calibration = calibrating && calibrationPage?.paper === paper ? calibrationPage : null;
+
   // The PDF: written once per plan and correction, previewed, then printed or
   // saved. One written for another — the paper just changed — is not shown.
   const [written, setWritten] = useState<{
@@ -234,6 +265,10 @@ export function PrintPreview({
   }, []);
 
   const print = async (bytes: Uint8Array, to: string): Promise<void> => {
+    // Print is disabled while the job goes, and a disabled button drops the
+    // focus to the page's body: Escape stopped closing the dialog, and the
+    // window's keys acted behind it (X19). *Close* is what comes next.
+    cancelRef.current?.focus();
     setSending({ kind: 'sending' });
     try {
       const job = await getPlatformHost().printPdf(bytes, {
@@ -277,51 +312,61 @@ export function PrintPreview({
         </h2>
 
         <div className="print-body">
-          <ol ref={listRef} className="print-sheets" aria-label={t('printPreview.sheets')}>
-            {pages.map((n) => (
-              <li key={n} className={n === current ? 'print-thumb current' : 'print-thumb'}>
-                <button
-                  type="button"
-                  className="print-thumb-page"
-                  aria-label={t('printPreview.show', { number: n })}
-                  aria-pressed={n === current}
-                  data-testid="print-thumb"
-                  onClick={() => setCurrent(n)}
-                >
-                  {pdf !== null && (
-                    <PageCanvas
-                      pdf={pdf.doc}
-                      number={n}
-                      widthPx={THUMB_PX}
-                      turn={turn}
-                      dpr={dpr}
-                      list={listRef}
-                    />
-                  )}
-                </button>
-                <label className="print-thumb-label">
-                  {direct && (
-                    <input
-                      type="checkbox"
-                      data-testid="print-include"
-                      aria-label={t('printPreview.include', { number: n })}
-                      checked={!omitted.has(n)}
-                      onChange={(event) =>
-                        setOmitted({
-                          plan,
-                          pages: leaveOut(plan, omitted, n, event.target.checked),
-                        })
-                      }
-                    />
-                  )}
-                  {t('sheetNumbers.one', { number: n })}
-                </label>
-              </li>
-            ))}
-          </ol>
+          {!calibrating && (
+            <ol ref={listRef} className="print-sheets" aria-label={t('printPreview.sheets')}>
+              {pages.map((n) => (
+                <li key={n} className={n === current ? 'print-thumb current' : 'print-thumb'}>
+                  <button
+                    type="button"
+                    className="print-thumb-page"
+                    aria-label={t('printPreview.show', { number: n })}
+                    aria-pressed={n === current}
+                    data-testid="print-thumb"
+                    onClick={() => setCurrent(n)}
+                  >
+                    {pdf !== null && (
+                      <PageCanvas
+                        pdf={pdf.doc}
+                        number={n}
+                        widthPx={THUMB_PX}
+                        turn={turn}
+                        dpr={dpr}
+                        list={listRef}
+                      />
+                    )}
+                  </button>
+                  <label className="print-thumb-label">
+                    {direct && (
+                      <input
+                        type="checkbox"
+                        data-testid="print-include"
+                        aria-label={t('printPreview.include', { number: n })}
+                        checked={!omitted.has(n)}
+                        onChange={(event) =>
+                          setOmitted({
+                            plan,
+                            pages: leaveOut(plan, omitted, n, event.target.checked),
+                          })
+                        }
+                      />
+                    )}
+                    {t('sheetNumbers.one', { number: n })}
+                  </label>
+                </li>
+              ))}
+            </ol>
+          )}
 
           <div className="print-page" data-testid="print-page">
-            {pdf !== null ? (
+            {calibration !== null && 'doc' in calibration ? (
+              <PageCanvas pdf={calibration.doc} number={1} widthPx={PAGE_PX} turn={0} dpr={dpr} />
+            ) : calibrating ? (
+              <p className="dialog-note">
+                {calibration === null
+                  ? t('printPreview.loading')
+                  : fileErrorText(calibration.error, t)}
+              </p>
+            ) : pdf !== null ? (
               <PageCanvas pdf={pdf.doc} number={current} widthPx={PAGE_PX} turn={turn} dpr={dpr} />
             ) : (
               <p className="dialog-note">
@@ -336,7 +381,7 @@ export function PrintPreview({
                 printer={printer.name}
                 paper={paper}
                 canPrint={paperOffered}
-                appVersion={appVersion}
+                page={calibration !== null && 'bytes' in calibration ? calibration.bytes : null}
                 onSaved={(saved) => {
                   setCorrections((all) => new Map(all).set(printer.name, saved));
                   setCalibrating(false);
@@ -534,10 +579,16 @@ export function PrintPreview({
             {sending.kind === 'failed' &&
               t('printPreview.failed', { printer: sending.printer, reason: sending.reason })}
           </p>
-          <button ref={cancelRef} type="button" className="tool" onClick={onClose}>
-            {sending.kind === 'sent' ? t('actions.close') : t('actions.cancel')}
+          {/* While calibrating, Cancel leaves the step, as Escape does: one way out (X25). */}
+          <button
+            ref={cancelRef}
+            type="button"
+            className="tool"
+            onClick={calibrating ? () => setCalibrating(false) : onClose}
+          >
+            {sending.kind === 'sent' && !calibrating ? t('actions.close') : t('actions.cancel')}
           </button>
-          {direct || printers === null ? (
+          {calibrating ? null : direct || printers === null ? (
             <button
               type="button"
               className="tool primary"

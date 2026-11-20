@@ -2154,8 +2154,9 @@ body {
 }
 
 /* A file just written (WrittenNote): its words light up and settle to the
-   bar's own colour, its check in the accent. Colour only; reduced motion keeps
-   the words and drops the light. */
+   bar's own colour, its check in the sage that says *it worked* wherever a
+   tick is coloured — the update chip's too (U.25); the tan is the accent's.
+   Colour only; reduced motion keeps the words and drops the light. */
 .written-note > span {
   display: inline-flex;
   gap: 6px;
@@ -2165,7 +2166,7 @@ body {
 }
 
 .written-note .icon {
-  color: var(--tan);
+  color: var(--ok);
 }
 
 @keyframes acknowledge {
@@ -2605,7 +2606,7 @@ body {
 }
 
 .link-button:focus-visible {
-  outline: 1px solid var(--tan);
+  outline: 2px solid var(--tan);
   outline-offset: 2px;
   border-radius: var(--r-sm);
 }
@@ -3254,7 +3255,9 @@ body {
 .settings-dialog {
   gap: 0;
   width: min(760px, calc(100vw - 32px));
-  height: min(520px, calc(100vh - 64px));
+  /* Taller where the window allows (X37): at 1440 × 900 the long sections,
+     Keyboard shortcuts and My tools, scrolled in 520 px. */
+  height: min(720px, calc(100vh - 64px));
   padding: 0;
   overflow: hidden;
 }
@@ -3528,6 +3531,20 @@ body {
   margin-top: 4px;
 }
 
+/* A dialog taller than a short window scrolls, and its buttons stay at its
+   foot (U.25): a long overlap list in Export no longer pushes *Export* below
+   the fold. Out to the dialog's edges and back by its padding, so a dialog
+   that fits is laid out as before; the dialog's own surface covers what
+   scrolls under. Sticky stops short of a scroller's padding, so it is told to
+   go past it. Print draws its own foot. */
+.dialog > .dialog-actions:not(.print-actions) {
+  position: sticky;
+  bottom: calc(-1 * var(--space-4));
+  margin: 4px calc(-1 * var(--space-4)) calc(-1 * var(--space-4));
+  padding: 0 var(--space-4) var(--space-4);
+  background: inherit;
+}
+
 /* The export dialog (6.4): an intent and the layers it chooses, side by side
    where the window has room. Native fieldsets, so a screen reader hears the
    groups; only their chrome is removed. */
@@ -3612,7 +3629,8 @@ body {
 .tool:focus-visible,
 .dialog .tool:focus,
 .settings-tab:focus-visible {
-  outline: 1px solid var(--tan);
+  /* The ring every stop has (§6.5): this was 1 px, thinner than the rest (U.25). */
+  outline: 2px solid var(--tan);
   outline-offset: 1px;
 }
 
@@ -4461,7 +4479,7 @@ button.problem-row[aria-current='true'] {
 }
 
 .canvas-legend-toggle:focus-visible {
-  outline: 1px solid var(--tan-ink);
+  outline: 2px solid var(--tan-ink);
   outline-offset: 1px;
 }
 

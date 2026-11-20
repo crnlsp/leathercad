@@ -128,10 +128,20 @@ test('Print previews the PDF, then sends those bytes to lp with scaling off', as
     await preview.getByLabel('Copies').press('Enter');
     await expect(submit).toHaveText('Print 2 sheets × 2');
 
-    await submit.click();
+    // From the keys (X19): Print is disabled while the job goes, and the
+    // focus moves to Close rather than falling out of the dialog.
+    await submit.focus();
+    await window.keyboard.press('Enter');
     await expect(preview.getByTestId('print-result')).toHaveText(
       'Sent to LeatherCAD_Test as job LeatherCAD_Test-7.',
     );
+    const close = preview.getByRole('button', { name: 'Close' });
+    await expect(close).toBeFocused();
+    // The window's keys stay behind the dialog: no new tab opens under it.
+    const tabs = await window.getByTestId('project-tab').count();
+    await window.keyboard.press('Control+n');
+    await expect(window.getByTestId('project-tab')).toHaveCount(tabs);
+    await expect(preview).toBeVisible();
 
     const args = readFileSync(cups.args, 'utf8').trim().split('\n');
     expect(args).toEqual([
@@ -154,6 +164,9 @@ test('Print previews the PDF, then sends those bytes to lp with scaling off', as
     // What lp was sent is the whole PDF the preview drew, true to size. The
     // sheets left out are CUPS's to leave out (-P), not a different file.
     expectAccurate(measurePrintTest(cups.job));
+    // And Escape still closes it.
+    await window.keyboard.press('Escape');
+    await expect(preview).toHaveCount(0);
 
     if (existsSync(PDFTOPDF)) {
       // The job's own options: still 100 × 5 mm after CUPS's filter.

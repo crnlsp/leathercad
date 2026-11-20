@@ -24,7 +24,7 @@ test('on the bifold, a click mid-panel selects the outer, on the fold the fold, 
     // Mid-panel, away from the fold: the outer, as its heading in Parts picks it.
     const panel = board({ x: 150, y: 47.5 });
     await window.mouse.click(panel.x, panel.y);
-    await expect(window.getByTestId('status-counts')).toContainText('1 part selected');
+    await expect(window.getByTestId('status-counts')).toContainText('1 piece selected');
     await expect(header(window)).toContainText('Outer');
 
     // On the fold: the fold.

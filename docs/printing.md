@@ -557,8 +557,10 @@ calibrated:
    10 mm margins in whole centimetres, up to 200 mm: **190 × 200 mm on A4, Letter and Legal**, 200 × 200
    on A3, 120 × 150 on A5 — 200 mm does not fit across a sheet 210 mm wide. The page is
    never corrected, so what is measured is the printer's own error, whatever was stored before.
+   While the step is open the preview shows that page, the bytes it sends (U.24g).
 2. The maker measures both lines end to end with a steel rule and enters the lengths, quantised
-   like every length typed. The step shows what the correction will do — *scaled +0.50 % across
+   like every length typed. The fields start empty, and nothing can be saved until both are
+   entered (U.24g). The step shows what the correction will do — *scaled +0.50 % across
    the paper and −0.12 % along it* — before it is saved.
 3. `scaleCorrection = { x: drawnX / measuredX, y: drawnY / measuredY }` (`correctionFrom` in
    `packages/core`), exactly that division, is stored against the printer's CUPS queue name — the

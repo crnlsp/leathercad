@@ -92,6 +92,10 @@ class Recorder implements Canvas2DLike {
   strokeText(t: string, x: number, y: number): void {
     this.record('strokeText', t, x, y, String(this.strokeStyle), this.lineWidth, this.lineJoin);
   }
+  /** Monospaced, 6 px a character: enough to see where a caption breaks. */
+  measureText(t: string): { width: number } {
+    return { width: t.length * 6 };
+  }
   setLineDash(s: number[]): void {
     this.record('setLineDash', s.join('|'));
   }
@@ -316,6 +320,30 @@ describe('renderDisplayList', () => {
       `strokeText(Card pocket ×2,400.0000,300.0000,${GROUND.ground},8.0000,round)`,
     );
     expect(ctx.calls[halo + 1]).toBe('fillText(Card pocket ×2,400.0000,300.0000)');
+  });
+
+  it('wraps a sheet’s caption to its width at this zoom, down from a top baseline and up from a bottom one (X36)', () => {
+    // 4 px to the millimetre: 20 mm is 80 px, 13 of the recorder's characters.
+    const caption = (baseline: 'top' | 'bottom'): string[] => {
+      const ctx = new Recorder();
+      const item = {
+        ...textItem('construction', { x: 0, y: 0 }, 'Outer panel, Pocket, turned 90°'),
+        baseline,
+        wrap: { widthMm: 20, lineHeightPx: 16 },
+      };
+      renderDisplayList(ctx, { items: [item] }, view);
+      return ctx.calls.filter((c) => c.startsWith('fillText'));
+    };
+    expect(caption('top')).toEqual([
+      'fillText(Outer panel,,400.0000,300.0000)',
+      'fillText(Pocket,,400.0000,316.0000)',
+      'fillText(turned 90°,400.0000,332.0000)',
+    ]);
+    expect(caption('bottom')).toEqual([
+      'fillText(Outer panel,,400.0000,268.0000)',
+      'fillText(Pocket,,400.0000,284.0000)',
+      'fillText(turned 90°,400.0000,300.0000)',
+    ]);
   });
 
   it('turns a dimension’s number to read along its line, through the world transform', () => {

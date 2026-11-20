@@ -291,6 +291,7 @@ export function sheetsPages(
         shift(0, frame.heightMm + 2),
         'left',
         'bottom',
+        frame.widthMm,
       ),
     );
 
@@ -328,6 +329,7 @@ export function sheetsPages(
           shift(0, -2),
           'left',
           'top',
+          frame.widthMm,
         ),
       );
     }
@@ -361,6 +363,7 @@ export function sheetsPages(
         { x: group.bounds.minX, y: group.bounds.minY - 2 },
         'left',
         'top',
+        group.bounds.maxX - group.bounds.minX,
       ),
     ];
     pages.push({ extent: extentOf(base), paper: [], base, tile: null, pieces: [] });
@@ -586,6 +589,8 @@ function overlay(
   at: Vec2,
   align: 'left' | 'center',
   baseline: 'top' | 'bottom',
+  /** Its sheet's width, or its taped grid's: a label wraps inside it, never over the next (X36). */
+  widthMm: Mm,
 ): BoundedItem {
   const { name } = CANVAS.text;
   return {
@@ -598,5 +603,6 @@ function overlay(
     align,
     baseline,
     weight: name.weight,
+    wrap: { widthMm, lineHeightPx: name.lineHeightPx },
   };
 }

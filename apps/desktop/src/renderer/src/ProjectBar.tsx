@@ -1,4 +1,4 @@
-import type { DocumentStore } from '@leathercad/document';
+import type { DocumentStore, Selection } from '@leathercad/document';
 import type { Project, SeverityCounts } from '@leathercad/domain';
 import { isScaleCheckOnly } from '@leathercad/export';
 import { useState, type RefObject } from 'react';
@@ -15,6 +15,7 @@ import type { Room } from './panelLayout.js';
 import { PaperButton } from './PaperButton.js';
 import { describeCounts, indicatorOf } from './problemsIndicator.js';
 import { SeverityGlyph } from './SeverityGlyph.js';
+import { selectionAnnouncement } from './selectionWords.js';
 import { describeSheets } from './sheetWords.js';
 import { sheetPlanFor } from './sheets.js';
 import { Tooltip } from './Tooltip.js';
@@ -36,6 +37,7 @@ import { ViewSwitch } from './ViewSwitch.js';
  */
 export function ProjectBar({
   project,
+  selection,
   store,
   dirty,
   saved,
@@ -56,6 +58,8 @@ export function ProjectBar({
   onPrint,
 }: {
   project: Project;
+  /** The board's selection, said when it changes (X21). */
+  selection: Selection;
   store: DocumentStore;
   dirty: boolean;
   /** The project has a file it was last saved to, or opened from. */
@@ -226,7 +230,8 @@ export function ProjectBar({
           />
         </div>
 
-        {/* Said politely, once per change (§2): the save state and the problems.
+        {/* Said politely, once per change (§2): the save state, the problems and
+          the selection (X21).
           Text that does not change is not touched, so it is not said again;
           during a drag the problems wait for it to end. */}
         <div className="visually-hidden" aria-live="polite" data-testid="announcer">
@@ -240,6 +245,9 @@ export function ProjectBar({
               }
               settled={settled}
             />
+          </span>{' '}
+          <span data-testid="announce-selection">
+            <Settled value={selectionAnnouncement(project, selection, i18n)} settled={settled} />
           </span>
         </div>
       </header>

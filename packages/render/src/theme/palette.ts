@@ -91,8 +91,8 @@ export const STATE = {
 } as const;
 
 /**
- * The shell's one word for *all is well* (8.9): the version is the latest. A
- * sage, quiet beside the tan, and only ever beside a tick — never alone, and
- * never a severity. Shell only: on the ground green is the fold's.
+ * The shell's one word for *all is well* (8.9): the version is the latest, a
+ * file was written (U.25). A sage, quiet beside the tan, and only ever beside a
+ * tick — never alone, and never a severity. Shell only: on the ground green is the fold's.
  */
 export const CONFIRM = { ok: '#7dae8b' } as const;
