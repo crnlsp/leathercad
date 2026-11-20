@@ -104,6 +104,7 @@ import {
   type TemplateChoice,
 } from './TemplateDialog.js';
 import { StartScreen } from './StartScreen.js';
+import { importedName } from './templates.js';
 import {
   ProjectTabs,
   isDirty,
@@ -837,12 +838,36 @@ export function App({
           .then(refresh)
           .catch(() => undefined);
       },
+      // Read and loaded here, as opening a project is, before anything is
+      // written (X29): what is listed always opens.
       importFile: async () => {
-        await host.importTemplate({
+        const path = await host.showOpenDialog({
           title: t('templates.importTitle'),
           filters: [{ name: t('file.project'), extensions: ['lcp'] }],
         });
-        await refresh();
+        if (path === null) return null;
+        try {
+          const data = await host.readFile(path);
+          const { project } = loadProject(data);
+          evaluate(project);
+          let saved = await host.importTemplate(importedName(project.name, path), data);
+          // A project's name no file can have is listed under its file's.
+          if (saved.kind === 'invalid')
+            saved = await host.importTemplate(projectNameOf(path), data);
+          if (saved.kind === 'exists') return { problem: t('templates.exists', saved) };
+          if (saved.kind === 'invalid') {
+            return { problem: t('templates.invalid', { name: projectNameOf(path) }) };
+          }
+          await refresh();
+          return { imported: `mine:${saved.name}` };
+        } catch (error) {
+          return {
+            problem: t('templates.importRefused', {
+              name: projectNameOf(path),
+              reason: fileErrorText(error, t),
+            }),
+          };
+        }
       },
     };
   }, [file, listTemplates, t, templateList]);

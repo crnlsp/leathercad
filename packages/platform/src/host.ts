@@ -302,11 +302,11 @@ export interface PlatformHost {
   templateUsed(id: string): Promise<void>;
 
   /**
-   * A `.lcp` chosen in a dialog, as one of the maker's templates (8.14). The
-   * main process asks and copies: the renderer sees no path. Null when the
-   * maker cancels.
+   * A project's bytes, chosen with `showOpenDialog` and read and checked by
+   * the app (X29), as one of the maker's templates (8.14) under the first free
+   * name of `name`.
    */
-  importTemplate(options: OpenDialogOptions): Promise<TemplateSave | null>;
+  importTemplate(name: string, data: Uint8Array): Promise<TemplateSave>;
 
   /** A template written to a file chosen in a dialog; false when the maker cancels. */
   exportTemplate(id: string, options: SaveDialogOptions): Promise<boolean>;

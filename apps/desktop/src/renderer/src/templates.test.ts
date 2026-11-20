@@ -36,7 +36,7 @@ import { STARTER_IRONS } from '@leathercad/platform';
 import { loadProject, saveProject } from '@leathercad/persist';
 import { describe, expect, it } from 'vitest';
 
-import { BUILT_IN_TEMPLATES } from './templates.js';
+import { BUILT_IN_TEMPLATES, importedName } from './templates.js';
 
 /**
  * The templates that ship with the app (8.12), beside the sample wallet: each
@@ -163,6 +163,16 @@ describe('the built-in templates (8.12)', () => {
       'bifold-wallet',
       ...Object.keys(RECIPES),
     ]);
+  });
+});
+
+describe('an imported template’s name (X29)', () => {
+  it('is the project’s own name, not its file’s', () => {
+    expect(importedName(' Card holder ', '/p/card-holder.lcp')).toBe('Card holder');
+  });
+
+  it('is the file’s name for a project with none of its own', () => {
+    expect(importedName('', 'C:\\p\\Strap.LCP')).toBe('Strap');
   });
 });
 

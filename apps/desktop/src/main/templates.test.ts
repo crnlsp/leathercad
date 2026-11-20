@@ -106,11 +106,17 @@ describe('managing templates (8.14)', () => {
     expect(text(await templates.read('mine:Bifold wallet 2'))).toBe('the wallet');
   });
 
-  it('imports a file under its own name, and exports a template to one', async () => {
+  it('imports under the first free name, and exports a template to a file', async () => {
     const templates = new Templates({ 'bifold-wallet': wallet }, mine);
-    const outside = join(root, 'Watch strap.lcp');
-    writeFileSync(outside, 'a strap');
-    expect(await templates.importFrom(outside)).toEqual({ kind: 'saved', name: 'Watch strap' });
+    expect(await templates.importAs('Watch strap', bytes('a strap'))).toEqual({
+      kind: 'saved',
+      name: 'Watch strap',
+    });
+    expect(await templates.importAs('Watch strap', bytes('another'))).toEqual({
+      kind: 'saved',
+      name: 'Watch strap 2',
+    });
+    expect(text(await templates.read('mine:Watch strap'))).toBe('a strap');
     const shared = join(root, 'shared.lcp');
     await templates.exportTo('builtin:bifold-wallet', shared);
     expect(readFileSync(shared, 'utf8')).toBe('the wallet');
