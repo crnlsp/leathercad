@@ -144,8 +144,8 @@ const platformBridge = {
 
   templateUsed: (id: string): Promise<void> => ipcRenderer.invoke(IPC.templateUsed, id),
 
-  importTemplate: (options: unknown): Promise<unknown> =>
-    ipcRenderer.invoke(IPC.importTemplate, options),
+  importTemplate: (name: string, data: Uint8Array): Promise<unknown> =>
+    ipcRenderer.invoke(IPC.importTemplate, name, data),
 
   exportTemplate: (id: string, options: unknown): Promise<boolean> =>
     ipcRenderer.invoke(IPC.exportTemplate, id, options),

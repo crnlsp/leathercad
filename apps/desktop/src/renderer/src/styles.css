@@ -862,6 +862,37 @@ body {
   border-left: 1px solid var(--tan);
 }
 
+/*
+ * Before the maker has templates of their own, Show and Sort are kept but
+ * quiet (X11): as wide as their words, with no box until pointed at, the
+ * chosen kind only brighter and underlined.
+ */
+.template-bar.quiet {
+  justify-content: space-between;
+}
+
+.template-bar.quiet .template-show {
+  flex: none;
+}
+
+.template-bar.quiet .segment,
+.template-bar.quiet .segment.active,
+.template-bar.quiet .template-filter {
+  border-color: transparent;
+  background: transparent;
+}
+
+.template-bar.quiet .segment.active {
+  text-decoration: underline;
+  text-decoration-color: var(--tan);
+  text-underline-offset: 4px;
+}
+
+.template-bar.quiet .segment:hover,
+.template-bar.quiet .template-filter:hover {
+  border-color: var(--shell-line);
+}
+
 .template-body {
   display: grid;
   grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
@@ -1183,16 +1214,33 @@ body {
 }
 
 /*
- * Editing them: at the pane's foot, apart from what the template is, with
- * Save and Discard only once something differs from what is kept.
+ * Editing them: beside the drawing, which stays in view (X31), with Save
+ * only once something differs from what is kept.
  */
+.template-sight {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+}
+
+.template-sight.editing {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+}
+
+/* Held at the top while a short window scrolls the form beside it. */
+.template-sight.editing .template-preview {
+  position: sticky;
+  top: 0;
+}
+
 .template-words {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  margin-top: auto;
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--shell-line);
+  min-width: 0;
 }
 
 /* Inserting pieces (9.7): which of the template's pieces come. */

@@ -1,4 +1,8 @@
-import { expect, test, type Page } from '@playwright/test';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
 
 import { drawAPanel, expectNoViolations, withApp } from './launchApp.js';
 import { fromProjectMenu } from './projectMenu.js';
@@ -83,4 +87,65 @@ test('pinning another row leaves the selection and project unchanged', async () 
     await expect(window.getByTestId('tab-strip').getByRole('tab')).toHaveCount(1);
     await expectNoViolations(window, 'template picker with an independent pin button');
   });
+});
+
+/** The open dialog answers with `path`, as if the maker chose it. */
+async function choosing(app: ElectronApplication, path: string): Promise<void> {
+  await app.evaluate(({ dialog }, chosen) => {
+    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [chosen] });
+  }, path);
+}
+
+test('a file that is not a project is refused at import, with the reason, and not listed', async () => {
+  await withApp(async (window, app) => {
+    const file = join(mkdtempSync(join(tmpdir(), 'leathercad-e2e-')), 'not-a-project.lcp');
+    writeFileSync(file, 'hello');
+    await choosing(app, file);
+    await fromProjectMenu(window, 'new-template');
+    const dialog = window.getByTestId('template-dialog');
+    // No templates of the maker's yet: Show and Sort are there, quiet (X11).
+    await expect(dialog.locator('.template-bar')).toHaveClass(/quiet/);
+    await dialog.getByTestId('template-import').click();
+    await expect(dialog.getByTestId('template-import-problem')).toHaveText(
+      '“not-a-project” wasn’t added to your templates. This file can’t be opened: it isn’t a LeatherCAD project, or it is damaged.',
+    );
+    await expect(dialog.locator('[data-template^="mine:"]')).toHaveCount(0);
+    await expectNoViolations(window, 'template picker refusing an import');
+  });
+});
+
+test('an imported project is listed under its own name, chosen and in view', async () => {
+  await withApp(async (window, app) => {
+    await choosing(app, join(import.meta.dirname, '..', 'fixtures', 'projects', 'card-holder.lcp'));
+    await fromProjectMenu(window, 'new-template');
+    const dialog = window.getByTestId('template-dialog');
+    await dialog.getByTestId('template-show-builtin').click();
+    await dialog.getByTestId('template-import').click();
+    const imported = dialog.getByTestId('template-mine:Card holder');
+    await expect(imported).toHaveAttribute('aria-selected', 'true');
+    await expect(dialog.getByTestId('template-show-all')).toHaveAttribute('aria-pressed', 'true');
+    await expect(dialog.locator('.template-bar')).not.toHaveClass(/quiet/);
+    await dialog.getByTestId('template-use').click();
+    await expect(window.getByTestId('project-name')).toHaveText('Card holder');
+  });
+});
+
+test('a template’s description is edited beside its drawing, at the smallest window', async () => {
+  await withApp(
+    async (window) => {
+      await saveTemplate(window);
+      const dialog = window.getByTestId('template-dialog');
+      await expect(dialog.getByTestId('template-edit')).toHaveText('Edit pattern');
+      await dialog.getByTestId('template-edit-details').click();
+      const drawing = dialog.locator('.template-detail-body .template-preview');
+      const form = dialog.locator('.template-words');
+      await expect(drawing).toBeInViewport({ ratio: 1 });
+      await expect(dialog.getByTestId('template-words-save')).toBeInViewport();
+      const [a, b] = [(await drawing.boundingBox())!, (await form.boundingBox())!];
+      expect(b.x).toBeGreaterThanOrEqual(a.x + a.width);
+      expect(b.y).toBeLessThan(a.y + a.height);
+      await expectNoViolations(window, 'template picker editing a description');
+    },
+    { size: [860, 600] },
+  );
 });

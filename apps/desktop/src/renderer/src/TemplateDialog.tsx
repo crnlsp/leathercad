@@ -35,7 +35,13 @@ export interface TemplateActions {
   readonly show: (id: string) => void;
   /** Removes it for good: only once the moment to undo it has passed. */
   readonly remove: (id: string) => void;
-  readonly importFile: () => Promise<void>;
+  /**
+   * A project chosen from disk, read and checked, as one of the maker's: its
+   * id, the words of why it was refused, or null when the maker cancelled.
+   */
+  readonly importFile: () => Promise<
+    { readonly imported: string } | { readonly problem: string } | null
+  >;
 }
 
 /** Each order's words, in the order the Sort menu lists them. */
@@ -176,16 +182,39 @@ export function TemplateDialog({
   const [picked, setPicked] = useState<string | null>(null);
   const chosen = ordered.find((row) => row.entry.id === picked) ?? ordered[0] ?? null;
   const at = chosen === null ? -1 : ordered.indexOf(chosen);
-  const choose = (index: number): void => {
-    const row = ordered[(index + ordered.length) % ordered.length];
-    if (row === undefined) return;
-    setPicked(row.entry.id);
+  const pick = (id: string): void => {
+    setPicked(id);
     requestAnimationFrame(() =>
       list.current
-        ?.querySelector<HTMLElement>(`[data-template="${CSS.escape(row.entry.id)}"]`)
+        ?.querySelector<HTMLElement>(`[data-template="${CSS.escape(id)}"]`)
         ?.scrollIntoView({ block: 'nearest' }),
     );
   };
+  const choose = (index: number): void => {
+    const row = ordered[(index + ordered.length) % ordered.length];
+    if (row !== undefined) pick(row.entry.id);
+  };
+
+  // An import is chosen once it is listed, in view whatever the list showed;
+  // a refused one says why, here, until the next try (X29).
+  const [importProblem, setImportProblem] = useState<string | null>(null);
+  const importFile = (): void => {
+    setImportProblem(null);
+    void actions.importFile().then((outcome) => {
+      if (outcome === null) return;
+      if ('problem' in outcome) {
+        setImportProblem(outcome.problem);
+        return;
+      }
+      setQuery('');
+      if (show === 'builtin') onOrder(sort, 'all');
+      if (pinnedFolded) onFoldPinned(false);
+      pick(outcome.imported);
+    });
+  };
+  // Sort and Show earn their weight once the maker has templates of their
+  // own; until then they are quiet (X11).
+  const ownCount = rows.filter((row) => row.entry.kind === 'mine').length;
 
   // The chosen template's pieces left out of an insert, forgotten as another is chosen.
   const [skipped, setSkipped] = useState<{ id: string; parts: ReadonlySet<string> } | null>(null);
@@ -330,14 +359,19 @@ export function TemplateDialog({
               type="button"
               className="tool"
               data-testid="template-import"
-              onClick={() => void actions.importFile()}
+              onClick={importFile}
             >
               {t('templates.import')}
             </button>
           </Tooltip>
         </div>
+        {importProblem !== null && (
+          <p className="status-error" role="alert" data-testid="template-import-problem">
+            {importProblem}
+          </p>
+        )}
 
-        <div className="template-bar">
+        <div className={ownCount === 0 ? 'template-bar quiet' : 'template-bar'}>
           <div
             className="segmented template-show"
             role="group"
@@ -360,7 +394,7 @@ export function TemplateDialog({
             label={t('templates.sortChosen', { sort: t(SORT_WORDS[sort]) })}
             tooltip={t('templates.sortLabel')}
             testId="template-sort"
-            className="tool template-filter"
+            className={ownCount === 0 ? 'tool quiet template-filter' : 'tool template-filter'}
             align="end"
             entries={(Object.keys(SORT_WORDS) as TemplateSort[]).map((each): MenuEntry => ({
               kind: 'item',
@@ -750,9 +784,73 @@ function Detail({
       </div>
 
       <div className="template-detail-body" role="region" aria-label={row.name} tabIndex={0}>
-        <span className="template-preview large" aria-hidden="true">
-          {preview !== null && <img src={preview} alt="" width={360} height={200} />}
-        </span>
+        {/* Its words are edited beside its picture, never scrolling it away (X31). */}
+        <div className={mine && editing ? 'template-sight editing' : 'template-sight'}>
+          <span className="template-preview large" aria-hidden="true">
+            {preview !== null && <img src={preview} alt="" width={360} height={200} />}
+          </span>
+          {mine && editing && (
+            <form
+              className="template-words"
+              aria-labelledby="template-words-title"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (edited && !saving) keepWords();
+              }}
+              onKeyDown={(event) => {
+                // Escape leaves the form, not the picker.
+                if (event.key === 'Escape') {
+                  event.stopPropagation();
+                  discardWords();
+                }
+              }}
+            >
+              <h3 id="template-words-title" className="template-heading">
+                {t('templates.wordsTitle')}
+              </h3>
+              <label className="template-field">
+                <span className="template-field-label">{t('templates.description')}</span>
+                <textarea
+                  id="template-description"
+                  autoFocus
+                  data-testid="template-description"
+                  rows={2}
+                  placeholder={t('templates.descriptionPlaceholder')}
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
+                />
+              </label>
+              <label className="template-field">
+                <span className="template-field-label">{t('templates.tags')}</span>
+                <input
+                  id="template-tags"
+                  data-testid="template-tags"
+                  placeholder={t('templates.tagsPlaceholder')}
+                  value={tags}
+                  onChange={(event) => setTags(event.target.value)}
+                />
+              </label>
+              <div className="template-words-actions">
+                <button
+                  type="button"
+                  className="tool"
+                  data-testid="template-words-discard"
+                  onClick={discardWords}
+                >
+                  {t('actions.cancel')}
+                </button>
+                <button
+                  type="submit"
+                  className="tool primary"
+                  data-testid="template-words-save"
+                  disabled={!edited || saving}
+                >
+                  {t('templates.saveWords')}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
         {mine
           ? !editing && (
               <>
@@ -822,67 +920,6 @@ function Detail({
           </fieldset>
         )}
         {!mine && <p className="template-note">{t('templates.builtInLocked')}</p>}
-        {mine && editing && (
-          <form
-            className="template-words"
-            aria-labelledby="template-words-title"
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (edited && !saving) keepWords();
-            }}
-            onKeyDown={(event) => {
-              // Escape leaves the form, not the picker.
-              if (event.key === 'Escape') {
-                event.stopPropagation();
-                discardWords();
-              }
-            }}
-          >
-            <h3 id="template-words-title" className="template-heading">
-              {t('templates.wordsTitle')}
-            </h3>
-            <label className="template-field">
-              <span className="template-field-label">{t('templates.description')}</span>
-              <textarea
-                id="template-description"
-                autoFocus
-                data-testid="template-description"
-                rows={2}
-                placeholder={t('templates.descriptionPlaceholder')}
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-              />
-            </label>
-            <label className="template-field">
-              <span className="template-field-label">{t('templates.tags')}</span>
-              <input
-                id="template-tags"
-                data-testid="template-tags"
-                placeholder={t('templates.tagsPlaceholder')}
-                value={tags}
-                onChange={(event) => setTags(event.target.value)}
-              />
-            </label>
-            <div className="template-words-actions">
-              <button
-                type="button"
-                className="tool"
-                data-testid="template-words-discard"
-                onClick={discardWords}
-              >
-                {t('actions.cancel')}
-              </button>
-              <button
-                type="submit"
-                className="tool primary"
-                data-testid="template-words-save"
-                disabled={!edited || saving}
-              >
-                {t('templates.saveWords')}
-              </button>
-            </div>
-          </form>
-        )}
       </div>
     </>
   );

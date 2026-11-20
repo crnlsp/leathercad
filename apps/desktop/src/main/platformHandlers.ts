@@ -102,8 +102,10 @@ export function registerPlatformHandlers(
   ipcMain.handle(IPC.readTemplate, (_event, id: unknown) =>
     typeof id === 'string' ? templates.read(id) : null,
   );
-  ipcMain.handle(IPC.saveTemplate, (_event, name: unknown, data: Uint8Array, replace: unknown) =>
-    typeof name === 'string' ? templates.save(name, data, replace === true) : { kind: 'invalid' },
+  ipcMain.handle(IPC.saveTemplate, (_event, name: unknown, data: unknown, replace: unknown) =>
+    typeof name === 'string' && data instanceof Uint8Array
+      ? templates.save(name, data, replace === true)
+      : { kind: 'invalid' },
   );
   ipcMain.handle(IPC.removeTemplate, async (_event, id: unknown) => {
     if (typeof id === 'string') await templates.remove(id);
@@ -136,8 +138,8 @@ export function registerPlatformHandlers(
   );
 
   // Managing templates (8.14). A template is named by its id; a name is
-  // checked as a file name; import and export ask in the main process's own
-  // dialogs and copy here, so the renderer never names a path. Only *Edit
+  // checked as a file name; export asks in the main process's own dialog and
+  // copies here, so the renderer never names a template's path. Only *Edit
   // template* hands one over, the maker's own template's, granted as a
   // dialog's choice is, so Save writes the template.
   ipcMain.handle(IPC.renameTemplate, (_event, id: unknown, name: unknown) =>
@@ -167,17 +169,12 @@ export function registerPlatformHandlers(
   ipcMain.handle(IPC.templateUsed, async (_event, id: unknown) => {
     if (typeof id === 'string') await templates.used(id);
   });
-  ipcMain.handle(IPC.importTemplate, (_event, options: Electron.OpenDialogOptions) =>
-    oneDialog.run(null, async () => {
-      const window = getWindow();
-      const asked = { ...options, properties: ['openFile' as const] };
-      const result = window
-        ? await dialog.showOpenDialog(window, asked)
-        : await dialog.showOpenDialog(asked);
-      const chosen = result.canceled ? null : (result.filePaths[0] ?? null);
-      if (chosen === null || !isProjectPath(chosen)) return null;
-      return templates.importFrom(chosen);
-    }),
+  // Import's file is chosen in the open dialog, read and checked in the app
+  // like any project it opens (X29); only bytes that loaded arrive here.
+  ipcMain.handle(IPC.importTemplate, (_event, name: unknown, data: unknown) =>
+    typeof name === 'string' && data instanceof Uint8Array
+      ? templates.importAs(name, data)
+      : { kind: 'invalid' },
   );
   ipcMain.handle(IPC.exportTemplate, (_event, id: unknown, options: Electron.SaveDialogOptions) =>
     oneDialog.run(false, async () => {

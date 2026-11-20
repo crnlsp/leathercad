@@ -1,4 +1,5 @@
 import type { MessageKey } from '../../shared/i18n.js';
+import { isUnnamed, projectNameOf } from './projectTabs.js';
 
 /**
  * The templates that ship with the app (8.12), in the order the picker lists
@@ -31,3 +32,12 @@ export const BUILT_IN_TEMPLATES: readonly {
     description: 'templates.coaster.description',
   },
 ];
+
+/**
+ * What an imported project is listed as (X29): its own name, as its tab would
+ * say it — "Card holder", not the file's "card-holder" — or its file's when it
+ * has none.
+ */
+export function importedName(projectName: string, path: string): string {
+  return isUnnamed(projectName) ? projectNameOf(path) : projectName.trim();
+}
