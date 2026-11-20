@@ -150,7 +150,7 @@ describe('the four planes (F.5)', () => {
     }
   });
 
-  it('draws the latest-version tick, and its chip, readably on the shell (8.9)', () => {
+  it('draws the it-worked tick — the latest version, a file written — readably on the shell (8.9, U.25)', () => {
     // The status bar, Settings, and a chip tinted from either.
     for (const surface of [SHELL[700], SHELL[800], SHELL[900]]) {
       expect(contrast(CONFIRM.ok, surface), surface).toBeGreaterThanOrEqual(3);

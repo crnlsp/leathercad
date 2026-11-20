@@ -449,3 +449,47 @@ describe('reframe', () => {
     expect(after.y).toBeCloseTo(topLeft.y, 9);
   });
 });
+
+describe('keepInView (X34)', () => {
+  const rect = fc
+    .tuple(
+      fc.double({ min: -400, max: 400, noNaN: true }),
+      fc.double({ min: -400, max: 400, noNaN: true }),
+      fc.double({ min: 0, max: 300, noNaN: true }),
+      fc.double({ min: 0, max: 300, noNaN: true }),
+    )
+    .map(([x, y, w, h]) => RectOps.fromOriginSize({ x, y }, w, h));
+
+  it('brings a rectangle that fits wholly into view, without zooming', () => {
+    fc.assert(
+      fc.property(rect, (bounds) => {
+        const v = makeViewport();
+        v.scale = 1;
+        v.keepInView(bounds, 20);
+        expect(v.scale).toBe(1);
+        expect(RectOps.containsRect(v.visibleBounds(), bounds, 1e-6)).toBe(true);
+      }),
+    );
+  });
+
+  it('leaves the view alone when the rectangle is in view already', () => {
+    const v = makeViewport();
+    const before = v.centreMm;
+    v.keepInView(RectOps.fromOriginSize({ x: -10, y: -10 }, 20, 20), 20);
+    expect(v.centreMm).toEqual(before);
+  });
+
+  it('moves only as far as the rectangle needs, on the side it was cut off', () => {
+    const v = makeViewport();
+    // 800 px at 4 px/mm shows x from -100 to 100; 20 px of margin is 5 mm.
+    v.keepInView(RectOps.fromOriginSize({ x: 90, y: -10 }, 20, 20), 20);
+    expect(closeTo(v.visibleBounds().maxX, 115)).toBe(true);
+    expect(closeTo(v.centreMm.y, 0)).toBe(true);
+  });
+
+  it('centres on an axis the rectangle is too big for', () => {
+    const v = makeViewport();
+    v.keepInView(RectOps.fromOriginSize({ x: 300, y: -10 }, 400, 20), 20);
+    expect(closeTo(v.centreMm.x, 500)).toBe(true);
+  });
+});

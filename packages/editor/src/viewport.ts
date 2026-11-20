@@ -204,6 +204,28 @@ export class Viewport {
     }
   }
 
+  /**
+   * Pans, at the same zoom, only as far as brings a millimetre rectangle
+   * wholly into view with a margin in device pixels (X34): a window shrunk
+   * under the selection keeps it in sight. An axis the rectangle cannot fit
+   * on is centred on it instead.
+   */
+  keepInView(bounds: Rect, paddingPx: number): void {
+    const view = this.visibleBounds();
+    const margin = this.pxToMm(paddingPx);
+    const shift = (low: number, high: number, viewLow: number, viewHigh: number): number => {
+      if (high - low > viewHigh - viewLow - 2 * margin)
+        return (low + high - viewLow - viewHigh) / 2;
+      if (low < viewLow + margin) return low - viewLow - margin;
+      if (high > viewHigh - margin) return high - viewHigh + margin;
+      return 0;
+    };
+    this.centreMm = {
+      x: this.centreMm.x + shift(bounds.minX, bounds.maxX, view.minX, view.maxX),
+      y: this.centreMm.y + shift(bounds.minY, bounds.maxY, view.minY, view.maxY),
+    };
+  }
+
   /** The millimetre rectangle currently on screen. */
   visibleBounds(): Rect {
     const inverse = screenToWorld(this.toView());

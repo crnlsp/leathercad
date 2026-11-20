@@ -38,7 +38,7 @@ test('a part picked by its heading is shown, counted and deleted as the part (Q2
     await heading.click();
 
     // Counted as a part, and shown as the part, not as nothing.
-    await expect(window.getByTestId('status-counts')).toContainText('1 part selected');
+    await expect(window.getByTestId('status-counts')).toContainText('1 piece selected');
     const panel = window.getByTestId('property-panel');
     await expect(panel.getByTestId('property-header')).toContainText('Panel');
     await expect(panel.getByTestId('part-name')).toHaveValue('Panel');

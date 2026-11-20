@@ -147,7 +147,7 @@ test('the command key with A on the board selects every piece, and one arrow mov
 
     await pickOnBoard(window);
     await window.keyboard.press(`${MOD}+a`);
-    await expect(window.getByTestId('status-counts')).toContainText('2 parts selected');
+    await expect(window.getByTestId('status-counts')).toContainText('2 pieces selected');
 
     await window.keyboard.press('Shift+ArrowRight');
     expect((await origin(window, 0)).x - first.x).toBeCloseTo(10, 4);
