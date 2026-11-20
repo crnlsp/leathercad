@@ -477,6 +477,8 @@ export interface RecentFile {
   readonly shown: string;
   /** Pinned to the top of the list (8.12): kept there, and by *Clear list*. */
   readonly pinned: boolean;
+  /** When the file was last written, in ms (U.23); null when it cannot be read. */
+  readonly modified: number | null;
 }
 
 /** How the maker likes the app (slice 8.2). None of it is the document's. */
