@@ -46,7 +46,7 @@ export function ProblemsPanel({
   const i18n = useI18n();
   const { t } = i18n;
   const badge = badgesOf(diagnostics).project;
-  const count = diagnostics.length;
+  const listed = open && diagnostics.length > 0;
   const counted = describeCounts(counts, i18n);
   // Accepted warnings are listed, not counted (9.16): the handle still says
   // they are there, so it never reads *nothing to fix* over a list.
@@ -68,26 +68,40 @@ export function ProblemsPanel({
       data-testid="problems-panel"
       aria-label={t('problems.panel.title')}
     >
-      <button
-        type="button"
-        className="drawer-handle"
-        data-testid="problems-toggle"
-        aria-expanded={open}
-        aria-controls={open && count > 0 ? 'problems-body' : undefined}
-        onClick={onToggle}
-      >
-        <span className="drawer-title">{t('problems.panel.title')}</span>
-        <CountBadge badge={badge} />
-        <span className="drawer-verdict" data-testid="problems-verdict">
-          {verdict ?? t('problems.panel.none')}
-        </span>
-        <span className="drawer-chevron" aria-hidden="true">
-          <Icon of={open ? 'chevron-down' : 'chevron-up'} />
-        </span>
-      </button>
-
-      {open && count > 0 && (
-        <>
+      {/*
+        One line: the handle, and while it lists something the walk through
+        it. A line of its own for Previous and Next cost the board 44 px, at
+        the minimum window the difference between a problem and the piece it
+        names both being in view, or not (U.24e, X23).
+      */}
+      <div className="drawer-header">
+        <button
+          type="button"
+          className="drawer-handle"
+          data-testid="problems-toggle"
+          aria-expanded={open}
+          aria-controls={listed ? 'problems-body' : undefined}
+          onClick={onToggle}
+        >
+          <span className="drawer-title">{t('problems.panel.title')}</span>
+          {/*
+            Seen, not read: the verdict beside it says the same in words, so
+            the handle is named "Problems 1 error". Read, the badge's glyph and
+            count came first, "Problems error 1 1 error" (U.24e, X22). Named
+            from what it shows rather than by an aria-label, which would have
+            to leave out the badge's digit that is seen (WCAG 2.5.3).
+          */}
+          <span className="drawer-badge" aria-hidden="true">
+            <CountBadge badge={badge} />
+          </span>
+          <span className="drawer-verdict" data-testid="problems-verdict">
+            {verdict ?? t('problems.panel.none')}
+          </span>
+          <span className="drawer-chevron" aria-hidden="true">
+            <Icon of={open ? 'chevron-down' : 'chevron-up'} />
+          </span>
+        </button>
+        {listed && (
           <div className="problem-navigation">
             <Tooltip text={t('problems.panel.previous')} keys="previousProblem">
               <button
@@ -110,15 +124,18 @@ export function ProblemsPanel({
               </button>
             </Tooltip>
           </div>
-          <div className="drawer-body" id="problems-body">
-            <ProblemRows
-              diagnostics={diagnostics}
-              project={project}
-              onGoTo={onGoTo}
-              current={current}
-            />
-          </div>
-        </>
+        )}
+      </div>
+
+      {listed && (
+        <div className="drawer-body" id="problems-body">
+          <ProblemRows
+            diagnostics={diagnostics}
+            project={project}
+            onGoTo={onGoTo}
+            current={current}
+          />
+        </div>
       )}
     </section>
   );

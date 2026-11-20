@@ -3516,12 +3516,12 @@ button.problem-row[aria-current='true'] {
   border-color: var(--tan);
 }
 
+/* Beside the handle, on its line (U.24e): the walk costs the board no height. */
 .problem-navigation {
   display: flex;
   flex: none;
-  flex-wrap: wrap;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-1) var(--space-3) var(--space-1) 0;
 }
 
 .problem-mark {
@@ -3602,10 +3602,18 @@ button.problem-row[aria-current='true'] {
   background: var(--shell-700);
 }
 
-.drawer-handle {
+/* The handle takes the line; Previous and Next, while listed, sit at its end. */
+.drawer-header {
   display: flex;
   flex: none;
   align-items: center;
+}
+
+.drawer-handle {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  min-width: 0;
   gap: 8px;
   height: 28px;
   padding: 0 12px;
@@ -3626,13 +3634,21 @@ button.problem-row[aria-current='true'] {
   font-weight: 600;
 }
 
+/* A long verdict gives way before the walk's buttons do. */
+.drawer-verdict {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .drawer-chevron {
   margin-left: auto;
 }
 
+/* auto-fit, so a lone problem takes the width and wraps in fewer lines. */
 .drawer-body {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 4px 16px;
   align-content: start;
   min-height: 0;

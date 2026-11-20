@@ -19,12 +19,19 @@ export function CountBadge({ badge, title }: { badge: Badge | null; title?: stri
   if (badge === null) return null;
 
   const severity = t(`problems.severity.${badge.worst}`);
+  const said = title ?? t('problems.badge', { count: badge.count, severity });
   return (
-    <Tooltip text={title ?? t('problems.badge', { count: badge.count, severity })}>
+    <Tooltip text={said}>
+      {/*
+        One image, named in words: its glyph and its digit read apart were
+        "error 1" in a Parts row and in the Problems handle (U.24e, X22).
+      */}
       <span
         className={`badge severity-${badge.worst}`}
         data-testid="count-badge"
         data-severity={badge.worst}
+        role="img"
+        aria-label={said}
       >
         <SeverityGlyph severity={badge.worst} />
         {badge.count}
