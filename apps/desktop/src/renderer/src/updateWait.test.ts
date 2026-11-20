@@ -45,8 +45,9 @@ describe('minutesUntilAgain', () => {
   });
 
   it('never waits after a failed check, before one, or in the Flatpak', () => {
-    for (const state of ['idle', 'failed', 'managed'] as const) {
+    for (const state of ['idle', 'failed'] as const) {
       expect(minutesUntilAgain({ state }, 0)).toBeNull();
     }
+    expect(minutesUntilAgain({ state: 'managed', by: 'flathub' }, 0)).toBeNull();
   });
 });

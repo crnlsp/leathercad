@@ -142,7 +142,7 @@ as any item that will not make it does.
 
 ### Stage 5 — The interface and distribution ([plan](superpowers/plans/2026-11-03-release-1.7.md#stage-5--the-interface-and-distribution))
 
-- ☐ **U.23 The start screen opens on the templates.**
+- ✅ **U.23 The start screen opens on the templates** — a blank project, the primary card with Ctrl+N on it, then up to seven templates drawn as the picker draws them; *All templates…* and *Open…* beside the heading; each recent project with the date it was saved; a project opened from the screen leaves the focus on its board (X10, X20).
 - ✅ **U.24a Project tabs, refined** — a tab is as wide as its name, to 200 px, and no narrower than 128 so crowded names stay whole while the strip scrolls; the *All tabs* list opens inside the window (X27, X28).
 - ☐ **U.24b The template picker and its management, refined.**
 - ✅ **U.24c Guides and Arrange, refined** — a level guide shows only its y, an upright one only its x; a press in the rulers' corner is the tool's, never a guide; Arrange as one row of icons per axis; selected outlines read as pieces (X7, X8, X9).
@@ -155,7 +155,7 @@ as any item that will not make it does.
 - ✅ **U.26 Languages, ready** (P1) — production Polish/German/Russian/French/Spanish, English fallback and non-blocking coverage; PR #87 reconciled and credited. [Verification and review limits](localization-verification.md).
 - ✅ **R14 Windows pins, the installer's description, and an icon for `.lcp` files** — the app sets the installer's AppUserModelID; the installer says what the app is; a project file shows its own document icon on Windows, macOS, the `.deb` and the Flatpak; the Windows installer job asserts the icon, the description and the shortcuts' id.
 - ✅ **R12 The assisted Windows installer** — asks for whom (only me by default, no administrator) and where; one install per account, no folder that holds anything but LeatherCAD, upgrades in place; CI refuses an unsafe folder and a second scope, and keeps the maker's data through upgrade and uninstall.
-- ☐ **B5 Microsoft Store readiness** (P1) — an MSIX whose templates survive reinstalling; the listing itself is the maintainer's.
+- ✅ **B5 Microsoft Store readiness** (P1) — an MSIX whose templates survive reinstalling; the listing itself is the maintainer's.
 - ☐ **7.6c Printing from Windows** (conditional) — only with a Windows PC and printer to measure the gauge.
 
 ### Stage 6 — Qualification ([plan](superpowers/plans/2026-11-03-release-1.7.md#stage-6--qualification))

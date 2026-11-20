@@ -6,6 +6,7 @@ import {
   RELEASES_URL,
   UpdateChecker,
   isNewer,
+  managedBy,
   releaseVersion,
   statusFrom,
   type Fetch,
@@ -145,7 +146,7 @@ describe('UpdateChecker', () => {
 
   it('asks GitHub for the latest release, once, with nothing about the maker', async () => {
     const fetch = answering(latest);
-    const checker = new UpdateChecker({ fetch, running: '1.5.0', managed: false });
+    const checker = new UpdateChecker({ fetch, running: '1.5.0', managedBy: null });
     await checker.check();
     expect(fetch).toHaveBeenCalledTimes(1);
     const [url, init] = fetch.mock.calls[0]! as Parameters<Fetch>;
@@ -159,7 +160,7 @@ describe('UpdateChecker', () => {
     await new UpdateChecker({
       fetch,
       running: '1.5.0',
-      managed: false,
+      managedBy: null,
       url: 'http://127.0.0.1:1/',
     }).check();
     expect(fetch.mock.calls[0]![0]).toBe('http://127.0.0.1:1/');
@@ -167,14 +168,14 @@ describe('UpdateChecker', () => {
 
   it('is idle until something asks', async () => {
     const fetch = answering(latest);
-    const checker = new UpdateChecker({ fetch, running: '1.5.0', managed: false });
+    const checker = new UpdateChecker({ fetch, running: '1.5.0', managedBy: null });
     expect(await checker.status()).toEqual({ state: 'idle' });
     expect(fetch).not.toHaveBeenCalled();
   });
 
   it("waits for the start's check while it runs, and keeps its answer", async () => {
     const fetch = answering(latest);
-    const checker = new UpdateChecker({ fetch, running: '1.5.0', managed: false });
+    const checker = new UpdateChecker({ fetch, running: '1.5.0', managedBy: null });
     void checker.check();
     expect((await checker.status()).state).toBe('available');
     expect((await checker.status()).state).toBe('available');
@@ -189,7 +190,7 @@ describe('UpdateChecker', () => {
         const checker = new UpdateChecker({
           fetch,
           running: '1.5.0',
-          managed: false,
+          managedBy: null,
           now: () => now,
         });
         const first = await checker.check();
@@ -206,7 +207,7 @@ describe('UpdateChecker', () => {
 
   it('shares the five minutes with `status`, which never asks', async () => {
     const fetch = answering(latest);
-    const checker = new UpdateChecker({ fetch, running: '1.5.0', managed: false, now: () => 0 });
+    const checker = new UpdateChecker({ fetch, running: '1.5.0', managedBy: null, now: () => 0 });
     await checker.check();
     expect(await checker.status()).toMatchObject({ state: 'available', againAt: AGAIN_AFTER_MS });
     expect(fetch).toHaveBeenCalledTimes(1);
@@ -214,7 +215,7 @@ describe('UpdateChecker', () => {
 
   it('waits for a check that is running rather than asking twice at once', async () => {
     const fetch = answering(latest);
-    const checker = new UpdateChecker({ fetch, running: '1.5.0', managed: false });
+    const checker = new UpdateChecker({ fetch, running: '1.5.0', managedBy: null });
     const [a, b] = await Promise.all([checker.check(), checker.check()]);
     expect(a).toEqual(b);
     expect(fetch).toHaveBeenCalledTimes(1);
@@ -222,7 +223,7 @@ describe('UpdateChecker', () => {
 
   it('tries again at once after a failed check: no five minutes', async () => {
     const fetch = answering(latest, false);
-    const checker = new UpdateChecker({ fetch, running: '1.5.0', managed: false, now: () => 0 });
+    const checker = new UpdateChecker({ fetch, running: '1.5.0', managedBy: null, now: () => 0 });
     expect(await checker.check()).toEqual({ state: 'failed' });
     expect(await checker.check()).toEqual({ state: 'failed' });
     expect(fetch).toHaveBeenCalledTimes(2);
@@ -239,16 +240,26 @@ describe('UpdateChecker', () => {
         json: () => Promise.reject(new SyntaxError('JSON')),
       });
     for (const fetch of [refused, unreachable, nonsense]) {
-      const checker = new UpdateChecker({ fetch, running: '1.5.0', managed: false });
+      const checker = new UpdateChecker({ fetch, running: '1.5.0', managedBy: null });
       expect(await checker.check()).toEqual({ state: 'failed' });
     }
   });
 
-  it('never asks where something else keeps the app up to date — the Flatpak', async () => {
-    const fetch = answering(latest);
-    const checker = new UpdateChecker({ fetch, running: '1.5.0', managed: true });
-    expect(await checker.status()).toEqual({ state: 'managed' });
-    expect(await checker.check()).toEqual({ state: 'managed' });
-    expect(fetch).not.toHaveBeenCalled();
+  it('never asks where something else keeps the app up to date, and says which', async () => {
+    for (const by of ['flathub', 'store'] as const) {
+      const fetch = answering(latest);
+      const checker = new UpdateChecker({ fetch, running: '1.5.0', managedBy: by });
+      expect(await checker.status()).toEqual({ state: 'managed', by });
+      expect(await checker.check()).toEqual({ state: 'managed', by });
+      expect(fetch).not.toHaveBeenCalled();
+    }
+  });
+});
+
+describe('managedBy', () => {
+  it('is Flathub in a Flatpak, the Store in the MSIX package, and nothing otherwise', () => {
+    expect(managedBy({ FLATPAK_ID: 'io.github.crnlsp.leathercad' }, false)).toBe('flathub');
+    expect(managedBy({}, true)).toBe('store');
+    expect(managedBy({ PATH: '/usr/bin' }, false)).toBeNull();
   });
 });

@@ -764,6 +764,15 @@ export function App({
       }),
     );
   }, []);
+  // The start screen's cards (U.23), read again each time it shows, with the
+  // recent projects: a template saved or pinned since changes them.
+  const [startChoices, setStartChoices] = useState<readonly TemplateChoice[]>([]);
+  const refreshStart = useCallback(() => {
+    refreshRecent();
+    void listTemplates()
+      .then(setStartChoices)
+      .catch(() => undefined);
+  }, [refreshRecent, listTemplates]);
   const showTemplates = useCallback(() => {
     setInsertingPieces(false);
     void listTemplates()
@@ -1012,6 +1021,21 @@ export function App({
     const timer = window.setInterval(keepSessionNow, 3000);
     return () => window.clearInterval(timer);
   }, [started, keepSessionNow, openTabs, active]);
+
+  // A project opened from the start screen — blank, a card, the picker, Open,
+  // a recent one — takes the place of what had the focus, which goes with the
+  // screen. The maker on the keys lands on the board, not on nothing, where
+  // the next Tab started again at the window's top (X20, WCAG 2.4.3).
+  const onStartScreen = started && active === null;
+  const wasOnStartScreen = useRef(onStartScreen);
+  useEffect(() => {
+    const left = wasOnStartScreen.current && !onStartScreen;
+    wasOnStartScreen.current = onStartScreen;
+    const focused = document.activeElement;
+    if (left && (focused === null || focused === document.body)) {
+      document.querySelector<HTMLElement>('[data-testid="editor-canvas"]')?.focus();
+    }
+  }, [onStartScreen]);
 
   // A recent project (8.2, 8.7), a second launch's (8.11), macOS's open-file:
   // the main process chose and granted the path, and it opens in a tab.
@@ -1703,9 +1727,11 @@ export function App({
           !started ? null : (
             <StartScreen
               recent={recent}
-              onRefreshRecent={refreshRecent}
+              templates={startChoices}
+              onRefresh={refreshStart}
               error={startError === null ? null : fileErrorText(startError, t)}
               onNew={newProject}
+              onUseTemplate={(id) => void file.newFromTemplate(id)}
               onNewFromTemplate={showTemplates}
               onOpen={() => void openProject()}
               onOpenRecent={(path) =>

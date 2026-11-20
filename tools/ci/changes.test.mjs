@@ -25,6 +25,11 @@ describe('the kinds of change a pull request makes', () => {
     assert.deepEqual(kinds('apps/desktop/src/main/print.ts'), ['packaging']);
   });
 
+  test('the scripts that install on Windows are packaging, which only Windows runs', () => {
+    assert.deepEqual(kinds('tools/ci/windows-install.ps1'), ['packaging']);
+    assert.deepEqual(kinds('tools/ci/windows-msix.ps1'), ['packaging']);
+  });
+
   test('a file moved into docs/ is still code, by where it came from', () => {
     assert.deepEqual(kinds({ status: 'renamed', path: 'docs/a.ts', previous: 'src/a.ts' }), [
       'code',
