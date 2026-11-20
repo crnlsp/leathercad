@@ -8,7 +8,7 @@ import { expect, test, type ElectronApplication, type Locator, type Page } from 
 import { closeApp } from './closeApp.js';
 import { readoutAt } from './cursorReadout.js';
 import { caption } from './keyCaption.js';
-import { launchApp } from './launchApp.js';
+import { expectNoViolations, launchApp } from './launchApp.js';
 import { PRINT_TEST } from './printTest.js';
 import { choosePaper, fromProjectMenu } from './projectMenu.js';
 
@@ -206,6 +206,7 @@ test('the Sheets view shows the plan, and changing the paper changes it (7.4c)',
     await expect(window.getByTestId('sheets-summary')).toHaveText(
       '3 sheets of A4, portrait. Strap is taped across sheets 2–3.',
     );
+    await expectNoViolations(window, 'the Sheets view with a taped piece (R15)');
     // No tool acts on paper: Draw as and the tool hint make way for the plan,
     // and the rail shows Select.
     await expect(window.getByTestId('draw-as-outline')).toHaveCount(0);

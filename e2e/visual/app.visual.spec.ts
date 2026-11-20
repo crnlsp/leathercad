@@ -1,4 +1,4 @@
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -13,7 +13,10 @@ import {
 import { boardMap } from '../boardMap.js';
 import { closeApp } from '../closeApp.js';
 import { fromProjectMenu } from '../projectMenu.js';
+import { ONE_PRINTER, fakeCups } from '../fakeCups.js';
 import { drawAPanel, freshStateHome } from '../launchApp.js';
+import { oneErrorFile } from '../oneErrorFile.js';
+import { openPrintTest } from '../printTest.js';
 import { chooseSvg } from '../svgPatterns.js';
 
 /**
@@ -31,10 +34,19 @@ const DESKTOP_DIR = resolve(import.meta.dirname, '../../apps/desktop');
 /** The content size every reference is taken at, whatever the display. */
 const SIZE = { width: 1280, height: 800 };
 
-async function launch(): Promise<{ app: ElectronApplication; window: Page }> {
+async function launch(
+  options: {
+    /** Stay on the start screen, which is otherwise left for a new project. */
+    readonly startScreen?: boolean;
+    /** A project to open, as the file association does: no start screen either. */
+    readonly file?: string;
+    readonly env?: Readonly<Record<string, string>>;
+  } = {},
+): Promise<{ app: ElectronApplication; window: Page }> {
   const app = await electron.launch({
     args: [
       '.',
+      ...(options.file === undefined ? [] : [options.file]),
       // One device pixel per CSS pixel. A HiDPI display would otherwise
       // double every reference.
       '--force-device-scale-factor=1',
@@ -49,6 +61,7 @@ async function launch(): Promise<{ app: ElectronApplication; window: Page }> {
     // reopened, past the start screen.
     env: {
       ...process.env,
+      ...options.env,
       XDG_CONFIG_HOME: mkdtempSync(join(tmpdir(), 'leathercad-visual-')),
       XDG_STATE_HOME: freshStateHome(),
     },
@@ -56,8 +69,12 @@ async function launch(): Promise<{ app: ElectronApplication; window: Page }> {
   const window = await app.firstWindow();
   await window.waitForLoadState('domcontentloaded');
   // The app starts on its start screen (8.12); the pictures are of a project.
-  await window.getByTestId('start-new').click();
-  await expect(window.getByTestId('app-version')).not.toBeEmpty();
+  if (options.startScreen !== true && options.file === undefined) {
+    await window.getByTestId('start-new').click();
+  }
+  await expect(
+    window.getByTestId(options.startScreen === true ? 'start-screen' : 'app-version'),
+  ).not.toBeEmpty();
   await app.evaluate(({ BrowserWindow }, { width, height }) => {
     BrowserWindow.getAllWindows()[0]?.setContentSize(width, height);
   }, SIZE);
@@ -453,6 +470,112 @@ test('a rectangle’s corners numbered while a corner field has focus (Q48)', as
     await panel.getByLabel('From corner', { exact: true }).focus();
     await blankVersion(window);
     await expect(window).toHaveScreenshot('corner-numbers.png');
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('the start screen, blank first and the templates as cards (U.23)', async () => {
+  const { app, window } = await launch({ startScreen: true });
+  try {
+    await expect(window.getByTestId('start-screen')).toBeVisible();
+    await expect(
+      window.getByTestId('start-card-builtin:bifold-wallet').locator('img'),
+    ).toBeVisible();
+    await window.mouse.move(0, 0);
+    await expect(window).toHaveScreenshot('start-screen.png');
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('the template picker with a template chosen (U.24b)', async () => {
+  const { app, window } = await launch();
+  try {
+    await fromProjectMenu(window, 'new-template');
+    const dialog = window.getByTestId('template-dialog');
+    await window.getByTestId('template-builtin:key-fob').click();
+    await expect(window.getByTestId('template-builtin:key-fob')).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    await window.mouse.move(0, 0);
+    await expect(dialog).toHaveScreenshot('template-picker.png');
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('Problems open on a piece with one error (U.24e)', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'leathercad-r15-'));
+  const { app, window } = await launch({ file: oneErrorFile(dir) });
+  try {
+    await window.getByTestId('problems-toggle').click();
+    await expect(window.getByTestId('problems-panel').getByTestId('problem-row')).toHaveCount(1);
+    await pointerAway(window);
+    await blankVersion(window);
+    await expect(window).toHaveScreenshot('problems-open.png');
+  } finally {
+    await closeApp(app);
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('the export dialog for a DXF (U.24)', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'leathercad-r15-'));
+  const { app, window } = await launch();
+  try {
+    await openPrintTest(app, window, join(dir, 'out.dxf'));
+    await window.getByTestId('export-more').click();
+    await window.getByTestId('export-dxf').click();
+    const dialog = window.getByTestId('export-dialog');
+    await expect(dialog).toBeVisible();
+    await window.mouse.move(0, 0);
+    await expect(dialog).toHaveScreenshot('export-dialog.png');
+  } finally {
+    await closeApp(app);
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('the calibration step, empty, for a printer (U.24g)', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'leathercad-r15-'));
+  const cups = fakeCups(ONE_PRINTER);
+  const { app, window } = await launch({
+    env: { PATH: `${cups.bin}:${process.env['PATH'] ?? ''}` },
+  });
+  try {
+    await openPrintTest(app, window, join(dir, 'out.pdf'));
+    await window.getByTestId('print').click();
+    const preview = window.getByTestId('print-preview');
+    await preview.getByTestId('print-calibrate').click();
+    const step = preview.getByTestId('calibration');
+    await expect(step.getByTestId('calibration-save')).toBeDisabled();
+    await window.mouse.move(0, 0);
+    await expect(step).toHaveScreenshot('calibration-step.png');
+  } finally {
+    await closeApp(app);
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('the seam panel while two hole sets are sewn together (9.6b)', async () => {
+  const { app, window } = await launch({
+    file: resolve(import.meta.dirname, '../../fixtures/regressions/card-holder-1.6.lcp'),
+  });
+  try {
+    await window.getByTestId('feature-row-pocket-holes').click();
+    await window.getByTestId('feature-row-outer-holes').click({ modifiers: ['Shift'] });
+    await window.getByTestId('sew-together').click();
+    const panel = window.getByTestId('seam-panel');
+    const sides = panel.getByTestId('seam-side');
+    await expect(sides).toHaveCount(2);
+    // The two sets chosen by name, as a maker who started from Sew together would.
+    await sides.nth(0).getByTestId('seam-holes').selectOption('pocket-holes');
+    await sides.nth(1).getByTestId('seam-holes').selectOption('outer-holes');
+    await expect(panel.getByTestId('seam-verdict')).toContainText('holes');
+    await window.mouse.move(0, 0);
+    await expect(panel).toHaveScreenshot('seam-panel.png');
   } finally {
     await closeApp(app);
   }

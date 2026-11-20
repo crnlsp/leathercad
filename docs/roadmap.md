@@ -160,7 +160,7 @@ as any item that will not make it does.
 
 ### Stage 6 — Qualification ([plan](superpowers/plans/2026-11-03-release-1.7.md#stage-6--qualification))
 
-- ☐ **R15 Pixels and axe for every screen 1.7 adds.**
+- ✅ **R15 Pixels and axe for every screen 1.7 adds** — every screen has a baseline and an axe scan; six baselines and two scans added.
 - ☐ **R16 Manufacturing workflows, end to end** — card holder, bifold, a multi-piece bag, a seam, a reused and an imported piece; E2E and paper.
 - ☐ **R17 Full regression and packaged qualification**, on every platform there is.
 - ☐ **R18 Release documentation** — README media, getting started, keys, formats, known limitations.

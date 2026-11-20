@@ -7,7 +7,7 @@ import { expect, test } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
 import { ONE_PRINTER, fakeCups } from './fakeCups.js';
-import { launchApp } from './launchApp.js';
+import { expectNoViolations, launchApp } from './launchApp.js';
 import { inkOn, measurePrintTest, openPrintTest } from './printTest.js';
 
 /**
@@ -68,6 +68,7 @@ test('a printer calibrated in the preview prints corrected, and says so, until t
     await expect(along).toHaveValue('');
     await expect(step.getByTestId('calibration-save')).toBeDisabled();
     await expect(step.getByTestId('calibration-result')).toHaveCount(0);
+    await expectNoViolations(window, 'the calibration step, empty (R15)');
 
     // Cancel leaves the step for the preview, as Escape does.
     await preview.getByRole('button', { name: 'Cancel' }).click();
