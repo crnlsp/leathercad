@@ -1783,6 +1783,7 @@ export function App({
           <>
             <ProjectBar
               project={storeState.document.project}
+              selection={storeState.selection}
               store={store}
               dirty={dirty}
               saved={tab.file.path !== null}

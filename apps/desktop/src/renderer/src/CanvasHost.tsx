@@ -859,6 +859,13 @@ export function CanvasHost({
       // edges — the drawer, the rail, a breakpoint, the window (F.3). Only the
       // first sizing, and a change of pixel density, simply resize.
       const placed = placedRef.current;
+      // A selection wholly in view stays in view as the board shrinks (X34).
+      const design = viewportRef.current;
+      const selected = placed === null ? null : selectionBounds();
+      const keep =
+        selected !== null && RectOps.containsRect(design.visibleBounds(), selected)
+          ? selected
+          : null;
       for (const viewport of [viewportRef.current, sheetsViewportRef.current]) {
         if (placed !== null && placed.dpr === dpr) {
           viewport.reframe(canvas.width, canvas.height, {
@@ -868,6 +875,9 @@ export function CanvasHost({
         } else {
           viewport.resize(canvas.width, canvas.height, dpr);
         }
+      }
+      if (keep !== null && !RectOps.containsRect(design.visibleBounds(), keep)) {
+        design.keepInView(keep, FIT_PADDING_PX * dpr);
       }
       placedRef.current = { left, top, dpr };
       const { clientWidth, clientHeight } = container;
@@ -910,7 +920,7 @@ export function CanvasHost({
       observer.disconnect();
       stopDensity();
     };
-  }, [frames, fitDrawing]);
+  }, [frames, fitDrawing, selectionBounds]);
 
   // Changing view: nothing the tool had under way carries across, and the
   // view repaints on its own camera at once, as a resize does. The zoom

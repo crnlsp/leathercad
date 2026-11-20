@@ -53,6 +53,41 @@ export function keepTabInDialogs(document: Document): void {
 }
 
 /**
+ * Keeps the window's keys out from behind the dialog on top (X19, U.25). A
+ * dialog stops the keys pressed inside it, but one whose focused button went
+ * away or was disabled — *Print* while its job goes — left the focus on the
+ * page, where Escape no longer closed it and Ctrl+N opened a tab under it. A
+ * key pressed outside the dialog is taken from the window, the focus goes back
+ * into the dialog, and the dialog hears the key as if it had been pressed
+ * there. Installed once, on the window, before anything else hears a key.
+ */
+export function keepKeysInDialogs(window: Window): void {
+  const { document } = window;
+  window.addEventListener(
+    'keydown',
+    (event) => {
+      // Tab has its own rule, which brings the focus back the same way; and
+      // the copy sent below is not taken a second time.
+      if (event.key === 'Tab' || !event.isTrusted) return;
+      const dialogs = document.querySelectorAll('[aria-modal="true"]');
+      const dialog = dialogs[dialogs.length - 1];
+      if (dialog === undefined) return;
+      const target = event.target instanceof Element ? event.target : null;
+      // A menu opened from the dialog is drawn outside it, and keeps its keys.
+      if (target !== null && (dialog.contains(target) || target.closest('[role="menu"]') !== null))
+        return;
+      event.stopImmediatePropagation();
+      const stop = stopsIn(dialog)[0];
+      stop?.focus();
+      const copy = new KeyboardEvent('keydown', event);
+      (stop ?? dialog).dispatchEvent(copy);
+      if (copy.defaultPrevented) event.preventDefault();
+    },
+    true,
+  );
+}
+
+/**
  * Gives the focus back to what had it before a dialog opened, once the last
  * dialog has closed (U.19). Without it, Esc out of Print or Settings left the
  * focus on nothing, and a maker on the keys started again from the top of

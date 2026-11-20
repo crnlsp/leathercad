@@ -62,6 +62,15 @@ for (const [width, height] of [
           'export-intent-template-print',
         ]);
 
+        // Export in view at the dialog's foot however far it is scrolled (U.25):
+        // scrolled back to the top, where a long overlap list would push it down.
+        await dialog.evaluate((element) => element.scrollTo(0, 0));
+        const shown = await dialog.boundingBox();
+        const go = await window.getByTestId('export-go').boundingBox();
+        expect((go?.y ?? 0) + (go?.height ?? 0)).toBeLessThanOrEqual(
+          (shown?.y ?? 0) + (shown?.height ?? 0) + 0.5,
+        );
+
         await window.getByTestId('export-go').focus();
         for (const id of ['export-dialog', 'export-go']) {
           const box = await window.getByTestId(id).boundingBox();
