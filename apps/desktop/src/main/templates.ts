@@ -162,11 +162,14 @@ export class Templates {
     return saved;
   }
 
-  /** A `.lcp` from anywhere, chosen in a dialog, as one of the maker's, named for its file. */
-  async importFrom(path: string): Promise<TemplateSave> {
-    const data = await readFile(path);
-    const name = basename(path).replace(/\.lcp$/i, '');
-    return this.saveFree(name, new Uint8Array(data.buffer, data.byteOffset, data.byteLength));
+  /**
+   * A project from anywhere, as one of the maker's, under the first free name
+   * of `name`: what *Import template…* makes. The app has read and checked the
+   * bytes already — that is where a file is trusted (`loadProject`) — so what
+   * is listed here always opens.
+   */
+  async importAs(name: string, data: Uint8Array): Promise<TemplateSave> {
+    return this.saveFree(name, data);
   }
 
   /** A template written to a file chosen in a dialog, to share it. */

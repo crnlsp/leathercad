@@ -337,9 +337,10 @@ Since 8.11–8.14, on each platform, with the packaged app.
     Problems. *Save as template…* on a project of yours: it is listed under *Mine*, and a
     second save under the same name asks before replacing it. In the picker, search, *Show*
     and *Sort* narrow and order the list, and open the same way next time; describe and tag one of
-    yours through *Edit details…*; rename, pin, duplicate, export and remove (then *Undo*) it from
-    the icons above its details, and import one; *Edit template* opens it,
-    and Save writes the template.
+    yours through *Edit description and tags…*, beside its drawing; rename, pin, duplicate, export
+    and remove (then *Undo*) it from the icons above its details; import one, listed under its
+    project's name and chosen, and a file that is not a project, refused with the reason;
+    *Edit pattern* opens it, and Save writes the template.
 
 ### 16. Performance, on every platform
 
