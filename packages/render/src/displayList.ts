@@ -131,6 +131,13 @@ export type DisplayItem =
       readonly halo?: { readonly colour: string; readonly widthPx: number };
       /** Turned about `at`, counter-clockwise in the world: a number along its line. */
       readonly rotationRad?: number;
+      /**
+       * Broken at its spaces to no wider than `widthMm` of the world as the
+       * view shows it — a sheet's caption, inside its sheet at any zoom
+       * (U.24g). Further lines go away from `at`: down from a `top`
+       * baseline, up from a `bottom` one. Unturned text only.
+       */
+      readonly wrap?: { readonly widthMm: number; readonly lineHeightPx: number };
     }
   /**
    * Where something is wrong: a severity glyph with a short leader to its

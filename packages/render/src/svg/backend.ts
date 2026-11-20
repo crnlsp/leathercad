@@ -1,12 +1,13 @@
 import { EPS_ANGLE } from '@leathercad/core';
 import { MatOps, PathOps, SegmentOps, type Path, type Segment } from '@leathercad/geometry';
-import { FONT_FAMILY, outlinesOf } from '@leathercad/typography';
+import { FONT_FAMILY, outlinesOf, textWidthMm } from '@leathercad/typography';
 
 import type { DisplayItem, DisplayList } from '../displayList.js';
 import { foldTickShape, hatchLines, linkTickShape } from '../leather.js';
 import { markerShape } from '../marker.js';
 import { CANVAS, GROUND, screenDash } from '../theme/index.js';
 import { cssPxPerMm, worldToCss, type ViewportView } from '../view.js';
+import { wrapLines } from '../wrapLines.js';
 
 export interface SvgOptions {
   /** Defaults to the vendored typeface. Never a platform font. */
@@ -160,11 +161,23 @@ export function renderToSvgString(
           ? ''
           : ` transform="rotate(${n((Math.atan2(along.y, along.x) * 180) / Math.PI)} ` +
             `${n(at.x)} ${n(at.y)})"`;
-      parts.push(
-        `<text x="${n(at.x)}" y="${n(at.y)}" font-size="${n(item.sizePx)}" fill="${item.colour}"` +
-          `${weight}${halo}${rotate}${anchor(item.align)}${baseline(item.baseline)}>` +
-          `${escapeText(item.text)}</text>`,
-      );
+      // Broken as the canvas breaks it (U.24g), measured by the vendored
+      // outlines' advances: a file has no canvas to ask.
+      const lines =
+        item.wrap === undefined
+          ? [item.text]
+          : wrapLines(item.text, item.wrap.widthMm * perMm, (line) =>
+              textWidthMm(line, item.sizePx),
+            );
+      const lineHeightPx = item.wrap?.lineHeightPx ?? 0;
+      const firstY = at.y - (item.baseline === 'bottom' ? (lines.length - 1) * lineHeightPx : 0);
+      lines.forEach((line, i) => {
+        parts.push(
+          `<text x="${n(at.x)}" y="${n(firstY + i * lineHeightPx)}" font-size="${n(item.sizePx)}" fill="${item.colour}"` +
+            `${weight}${halo}${rotate}${anchor(item.align)}${baseline(item.baseline)}>` +
+            `${escapeText(line)}</text>`,
+        );
+      });
     }
     parts.push('</g>');
   }

@@ -1,6 +1,6 @@
 import { correctionFrom, isNoCorrection, type ScaleCorrection } from '@leathercad/core';
 import { PAPER_SIZES, type PaperName } from '@leathercad/domain';
-import { calibrationLengths, exportCalibrationPdf } from '@leathercad/export';
+import { calibrationLengths } from '@leathercad/export';
 import { useEffect, useId, useRef, useState } from 'react';
 
 import { describeFactor } from './calibration.js';
@@ -23,12 +23,18 @@ type Sending =
  * The page goes out uncorrected, so what is measured is the printer's own
  * error, whatever was stored before. A measurement more than 2 % off is
  * refused: that is a print setting, and a correction would hide it.
+ *
+ * `page` is the calibration page the preview shows (U.24g, X25): those bytes
+ * are the ones sent, as a sheet's are. The fields start empty, and nothing
+ * can be saved until both lines are measured (X24): a field that started at
+ * the drawn length saved "no correction" before the page was ever printed.
+ * The step has no Cancel of its own: the dialog's Cancel, or Escape, leaves it.
  */
 export function CalibrationStep({
   printer,
   paper,
   canPrint,
-  appVersion,
+  page,
   onSaved,
   onCancel,
 }: {
@@ -36,30 +42,37 @@ export function CalibrationStep({
   paper: PaperName;
   /** The printer offers the paper: the page can be sent. */
   canPrint: boolean;
-  appVersion: string;
+  /** The calibration page's PDF, once it is written. */
+  page: Uint8Array | null;
   onSaved: (correction: ScaleCorrection) => void;
   onCancel: () => void;
 }) {
   const { t, locale } = useI18n();
   const ids = useId();
   const drawnMm = calibrationLengths(PAPER_SIZES[paper]);
-  const [measured, setMeasured] = useState<{ x: number; y: number }>(drawnMm);
+  const [measured, setMeasured] = useState<{ x: number | null; y: number | null }>({
+    x: null,
+    y: null,
+  });
   const [sending, setSending] = useState<Sending>({ kind: 'idle' });
   const [saveFailed, setSaveFailed] = useState<string | null>(null);
-  const result = correctionFrom(drawnMm, measured);
+  const { x: measuredX, y: measuredY } = measured;
+  const result =
+    measuredX === null || measuredY === null
+      ? null
+      : correctionFrom(drawnMm, { x: measuredX, y: measuredY });
 
   const headingRef = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     headingRef.current?.focus();
   }, []);
 
-  const printPage = async (): Promise<void> => {
+  const printPage = async (bytes: Uint8Array): Promise<void> => {
+    // The button is disabled while the page is sent, and a disabled button
+    // drops the focus to the page's body, out of the dialog (X19).
+    headingRef.current?.focus();
     setSending({ kind: 'sending' });
     try {
-      const { bytes } = await exportCalibrationPdf(PAPER_SIZES[paper], {
-        applicationVersion: appVersion,
-        now: () => new Date(),
-      });
       const job = await getPlatformHost().printPdf(bytes, {
         printer,
         paper,
@@ -107,8 +120,10 @@ export function CalibrationStep({
         type="button"
         className="tool"
         data-testid="calibration-print"
-        disabled={!canPrint || sending.kind === 'sending'}
-        onClick={() => void printPage()}
+        disabled={!canPrint || page === null || sending.kind === 'sending'}
+        onClick={() => {
+          if (page !== null) void printPage(page);
+        }}
       >
         {t('calibration.printPage')}
       </button>
@@ -124,15 +139,17 @@ export function CalibrationStep({
         value={measured.x}
         min={0}
         onCommit={(x) => setMeasured((m) => ({ ...m, x }))}
+        onClear={() => setMeasured((m) => ({ ...m, x: null }))}
       />
       <NumberField
         label={t('calibration.vertical', { length: drawnMm.y })}
         value={measured.y}
         min={0}
         onCommit={(y) => setMeasured((m) => ({ ...m, y }))}
+        onClear={() => setMeasured((m) => ({ ...m, y: null }))}
       />
 
-      {result.ok ? (
+      {result === null ? null : result.ok ? (
         <p data-testid="calibration-result">
           {t('calibration.result', {
             x: describeFactor(result.value.x, locale),
@@ -153,16 +170,13 @@ export function CalibrationStep({
       )}
 
       <div className="print-calibration-actions">
-        <button type="button" className="tool" onClick={onCancel}>
-          {t('actions.cancel')}
-        </button>
         <button
           type="button"
           className="tool primary"
           data-testid="calibration-save"
-          disabled={!result.ok}
+          disabled={result?.ok !== true}
           onClick={() => {
-            if (result.ok) void save(result.value);
+            if (result?.ok === true) void save(result.value);
           }}
         >
           {t('calibration.save')}

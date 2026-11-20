@@ -57,6 +57,7 @@ function recorder(): Recorded {
       placed.push({ text, x, y });
     },
     strokeText: noop,
+    measureText: (text) => ({ width: text.length * 6 }),
     setLineDash: noop,
     lineWidth: 1,
     get strokeStyle() {
