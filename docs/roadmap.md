@@ -142,7 +142,7 @@ as any item that will not make it does.
 
 ### Stage 5 — The interface and distribution ([plan](superpowers/plans/2026-11-03-release-1.7.md#stage-5--the-interface-and-distribution))
 
-- ☐ **U.23 The start screen opens on the templates.**
+- ✅ **U.23 The start screen opens on the templates** — a blank project, the primary card with Ctrl+N on it, then up to seven templates drawn as the picker draws them; *All templates…* and *Open…* beside the heading; each recent project with the date it was saved; a project opened from the screen leaves the focus on its board (X10, X20).
 - ✅ **U.24a Project tabs, refined** — a tab is as wide as its name, to 200 px, and no narrower than 128 so crowded names stay whole while the strip scrolls; the *All tabs* list opens inside the window (X27, X28).
 - ☐ **U.24b The template picker and its management, refined.**
 - ✅ **U.24c Guides and Arrange, refined** — a level guide shows only its y, an upright one only its x; a press in the rulers' corner is the tool's, never a guide; Arrange as one row of icons per axis; selected outlines read as pieces (X7, X8, X9).

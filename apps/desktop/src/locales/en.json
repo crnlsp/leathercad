@@ -61,7 +61,8 @@
   },
   "start": {
     "title": "Start new project",
-    "fromTemplate": "New project from template",
+    "blank": "Blank",
+    "fromTemplate": "All templates…",
     "open": "Open existing project",
     "lede": "Start a new pattern, open one from disk, or pick up where you left off.",
     "pin": "Pin {{name}}",
