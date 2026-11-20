@@ -44,6 +44,15 @@ About ten minutes, with a **steel rule** (not a tape) graduated in half millimet
 Linux, Windows and macOS: on Linux and macOS with LeatherCAD's own **Print**, on Windows from the
 default PDF viewer.
 
+**Sheets that say what to measure.** Each check on this page has a `paper-check-*.lcp` twin in
+`fixtures/projects/`: the same project, with a short label beside everything to measure — its
+letter here and the value it must read, as `E = 93.0 bottom holes 1 to 25`. Print the twin and the
+paper is the procedure; the tables below remain the record. The labels sit inside their pieces, so
+every piece prints where it does without them (`paperChecks.test.ts` holds that, and regenerates
+them with `UPDATE_FIXTURES=1 pnpm test`): `paper-check-print-test.lcp` for A–H,
+`paper-check-alignment-marks.lcp` for 9.13, and `paper-check-mirrored-pair.lcp` for Q21, its pocket
+already cut as a mirrored pair.
+
 1. **Open** `fixtures/projects/print-test.lcp` in the LeatherCAD build under test. Note the version
    in the status bar. The project is on A4 portrait, and the paper button beside *Export PDF* says
    *3 × A4 portrait* (before 1.5, the paper list said *3 sheets of A4, portrait (Strap taped)*).
