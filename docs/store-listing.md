@@ -51,9 +51,10 @@ Partner Center asks why the package declares it. The answer:
 
 ## Once the listing is live
 
-- `docs/getting-started.md`'s *Install* table gains the Store row, with one line: keep either the
-  Store's copy or the `.exe`, not both. Both read the same data folder and so one single-instance
-  lock — whichever starts second hands over to the first.
+- `docs/getting-started.md`'s *Install* table gains the Store row, in place of its *not live yet*
+  paragraph, and the README's download table loses its note; with one line: keep either the Store's
+  copy or the `.exe`, not both. Both read the same data folder and so one single-instance lock —
+  whichever starts second hands over to the first.
 - The roadmap's *Code signing* row says the Store's copy needs no SmartScreen click.
 - Each release: upload that release's `msix-Windows` package as a new submission. Automating it
   (the Store CLI from a protected environment) is a later step (the CI/CD plan's B5).

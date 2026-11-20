@@ -163,7 +163,7 @@ as any item that will not make it does.
 - ☐ **R15 Pixels and axe for every screen 1.7 adds.**
 - ◐ **R16 Manufacturing workflows, end to end** — card holder, bifold, a multi-piece bag, a seam, a reused and an imported piece; E2E and paper. The six journeys run, each checking geometry and measuring its PDF; awaiting the card holder cut and stitched once ([log](print-verification-log.md#a-card-holder-from-blank--r16)).
 - ☐ **R17 Full regression and packaged qualification**, on every platform there is.
-- ☐ **R18 Release documentation** — README media, getting started, keys, formats, known limitations.
+- ✅ **R18 Release documentation** — README media, getting started, keys, formats, known limitations.
 
 ### Collected from makers, and decided
 
