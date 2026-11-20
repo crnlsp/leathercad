@@ -5,7 +5,7 @@ import { useI18n } from './i18n.js';
 import { Icon } from './icons/Icon.js';
 import { KeyCap } from './keyCaps.js';
 import { recentParts } from './menus.js';
-import { startTemplates, templateName } from './startScreen.js';
+import { startTemplates, templateName } from './startTemplates.js';
 import type { TemplateChoice } from './TemplateDialog.js';
 import { templatePreview } from './templatePreview.js';
 import { Tooltip } from './Tooltip.js';

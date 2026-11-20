@@ -2,7 +2,7 @@ import { emptyDocument } from '@leathercad/document';
 import type { TemplateEntry } from '@leathercad/platform';
 import { describe, expect, it } from 'vitest';
 
-import { START_CARDS, startTemplates, templateName } from './startScreen.js';
+import { START_CARDS, startTemplates, templateName } from './startTemplates.js';
 import type { TemplateChoice } from './TemplateDialog.js';
 
 const project = emptyDocument('start').project;
