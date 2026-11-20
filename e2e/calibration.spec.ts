@@ -76,7 +76,9 @@ test('a printer calibrated in the preview prints corrected, and says so, until t
     await expect(preview.getByTestId('print-thumb')).toHaveCount(3);
     await preview.getByTestId('print-calibrate').click();
 
-    // Sent from the keys, the focus stays in the step (X19).
+    // Sent from the keys, the focus stays in the step (X19). Back in the step,
+    // its page is written again before it can be sent.
+    await expect(step.getByTestId('calibration-print')).toBeEnabled();
     await step.getByTestId('calibration-print').focus();
     await window.keyboard.press('Enter');
     await expect(step.getByTestId('calibration-sent')).toHaveText(
