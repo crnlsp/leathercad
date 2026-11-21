@@ -630,7 +630,10 @@ size — belongs in preferences.
   (`fsync`) before the rename and the folder after it (not on Windows, which cannot and need not),
   so a power cut cannot leave the new name on an empty file; a symbolic link is written through to
   its target, and the file keeps its permission bits (Q35). A save writes the document from before
-  a drag still under way, never the drag's preview (Q36).
+  a drag still under way, never the drag's preview (Q36). And it never writes a file its own loader
+  would refuse (QA2): `saveProject` checks the document as written — after JSON has made an
+  infinity `null` and rounded to six decimals — exactly as `loadProject` does, and throws an
+  `UnsavableProjectError` instead, so the file on disk stays as it was and the tab stays unsaved.
 - **Made off the window's thread.** A save's, a copy's or a kept copy's bytes are made in a worker
   (PERF-009), from the document as it was when the save was asked for, which the worker is sent a
   copy of. The worker answers in the order it was asked, so writes still reach the main process in
@@ -644,7 +647,10 @@ size — belongs in preferences.
   - *Not now* keeps it until the next clean exit.
   - A copy that does not load is renamed `.corrupt` and never offered again.
 - **Cleanup.** A tab's copy is deleted when its project is clean again (saved or reloaded), when
-  the tab is closed, and at a clean exit. A renderer crash keeps it through the quit that follows.
+  the tab is closed, and at a clean exit. A renderer crash keeps it through the quit that follows,
+  and so does a window whose whole interface failed to draw (QA2): its renderer lives on, blank but
+  for a notice, so the window tells the main process (`windowFailed`), writes each tab's latest
+  work as it unmounts, and nothing of that session is deleted at quit.
   - **The invariant:** saving never leaves a stale copy that a later start would offer as newer
     unsaved work.
   - This session's writes, clears and take-overs run in the order they were asked, so a save that

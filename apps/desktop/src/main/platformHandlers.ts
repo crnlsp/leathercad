@@ -290,6 +290,11 @@ export function registerPlatformHandlers(
     }
   });
   ipcMain.handle(IPC.getRecoveryIntervalMs, () => recoveryIntervalMs());
+  // Nothing to narrow: the verb carries no argument. It only ever keeps files.
+  ipcMain.handle(IPC.windowFailed, () => {
+    log.error('the window failed to draw; its recovery copies are kept for the next start');
+    recovery.windowFailed();
+  });
 
   ipcMain.handle(IPC.takeLaunchFile, () => takeLaunchFile());
 

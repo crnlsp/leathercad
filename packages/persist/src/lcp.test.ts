@@ -1,5 +1,6 @@
 import { DEFAULT_SETTINGS, evaluate, type Problem, type Project } from '@leathercad/domain';
 import { PathOps, Shapes, uniformRadii } from '@leathercad/geometry';
+import fc from 'fast-check';
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
 
@@ -8,6 +9,8 @@ import {
   loadProject,
   readManifest,
   saveProject,
+  UnsavableProjectError,
+  writeUnchecked,
   type FileRefusal,
 } from './lcp.js';
 import { CURRENT_FORMAT_VERSION, NewerFormatError, migrate } from './migrations/index.js';
@@ -156,6 +159,71 @@ describe('round trip', () => {
     expect(drawn.ok).toBe(true);
     if (!drawn.ok) return;
     expect(drawn.path).toEqual(Shapes.roundedRect({ x: 0, y: 0 }, 80, 60, 30));
+  });
+});
+
+/** The sample with its outline's rectangle changed: only the values a test is about. */
+function withOutline(shape: Partial<{ width: number; rotation: number }>): Project {
+  const project = sampleProject();
+  const part = project.parts[0];
+  const outline = part?.features[0];
+  if (
+    part === undefined ||
+    outline?.kind !== 'cut-contour' ||
+    outline.source.kind !== 'shape' ||
+    outline.source.shape.type !== 'rect'
+  ) {
+    throw new Error('the sample starts with a rectangle');
+  }
+  const changed = {
+    ...outline,
+    source: { ...outline.source, shape: { ...outline.source.shape, ...shape } },
+  };
+  return { ...project, parts: [{ ...part, features: [changed, ...part.features.slice(1)] }] };
+}
+
+/** Why `saveProject` would not write a project: the loader's refusal of the file it would have been. */
+function unsavable(project: Project): FileRefusal {
+  try {
+    saveProject(project, options);
+  } catch (error) {
+    if (error instanceof UnsavableProjectError) return error.reason.refusal;
+    throw error;
+  }
+  throw new Error('the project was written');
+}
+
+describe('saving never writes a file its own loader refuses (QA2, F2)', () => {
+  it('refuses a size beyond the format’s ±100 000 mm, naming where', () => {
+    expect(unsavable(withOutline({ width: 150_000 }))).toEqual({
+      kind: 'schema',
+      entry: 'document.json',
+      where: ['parts[0].features[0].source.shape.width'],
+    });
+  });
+
+  it('refuses a number JSON cannot hold, which it would have written as null', () => {
+    expect(unsavable(withOutline({ rotation: Infinity }))).toEqual({
+      kind: 'schema',
+      entry: 'document.json',
+      where: ['parts[0].features[0].source.shape.rotation'],
+    });
+  });
+
+  it('whatever width a piece has, its file is refused or opens again', () => {
+    fc.assert(
+      fc.property(fc.double({ min: -1e7, max: 1e7, noNaN: true }), (width) => {
+        let bytes: Uint8Array;
+        try {
+          bytes = saveProject(withOutline({ width }), options);
+        } catch (error) {
+          expect(error).toBeInstanceOf(UnsavableProjectError);
+          return;
+        }
+        expect(() => loadProject(bytes)).not.toThrow();
+      }),
+      { numRuns: 60 },
+    );
   });
 });
 
@@ -544,7 +612,7 @@ describe('loading a project whose reference graph is broken', () => {
   function withFeatures(extra: AnyFeature[]): Uint8Array {
     const project = sampleProject();
     const [part] = project.parts;
-    return saveProject(
+    return writeUnchecked(
       { ...project, parts: [{ ...part!, features: [...part!.features, ...extra] }] },
       options,
     );

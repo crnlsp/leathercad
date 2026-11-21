@@ -14,7 +14,7 @@ import { describe, expect, it } from 'vitest';
 import { strFromU8, unzipSync } from 'fflate';
 
 import { fixtureProjectV12 } from './makeFixture.js';
-import { InvalidProjectFileError, loadProject, saveProject } from './lcp.js';
+import { InvalidProjectFileError, loadProject, saveProject, writeUnchecked } from './lcp.js';
 import { CURRENT_FORMAT_VERSION } from './migrations/index.js';
 import { ProjectSchema } from './schema.js';
 // Frozen verbatim from leathercad-v1.6.0:packages/persist/src/schema.ts.
@@ -137,7 +137,7 @@ describe('seams, kept at format 12 and marked from 13 (9.6a, 9.13)', () => {
       a: { ...seam.a, stretch: { kind: 'between', fromAnchor: 'start', toAnchor: 1 } },
     };
     expect(() =>
-      loadProject(saveProject({ ...fixtureProjectV12(), seams: [value] }, options)),
+      loadProject(writeUnchecked({ ...fixtureProjectV12(), seams: [value] }, options)),
     ).toThrow(InvalidProjectFileError);
   });
   it('walks the released 1.6 card holder bottom seam with 27 holes and its exact drift', () => {
@@ -239,7 +239,7 @@ describe('seams, kept at format 12 and marked from 13 (9.6a, 9.13)', () => {
         a: { ...seam.a, stretch: { kind: 'between' as const, fromAnchor: 0, toAnchor: 99 } },
       },
     ])
-      expect(() => loadProject(saveProject({ ...p, seams: [bad] }, options))).toThrow(
+      expect(() => loadProject(writeUnchecked({ ...p, seams: [bad] }, options))).toThrow(
         InvalidProjectFileError,
       );
   });
@@ -248,7 +248,7 @@ describe('seams, kept at format 12 and marked from 13 (9.6a, 9.13)', () => {
     const p = fixtureProjectV12();
     const guide = { id: 'guide', origin: { x: 0, y: 0 }, angleRad: 0 };
     for (const seams of [[seam, seam], [{ ...seam, id: 'holes-1' }], [{ ...seam, id: 'guide' }]]) {
-      expect(() => loadProject(saveProject({ ...p, guides: [guide], seams }, options))).toThrow(
+      expect(() => loadProject(writeUnchecked({ ...p, guides: [guide], seams }, options))).toThrow(
         InvalidProjectFileError,
       );
     }

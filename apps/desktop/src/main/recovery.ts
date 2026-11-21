@@ -68,6 +68,8 @@ export class RecoveryStore {
   private deaths = 0;
   /** Set by a clean exit: from here on, a copy that lands is removed. */
   private released = false;
+  /** Set when the window's interface failed (QA2): no exit of this session is clean. */
+  private failed = false;
   /** This session's writes and clears, one after another in the order asked. */
   private queue: Promise<unknown> = Promise.resolve();
 
@@ -206,12 +208,27 @@ export class RecoveryStore {
   }
 
   /**
+   * The window's interface failed to draw, past any notice that could catch
+   * it (QA2): its renderer lives on, blank, its unsaved-changes question gone
+   * with the interface. Its copies are set aside as for a renderer that died,
+   * and from here on nothing of this session's is deleted at quit — not even
+   * the copy the failing window writes last, as it fails — so the quit that
+   * follows is not mistaken for a clean exit, and the next start offers them.
+   */
+  windowFailed(): void {
+    this.failed = true;
+    this.rendererGone();
+  }
+
+  /**
    * A clean exit: this session's copy and the ones it took over go. Synchronous,
    * because the process is on its way out; the quit waits for `settled` first,
    * so what the window asked for has landed, and a write asked for after this
-   * is removed as it lands.
+   * is removed as it lands. After `windowFailed`, the exit was not clean, and
+   * nothing goes.
    */
   releaseOnQuit(): void {
+    if (this.failed) return;
     this.released = true;
     const own = [...this.tabs].map((tab) => `${this.id}-${tab}`);
     for (const id of [...own, ...this.adopted]) {

@@ -3,6 +3,7 @@ import {
   CURRENT_FORMAT_VERSION,
   InvalidProjectFileError,
   NewerFormatError,
+  UnsavableProjectError,
 } from '@leathercad/persist';
 
 import type { Translate } from '../../shared/i18n.js';
@@ -33,6 +34,12 @@ export function fileErrorText(error: unknown, t: Translate): string {
     });
   }
   if (error instanceof InvalidProjectFileError) return refusalText(error, t);
+  if (error instanceof UnsavableProjectError) {
+    // A save, not a damaged file (QA2): where the schema broke, when it says.
+    const { refusal } = error.reason;
+    const where = refusal.kind === 'schema' ? refusal.where[0] : undefined;
+    return where === undefined ? t('file.unsavable') : t('file.unsavableAt', { where });
+  }
   if (error instanceof PdfWriterError) {
     return t(error.kind === 'failed' ? 'file.pdfFailed' : 'file.pdfUnavailable', {
       reason: error.detail,

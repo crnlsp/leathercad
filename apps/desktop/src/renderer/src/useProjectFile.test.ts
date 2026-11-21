@@ -7,7 +7,7 @@ import {
   setProjectName,
   translateFeatures,
 } from '@leathercad/document';
-import { loadProject } from '@leathercad/persist';
+import { loadProject, UnsavableProjectError } from '@leathercad/persist';
 import type { PlatformHost } from '@leathercad/platform';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -37,45 +37,46 @@ describe('fileName', () => {
   });
 });
 
+/** A saved tab of one 100 × 50 mm panel, and what its saves write. */
+function setup() {
+  const store = new DocumentStore(
+    setProjectName('Wallet').apply(
+      addPart(rectanglePart('part-1', 'feat-1', 'Panel', rectShape({ x: 0, y: 0 }, 100, 50))).apply(
+        emptyDocument('proj'),
+      ),
+    ),
+  );
+  const tab = newTab('tab-1', store);
+  tab.file = { path: '/p/Wallet.lcp', error: null };
+  const tabs = new ProjectTabs(tab);
+  const writes: Uint8Array[] = [];
+  const host = {
+    writeFile: (_path: string, data: Uint8Array) => {
+      writes.push(data);
+      return Promise.resolve();
+    },
+    noteRecentFile: () => Promise.resolve(),
+  } as unknown as PlatformHost;
+  let file: ReturnType<typeof useProjectFile> | undefined;
+  function Probe() {
+    file = useProjectFile(
+      tabs,
+      () => host,
+      '0.0.0',
+      () => tab,
+      () => emptyDocument('blank'),
+      ((key: string) => key) as Translate,
+      () => undefined,
+      () => undefined,
+    );
+    return null;
+  }
+  renderToStaticMarkup(createElement(Probe));
+  return { store, tab, writes, save: () => file!.save(tab) };
+}
+
 /** Ctrl+S during a drag writes the document from before it (Q36). */
 describe('saving while a gesture is under way', () => {
-  function setup() {
-    const store = new DocumentStore(
-      setProjectName('Wallet').apply(
-        addPart(
-          rectanglePart('part-1', 'feat-1', 'Panel', rectShape({ x: 0, y: 0 }, 100, 50)),
-        ).apply(emptyDocument('proj')),
-      ),
-    );
-    const tab = newTab('tab-1', store);
-    tab.file = { path: '/p/Wallet.lcp', error: null };
-    const tabs = new ProjectTabs(tab);
-    const writes: Uint8Array[] = [];
-    const host = {
-      writeFile: (_path: string, data: Uint8Array) => {
-        writes.push(data);
-        return Promise.resolve();
-      },
-      noteRecentFile: () => Promise.resolve(),
-    } as unknown as PlatformHost;
-    let file: ReturnType<typeof useProjectFile> | undefined;
-    function Probe() {
-      file = useProjectFile(
-        tabs,
-        () => host,
-        '0.0.0',
-        () => tab,
-        () => emptyDocument('blank'),
-        ((key: string) => key) as Translate,
-        () => undefined,
-        () => undefined,
-      );
-      return null;
-    }
-    renderToStaticMarkup(createElement(Probe));
-    return { store, tab, writes, save: () => file!.save(tab) };
-  }
-
   it('writes the document as it was before the drag, and leaves the tab unsaved with the drag', async () => {
     const { store, tab, writes, save } = setup();
     const before = store.getState().document;
@@ -93,6 +94,20 @@ describe('saving while a gesture is under way', () => {
     // drag commits the project is unsaved, and a cancelled drag leaves it clean.
     expect(tab.savedDocument).toBe(before);
     store.commit();
+    expect(isDirty(tab)).toBe(true);
+  });
+});
+
+/** QA2, F2: a project the format cannot hold is never written, and never said to be saved. */
+describe('saving a project its file could not hold', () => {
+  it('writes nothing, says why, and leaves the tab unsaved', async () => {
+    const { store, tab, writes, save } = setup();
+    store.dispatch(translateFeatures(['feat-1'], { x: 200_000, y: 0 }));
+
+    expect(await save()).toBe(false);
+
+    expect(writes).toEqual([]);
+    expect(tab.file.error).toBeInstanceOf(UnsavableProjectError);
     expect(isDirty(tab)).toBe(true);
   });
 });

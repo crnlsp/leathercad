@@ -4,7 +4,7 @@ import { acceptance, diagnose, type Feature, type Project } from '@leathercad/do
 import { strFromU8, unzipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
 
-import { InvalidProjectFileError, loadProject, saveProject } from './lcp.js';
+import { InvalidProjectFileError, loadProject, saveProject, writeUnchecked } from './lcp.js';
 // Frozen verbatim from leathercad-v1.6.0:packages/persist/src/schema.ts.
 import { ProjectSchema as ReleasedSchema } from './test/schema-v1.6.0.js';
 
@@ -52,6 +52,6 @@ describe('accepted warnings in the file (9.16)', () => {
 
   it('refuse an entry without a key', () => {
     const project = { ...accepted(), acceptedWarnings: [{ cause: null }] } as unknown as Project;
-    expect(() => loadProject(saveProject(project, options))).toThrow(InvalidProjectFileError);
+    expect(() => loadProject(writeUnchecked(project, options))).toThrow(InvalidProjectFileError);
   });
 });

@@ -85,6 +85,7 @@ import { TextFieldMenu } from './TextFieldMenu.js';
 import { ExportDialog } from './ExportDialog.js';
 import { ExportNotice } from './ExportNotice.js';
 import { PrintPreview } from './PrintPreview.js';
+import { AreaBoundary } from './Failure.js';
 import { fileErrorText } from './fileErrorText.js';
 import {
   fileName,
@@ -1681,6 +1682,10 @@ export function App({
     0,
   );
 
+  // An area that failed to draw tries again after the maker's next step (QA2):
+  // an Undo, another selection, another tab or view.
+  const retryOn = [tab.id, view, storeState.document, storeState.selection];
+
   return (
     <I18nProvider value={i18n}>
       <div className={hasProject ? 'app' : 'app no-project'}>
@@ -1918,52 +1923,54 @@ export function App({
               {/* A panel's place in the DOM, docked or not (F.2): no panel is ever
               removed. Esc pressed inside it, open over the board, closes it. */}
               <div className="panel-slot" onKeyDown={overlayKeys('parts')}>
-                {view === 'sheets' ? (
-                  <SheetsParts
-                    store={store}
-                    project={storeState.document.project}
-                    printStatus={printStatusFor(storeState.document.project)}
-                    selected={sheetsSelected}
-                    hoveredPart={hoveredPart}
-                    onHoverPart={setHoveredPart}
-                    toggle={
-                      <PanelToggle
-                        panel="parts"
-                        shown
-                        onToggle={(press) => togglePanel('parts', press, true)}
-                      />
-                    }
-                  />
-                ) : (
-                  <PartsList
-                    // Made again for each tab, from the folds that tab keeps (PERF-016).
-                    key={tab.id}
-                    store={store}
-                    project={storeState.document.project}
-                    folds={tab.folds}
-                    selected={storeState.selection.features}
-                    selectedParts={storeState.selection.parts}
-                    hoveredRow={boardHoverRow}
-                    editing={
-                      toolId === 'points'
-                        ? (pointsUnderEdit(storeState.document.project, storeState.selection)?.id ??
-                          null)
-                        : null
-                    }
-                    badges={badges}
-                    printStatus={printStatusFor(storeState.document.project)}
-                    onRemovePart={requestDeletePart}
-                    onDuplicatePart={requestDuplicatePart}
-                    onContextMenu={openContextMenu}
-                    toggle={
-                      <PanelToggle
-                        panel="parts"
-                        shown
-                        onToggle={(press) => togglePanel('parts', press, true)}
-                      />
-                    }
-                  />
-                )}
+                <AreaBoundary area="panel" testArea="parts" retryOn={retryOn}>
+                  {view === 'sheets' ? (
+                    <SheetsParts
+                      store={store}
+                      project={storeState.document.project}
+                      printStatus={printStatusFor(storeState.document.project)}
+                      selected={sheetsSelected}
+                      hoveredPart={hoveredPart}
+                      onHoverPart={setHoveredPart}
+                      toggle={
+                        <PanelToggle
+                          panel="parts"
+                          shown
+                          onToggle={(press) => togglePanel('parts', press, true)}
+                        />
+                      }
+                    />
+                  ) : (
+                    <PartsList
+                      // Made again for each tab, from the folds that tab keeps (PERF-016).
+                      key={tab.id}
+                      store={store}
+                      project={storeState.document.project}
+                      folds={tab.folds}
+                      selected={storeState.selection.features}
+                      selectedParts={storeState.selection.parts}
+                      hoveredRow={boardHoverRow}
+                      editing={
+                        toolId === 'points'
+                          ? (pointsUnderEdit(storeState.document.project, storeState.selection)
+                              ?.id ?? null)
+                          : null
+                      }
+                      badges={badges}
+                      printStatus={printStatusFor(storeState.document.project)}
+                      onRemovePart={requestDeletePart}
+                      onDuplicatePart={requestDuplicatePart}
+                      onContextMenu={openContextMenu}
+                      toggle={
+                        <PanelToggle
+                          panel="parts"
+                          shown
+                          onToggle={(press) => togglePanel('parts', press, true)}
+                        />
+                      }
+                    />
+                  )}
+                </AreaBoundary>
               </div>
               {/* The drawing is what the window is for: its main landmark. A press
               on it closes a panel open over it. */}
@@ -1972,141 +1979,147 @@ export function App({
                 aria-label={t('app.drawing')}
                 onPointerDown={open === null ? undefined : () => closeOverlay('pointer')}
               >
-                <CanvasHost
-                  // Made again for each tab: its tools and gestures are that
-                  // project's, and its cameras the tab's (8.12).
-                  key={tab.id}
-                  seam={shownSeam}
-                  onEditSeam={(seam) => {
-                    seamWorkflow.open(seam, true);
-                    showSeamProperties();
-                  }}
-                  cameras={tab.cameras}
-                  ref={canvasRef}
-                  store={store}
-                  view={view}
-                  hoveredPart={hoveredPart}
-                  onHoverPart={setHoveredPart}
-                  hoverRow={boardHoverRow}
-                  toolId={toolId}
-                  nextId={nextId}
-                  onToolChange={chooseTool}
-                  onStatus={handleStatus}
-                  cursor={cursor}
-                  move={move}
-                  panelOver={open}
-                  selectionBar={selectionBarOn ? tools : null}
-                  drawAs={drawAs}
-                  makerDefaults={makerDefaults}
-                  smartGuides={preferences.smartGuides}
-                  hardware={hardware}
-                  pointOptions={pointOptions}
-                  requestDelete={requestDelete}
-                  requestDeletePart={requestDeletePart}
-                  onContextMenu={openContextMenu}
-                  onBoardContextMenu={openBoardMenu}
-                  onCopyPieces={copyPieces}
-                  onPastePieces={pastePieces}
-                  onDuplicatePiece={duplicateSelected}
-                >
-                  {/* The legend explains the board's marks; the sheets are ink. */}
-                  {view === 'design' && (
-                    <CanvasLegend
-                      project={storeState.document.project}
-                      open={legendOpen}
-                      onToggle={toggleLegend}
-                    />
-                  )}
-                  {status !== null && (
-                    <ZoomControl
-                      percent={status.zoomPercent}
-                      run={runZoom}
-                      zoomTo={zoomTo}
-                      fitSelectionRefusal={fitSelectionRefusal}
-                    />
-                  )}
-                  {tab.file.outside !== undefined && tab.file.path !== null && (
-                    <OutsideChangeBar
-                      change={tab.file.outside}
-                      file={fileName(tab.file.path)}
-                      onReload={() =>
-                        void confirmDiscard('reload', tab).then((proceed) =>
-                          proceed ? file.reload(tab) : undefined,
-                        )
-                      }
-                      onSave={() => void file.save(tab)}
-                      onKeep={() =>
-                        tabs.update(tab.id, (each) => {
-                          const { outside: _outside, ...rest } = each.file;
-                          each.file = rest;
-                        })
-                      }
-                    />
-                  )}
-                </CanvasHost>
-                <ProblemsPanel
-                  project={storeState.document.project}
-                  diagnostics={diagnostics}
-                  counts={counts}
-                  onGoTo={goToDiagnostic}
-                  current={currentProblem}
-                  onNavigate={navigateProblems}
-                  open={problemsOpen}
-                  onToggle={() => setProblemsOpen((open) => !open)}
-                />
-              </main>
-              <div className="panel-slot" onKeyDown={overlayKeys('properties')}>
-                {view === 'sheets' ? (
-                  <SheetsProperties
+                <AreaBoundary area="board" testArea="board" retryOn={retryOn}>
+                  <CanvasHost
+                    // Made again for each tab: its tools and gestures are that
+                    // project's, and its cameras the tab's (8.12).
+                    key={tab.id}
+                    seam={shownSeam}
+                    onEditSeam={(seam) => {
+                      seamWorkflow.open(seam, true);
+                      showSeamProperties();
+                    }}
+                    cameras={tab.cameras}
+                    ref={canvasRef}
                     store={store}
-                    project={storeState.document.project}
-                    selected={sheetsSelected}
-                    toggle={
-                      <PanelToggle
-                        panel="properties"
-                        shown
-                        onToggle={(press) => togglePanel('properties', press, true)}
-                      />
-                    }
-                  />
-                ) : (
-                  <PropertyPanel
-                    seamPanel={
-                      <SeamPanel
-                        store={store}
-                        project={storeState.document.project}
-                        selected={storeState.selection.features}
-                        workflow={seamWorkflow}
-                        draft={seamDraft}
-                        onSew={sewingIds.length > 0 ? startSewing : null}
-                        onHighlight={setHighlightedSeam}
-                      />
-                    }
-                    store={store}
-                    project={storeState.document.project}
-                    selected={storeState.selection.features}
-                    selectedParts={storeState.selection.parts}
-                    diagnostics={diagnostics}
+                    view={view}
+                    hoveredPart={hoveredPart}
+                    onHoverPart={setHoveredPart}
+                    hoverRow={boardHoverRow}
+                    toolId={toolId}
                     nextId={nextId}
+                    onToolChange={chooseTool}
+                    onStatus={handleStatus}
+                    cursor={cursor}
+                    move={move}
+                    panelOver={open}
+                    selectionBar={selectionBarOn ? tools : null}
+                    drawAs={drawAs}
+                    makerDefaults={makerDefaults}
+                    smartGuides={preferences.smartGuides}
+                    hardware={hardware}
+                    pointOptions={pointOptions}
                     requestDelete={requestDelete}
                     requestDeletePart={requestDeletePart}
-                    tools={tools}
-                    onTools={changePreferences}
-                    guidesMode={toolId === 'guide'}
-                    drawingPiece={
-                      DRAWING_TOOL_IDS.has(toolId) &&
-                      (drawAs === 'outline' || drawAs === 'stitch-allowance')
-                    }
-                    sizing={status?.sizing ?? null}
-                    toggle={
-                      <PanelToggle
-                        panel="properties"
-                        shown
-                        onToggle={(press) => togglePanel('properties', press, true)}
+                    onContextMenu={openContextMenu}
+                    onBoardContextMenu={openBoardMenu}
+                    onCopyPieces={copyPieces}
+                    onPastePieces={pastePieces}
+                    onDuplicatePiece={duplicateSelected}
+                  >
+                    {/* The legend explains the board's marks; the sheets are ink. */}
+                    {view === 'design' && (
+                      <CanvasLegend
+                        project={storeState.document.project}
+                        open={legendOpen}
+                        onToggle={toggleLegend}
                       />
-                    }
+                    )}
+                    {status !== null && (
+                      <ZoomControl
+                        percent={status.zoomPercent}
+                        run={runZoom}
+                        zoomTo={zoomTo}
+                        fitSelectionRefusal={fitSelectionRefusal}
+                      />
+                    )}
+                    {tab.file.outside !== undefined && tab.file.path !== null && (
+                      <OutsideChangeBar
+                        change={tab.file.outside}
+                        file={fileName(tab.file.path)}
+                        onReload={() =>
+                          void confirmDiscard('reload', tab).then((proceed) =>
+                            proceed ? file.reload(tab) : undefined,
+                          )
+                        }
+                        onSave={() => void file.save(tab)}
+                        onKeep={() =>
+                          tabs.update(tab.id, (each) => {
+                            const { outside: _outside, ...rest } = each.file;
+                            each.file = rest;
+                          })
+                        }
+                      />
+                    )}
+                  </CanvasHost>
+                </AreaBoundary>
+                <AreaBoundary area="panel" testArea="problems" retryOn={retryOn}>
+                  <ProblemsPanel
+                    project={storeState.document.project}
+                    diagnostics={diagnostics}
+                    counts={counts}
+                    onGoTo={goToDiagnostic}
+                    current={currentProblem}
+                    onNavigate={navigateProblems}
+                    open={problemsOpen}
+                    onToggle={() => setProblemsOpen((open) => !open)}
                   />
-                )}
+                </AreaBoundary>
+              </main>
+              <div className="panel-slot" onKeyDown={overlayKeys('properties')}>
+                <AreaBoundary area="panel" testArea="properties" retryOn={retryOn}>
+                  {view === 'sheets' ? (
+                    <SheetsProperties
+                      store={store}
+                      project={storeState.document.project}
+                      selected={sheetsSelected}
+                      toggle={
+                        <PanelToggle
+                          panel="properties"
+                          shown
+                          onToggle={(press) => togglePanel('properties', press, true)}
+                        />
+                      }
+                    />
+                  ) : (
+                    <PropertyPanel
+                      seamPanel={
+                        <SeamPanel
+                          store={store}
+                          project={storeState.document.project}
+                          selected={storeState.selection.features}
+                          workflow={seamWorkflow}
+                          draft={seamDraft}
+                          onSew={sewingIds.length > 0 ? startSewing : null}
+                          onHighlight={setHighlightedSeam}
+                        />
+                      }
+                      store={store}
+                      project={storeState.document.project}
+                      selected={storeState.selection.features}
+                      selectedParts={storeState.selection.parts}
+                      diagnostics={diagnostics}
+                      nextId={nextId}
+                      requestDelete={requestDelete}
+                      requestDeletePart={requestDeletePart}
+                      tools={tools}
+                      onTools={changePreferences}
+                      guidesMode={toolId === 'guide'}
+                      drawingPiece={
+                        DRAWING_TOOL_IDS.has(toolId) &&
+                        (drawAs === 'outline' || drawAs === 'stitch-allowance')
+                      }
+                      sizing={status?.sizing ?? null}
+                      toggle={
+                        <PanelToggle
+                          panel="properties"
+                          shown
+                          onToggle={(press) => togglePanel('properties', press, true)}
+                        />
+                      }
+                    />
+                  )}
+                </AreaBoundary>
               </div>
               {layout.properties === 'strip' && (
                 <PropertiesStrip
@@ -2247,110 +2260,145 @@ export function App({
           (contextMenu.empty
             ? pasteChoice !== undefined
             : !isEmptySelection(storeState.selection)) && (
-            <ContextMenu
-              key={`${String(contextMenu.x)},${String(contextMenu.y)}`}
-              at={contextMenu}
-              label={t('contextMenu.label')}
-              testId="context-menu"
-              entries={
-                contextMenu.empty
-                  ? boardMenu(i18n, pasteChoice)
-                  : selectionMenu(i18n, storeState.document.project, storeState.selection, {
-                      dispatch: (command) => store.dispatch(command),
-                      sewTogether: startSewing,
-                      duplicatePieces: duplicateSelected,
-                      copyPieces,
-                      saveAsTemplate: savePiecesAsTemplate,
-                      paste: pasteChoice,
-                      deleteFeatures: requestDelete,
-                      deletePart: requestDeletePart,
-                    })
-              }
+            <AreaBoundary
+              area="dialog"
+              testArea="context-menu"
+              retryOn={[]}
               onClose={() => setContextMenu(null)}
-            />
+            >
+              <ContextMenu
+                key={`${String(contextMenu.x)},${String(contextMenu.y)}`}
+                at={contextMenu}
+                label={t('contextMenu.label')}
+                testId="context-menu"
+                entries={
+                  contextMenu.empty
+                    ? boardMenu(i18n, pasteChoice)
+                    : selectionMenu(i18n, storeState.document.project, storeState.selection, {
+                        dispatch: (command) => store.dispatch(command),
+                        sewTogether: startSewing,
+                        duplicatePieces: duplicateSelected,
+                        copyPieces,
+                        saveAsTemplate: savePiecesAsTemplate,
+                        paste: pasteChoice,
+                        deleteFeatures: requestDelete,
+                        deletePart: requestDeletePart,
+                      })
+                }
+                onClose={() => setContextMenu(null)}
+              />
+            </AreaBoundary>
           )}
 
         {/* A text field's own (U.20): Cut, Copy, Paste and Select all. */}
         <TextFieldMenu />
 
         {settings !== null && (
-          <SettingsDialog
-            section={settings}
-            onSection={setSettings}
-            preferences={preferences}
-            onPreferences={changePreferences}
-            systemLanguages={systemLanguages}
-            recentCount={recent.length}
-            onClearRecent={() =>
-              void getPlatformHost()
-                .clearRecent()
-                .then(refreshRecent)
-                .catch(() => undefined)
-            }
+          <AreaBoundary
+            area="dialog"
+            testArea="settings"
+            retryOn={[]}
             onClose={() => setSettings(null)}
-            nextId={nextId}
-            updates={updates}
-            onCheckUpdates={checkUpdates}
-          />
+          >
+            <SettingsDialog
+              section={settings}
+              onSection={setSettings}
+              preferences={preferences}
+              onPreferences={changePreferences}
+              systemLanguages={systemLanguages}
+              recentCount={recent.length}
+              onClearRecent={() =>
+                void getPlatformHost()
+                  .clearRecent()
+                  .then(refreshRecent)
+                  .catch(() => undefined)
+              }
+              onClose={() => setSettings(null)}
+              nextId={nextId}
+              updates={updates}
+              onCheckUpdates={checkUpdates}
+            />
+          </AreaBoundary>
         )}
 
         {aboutOpen && (
-          <AboutDialog version={version} updates={updates} onClose={() => setAboutOpen(false)} />
+          <AreaBoundary
+            area="dialog"
+            testArea="about"
+            retryOn={[]}
+            onClose={() => setAboutOpen(false)}
+          >
+            <AboutDialog version={version} updates={updates} onClose={() => setAboutOpen(false)} />
+          </AreaBoundary>
         )}
 
         {templateList !== null && (
-          <TemplateDialog
-            templates={templateList}
-            sort={preferences.templateSort}
-            show={preferences.templateShow}
-            onOrder={(templateSort, templateShow) =>
-              changePreferences({ templateSort, templateShow })
-            }
-            pinnedFolded={preferences.templatePinnedFolded}
-            onFoldPinned={(templatePinnedFolded) => changePreferences({ templatePinnedFolded })}
-            actions={templateActions}
-            insert={insertingPieces ? insertFromTemplate : undefined}
+          <AreaBoundary
+            area="dialog"
+            testArea="templates"
+            retryOn={[]}
             onClose={() => setTemplateList(null)}
-          />
+          >
+            <TemplateDialog
+              templates={templateList}
+              sort={preferences.templateSort}
+              show={preferences.templateShow}
+              onOrder={(templateSort, templateShow) =>
+                changePreferences({ templateSort, templateShow })
+              }
+              pinnedFolded={preferences.templatePinnedFolded}
+              onFoldPinned={(templatePinnedFolded) => changePreferences({ templatePinnedFolded })}
+              actions={templateActions}
+              insert={insertingPieces ? insertFromTemplate : undefined}
+              onClose={() => setTemplateList(null)}
+            />
+          </AreaBoundary>
         )}
 
         {savingTemplate !== null && (
-          <SaveTemplateDialog
-            initialName={savingTemplate.name}
-            onSave={async (name, replace) => {
-              const { project, copied } = savingTemplate;
-              const outcome = await file
-                .saveAsTemplate(project, name, replace)
-                .then(async (saved) => {
-                  // Pieces are tagged so, beside what the maker said of it before (9.7).
-                  if (saved.kind === 'saved' && copied !== undefined) {
-                    const host = getPlatformHost();
-                    const id = `mine:${saved.name}`;
-                    const was = (await host.listTemplates()).find((entry) => entry.id === id);
-                    await host.describeTemplate(id, was?.description ?? '', [
-                      ...(was?.tags ?? []),
-                      PIECE_TAG,
-                    ]);
-                  }
-                  return saved;
-                })
-                .catch((error: unknown) => ({ kind: 'failed' as const, error }));
-              if (outcome.kind === 'failed') {
-                return { said: fileErrorText(outcome.error, t), taken: false };
-              }
-              if (outcome.kind === 'saved') {
-                setSavingTemplate(null);
-                const said = copied === undefined ? null : copyNotice(copied, i18n, 'duplicate');
-                if (said !== null) setNotice({ title: t('templates.savedTitle'), text: said });
-                return null;
-              }
-              if (outcome.kind === 'exists') {
-                return { said: t('templates.exists', { name: outcome.name }), taken: true };
-              }
-              return { said: t('templates.invalid', { name: name.trim() }), taken: false };
-            }}
+          <AreaBoundary
+            area="dialog"
+            testArea="save-template"
+            retryOn={[]}
             onClose={() => setSavingTemplate(null)}
-          />
+          >
+            <SaveTemplateDialog
+              initialName={savingTemplate.name}
+              onSave={async (name, replace) => {
+                const { project, copied } = savingTemplate;
+                const outcome = await file
+                  .saveAsTemplate(project, name, replace)
+                  .then(async (saved) => {
+                    // Pieces are tagged so, beside what the maker said of it before (9.7).
+                    if (saved.kind === 'saved' && copied !== undefined) {
+                      const host = getPlatformHost();
+                      const id = `mine:${saved.name}`;
+                      const was = (await host.listTemplates()).find((entry) => entry.id === id);
+                      await host.describeTemplate(id, was?.description ?? '', [
+                        ...(was?.tags ?? []),
+                        PIECE_TAG,
+                      ]);
+                    }
+                    return saved;
+                  })
+                  .catch((error: unknown) => ({ kind: 'failed' as const, error }));
+                if (outcome.kind === 'failed') {
+                  return { said: fileErrorText(outcome.error, t), taken: false };
+                }
+                if (outcome.kind === 'saved') {
+                  setSavingTemplate(null);
+                  const said = copied === undefined ? null : copyNotice(copied, i18n, 'duplicate');
+                  if (said !== null) setNotice({ title: t('templates.savedTitle'), text: said });
+                  return null;
+                }
+                if (outcome.kind === 'exists') {
+                  return { said: t('templates.exists', { name: outcome.name }), taken: true };
+                }
+                return { said: t('templates.invalid', { name: name.trim() }), taken: false };
+              }}
+              onClose={() => setSavingTemplate(null)}
+            />
+          </AreaBoundary>
         )}
 
         {svgReading !== null && (
@@ -2362,13 +2410,20 @@ export function App({
         )}
 
         {svgImport !== null && (
-          <SvgImportDialog
-            tree={svgImport.tree}
-            name={svgImport.name}
-            canImportIntoOpen={hasProject}
-            onCancel={() => setSvgImport(null)}
-            onImport={importPiecesInto}
-          />
+          <AreaBoundary
+            area="dialog"
+            testArea="svg-import"
+            retryOn={[]}
+            onClose={() => setSvgImport(null)}
+          >
+            <SvgImportDialog
+              tree={svgImport.tree}
+              name={svgImport.name}
+              canImportIntoOpen={hasProject}
+              onCancel={() => setSvgImport(null)}
+              onImport={importPiecesInto}
+            />
+          </AreaBoundary>
         )}
 
         {notice !== null && (
@@ -2378,48 +2433,55 @@ export function App({
         )}
 
         {tabMenuAt !== null && menuTab !== undefined && (
-          <TabContextMenu
-            key={`${tabMenuAt.id}:${String(tabMenuAt.x)},${String(tabMenuAt.y)}`}
-            tab={menuTab}
-            at={tabMenuAt}
-            othersOpen={openTabs.length > 1}
-            actions={{
-              rename: (how) => {
-                tabs.activate(menuTab.id);
-                setRenaming(how ?? 'pointer');
-              },
-              save: () => void file.save(menuTab),
-              saveAs: () => void file.save(menuTab, true),
-              saveAsTemplate: () => saveTabAsTemplate(menuTab),
-              reload: () =>
-                void confirmDiscard('reload', menuTab).then((proceed) =>
-                  proceed ? file.reload(menuTab) : undefined,
-                ),
-              duplicate: () => file.duplicate(menuTab),
-              showInFolder: () => {
-                if (menuTab.file.path !== null) {
-                  void getPlatformHost()
-                    .showInFolder(menuTab.file.path)
-                    .catch(() => undefined);
-                }
-              },
-              copyPath: () => {
-                if (menuTab.file.path !== null) {
-                  void navigator.clipboard.writeText(menuTab.file.path).catch(() => undefined);
-                }
-              },
-              trash: () => setTrashing(menuTab),
-              close: () => void closeTab(menuTab.id),
-              closeOthers: () =>
-                void (async () => {
-                  for (const other of tabs.tabs.filter((each) => each !== menuTab)) {
-                    // Each asks about its own unsaved work; Cancel keeps it and goes on.
-                    await closeTab(other.id);
-                  }
-                })(),
-            }}
+          <AreaBoundary
+            area="dialog"
+            testArea="tab-menu"
+            retryOn={[]}
             onClose={() => setTabMenuAt(null)}
-          />
+          >
+            <TabContextMenu
+              key={`${tabMenuAt.id}:${String(tabMenuAt.x)},${String(tabMenuAt.y)}`}
+              tab={menuTab}
+              at={tabMenuAt}
+              othersOpen={openTabs.length > 1}
+              actions={{
+                rename: (how) => {
+                  tabs.activate(menuTab.id);
+                  setRenaming(how ?? 'pointer');
+                },
+                save: () => void file.save(menuTab),
+                saveAs: () => void file.save(menuTab, true),
+                saveAsTemplate: () => saveTabAsTemplate(menuTab),
+                reload: () =>
+                  void confirmDiscard('reload', menuTab).then((proceed) =>
+                    proceed ? file.reload(menuTab) : undefined,
+                  ),
+                duplicate: () => file.duplicate(menuTab),
+                showInFolder: () => {
+                  if (menuTab.file.path !== null) {
+                    void getPlatformHost()
+                      .showInFolder(menuTab.file.path)
+                      .catch(() => undefined);
+                  }
+                },
+                copyPath: () => {
+                  if (menuTab.file.path !== null) {
+                    void navigator.clipboard.writeText(menuTab.file.path).catch(() => undefined);
+                  }
+                },
+                trash: () => setTrashing(menuTab),
+                close: () => void closeTab(menuTab.id),
+                closeOthers: () =>
+                  void (async () => {
+                    for (const other of tabs.tabs.filter((each) => each !== menuTab)) {
+                      // Each asks about its own unsaved work; Cancel keeps it and goes on.
+                      await closeTab(other.id);
+                    }
+                  })(),
+              }}
+              onClose={() => setTabMenuAt(null)}
+            />
+          </AreaBoundary>
         )}
 
         {trashing !== null && trashing.file.path !== null && (
@@ -2457,39 +2519,60 @@ export function App({
         )}
 
         {printing && (
-          <PrintPreview
-            project={storeState.document.project}
-            store={store}
-            appVersion={version ?? '0.0.0'}
-            diagnostics={diagnostics}
-            // A problem chosen there is gone to, as from the drawer.
-            onGoTo={(diagnostic) => {
-              setPrinting(false);
-              goToDiagnostic(diagnostic);
-            }}
-            // Where the app cannot print itself: the bytes previewed are the
-            // bytes saved, and the export's own notice follows.
-            onSavePdf={(bytes) => {
-              setPrinting(false);
-              void file.exportPdfFile(bytes).then(setExportNotice);
-            }}
+          <AreaBoundary
+            area="dialog"
+            testArea="print-preview"
+            retryOn={[]}
             onClose={() => setPrinting(false)}
-          />
+          >
+            <PrintPreview
+              project={storeState.document.project}
+              store={store}
+              appVersion={version ?? '0.0.0'}
+              diagnostics={diagnostics}
+              // A problem chosen there is gone to, as from the drawer.
+              onGoTo={(diagnostic) => {
+                setPrinting(false);
+                goToDiagnostic(diagnostic);
+              }}
+              // Where the app cannot print itself: the bytes previewed are the
+              // bytes saved, and the export's own notice follows.
+              onSavePdf={(bytes) => {
+                setPrinting(false);
+                void file.exportPdfFile(bytes).then(setExportNotice);
+              }}
+              onClose={() => setPrinting(false)}
+            />
+          </AreaBoundary>
         )}
 
         {exporting !== null && (
-          <ExportDialog
-            project={storeState.document.project}
-            format={exporting}
-            roles={exportRoles}
-            onRoles={(roles) => changePreferences({ exportRoles: roles })}
-            onExport={() => void exportDrawing(exporting)}
-            onCancel={() => setExporting(null)}
-          />
+          <AreaBoundary
+            area="dialog"
+            testArea="export"
+            retryOn={[]}
+            onClose={() => setExporting(null)}
+          >
+            <ExportDialog
+              project={storeState.document.project}
+              format={exporting}
+              roles={exportRoles}
+              onRoles={(roles) => changePreferences({ exportRoles: roles })}
+              onExport={() => void exportDrawing(exporting)}
+              onCancel={() => setExporting(null)}
+            />
+          </AreaBoundary>
         )}
 
         {exportNotice !== null && (
-          <ExportNotice report={exportNotice} onClose={() => setExportNotice(null)} />
+          <AreaBoundary
+            area="dialog"
+            testArea="export-notice"
+            retryOn={[]}
+            onClose={() => setExportNotice(null)}
+          >
+            <ExportNotice report={exportNotice} onClose={() => setExportNotice(null)} />
+          </AreaBoundary>
         )}
 
         {recovery.offer !== null && (
@@ -2504,45 +2587,69 @@ export function App({
         )}
 
         {pendingAll !== null && (
-          <UnsavedProjectsDialog
-            names={pendingAll.tabs.map((each) => tabName(each, t))}
-            onSaveAll={() => {
-              const unsaved = pendingAll.tabs;
-              setPendingAll(null);
-              void saveAllThenClose(unsaved).then((saved) => pendingAll.resolve(saved));
-            }}
-            onDiscard={() => {
-              setPendingAll(null);
-              pendingAll.resolve(true);
-            }}
-            onCancel={() => {
+          <AreaBoundary
+            area="dialog"
+            testArea="unsaved-projects"
+            retryOn={[]}
+            onClose={() => {
               setPendingAll(null);
               pendingAll.resolve(false);
             }}
-          />
+          >
+            <UnsavedProjectsDialog
+              names={pendingAll.tabs.map((each) => tabName(each, t))}
+              onSaveAll={() => {
+                const unsaved = pendingAll.tabs;
+                setPendingAll(null);
+                void saveAllThenClose(unsaved).then((saved) => pendingAll.resolve(saved));
+              }}
+              onDiscard={() => {
+                setPendingAll(null);
+                pendingAll.resolve(true);
+              }}
+              onCancel={() => {
+                setPendingAll(null);
+                pendingAll.resolve(false);
+              }}
+            />
+          </AreaBoundary>
         )}
 
         {pendingDiscard !== null && (
-          <UnsavedChangesDialog
-            projectName={tabName(pendingDiscard.tab, t)}
-            action={pendingDiscard.action}
-            // Saving an untitled project asks where; backing out of that asks
-            // nothing further and changes nothing.
-            onSave={() =>
-              void file.save(pendingDiscard.tab).then((saved) => pendingDiscard.resolve(saved))
-            }
-            onDiscard={() => pendingDiscard.resolve(true)}
-            onCancel={() => pendingDiscard.resolve(false)}
-          />
+          <AreaBoundary
+            area="dialog"
+            testArea="unsaved-changes"
+            retryOn={[]}
+            onClose={() => pendingDiscard.resolve(false)}
+          >
+            <UnsavedChangesDialog
+              projectName={tabName(pendingDiscard.tab, t)}
+              action={pendingDiscard.action}
+              // Saving an untitled project asks where; backing out of that asks
+              // nothing further and changes nothing.
+              onSave={() =>
+                void file.save(pendingDiscard.tab).then((saved) => pendingDiscard.resolve(saved))
+              }
+              onDiscard={() => pendingDiscard.resolve(true)}
+              onCancel={() => pendingDiscard.resolve(false)}
+            />
+          </AreaBoundary>
         )}
 
         {pendingDelete !== null && (
-          <DeleteDialog
-            what={describeDelete(storeState.document.project, pendingDelete, t)}
-            plan={planDelete(storeState.document.project, pendingDelete.ids)}
-            onResolve={resolvePendingDelete}
-            onCancel={() => setPendingDelete(null)}
-          />
+          <AreaBoundary
+            area="dialog"
+            testArea="delete"
+            retryOn={[]}
+            onClose={() => setPendingDelete(null)}
+          >
+            <DeleteDialog
+              what={describeDelete(storeState.document.project, pendingDelete, t)}
+              plan={planDelete(storeState.document.project, pendingDelete.ids)}
+              onResolve={resolvePendingDelete}
+              onCancel={() => setPendingDelete(null)}
+            />
+          </AreaBoundary>
         )}
       </div>
     </I18nProvider>
