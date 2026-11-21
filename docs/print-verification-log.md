@@ -101,6 +101,7 @@ not 250: a row recorded before it read A as the square, across × up, B as the r
 | 2026-10-01 | 7.6 branch: `lp -o print-scaling=none -o fit-to-page=false -o media=A4`, as *Print* sends it | Linux (CachyOS), CUPS 2.4.19, libcupsfilters 2.2.1 | none: sent to `lp` | Brother HL-L2442DW, driverless (IPP Everywhere) | A4 | Sheet 1 only. A–F each within 0.5 mm of expected, reported as passing; exact readings not noted. G, H not printed | **Pass** (sheet 1). No visible issue |
 | 2026-10-09 | `develop` at 6a63ae2, the 1.3.5 release candidate | Linux (CachyOS) | none: LeatherCAD's *Print*, *100 % — locked*, *No scaling* | Brother HL-L2442DW, the printer's default settings | A4 portrait | All three sheets. A–H each within 0.5 mm of expected, reported as passing; exact readings not noted | **Pass** |
 | 2026-10-09 | `develop` at 6a63ae2, the 1.3.5 release candidate | Linux (CachyOS) | none: LeatherCAD's *Print*, A4 landscape (7.6b) | Brother HL-L2442DW, the printer's default settings | A4, the sheet turned onto upright paper | One sheet. A–F and the strap whole at 275.0 each within 0.5 mm of expected, reported as passing; exact readings not noted | **Pass** |
+| 2026-11-20 | `develop` at 0527c3a (1.7, after R18), `paper-check-*.lcp` | Linux (CachyOS), CUPS 2.4.20, libcupsfilters 2.2.1 | none: the PDF written as *Print* writes it (`exportPdf`, upright, no correction) and sent to `lp` with *Print*'s own options (`print-scaling=none`, `fit-to-page=false`, `media=A4`) | Brother HL-L2442DW, driverless (IPP Everywhere), the printer's default settings | A4 portrait | All three sheets, labelled. Every check read within about 1 mm, the maintainer judging the difference to be where the rule was started; exact readings not noted. G taped at the crosses | **Pass, by the maintainer's judgment** — not to this log's 0.5 mm line, which needs exact readings |
 | _pending_ | | Windows | | | | | |
 | _pending_ | | macOS, through *Print* | | | | | |
 
@@ -157,7 +158,7 @@ plan, the PDF, the SVG and the DXF. None of that is the printer.
 
 | Date | Build | OS, viewer and scale setting | Printer, paper | Readings N · O · P · Q (left; right) | Result |
 |---|---|---|---|---|---|
-| _pending_ | | | | | |
+| 2026-11-20 | `develop` at 0527c3a (1.7, after R18), `paper-check-*.lcp` | Linux (CachyOS), CUPS 2.4.20, libcupsfilters 2.2.1; none: the PDF written as *Print* writes it (`exportPdf`, upright, no correction) and sent to `lp` with *Print*'s own options (`print-scaling=none`, `fit-to-page=false`, `media=A4`) | Brother HL-L2442DW, driverless (IPP Everywhere), the printer's default settings, A4 | Every check read within about 1 mm, the maintainer judging the difference to be where the rule was started; exact readings not noted; every tick inside the stitching, clear of the cut edge | **Pass, by the maintainer's judgment** — not to this log's 0.5 mm line, which needs exact readings |
 
 ## A mirrored pair's caption — Q21
 
@@ -195,7 +196,7 @@ and holes are byte for byte the same. None of that is the printer.
 
 | Date | Build | OS, viewer and scale setting | Printer, paper | Readings A · B · S · T · U · V | Result |
 |---|---|---|---|---|---|
-| _pending_ | | | | | |
+| 2026-11-20 | `develop` at 0527c3a (1.7, after R18), `paper-check-*.lcp` | Linux (CachyOS), CUPS 2.4.20, libcupsfilters 2.2.1; none: the PDF written as *Print* writes it (`exportPdf`, upright, no correction) and sent to `lp` with *Print*'s own options (`print-scaling=none`, `fit-to-page=false`, `media=A4`) | Brother HL-L2442DW, driverless (IPP Everywhere), the printer's default settings, A4 | Every check read within about 1 mm, the maintainer judging the difference to be where the rule was started; exact readings not noted; U legible, V yes; the two cut pockets stack | **Pass, by the maintainer's judgment** — not to this log's 0.5 mm line, which needs exact readings |
 
 ## A card holder from blank — R16
 
