@@ -830,7 +830,9 @@ A side naming a different feature kind and a pair with no fixed length are refus
 and the loader. An out-of-range anchor refuses rather than re-targeting a neighbouring corner;
 an anchor evaluation has swallowed is still missing. A missing or failed hole set is an outcome,
 `SEAM_SIDE_MISSING`, and a following stretch longer than its available line is
-`SEAM_RUNS_OFF_THE_LINE`. Missing sides deliberately load: 1.6 preserves the unknown seam metadata
+`SEAM_RUNS_OFF_THE_LINE`. A seam whose two sides walk the same holes of one hole set is
+`SEAM_JOINS_ITSELF`, listed rather than refused, so a file holding one still opens and an edit
+never bounces on it. Missing sides deliberately load: 1.6 preserves the unknown seam metadata
 but may delete its source. Seams kept format 12 (file-format §4.5 rule 3, approved D2); their marks
 print, and arrived with format 13.
 
@@ -1096,6 +1098,7 @@ The diagnostics themselves:
 | `SEAM_RUNS_OFF_THE_LINE` | error | outcome | E4 | built 9.6a |
 | `SEAM_HOLE_COUNT_MISMATCH` | error | rule | DR7 | built 9.6b |
 | `SEAM_HOLES_DRIFT` | warning (above 0.5 mm) | rule | DR7 | built 9.6b |
+| `SEAM_JOINS_ITSELF` | error | rule | DR7 | built QA5 — both sides walk the same holes of one hole set, so nothing pairs; a fold sews two other stretches of it |
 | `FOLD_NOT_STRAIGHT` | error | outcome | E1 | built 4.8b — a mirror can only be folded about a straight line |
 | `ANCHOR_MISSING` | error | outcome | E4 | built 4.12a for runs; through derivations 4.4b |
 | `TEXT_GLYPH_MISSING` | warning | outcome | E2 | built 4.11a for part names; labels 4.11b |

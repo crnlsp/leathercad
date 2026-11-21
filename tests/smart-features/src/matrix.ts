@@ -74,6 +74,12 @@ export const MATRIX: { readonly [code: string]: RuleCoverage } = {
     notApplicable: ['SF-D2'],
     transition: ['SF-G3'],
   },
+  SEAM_JOINS_ITSELF: {
+    positive: ['SF-G11'],
+    negative: ['SF-G12'],
+    notApplicable: ['SF-G1'],
+    transition: ['SF-G11'],
+  },
   // ——— Seam outcomes: a declared seam that cannot be walked ———
   SEAM_SIDE_MISSING: {
     positive: ['SF-G7', 'SF-X2'],

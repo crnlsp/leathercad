@@ -319,6 +319,11 @@ export function seamDiagnostics(project: Project): Diagnostic[] {
   });
 }
 
+function sameHoles(a: Stretch, b: Stretch): boolean {
+  const ordinals = new Set(a.holes.map((hole) => hole.ordinal));
+  return ordinals.size === b.holes.length && b.holes.every((hole) => ordinals.has(hole.ordinal));
+}
+
 /** D4: maximum paired travel difference, in millimetres. */
 export const SEAM_DRIFT_LIMIT_MM = 0.5;
 type Verdict =
@@ -343,6 +348,16 @@ export function seamVerdict(project: Project, seam: Seam): Verdict {
   if (cached !== undefined) return cached;
   if (!resolved.ok) return resolved;
   const { a, b } = resolved;
+  if (seam.a.holeSetId === seam.b.holeSetId && sameHoles(a, b)) {
+    // Walked, so stretch choices can measure a run against itself, but pairing
+    // holes with themselves sews nothing (QA5). A fold joins two other runs.
+    const joined: Verdict = {
+      ok: false,
+      problem: problem('SEAM_JOINS_ITSELF', { seamId: seam.id, holeSetId: seam.a.holeSetId }),
+    };
+    verdicts.set(resolved, joined);
+    return joined;
+  }
   let driftMm = 0;
   let worstPair: number | null = a.holes.length > 0 && b.holes.length > 0 ? 1 : null;
   for (let i = 0; i < Math.min(a.holes.length, b.holes.length); i++) {

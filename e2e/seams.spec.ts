@@ -88,6 +88,56 @@ test('sew two hole sets inline, cancel, commit, edit and unsew in single undo st
   }
 });
 
+test('Shift- and Ctrl-click in Parts add and remove hole sets, as on the board (QA5)', async () => {
+  const { app, window } = await openApp({ args: [cardHolder], size: [1440, 1000] });
+  try {
+    const pocket = window.getByTestId('feature-row-pocket-holes');
+    const outer = window.getByTestId('feature-row-outer-holes');
+    await pocket.click();
+    await outer.click({ modifiers: ['Shift'] });
+    await expect(pocket).toHaveAttribute('aria-selected', 'true');
+    await expect(outer).toHaveAttribute('aria-selected', 'true');
+    await outer.click({ modifiers: ['ControlOrMeta'] });
+    await expect(outer).toHaveAttribute('aria-selected', 'false');
+    await expect(pocket).toHaveAttribute('aria-selected', 'true');
+    await outer.click({ modifiers: ['ControlOrMeta'] });
+    await expect(outer).toHaveAttribute('aria-selected', 'true');
+    await expectNoViolations(window, 'two rows picked in Parts');
+    // Keyboard selection still moves a single pick with the focus.
+    await outer.press('ArrowUp');
+    await expect(outer).toHaveAttribute('aria-selected', 'false');
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('Sew together from one hole set starts its second side on another piece (QA5)', async () => {
+  const saved = join(mkdtempSync(join(tmpdir(), 'leathercad-sew-one-')), 'Sewn.lcp');
+  copyFileSync(cardHolder, saved);
+  const { app, window } = await openApp({ args: [saved], size: [1440, 1000] });
+  try {
+    await window.getByTestId('feature-row-pocket-holes').click();
+    await window.getByTestId('sew-together').click();
+    const panel = window.getByTestId('seam-panel');
+    const sides = panel.getByTestId('seam-side');
+    await expect(sides.nth(0).getByTestId('seam-holes')).toHaveValue('pocket-holes');
+    await expect(sides.nth(1).getByTestId('seam-holes')).toHaveValue('outer-holes');
+    // Its stretch is still the maker's: the outer's left side, up from its bottom corner.
+    await sides.nth(1).getByTestId('seam-where').selectOption('from');
+    await sides.nth(1).getByLabel('From', { exact: true }).selectOption('3');
+    await sides.nth(1).getByLabel('Direction', { exact: true }).selectOption('previous');
+    await expect(panel.getByTestId('seam-verdict')).toHaveText(/11 = 11 holes/);
+    await panel.getByTestId('seam-commit').click();
+    await window.getByTestId('save').click();
+    await expect(window.getByTestId('save-state')).toHaveText('Saved');
+    expect(loadProject(readFileSync(saved)).project.seams).toMatchObject([
+      { a: { holeSetId: 'pocket-holes' }, b: { holeSetId: 'outer-holes' } },
+    ]);
+  } finally {
+    await closeApp(app);
+  }
+});
+
 test('fully orphaned seams remain editable and removable from empty Properties', async () => {
   const file = join(mkdtempSync(join(tmpdir(), 'leathercad-orphan-seam-')), 'Orphan.lcp');
   const p = loadProject(readFileSync(cardHolder)).project;

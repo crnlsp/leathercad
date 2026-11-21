@@ -5,6 +5,7 @@ import {
   setFeatureVisible,
   setPartName,
   setPartVisible,
+  toggledFeatureIds,
   type DocumentStore,
 } from '@leathercad/document';
 import {
@@ -37,7 +38,7 @@ import { CountBadge } from './CountBadge.js';
 import type { Translate } from '../../shared/i18n.js';
 import { useI18n } from './i18n.js';
 import { IS_MAC, useKeysInSentences } from './keyCaps.js';
-import { keysOf, matches, type CommandId } from './keymap.js';
+import { addsToSelection, keysOf, matches, type CommandId } from './keymap.js';
 import { MIRROR_ICON } from './icons/arrange.js';
 import { Icon } from './icons/Icon.js';
 import { ToolIcon } from './icons/ToolIcon.js';
@@ -231,6 +232,19 @@ export function PartsList({
     if (row.kind === 'part') store.selectParts([row.id]);
     else store.select([row.id]);
   };
+  /** As on the board: alone a click picks the row; with Shift or the command key it toggles. */
+  const clickRow = (row: TreeRow, event: MouseEvent): void => {
+    if (!addsToSelection(event, IS_MAC)) {
+      selectRow(row);
+      return;
+    }
+    const state = store.getState();
+    const own =
+      row.kind === 'part'
+        ? (project.parts.find((part) => part.id === row.id)?.features.map((f) => f.id) ?? [])
+        : [row.id];
+    store.select(toggledFeatureIds(state.document.project, state.selection, own));
+  };
 
   const focusRow = (key: string): void => {
     setActive(key);
@@ -330,6 +344,7 @@ export function PartsList({
       <div
         ref={tree}
         role="tree"
+        aria-multiselectable="true"
         className="parts-tree"
         aria-label={t('parts.title')}
         onKeyDown={onKeyDown}
@@ -368,7 +383,7 @@ export function PartsList({
                 )}
                 renaming={renaming === heading.key}
                 onRename={(name, how) => finishRename(heading, name, how)}
-                onSelect={() => selectRow(heading)}
+                onSelect={(event) => clickRow(heading, event)}
                 onFold={() => setOpen(part.id, heading.expanded === false)}
                 onRemovePart={onRemovePart}
                 onDuplicatePart={onDuplicatePart}
@@ -395,7 +410,7 @@ export function PartsList({
                     )}
                     renaming={renaming === row.key}
                     onRename={(name, how) => finishRename(row, name, how)}
-                    onSelect={() => selectRow(row)}
+                    onSelect={(event) => clickRow(row, event)}
                     onContextMenu={onContextMenu}
                   />
                 );
@@ -481,7 +496,7 @@ function PieceRow({
   treeProps: TreeItem;
   renaming: boolean;
   onRename: (name: string | null, how: 'keyboard' | 'blur') => void;
-  onSelect: () => void;
+  onSelect: (event: MouseEvent) => void;
   onFold: () => void;
   onRemovePart: (partId: string) => void;
   onDuplicatePart: (partId: string) => void;
@@ -674,7 +689,7 @@ function FeatureRow({
   treeProps: TreeItem;
   renaming: boolean;
   onRename: (name: string | null, how: 'keyboard' | 'blur') => void;
-  onSelect: () => void;
+  onSelect: (event: MouseEvent) => void;
   onContextMenu: OpenMenu;
 }) {
   const { t, locale } = useI18n();
