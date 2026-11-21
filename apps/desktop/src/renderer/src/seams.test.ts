@@ -7,9 +7,10 @@ import {
   rectShape,
   shapePart,
 } from '@leathercad/document';
+import { seamVerdict } from '@leathercad/domain';
 import { describe, expect, it } from 'vitest';
 
-import { defaultSide, SeamWorkflow, sewableIds, stretchChoices } from './seams.js';
+import { defaultSide, SeamWorkflow, sewableIds, sewingSides, stretchChoices } from './seams.js';
 
 function fixture() {
   const store = new DocumentStore(emptyDocument('project'));
@@ -31,6 +32,27 @@ describe('seam workflow', () => {
       stretch: { kind: 'whole' },
       count: expect.any(Number),
     });
+  });
+  it('starts the second side on another piece when only one hole set is selected (QA5)', () => {
+    const { store } = fixture();
+    store.dispatch(
+      addPart(shapePart('back', 'back-outline', 'Back', rectShape({ x: 60, y: 0 }, 40, 20))),
+    );
+    store.dispatch(addStitchLine('back', 'back-line', 'back-outline', 2));
+    store.dispatch(addStitchHoles('back', 'back-holes', 'back-line'));
+    const p = store.getState().document.project;
+    expect(sewingSides(p, 'holes')).toEqual({
+      a: defaultSide(p, 'holes'),
+      b: defaultSide(p, 'back-holes'),
+    });
+    expect(sewingSides(p, 'back-holes', 'holes').b.holeSetId).toBe('holes');
+  });
+  it('leaves a lone piece’s second side for the maker to choose: Sew stays off until they do', () => {
+    const { store } = fixture();
+    const p = store.getState().document.project;
+    const sides = sewingSides(p, 'holes');
+    expect(sides.b.holeSetId).toBe('holes');
+    expect(seamVerdict(p, { id: 'seam', ...sides }).ok).toBe(false);
   });
   it('cancels without history and commits repeated previews as one step', () => {
     const { store, seam } = fixture();

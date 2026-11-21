@@ -50,6 +50,22 @@ export function selectedFeatureIds(project: Project, selection: Selection): Feat
 }
 
 /**
+ * What a Shift-click makes of the selection, on the board or in Parts: `ids`
+ * join it or, when all of them are already picked, leave it. A picked part
+ * counts as the features it stands for.
+ */
+export function toggledFeatureIds(
+  project: Project,
+  selection: Selection,
+  ids: readonly FeatureId[],
+): Set<FeatureId> {
+  const next = new Set(selectedFeatureIds(project, selection));
+  if (ids.every((id) => next.has(id))) for (const id of ids) next.delete(id);
+  else for (const id of ids) next.add(id);
+  return next;
+}
+
+/**
  * The drawn extent, in millimetres, of every feature the board draws — or of
  * those in `only` among them: what Fit drawing and Fit selection frame (U.4).
  * A hidden feature is not drawn, so it is not framed. Null when nothing is.

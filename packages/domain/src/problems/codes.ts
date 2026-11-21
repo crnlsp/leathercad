@@ -52,6 +52,7 @@ export const PROBLEM_CODES: { readonly [K in ProblemCode]: CodeInfo } = {
   SEAM_REQUIRES_CLOSED_LINE: structural('S11'),
   SEAM_HOLE_COUNT_MISMATCH: rule('DR7', 'error'),
   SEAM_HOLES_DRIFT: rule('DR7', 'warning'),
+  SEAM_JOINS_ITSELF: rule('DR7', 'error'),
   SEAM_NOT_A_HOLE_SET: structural('S11'),
   SEAM_HAS_NO_LENGTH: structural('S11'),
   SEAM_SIDE_MISSING: outcome('E3'),

@@ -5,6 +5,7 @@ import {
   pieceScope,
   selectedFeatureIds,
   selectionBox,
+  toggledFeatureIds,
   transformRefusal,
   translateFeatures,
   setGuide,
@@ -160,10 +161,7 @@ export function createSelectTool(): Tool {
       } else if (event.shiftKey) {
         // Added to what is picked — a part picked by its heading included, as
         // the features it stands for, rather than dropped (Q29).
-        const next = new Set(selectedFeatureIds(document.project, selection));
-        if (next.has(pick.id)) next.delete(pick.id);
-        else next.add(pick.id);
-        ctx.store.select(next);
+        ctx.store.select(toggledFeatureIds(document.project, selection, [pick.id]));
       } else if (!selection.features.has(pick.id)) {
         ctx.store.select([pick.id]);
       }
@@ -423,10 +421,7 @@ function pickPiece(ctx: ToolContext, partId: PartId, outline: FeatureId, shift: 
   }
   const part = document.project.parts.find((candidate) => candidate.id === partId);
   const own = part?.features.map((feature) => feature.id) ?? [];
-  const next = new Set(selectedFeatureIds(document.project, selection));
-  if (own.every((id) => next.has(id))) for (const id of own) next.delete(id);
-  else for (const id of own) next.add(id);
-  ctx.store.select(next);
+  ctx.store.select(toggledFeatureIds(document.project, selection, own));
 }
 
 /**

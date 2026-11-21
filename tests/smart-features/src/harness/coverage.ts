@@ -33,6 +33,7 @@ const PREREQUISITES: Readonly<Record<string, (project: Project) => boolean>> = {
   POCKET_TOO_SHALLOW: (p) => stitchLines(p).some((s) => s.holds?.fully === true),
   SEAM_HOLE_COUNT_MISMATCH: (p) => (p.seams?.length ?? 0) > 0,
   SEAM_HOLES_DRIFT: (p) => (p.seams?.length ?? 0) > 0,
+  SEAM_JOINS_ITSELF: (p) => (p.seams ?? []).some((s) => s.a.holeSetId === s.b.holeSetId),
   SEAM_SIDE_MISSING: (p) => (p.seams?.length ?? 0) > 0,
   SEAM_RUNS_OFF_THE_LINE: (p) => (p.seams?.length ?? 0) > 0,
 };
