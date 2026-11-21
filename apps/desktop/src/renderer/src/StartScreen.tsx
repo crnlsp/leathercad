@@ -120,7 +120,7 @@ export function StartScreen({
                 <Icon of="new-project" size={32} />
               </span>
               <span className="start-card-name">
-                {t('start.blank')}
+                {t('menu.new')}
                 <KeyCap command="newProject" />
               </span>
             </button>

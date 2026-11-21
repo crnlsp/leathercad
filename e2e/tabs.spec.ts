@@ -172,6 +172,40 @@ test('+ offers a new project, Open… and the recent projects', async () => {
   });
 });
 
+test('a new project starts on its board, wherever the focus was: R 96 Tab 60 Enter draws (QA7, U4)', async () => {
+  await withApp(async (window) => {
+    const board = window.getByTestId('editor-canvas');
+    const box = (await board.boundingBox())!;
+    // The pointer rests on the board; the keys are on a panel's button.
+    await window.mouse.move(box.x + box.width * 0.3, box.y + box.height * 0.5);
+    await window.getByTestId('problems-toggle').focus();
+
+    await window.keyboard.press('ControlOrMeta+n');
+    await expect(window.getByTestId('tab-strip').getByRole('tab')).toHaveCount(2);
+    await expect(board).toBeFocused();
+    await window.keyboard.press('r');
+    await window.keyboard.type('96');
+    await window.keyboard.press('Tab');
+    await window.keyboard.type('60');
+    await window.keyboard.press('Enter');
+    await expect(window.getByTestId('part-count')).toHaveText('1');
+    const panel = window.getByTestId('property-panel');
+    await expect(panel.getByLabel('Width')).toHaveValue('96');
+    await expect(panel.getByLabel('Height')).toHaveValue('60');
+
+    // Every other way in lands there too: the Project menu, and + › New.
+    await window.getByTestId('problems-toggle').focus();
+    await fromProjectMenu(window, 'new');
+    await expect(window.getByTestId('tab-strip').getByRole('tab')).toHaveCount(3);
+    await expect(board).toBeFocused();
+    await window.getByTestId('new-tab').focus();
+    await window.keyboard.press('Enter');
+    await window.getByTestId('tab-new').press('Enter');
+    await expect(window.getByTestId('tab-strip').getByRole('tab')).toHaveCount(4);
+    await expect(board).toBeFocused();
+  });
+});
+
 test('the open tabs come back at the next start, the one in front in front', async () => {
   const config = mkdtempSync(join(tmpdir(), 'leathercad-e2e-'));
   const folder = mkdtempSync(join(tmpdir(), 'leathercad-e2e-'));

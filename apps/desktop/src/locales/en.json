@@ -60,8 +60,7 @@
     "followExists": "The project is called “{{name}}” again, but its file keeps the name it has: a file named “{{file}}” is already in its folder."
   },
   "start": {
-    "title": "Start new project",
-    "blank": "Blank",
+    "title": "New project",
     "fromTemplate": "All templates…",
     "open": "Open existing project",
     "lede": "Start a new pattern, open one from disk, or pick up where you left off.",
@@ -155,7 +154,7 @@
     "exportNothing": "Nothing to export yet. No part has a line to cut.",
     "exportSvg": "Export SVG…",
     "exportSvgNote": "Millimetres, for laser cutters, plotters and vector editors",
-    "new": "New project from scratch",
+    "new": "New project",
     "open": "Open…",
     "recent": "Recent projects",
     "recentEmpty": "Projects you open or save appear here.",

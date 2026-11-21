@@ -177,7 +177,7 @@ then QA3 (after QA1), QA6–QA8; then QA9–QA11. U9, U11 and U14 wait on the ma
 - ✅ **QA4 Degenerate outlines reported truly** — a repeated vertex is not a self-crossing; a zero-size piece is a problem (F4, F5).
 - ✅ **QA5 Sewing two pieces starts right** — *Sew together* never pairs a hole set with itself: one selected starts its second side on another piece, and a seam whose sides are the same holes is `SEAM_JOINS_ITSELF`, an error; Shift/Ctrl-click (⌘ on macOS) in Parts adds to or removes from the selection (U1, U3).
 - ☐ **QA6 Stitching and pocket feedback** — an open run starts clear of the edge, one reason for the seam allowance, the pocket check says "fits" once, problem wording (U2, U6, U7, U15).
-- ☐ **QA7 A new project starts focused** — Ctrl+N focuses the new board; one name and key cap for a new project (U4, U20).
+- ✅ **QA7 A new project starts focused** — Ctrl+N focuses the new board; one name and key cap for a new project (U4, U20).
 - ☐ **QA8 Board labels say what they mean** — pitch named as pitch, one number format, captions of stacked pieces apart (U5, U16, U17).
 - ☐ **QA9 Screen-reader names** — the eye button's state, the *Cut* field's name, the template dialog's role (U8, U10, U19).
 - ☐ **QA10 Templates confirm and show** — a notice after *Save as template*; *Insert pieces*' checklist in view (U12, U13).
