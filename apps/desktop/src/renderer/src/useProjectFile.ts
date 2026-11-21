@@ -23,7 +23,7 @@ const UNNAMED_FILE = createI18n(SOURCE_LOCALE).t('app.untitled');
 
 /** A save or an export that reached the disk. A new one for every write. */
 export interface Written {
-  readonly kind: 'save' | 'export';
+  readonly kind: 'save' | 'export' | 'template';
   readonly path: string;
   /** Counts writes, so writing the same file twice is acknowledged twice. */
   readonly serial: number;
@@ -481,9 +481,11 @@ export function useProjectFile(
         applicationVersion: appVersion,
         at: new Date().toISOString(),
       });
-      return host().saveTemplate(name, bytes, replace);
+      const saved = await host().saveTemplate(name, bytes, replace);
+      if (saved.kind === 'saved') wrote('template', saved.name);
+      return saved;
     },
-    [appVersion, host],
+    [appVersion, host, wrote],
   );
 
   const restoreKept = useCallback(

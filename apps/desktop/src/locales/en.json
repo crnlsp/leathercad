@@ -253,7 +253,8 @@
     "checkForUpdates": "Check for updates",
     "versionNext": "to {{version}}",
     "saved": "Saved {{name}}",
-    "exported": "Exported {{name}}"
+    "exported": "Exported {{name}}",
+    "savedTemplate": "Saved as a template. Find it under All templates › Mine"
   },
   "view": {
     "design": "Design",

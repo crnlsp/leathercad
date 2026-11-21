@@ -784,6 +784,22 @@ function Detail({
       </div>
 
       <div className="template-detail-body" role="region" aria-label={row.name} tabIndex={0}>
+        {pieces !== undefined && row.project !== null && (
+          <fieldset className="template-pieces" data-testid="template-pieces">
+            <legend className="template-heading">{t('templates.piecesToInsert')}</legend>
+            {row.project.parts.map((part) => (
+              <label key={part.id} className="template-piece">
+                <input
+                  type="checkbox"
+                  data-testid={`template-piece-${part.id}`}
+                  checked={pieces.kept.includes(part.id)}
+                  onChange={() => pieces.toggle(part.id)}
+                />
+                {part.name}
+              </label>
+            ))}
+          </fieldset>
+        )}
         {/* Its words are edited beside its picture, never scrolling it away (X31). */}
         <div className={mine && editing ? 'template-sight editing' : 'template-sight'}>
           <span className="template-preview large" aria-hidden="true">
@@ -903,22 +919,6 @@ function Detail({
             </>
           )}
         </dl>
-        {pieces !== undefined && row.project !== null && (
-          <fieldset className="template-pieces" data-testid="template-pieces">
-            <legend className="template-heading">{t('templates.piecesToInsert')}</legend>
-            {row.project.parts.map((part) => (
-              <label key={part.id} className="template-piece">
-                <input
-                  type="checkbox"
-                  data-testid={`template-piece-${part.id}`}
-                  checked={pieces.kept.includes(part.id)}
-                  onChange={() => pieces.toggle(part.id)}
-                />
-                {part.name}
-              </label>
-            ))}
-          </fieldset>
-        )}
         {!mine && <p className="template-note">{t('templates.builtInLocked')}</p>}
       </div>
     </>
