@@ -605,6 +605,14 @@
     "seam": "{{a}} · {{b}}",
     "missingSide": "Missing piece"
   },
+  "failure": {
+    "board": "The board couldn’t be drawn. Your work is unchanged: undo the last change, or save it.",
+    "panel": "This panel couldn’t be shown. Your work is unchanged: undo the last change, or choose something else.",
+    "dialogTitle": "This dialog stopped working",
+    "dialog": "Your work is unchanged. Close this and try again.",
+    "windowTitle": "LeatherCAD stopped working",
+    "window": "Your unsaved work is kept. Close LeatherCAD and start it again, and it will be offered back to you."
+  },
   "file": {
     "exportDxfTitle": "Export DXF",
     "exportSvgTitle": "Export SVG",
@@ -617,6 +625,8 @@
     "schema": "This project file is damaged and can’t be opened: its {{entry}} doesn’t follow the project format.",
     "schemaAt": "This project file is damaged and can’t be opened: its {{entry}} doesn’t follow the project format, at {{where}}.",
     "unexpected": "Something went wrong that LeatherCAD didn’t expect ({{reason}}).",
+    "unsavable": "This project wasn’t saved, because it wouldn’t open again. Nothing was written.",
+    "unsavableAt": "This project wasn’t saved, because it wouldn’t open again: the value at {{where}} is one a project file can’t hold. Nothing was written.",
     "system": {
       "notFound": "The file isn’t there: it was moved, renamed or deleted, or its disk isn’t connected.",
       "denied": "LeatherCAD isn’t allowed to use this file or its folder. Check its permissions, or choose another place.",

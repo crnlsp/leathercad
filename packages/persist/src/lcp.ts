@@ -68,14 +68,55 @@ export class InvalidProjectFileError extends Error {
 }
 
 /**
+ * A project `saveProject` will not write, because `loadProject` would refuse
+ * the file (QA2): a size beyond the format's limits, or a number JSON cannot
+ * hold and would write as `null`. `reason` is the loader's refusal of the file
+ * it would have been. Nothing is written, so the file it was to replace stays
+ * as it was.
+ */
+export class UnsavableProjectError extends Error {
+  constructor(readonly reason: InvalidProjectFileError) {
+    super(`Not saved, as the file would not open: ${reason.message}`);
+    this.name = 'UnsavableProjectError';
+  }
+}
+
+/**
  * Writes a `.lcp` archive.
  *
  * Stores **parameters only** — no paths, no hole positions, no bounding boxes.
  * Evaluation recomputes all of it on load, which keeps files small, keeps them
  * free of stale data, and means an improved algorithm improves every existing
  * file. See CLAUDE.md invariant 4.
+ *
+ * **Never a file its own loader refuses** (QA2): the document is checked, as
+ * written, exactly as `loadProject` checks it, and an `UnsavableProjectError`
+ * is thrown instead of bytes that would open as damaged. A `ResourceLimitError`
+ * passes through as the loader would throw it.
  */
 export function saveProject(project: Project, options: SaveOptions): Uint8Array {
+  const document = stableJson(project);
+  // The text as written, not the project: JSON writes Infinity as null, and
+  // rounds to six decimals, either of which the schema can then refuse.
+  try {
+    checkedProject(JSON.parse(document));
+  } catch (error) {
+    if (error instanceof InvalidProjectFileError) throw new UnsavableProjectError(error);
+    throw error;
+  }
+  return archiveOf(document, options);
+}
+
+/**
+ * The archive `saveProject` writes, without its check: how a test makes a
+ * file the loader must refuse. Never for the app, which saves only through
+ * `saveProject`.
+ */
+export function writeUnchecked(project: Project, options: SaveOptions): Uint8Array {
+  return archiveOf(stableJson(project), options);
+}
+
+function archiveOf(document: string, options: SaveOptions): Uint8Array {
   const timestamp = options.now().toISOString();
   const manifest: Manifest = {
     formatVersion: CURRENT_FORMAT_VERSION,
@@ -92,7 +133,7 @@ export function saveProject(project: Project, options: SaveOptions): Uint8Array 
       // without unzipping.
       [MIMETYPE_ENTRY]: [strToU8(LCP_MIME), { level: 0 }],
       [MANIFEST_ENTRY]: strToU8(stableJson(manifest)),
-      [DOCUMENT_ENTRY]: strToU8(stableJson(project)),
+      [DOCUMENT_ENTRY]: strToU8(document),
     },
     // A fixed entry timestamp keeps the archive byte-identical across saves
     // of an unchanged document, so .lcp files diff cleanly in git. The real

@@ -1,5 +1,6 @@
 import { ResourceLimitError } from '@leathercad/core';
-import { loadProject, readFeatures } from '@leathercad/persist';
+import { DEFAULT_SETTINGS, type Project } from '@leathercad/domain';
+import { loadProject, readFeatures, saveProject } from '@leathercad/persist';
 import { describe, expect, it } from 'vitest';
 
 import en from '../../locales/en.json';
@@ -89,6 +90,30 @@ describe('every refusal is worded in the app', () => {
     expect(fileErrorText(overIpc('EIO: i/o error, read'), english)).toBe(
       english('file.unexpected', { reason: 'EIO: i/o error, read' }),
     );
+  });
+});
+
+/** QA2: a save its own loader would refuse is said as a save, never as a damaged file. */
+describe('a project that cannot be saved', () => {
+  const offTheBoard: Project = {
+    id: 'p',
+    name: 'Far away',
+    settings: DEFAULT_SETTINGS,
+    parts: [],
+    guides: [{ id: 'g', origin: { x: 0, y: 1e9 }, angleRad: 0 }],
+  };
+  const refusal = catching(() =>
+    saveProject(offTheBoard, { applicationVersion: '0.0.0', now: () => new Date(0) }),
+  );
+
+  it('names where, and says the file on disk is as it was', () => {
+    expect(fileErrorText(refusal, english)).toBe(
+      english('file.unsavableAt', { where: 'guides[0].origin.y' }),
+    );
+  });
+
+  it('is said in another language too', () => {
+    expect(fileErrorText(refusal, expanded)).toMatch(/^\[.*\]$/);
   });
 });
 

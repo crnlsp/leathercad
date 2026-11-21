@@ -24,6 +24,7 @@ export {
   readManifest,
   saveProject,
   stableJson,
+  UnsavableProjectError,
 } from './lcp.js';
 
 export type { Features, Pieces } from './pieces.js';
