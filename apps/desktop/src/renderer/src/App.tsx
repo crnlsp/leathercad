@@ -1056,6 +1056,9 @@ export function App({
   useEffect(() => {
     if (!boardWanted.current || active === null) return;
     boardWanted.current = false;
+    // A dialog open over the new tab keeps the keys — the crash-recovery offer
+    // at launch, or a refusal — and its own buttons where they start.
+    if (document.querySelector('[aria-modal="true"]') !== null) return;
     document.querySelector<HTMLElement>('[data-testid="editor-canvas"]')?.focus();
   }, [active]);
 
