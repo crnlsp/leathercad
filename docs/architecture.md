@@ -90,7 +90,9 @@ conformance suite for the replacement.
   part's print status a `PartPrintStatus`, and the app words each one. The paper's words — the PDF
   footer, part captions — are the export's, and stay English while the vendored glyphs are Latin.
   The Design board's captions are the app's: `buildDisplayList` takes a `caption` function and
-  places what it returns (R-01).
+  places what it returns (R-01). Pieces laid on one another share one stack of captions above
+  the highest of them (`captionStacks`, U17), so no caption is written over another or over the
+  holes beneath; paper lays pieces apart and needs none.
 
 ### 1.4 Supporting tools
 

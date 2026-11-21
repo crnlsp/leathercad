@@ -1,5 +1,6 @@
 import { EPS_LENGTH, approxEq, type Mm } from '@leathercad/core';
 import { turnedOver, type Part, type ResolvedPart } from '@leathercad/domain';
+import { RectOps, type Rect } from '@leathercad/geometry';
 
 /**
  * What a part is called **on paper**: "Card pocket — cut 2".
@@ -64,3 +65,40 @@ export function stitchingOf(part: ResolvedPart): readonly Stitching[] {
  */
 export const CAPTION_SIZE_MM: Mm = 2.8;
 export const CAPTION_GAP_MM: Mm = 1.5;
+
+/** Pieces whose captions are stacked together, and the top they stack above. */
+export interface CaptionStack {
+  /** Indices into the boxes given, in the order given: the first is captioned nearest. */
+  readonly members: readonly number[];
+  /** The highest top among them, which every caption in the stack clears. */
+  readonly topMm: Mm;
+}
+
+/**
+ * The board's captions, grouped so none is written over another or over a
+ * piece's holes (U17): pieces whose boxes overlap — a pocket laid on its back
+ * panel, the usual check of a card holder — share one stack above the highest
+ * of them, overlapping counted through any chain of pieces. A piece clear of
+ * the rest is a stack of its own above its own top, as before. Where the words
+ * sit only: no piece moves, and paper, which lays pieces apart, is untouched.
+ *
+ * In the order of each stack's first piece, so the board is drawn the same way
+ * every time.
+ */
+export function captionStacks(boxes: readonly Rect[]): readonly CaptionStack[] {
+  // ponytail: O(n²) box checks, fine for the pieces of one project.
+  let groups: (readonly number[])[] = [];
+  boxes.forEach((box, index) => {
+    const touching = groups.filter((group) =>
+      group.some((other) => RectOps.intersects(boxes[other]!, box)),
+    );
+    groups = [...groups.filter((group) => !touching.includes(group)), [...touching.flat(), index]];
+  });
+  return groups
+    .map((group) => [...group].sort((a, b) => a - b))
+    .sort((a, b) => a[0]! - b[0]!)
+    .map((members) => ({
+      members,
+      topMm: Math.max(...members.map((member) => boxes[member]!.maxY)),
+    }));
+}

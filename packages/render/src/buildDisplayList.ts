@@ -39,6 +39,7 @@ import {
   type DisplayList,
 } from './displayList.js';
 import { alignmentTick } from './alignmentTick.js';
+import { captionStacks } from './captions.js';
 import {
   foldTicksAlong,
   linkTickOn,
@@ -53,7 +54,7 @@ import { TRUE_SIZE_CSS_PX_PER_MM, cssPxPerMm, visibleBoundsMm, type ViewportView
 export interface Caption {
   /** "Card pocket ×2". */
   readonly name: string;
-  /** "52 holes · 3.85 mm"; null with nothing to add. */
+  /** "52 holes · pitch 3.85 mm"; null with nothing to add. */
   readonly detail: string | null;
 }
 
@@ -118,6 +119,8 @@ export function buildDisplayList(
    */
   const pieces: DisplayItem[] = [];
   const hidden = new Set<FeatureId>();
+  /** Each piece's caption and box, placed once every piece is known (U17). */
+  const captioned: { readonly caption: Caption; readonly bounds: Rect }[] = [];
 
   // What every feature resolved to, so a seam allowance can find the stitching
   // it grew from.
@@ -330,7 +333,19 @@ export function buildDisplayList(
 
     const bounds = RectOps.unionAll(drawn);
     if (options.caption !== undefined && bounds !== null) {
-      items.push(...words.caption(options.caption(part), bounds));
+      captioned.push({ caption: options.caption(part), bounds });
+    }
+  }
+
+  // Stacked pieces share one stack of captions above them all (U17), so no
+  // caption is written over another, or over the holes of the piece beneath.
+  for (const { members, topMm } of captionStacks(captioned.map(({ bounds }) => bounds))) {
+    let liftPx = 0;
+    for (const member of members) {
+      const { caption, bounds } = captioned[member]!;
+      const placed = words.caption(caption, { ...bounds, maxY: topMm }, liftPx);
+      items.push(...placed.items);
+      liftPx += placed.heightPx;
     }
   }
 
@@ -479,9 +494,14 @@ function boardWords(zoom: number, view: ViewportView | undefined) {
      * piece — the name alone below 40 %. Once it would run under the ruler —
      * the piece's top off the canvas, or so near it that the name would hide —
      * while the piece is still on the canvas, pinned to the canvas's top-left,
-     * under any caption pinned there already.
+     * under any caption pinned there already. `liftPx` higher, above the
+     * captions stacked under it (U17); with the room it takes, gap and all.
      */
-    caption(caption: Caption, bounds: Rect): DisplayItem[] {
+    caption(
+      caption: Caption,
+      bounds: Rect,
+      liftPx: number,
+    ): { readonly items: DisplayItem[]; readonly heightPx: number } {
       const lines: [string, typeof text.name | typeof text.meta, string][] = [
         [caption.name, text.name, GROUND.ink],
       ];
@@ -492,19 +512,23 @@ function boardWords(zoom: number, view: ViewportView | undefined) {
 
       // The first line's baseline, and the left edge of both.
       let x = bounds.minX;
-      let first = bounds.maxY + mm(spacing.gapPx + below(text.name) + (lines.length - 1) * line);
+      let first =
+        bounds.maxY + mm(liftPx + spacing.gapPx + below(text.name) + (lines.length - 1) * line);
       // Pinned once the caption would run under the ruler — the piece's top
       // off the canvas, or so near its top that the name would be hidden —
       // while the piece is still on the canvas.
-      const top = bounds.maxY + mm(spacing.gapPx + lines.length * line);
+      const top = bounds.maxY + mm(liftPx + spacing.gapPx + lines.length * line);
       if (area !== null && top > area.maxY && RectOps.intersects(bounds, area)) {
         x = area.minX + mm(spacing.insetPx);
         first = area.maxY - mm(pinnedPx + spacing.insetPx + line - below(text.name));
         pinnedPx += lines.length * line + spacing.gapPx;
       }
-      return lines.map(([words, voice, colour], index) =>
-        boardTextItem({ x, y: first - mm(index * line) }, words, voice, colour),
-      );
+      return {
+        items: lines.map(([words, voice, colour], index) =>
+          boardTextItem({ x, y: first - mm(index * line) }, words, voice, colour),
+        ),
+        heightPx: lines.length * line + spacing.gapPx,
+      };
     },
   };
 }
