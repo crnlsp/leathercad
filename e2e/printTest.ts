@@ -24,12 +24,12 @@ export const PRINT_TEST = resolve(import.meta.dirname, '../fixtures/projects/pri
 
 /** 254 dpi: ten pixels to the millimetre. */
 const DPI = 254;
-const PX_PER_MM = DPI / 25.4;
+export const PX_PER_MM = DPI / 25.4;
 
 /** Anything noticeably darker than paper, so the thin grey annotation lines count. */
-const INK = 200;
+export const INK = 200;
 
-interface Gray {
+export interface Gray {
   readonly width: number;
   readonly height: number;
   readonly pixels: Uint8Array;
@@ -232,12 +232,12 @@ export function expectAccurate(measured: PrintTestMeasurements, sheets = 3): voi
 
 // ── Pages ────────────────────────────────────────────────────────────────────
 
-function pageCount(pdf: string): number {
+export function pageCount(pdf: string): number {
   const info = execFileSync('pdfinfo', [pdf], { encoding: 'utf8' });
   return Number(/Pages:\s+(\d+)/.exec(info)?.[1]);
 }
 
-function render(pdf: string, page: number): Gray {
+export function render(pdf: string, page: number): Gray {
   const directory = mkdtempSync(join(tmpdir(), 'leathercad-7.7-'));
   try {
     const prefix = join(directory, 'page');
@@ -311,7 +311,7 @@ function turnedBack(image: Gray): Gray {
  * that cover much the same span: one stroke, a few pixels thick. In image rows,
  * which run down the page.
  */
-function horizontalStrokes(image: Gray, minMm: number): Stroke[] {
+export function horizontalStrokes(image: Gray, minMm: number): Stroke[] {
   const minPx = minMm * PX_PER_MM;
   const open: Array<{ rows: number[]; from: number; to: number; lastRow: number }> = [];
   const done: typeof open = [];
@@ -360,7 +360,7 @@ function horizontalStrokes(image: Gray, minMm: number): Stroke[] {
   });
 }
 
-function verticalStrokes(image: Gray, minMm: number): Stroke[] {
+export function verticalStrokes(image: Gray, minMm: number): Stroke[] {
   return horizontalStrokes(transpose(image), minMm);
 }
 
@@ -379,7 +379,7 @@ const inPattern = (image: Gray) => (stroke: Stroke) =>
  * The verification gauge (7.8): the lowest 100 mm-ish stroke on the page and
  * the one 5 mm above it, joined at their ends by 5 mm sides.
  */
-function gaugeOn(image: Gray): { widthMm: number; heightMm: number } {
+export function gaugeOn(image: Gray): { widthMm: number; heightMm: number } {
   const long = horizontalStrokes(image, 80).filter((s) => within(s.length, 90, 110));
   const bottom = long.reduce((a, b) => (b.at > a.at ? b : a));
   const top = long.find(
