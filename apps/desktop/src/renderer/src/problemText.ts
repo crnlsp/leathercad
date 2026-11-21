@@ -171,6 +171,7 @@ const CATALOGUE: { readonly [K in ProblemCode]: Describe<K> } = {
           count: f.count,
         }),
   PART_HAS_NO_OUTER_CONTOUR: (f, t) => t('problems.PART_HAS_NO_OUTER_CONTOUR.description', f),
+  CONTOUR_HAS_NO_AREA: (f, t) => t('problems.CONTOUR_HAS_NO_AREA.description', f),
   CUT_OUT_OUTSIDE_PART: (f, t) => t('problems.CUT_OUT_OUTSIDE_PART.description', f),
   OUTSIDE_PART: (f, t) => t(`problems.OUTSIDE_PART.${f.what}`, { featureName: f.featureName }),
   HOLE_TOO_CLOSE_TO_EDGE: (f, t) =>
@@ -224,6 +225,7 @@ const FIXES: { readonly [K in ProblemCode]?: MessageKey | Describe<K> } = {
     t(`problems.TEXT_GLYPH_MISSING.${f.featureId === undefined ? 'fixPart' : 'fixLabel'}`),
   TEXT_TOO_SMALL_TO_PRINT: 'problems.TEXT_TOO_SMALL_TO_PRINT.fix',
   CONTOUR_SELF_INTERSECTS: 'problems.CONTOUR_SELF_INTERSECTS.fix',
+  CONTOUR_HAS_NO_AREA: 'problems.CONTOUR_HAS_NO_AREA.fix',
   HOLES_OVERLAP: 'problems.HOLES_OVERLAP.fix',
   HOLE_SPACING_DEVIATION: 'problems.HOLE_SPACING_DEVIATION.fix',
   HOLE_SPACING_UNEVEN: 'problems.HOLE_SPACING_UNEVEN.fix',

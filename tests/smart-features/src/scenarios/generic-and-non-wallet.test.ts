@@ -106,6 +106,24 @@ describe('A — shapes drawn with no purpose declared', () => {
     ]);
   });
 
+  it('SF-A12 · an outline flattened onto a line, as a singular matrix leaves it, is an error that it encloses nothing', () => {
+    // QA4 F5: imported as 0.0 × 0.0 mm with nothing to fix.
+    new Bench()
+      .do(drawOutline('flat', [at(0, 0), at(60, 0), at(60, 0), at(0, 0)]))
+      .expect([{ code: 'CONTOUR_HAS_NO_AREA', severity: 'error', on: outlineOf('flat') }]);
+  });
+
+  it('SF-A13 · an outline with a repeated corner, stitched all round with holes, says nothing', () => {
+    // QA4 F4: the repeat was a crossing, and the stitch line collapsed.
+    new Bench()
+      .do(
+        drawOutline('twice', [at(0, 0), at(100, 0), at(100, 0), at(100, 70), at(0, 70)]),
+        stitchAllRound('twice', 3),
+        punchHoles('twice'),
+      )
+      .expect([]);
+  });
+
   it('SF-A7 · a run too short for its iron is a spacing warning, not a pocket or a seam', () => {
     // 5.5 mm takes one gap at a 3.85 mm iron: 5.5 mm apart, 43 % over the pitch.
     new Bench()

@@ -110,6 +110,7 @@ export const PROBLEM_CODES: { readonly [K in ProblemCode]: CodeInfo } = {
 
   TEXT_TOO_SMALL_TO_PRINT: rule('DR5', 'warning'),
   CONTOUR_SELF_INTERSECTS: rule('DR3', 'error'),
+  CONTOUR_HAS_NO_AREA: rule('DR3', 'error'),
   HOLES_OVERLAP: rule('DR3', 'warning'),
   HOLE_SPACING_DEVIATION: rule('DR4', 'warning'),
   HOLE_SPACING_UNEVEN: rule('DR4', 'info'),

@@ -145,3 +145,35 @@ export const arbPitch: fc.Arbitrary<number> = fc.oneof(
   fc.constantFrom(2, 2.7, 3, 3.85, 4, 5, 6),
   fc.double({ min: 0.1, max: 50, noNaN: true, noDefaultInfinity: true }),
 );
+
+/**
+ * A simple polygon — star-shaped about its centre, so concave corners
+ * included — and the same vertices with one of them repeated: a side of no
+ * length, as SVG polygons and traced outlines often carry (QA4). Either is
+ * counter-clockwise, given to `polyline` closed.
+ */
+export const arbRepeatedVertex: fc.Arbitrary<{
+  readonly points: readonly Vec2[];
+  readonly repeated: readonly Vec2[];
+}> = fc
+  .tuple(
+    fc.array(fc.double({ min: 0.3, max: 1, noNaN: true }), { minLength: 3, maxLength: 12 }),
+    arbVec2,
+    fc.double({ min: 5, max: 500, noNaN: true }),
+    arbAngle,
+    fc.nat(),
+    fc.integer({ min: 1, max: 3 }),
+  )
+  .map(([radii, centre, size, turn, at, times]) => {
+    const points = radii.map((r, i) => {
+      const angle = turn + (2 * Math.PI * i) / radii.length;
+      return { x: centre.x + size * r * Math.cos(angle), y: centre.y + size * r * Math.sin(angle) };
+    });
+    const k = at % points.length;
+    const repeated = [
+      ...points.slice(0, k + 1),
+      ...Array.from({ length: times }, () => points[k]!),
+      ...points.slice(k + 1),
+    ];
+    return { points, repeated };
+  });

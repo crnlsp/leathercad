@@ -59,6 +59,8 @@ const platformBridge = {
 
   getRecoveryIntervalMs: (): Promise<number> => ipcRenderer.invoke(IPC.getRecoveryIntervalMs),
 
+  windowFailed: (): Promise<void> => ipcRenderer.invoke(IPC.windowFailed),
+
   getPreferences: (): Promise<Preferences> => ipcRenderer.invoke(IPC.getPreferences),
 
   setPreferences: (changes: unknown): Promise<void> =>

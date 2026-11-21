@@ -5,7 +5,13 @@ import { strFromU8, unzipSync } from 'fflate';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
-import { InvalidProjectFileError, loadProject, readManifest, saveProject } from './lcp.js';
+import {
+  InvalidProjectFileError,
+  loadProject,
+  readManifest,
+  saveProject,
+  writeUnchecked,
+} from './lcp.js';
 import { fixtureProjectV14, fixtureProjectV15 } from './makeFixture.js';
 import { CURRENT_FORMAT_VERSION } from './migrations/index.js';
 // Frozen verbatim from leathercad-v1.6.0:packages/persist/src/schema.ts.
@@ -39,7 +45,7 @@ describe('a piece cut as a mirrored pair, format 15 (Q21)', () => {
 
   it('refuses an odd count, or a pair said any way but `true`', () => {
     for (const odd of [1, 3, 7]) {
-      expect(() => loadProject(saveProject(pocketPair(odd), options))).toThrow(
+      expect(() => loadProject(writeUnchecked(pocketPair(odd), options))).toThrow(
         InvalidProjectFileError,
       );
     }
@@ -51,7 +57,9 @@ describe('a piece cut as a mirrored pair, format 15 (Q21)', () => {
         ),
       }) as unknown as Project;
     for (const value of [false, 'yes', 1]) {
-      expect(() => loadProject(saveProject(said(value), options))).toThrow(InvalidProjectFileError);
+      expect(() => loadProject(writeUnchecked(said(value), options))).toThrow(
+        InvalidProjectFileError,
+      );
     }
   });
 

@@ -5,7 +5,7 @@ import fc from 'fast-check';
 import { strFromU8, unzipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
 
-import { InvalidProjectFileError, loadProject, saveProject } from './lcp.js';
+import { InvalidProjectFileError, loadProject, saveProject, writeUnchecked } from './lcp.js';
 import { CURRENT_FORMAT_VERSION } from './migrations/index.js';
 // Frozen verbatim from leathercad-v1.6.0:packages/persist/src/schema.ts.
 import { ProjectSchema as ReleasedSchema } from './test/schema-v1.6.0.js';
@@ -115,7 +115,7 @@ describe('what a pocket holds, kept as metadata (9.14b)', () => {
     ],
     ['no answer to fully', { content: { kind: 'id-1' }, easeMm: 0 }, 'holds.fully'],
   ])('refuses %s, naming the field', (_name, holds, field) => {
-    const bytes = saveProject(holding(holds), options);
+    const bytes = writeUnchecked(holding(holds), options);
     expect(() => loadProject(bytes)).toThrow(InvalidProjectFileError);
     expect(() => loadProject(bytes)).toThrow(field);
   });

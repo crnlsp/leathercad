@@ -1,4 +1,4 @@
-import type { Mm } from '@leathercad/core';
+import { EPS_LENGTH, type Mm } from '@leathercad/core';
 
 import type { Mat2x3 } from '../mat2x3.js';
 import type { Rect } from '../rect.js';
@@ -57,6 +57,18 @@ export function length(s: Segment): Mm {
     case 'cubic':
       return CubicOps.length(s);
   }
+}
+
+/**
+ * A segment with no length to speak of: a repeated vertex, a side of a shape
+ * scaled to nothing. It has no direction, so it turns no corner, offsets to
+ * nothing and crosses nothing; its neighbours meet across it (QA4).
+ */
+export function isDegenerate(s: Segment): boolean {
+  // A cubic is at least as long as its chord, which costs less than its
+  // length, and almost every cubic is decided by it.
+  if (s.kind === 'cubic' && Math.hypot(s.p3.x - s.p0.x, s.p3.y - s.p0.y) > EPS_LENGTH) return false;
+  return length(s) <= EPS_LENGTH;
 }
 
 /**
