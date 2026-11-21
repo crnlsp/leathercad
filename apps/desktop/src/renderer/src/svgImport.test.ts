@@ -1,4 +1,4 @@
-import { ResourceLimitError } from '@leathercad/core';
+import { COORDINATE_LIMIT_MM, ResourceLimitError } from '@leathercad/core';
 import { diagnose, evaluate } from '@leathercad/domain';
 import { PathOps } from '@leathercad/geometry';
 import { SvgImportError, type SvgElement } from '@leathercad/import';
@@ -195,5 +195,52 @@ describe('an untrusted file, in the maker’s words (9.20c)', () => {
       'This drawing has too many shapes to sort into pieces.',
     );
     expect(said(new ResourceLimitError('nodes', 1))).toContain('500,000 elements');
+  });
+});
+
+describe('what a project cannot hold is refused in the preview, before it is drawn (QA3)', () => {
+  const drawing = (...children: SvgElement[]) =>
+    el('svg', { width: '1000mm', height: '1000mm', viewBox: '0 0 1000 1000' }, children);
+  const refusal = (reading: ReturnType<typeof readSvg>): string => {
+    if (reading.kind !== 'refused') throw new Error(reading.kind);
+    return refusalText(reading.error, english);
+  };
+
+  it('a thousand small pieces, whose names pass the characters a project holds (F3)', () => {
+    const shapes = Array.from({ length: 1000 }, (_, i) =>
+      el('rect', {
+        x: String((i % 40) * 4),
+        y: String(Math.floor(i / 40) * 4),
+        width: '2',
+        height: '2',
+      }),
+    );
+    const reading = readSvg(drawing(...shapes), 'small shapes', null);
+    expect(reading).toMatchObject({ kind: 'refused', error: { resource: 'characters' } });
+    expect(refusal(reading)).toBe(
+      'This drawing is too large to import: its pieces and their names come to more than 20,000 characters.',
+    );
+  });
+
+  it('a piece past the coordinate limit, by its size, its place or a transform, names the limit (F2, F7)', () => {
+    for (const shape of [
+      el('rect', { width: '150000', height: '10' }),
+      el('rect', { width: '1e300', height: '10' }),
+      el('rect', { width: '10', height: '10', transform: 'scale(1e300)' }),
+    ]) {
+      const reading = readSvg(drawing(shape), 'big', null);
+      expect(reading).toMatchObject({ kind: 'refused', error: { code: 'BEYOND_LIMIT' } });
+      expect(refusal(reading)).toBe(
+        `This drawing is too large to import: it reaches more than ${new Intl.NumberFormat('en').format(COORDINATE_LIMIT_MM)} mm from its origin, farther than a project holds.`,
+      );
+    }
+  });
+
+  it('a piece within the limit that no paper could print, as the import would be refused (F7)', () => {
+    const reading = readSvg(drawing(el('rect', { width: '50000', height: '50000' })), 'big', null);
+    expect(reading).toMatchObject({ kind: 'refused', error: { resource: 'pages' } });
+    expect(refusal(reading)).toBe(
+      'This drawing is too large to import: printed at 1:1 it would take more than 1,000 sheets.',
+    );
   });
 });

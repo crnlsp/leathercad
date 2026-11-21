@@ -2062,11 +2062,14 @@
       "UNSUPPORTED_SVG": "This drawing uses a length or a setting LeatherCAD cannot read yet.",
       "SCALE_REQUIRED": "This drawing gives no size LeatherCAD can read.",
       "UNSAFE_SVG": "This drawing declares entities that could reach other files or rewrite it, so LeatherCAD does not read it.",
+      "BEYOND_LIMIT": "This drawing is too large to import: it reaches more than {{limit}} mm from its origin, farther than a project holds.",
       "tooBig": "This drawing is too large to import: it asks for more than {{limit}} elements or curve steps.",
       "svgBytes": "This file is larger than {{limit}} MB, the most LeatherCAD imports.",
       "svgExpandedBytes": "This drawing’s entities would expand it past {{limit}} MB, so LeatherCAD does not read it.",
       "segments": "This drawing has more than {{limit}} path segments, more than a project holds.",
-      "svgShapeTests": "This drawing has too many shapes to sort into pieces."
+      "svgShapeTests": "This drawing has too many shapes to sort into pieces.",
+      "characters": "This drawing is too large to import: its pieces and their names come to more than {{limit}} characters.",
+      "pages": "This drawing is too large to import: printed at 1:1 it would take more than {{limit}} sheets."
     }
   }
 }

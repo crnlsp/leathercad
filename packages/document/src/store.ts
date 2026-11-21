@@ -1,5 +1,5 @@
 import { ResourceLimitError } from '@leathercad/core';
-import type { FeatureId, PartId } from '@leathercad/domain';
+import type { FeatureId, PartId, Project } from '@leathercad/domain';
 
 import {
   EMPTY_SELECTION,
@@ -270,7 +270,9 @@ export class DocumentStore {
    * so undoing a delete brings back what was deleted, still selected.
    */
   setSelection(selection: Selection): void {
-    this.present = { ...this.present, selection };
+    const held = heldSelection(selection, this.present.document.project);
+    if (held === null) return;
+    this.present = { ...this.present, selection: held };
     this.emit();
   }
 
@@ -316,6 +318,29 @@ export class DocumentStore {
   private emit(): void {
     for (const listener of this.listeners) listener();
   }
+}
+
+/**
+ * What of a selection the document holds; null when it names nothing that is
+ * there. A command refused for a resource limit never makes the ids its caller
+ * selects next — an import's pieces — and selecting them must neither report
+ * pieces that are not there nor drop what was picked before (QA F7).
+ */
+function heldSelection(selection: Selection, project: Project): Selection | null {
+  if (selection.parts.size === 0 && selection.features.size === 0) return selection;
+  const partIds = new Set<PartId>();
+  const featureIds = new Set<FeatureId>();
+  for (const part of project.parts) {
+    partIds.add(part.id);
+    for (const feature of part.features) featureIds.add(feature.id);
+  }
+  const parts = [...selection.parts].filter((id) => partIds.has(id));
+  const features = [...selection.features].filter((id) => featureIds.has(id));
+  if (parts.length === 0 && features.length === 0) return null;
+  if (parts.length === selection.parts.size && features.length === selection.features.size) {
+    return selection;
+  }
+  return { ...selection, parts: new Set(parts), features: new Set(features) };
 }
 
 /**

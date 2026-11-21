@@ -1,3 +1,4 @@
+import { ResourceLimitError } from '@leathercad/core';
 import { DEFAULT_SETTINGS, ORIENTATIONS, PAPER_NAMES } from '@leathercad/domain';
 import { uniformRadii } from '@leathercad/geometry';
 import fc from 'fast-check';
@@ -410,6 +411,28 @@ describe('selection', () => {
     store.preview(setPartVisible('part-1', false));
     store.commit();
     expect(store.getState().selection.features.size).toBe(0);
+  });
+
+  it('a refused command leaves the selection as it was, though its ids are then selected (QA F7)', () => {
+    // As an import refused for its sheets: the pieces it would have made are selected after it.
+    const store = new DocumentStore(docWithRect(), (document) => {
+      if (document.project.parts.length > 1) throw new ResourceLimitError('pages', 1001);
+    });
+    store.selectParts(['part-1']);
+    store.dispatch(
+      addPart(rectanglePart('part-2', 'feat-2', 'Second', rectShape({ x: 0, y: 0 }, 10, 10))),
+    );
+    store.selectParts(['part-2']);
+    store.select(['feat-2']);
+    expect(store.getState().resourceLimit?.resource).toBe('pages');
+    expect([...store.getState().selection.parts]).toEqual(['part-1']);
+    expect(store.getState().selection.features.size).toBe(0);
+  });
+
+  it('selects only what the document holds', () => {
+    const store = new DocumentStore(docWithRect());
+    store.select(['feat-1', 'gone']);
+    expect([...store.getState().selection.features]).toEqual(['feat-1']);
   });
 
   it('does not consume a step of undo on its own', () => {

@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import { withApp } from './launchApp.js';
-import { chooseSvgFile } from './svgPatterns.js';
+import { chooseSvg, chooseSvgFile } from './svgPatterns.js';
 
 /**
  * 9.20c: an SVG file is untrusted input (ADR 0023). The hostile-file corpus,
@@ -101,6 +101,38 @@ test('a number past a double is refused in the preview, never imported as infini
       'This file could not be read as an SVG drawing.',
     );
     await expect(dialog.getByTestId('svg-import-new')).toBeDisabled();
+  });
+});
+
+test('a drawing too large for a project is refused in the preview, and the open work stays (QA F3)', async () => {
+  await withApp(async (window, app) => {
+    await chooseSvg(app, 'cardHolder');
+    await chooseImport(window);
+    const dialog = window.getByTestId('svg-import-dialog');
+    await dialog.getByTestId('svg-import-open').click();
+    await expect(window.getByTestId('part-count')).toHaveText('1');
+
+    // A thousand small squares: their names pass the characters a project holds.
+    const squares = Array.from(
+      { length: 1000 },
+      (_, i) =>
+        `<rect x="${String((i % 25) * 4)}" y="${String(Math.floor(i / 25) * 1.5)}" width="2" height="1"/>`,
+    ).join('');
+    await chooseSvgFile(
+      app,
+      'thousand-shapes',
+      `<svg xmlns="http://www.w3.org/2000/svg" width="100mm" height="60mm" viewBox="0 0 100 60">${squares}</svg>`,
+    );
+    await chooseImport(window);
+    await expect(dialog.getByRole('alert')).toHaveText(
+      'This drawing is too large to import: its pieces and their names come to more than 20,000 characters.',
+    );
+    await expect(dialog.getByTestId('svg-import-open')).toBeDisabled();
+    await expect(dialog.getByTestId('svg-import-new')).toBeDisabled();
+    await dialog.getByTestId('svg-import-cancel').click();
+    await expect(dialog).toHaveCount(0);
+    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expect(window.getByTestId('parts-list')).toContainText('cardHolder');
   });
 });
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
-import { EPS_POINT, RESOURCE_LIMITS } from '@leathercad/core';
+import { COORDINATE_LIMIT_MM, EPS_POINT, RESOURCE_LIMITS } from '@leathercad/core';
 import {
   PathOps,
   SegmentOps,
@@ -364,7 +364,51 @@ describe('untrusted content is left out and counted, never followed (9.20c)', ()
               for (const p of s.paths)
                 expect(Object.values(PathOps.bbox(p) ?? {}).every(Number.isFinite)).toBe(true);
           } catch (error) {
-            expect(error).toMatchObject({ code: 'INVALID_SVG' });
+            expect(['INVALID_SVG', 'BEYOND_LIMIT']).toContain((error as { code?: string }).code);
+          }
+        },
+      ),
+    );
+  });
+
+  it('a drawing reaching past the coordinate limit is refused, by its own size or a transform (QA F2, F7)', () => {
+    const limit = String(COORDINATE_LIMIT_MM);
+    expect(read([element('rect', { width: limit, height: '10' })]).shapes).toHaveLength(1);
+    for (const child of [
+      element('rect', { width: '150000', height: '10' }),
+      element('rect', { width: '1e300', height: '10' }),
+      element('rect', { width: '10', height: '10', transform: 'scale(1e300)' }),
+      element('rect', { x: '-150000', width: '10', height: '10' }),
+      // A near-flat arc: its ends are close, but its centre is what a file stores.
+      element('path', { d: 'M0 0A1e9 1e9 0 0 1 10 0' }),
+    ])
+      expect(() => read([child])).toThrow(expect.objectContaining({ code: 'BEYOND_LIMIT' }));
+  });
+
+  it('a kept drawing lies within the coordinate limit, and stores nothing past it (QA F2)', () => {
+    fc.assert(
+      fc.property(
+        fc.double({ min: -2e5, max: 2e5, noNaN: true }),
+        fc.double({ min: 1e-3, max: 2e5, noNaN: true }),
+        (x, size) => {
+          const child = element('circle', { cx: String(x), cy: '0', r: String(size) });
+          let paths;
+          try {
+            paths = read([child]).shapes.flatMap((s) => s.paths);
+          } catch (error) {
+            expect(error).toMatchObject({ code: 'BEYOND_LIMIT' });
+            expect(Math.abs(x) + size).toBeGreaterThan(COORDINATE_LIMIT_MM - EPS_POINT);
+            return;
+          }
+          for (const p of paths) {
+            const box = PathOps.bbox(p);
+            for (const v of Object.values(box ?? {}))
+              expect(Math.abs(v)).toBeLessThanOrEqual(COORDINATE_LIMIT_MM);
+            for (const segment of p.segments)
+              if (segment.kind === 'arc')
+                expect(
+                  Math.max(Math.abs(segment.centre.x), Math.abs(segment.centre.y), segment.radius),
+                ).toBeLessThanOrEqual(COORDINATE_LIMIT_MM);
           }
         },
       ),

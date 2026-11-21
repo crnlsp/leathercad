@@ -1,5 +1,13 @@
 export class SvgImportError extends Error {
-  constructor(readonly code: 'INVALID_SVG' | 'SCALE_REQUIRED' | 'UNSUPPORTED_SVG' | 'UNSAFE_SVG') {
+  constructor(
+    readonly code:
+      | 'INVALID_SVG'
+      | 'SCALE_REQUIRED'
+      | 'UNSUPPORTED_SVG'
+      | 'UNSAFE_SVG'
+      /** A point or radius past `COORDINATE_LIMIT_MM`, which a project file cannot hold. */
+      | 'BEYOND_LIMIT',
+  ) {
     super(code);
   }
 }
