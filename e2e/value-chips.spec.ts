@@ -44,12 +44,12 @@ test('a selected outline shows its sizes beside it, and a click edits one, one u
     await selectOuter(window);
 
     // At rest: the numbers, the corner and the margin labelled.
-    await expect(field(window, 'width')).toHaveValue('200.0');
-    await expect(field(window, 'height')).toHaveValue('95.0');
+    await expect(field(window, 'width')).toHaveValue('200');
+    await expect(field(window, 'height')).toHaveValue('95');
     await expect(chip(window, 'corner')).toHaveText(/^r/);
-    await expect(field(window, 'corner')).toHaveValue('5.0');
+    await expect(field(window, 'corner')).toHaveValue('5');
     await expect(chip(window, 'margin')).toHaveText(/^margin/);
-    await expect(field(window, 'margin')).toHaveValue('3.0');
+    await expect(field(window, 'margin')).toHaveValue('3');
     for (const name of ['width', 'height', 'corner', 'margin'] as const) {
       await expect(chip(window, name)).toBeVisible();
     }
@@ -74,14 +74,14 @@ test('a selected outline shows its sizes beside it, and a click edits one, one u
 
     await field(window, 'width').fill('95-2*3.5');
     await field(window, 'width').press('Enter');
-    await expect(field(window, 'width')).toHaveValue('88.0');
+    await expect(field(window, 'width')).toHaveValue('88');
     await expect(field(window, 'width')).not.toBeFocused();
     const panel = window.getByTestId('property-panel');
     await expect(panel.getByLabel('Width')).toHaveValue('88');
 
     // One step to undo.
     await window.getByTestId('undo').click();
-    await expect(field(window, 'width')).toHaveValue('200.0');
+    await expect(field(window, 'width')).toHaveValue('200');
     await expect(window.getByTestId('undo')).toBeDisabled();
 
     // Inches, shown in millimetres, and the margin.
@@ -92,7 +92,7 @@ test('a selected outline shows its sizes beside it, and a click edits one, one u
     await chip(window, 'margin').click();
     await field(window, 'margin').fill('4');
     await field(window, 'margin').press('Enter');
-    await expect(field(window, 'margin')).toHaveValue('4.0');
+    await expect(field(window, 'margin')).toHaveValue('4');
   });
 });
 
@@ -102,7 +102,7 @@ test('Esc puts a chip back and leaves the document as it was (U.14)', async () =
     await chip(window, 'height').click();
     await field(window, 'height').fill('40');
     await field(window, 'height').press('Escape');
-    await expect(field(window, 'height')).toHaveValue('95.0');
+    await expect(field(window, 'height')).toHaveValue('95');
     await expect(field(window, 'height')).not.toBeFocused();
     await expect(window.getByTestId('undo')).toBeDisabled();
     // The selection is kept: Esc in a chip is not Esc on the board.
@@ -128,15 +128,15 @@ test('by keyboard alone: Enter opens the sizes, Tab goes on, a corner too large 
     await window.keyboard.type('95');
     await window.keyboard.press('Tab');
     await expect(field(window, 'height')).toBeFocused();
-    await expect(field(window, 'width')).toHaveValue('95.0');
+    await expect(field(window, 'width')).toHaveValue('95');
     await window.keyboard.type('60');
     await window.keyboard.press('Tab');
     await expect(field(window, 'corner')).toBeFocused();
     // Each applied to the outline as it is now: the height did not put the
     // width it was opened beside back (a Tab opens the next chip in the same
     // keypress that applied the last).
-    await expect(field(window, 'width')).toHaveValue('95.0');
-    await expect(field(window, 'height')).toHaveValue('60.0');
+    await expect(field(window, 'width')).toHaveValue('95');
+    await expect(field(window, 'height')).toHaveValue('60');
 
     // Larger than half the height: kept open, said why, with a glyph.
     await window.keyboard.type('48');
@@ -144,7 +144,7 @@ test('by keyboard alone: Enter opens the sizes, Tab goes on, a corner too large 
     await expect(field(window, 'corner')).toBeFocused();
     await expect(field(window, 'corner')).toHaveAttribute('aria-invalid', 'true');
     const note = window.getByTestId('value-chip-note');
-    await expect(note).toHaveText('Corner radius exceeds half the height (30.0). Enter uses 30.0.');
+    await expect(note).toHaveText('Corner radius exceeds half the height (30). Enter uses 30.');
     await expect(note.locator('[data-glyph="warning"]')).toHaveCount(1);
     await expect(field(window, 'corner')).toHaveAccessibleDescription(/half the height/);
 
@@ -153,7 +153,7 @@ test('by keyboard alone: Enter opens the sizes, Tab goes on, a corner too large 
     // Enter again takes it.
     await window.keyboard.press('Enter');
     await expect(note).toHaveCount(0);
-    await expect(field(window, 'corner')).toHaveValue('30.0');
+    await expect(field(window, 'corner')).toHaveValue('30');
     const panel = window.getByTestId('property-panel');
     for (const corner of [
       'Top-left corner radius',
@@ -170,9 +170,9 @@ test('by keyboard alone: Enter opens the sizes, Tab goes on, a corner too large 
     await window.keyboard.press('Escape');
     await expect(field(window, 'width')).not.toBeFocused();
     for (let step = 0; step < 3; step++) await window.getByTestId('undo').click();
-    await expect(field(window, 'width')).toHaveValue('200.0');
-    await expect(field(window, 'height')).toHaveValue('95.0');
-    await expect(field(window, 'corner')).toHaveValue('5.0');
+    await expect(field(window, 'width')).toHaveValue('200');
+    await expect(field(window, 'height')).toHaveValue('95');
+    await expect(field(window, 'corner')).toHaveValue('5');
     await expect(window.getByTestId('undo')).toBeDisabled();
 
     // Tab past the last chip leaves them: no trap.
@@ -252,7 +252,7 @@ test('Enter on the board opens the first chip, Tab and Shift+Tab go through them
     await window.keyboard.type('190');
     await window.keyboard.press('Enter');
     await expect(board).toBeFocused();
-    await expect(field(window, 'width')).toHaveValue('190.0');
+    await expect(field(window, 'width')).toHaveValue('190');
   });
 });
 
@@ -272,7 +272,7 @@ test('a right-click in an open chip is the field’s menu, and the chip stays op
     await expect(menu).toHaveCount(0);
     await expect(field(window, 'width')).toBeFocused();
     await window.keyboard.press('Enter');
-    await expect(field(window, 'width')).toHaveValue('150.0');
+    await expect(field(window, 'width')).toHaveValue('150');
   });
 });
 
@@ -391,9 +391,9 @@ test('a width or height its corners do not fit in is refused, on the board and i
     await window.keyboard.press('Enter');
     await expect(field(window, 'width')).toBeFocused();
     await expect(field(window, 'width')).toHaveAttribute('aria-invalid', 'true');
-    await expect(note).toHaveText('Width is less than its corners need (10.0). Enter uses 10.0.');
+    await expect(note).toHaveText('Width is less than its corners need (10). Enter uses 10.');
     await window.keyboard.press('Enter');
-    await expect(field(window, 'width')).toHaveValue('10.0');
+    await expect(field(window, 'width')).toHaveValue('10');
 
     const panel = window.getByTestId('property-panel');
     const height = panel.getByLabel('Height');
@@ -404,9 +404,9 @@ test('a width or height its corners do not fit in is refused, on the board and i
     await expect(height).toHaveAccessibleDescription(
       /Height is less than its corners need \(10\.0\)\. Enter uses 10\.0\.$/,
     );
-    await expect(field(window, 'height')).toHaveValue('95.0');
+    await expect(field(window, 'height')).toHaveValue('95');
     await height.press('Enter');
-    await expect(field(window, 'height')).toHaveValue('10.0');
+    await expect(field(window, 'height')).toHaveValue('10');
 
     // Stored as drawn: the corners are still the 5 mm typed.
     for (const corner of [
@@ -419,8 +419,8 @@ test('a width or height its corners do not fit in is refused, on the board and i
     }
     // Two sizes accepted, two steps back; the refusals were none.
     for (let step = 0; step < 2; step++) await window.getByTestId('undo').click();
-    await expect(field(window, 'width')).toHaveValue('200.0');
-    await expect(field(window, 'height')).toHaveValue('95.0');
+    await expect(field(window, 'width')).toHaveValue('200');
+    await expect(field(window, 'height')).toHaveValue('95');
     await expect(window.getByTestId('undo')).toBeDisabled();
   });
 });

@@ -1,4 +1,4 @@
-import { EPS_LENGTH, approxLte, approxZero, formatMm, formatNumber } from '@leathercad/core';
+import { EPS_LENGTH, approxLte, approxZero, formatEditable } from '@leathercad/core';
 import { rectShape } from '@leathercad/document';
 import { RectOps, Shapes, cornerRoom, uniformRadii, type CornerRadii } from '@leathercad/geometry';
 import { CANVAS, pathItem, textItem, type DisplayList } from '@leathercad/render';
@@ -202,7 +202,7 @@ export function createRectangleTool(nextId: () => string): Tool {
           textItem(
             'annotation',
             { x: origin.x, y: origin.y + height + 3 },
-            `${formatNumber(width, 1)} × ${formatMm(height, 1)}`,
+            `${formatEditable(width, 2)} × ${formatEditable(height, 2)} mm`,
             12,
             CANVAS.overlay.preview,
           ),

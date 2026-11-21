@@ -31,7 +31,6 @@ import { SeverityGlyph } from './SeverityGlyph.js';
 import {
   CHIP_MIN,
   chipCommand,
-  chipNumber,
   chipRefusal,
   chipSubject,
   chipsOf,
@@ -440,7 +439,7 @@ function Chip({
     }
   };
 
-  const shown = draft ?? (value === null ? t('chips.mixed') : chipNumber(value));
+  const shown = draft ?? (value === null ? t('chips.mixed') : formatEditable(value, 2));
   useLayoutEffect(() => onResize(), [shown, editing, onResize]);
   const prefix =
     chip === 'corner' ? t('chips.corner') : chip === 'margin' ? t('chips.margin') : null;
