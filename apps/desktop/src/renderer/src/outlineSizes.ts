@@ -165,7 +165,7 @@ export interface RefusalWords {
 
 /**
  * A corner the rectangle would draw smaller than typed (R-12): "Corner is
- * larger than half the height (30.0). Enter uses 30.0." Null when it fits.
+ * larger than half the height (30). Enter uses 30." Null when it fits.
  * The room is `cornerRoom`'s, the very sum `roundedRect` shrinks by, so what
  * is refused is exactly what would never be drawn; the radius offered is the
  * largest stored value within it.
@@ -190,7 +190,7 @@ export function cornerRefusal(
 
 /**
  * A width or height the corners would be drawn smaller in (U.14): "Width is
- * less than its corners need (23.0). Enter uses 23.0." Null when they fit.
+ * less than its corners need (23). Enter uses 23." Null when they fit.
  * The need is `cornerNeeds`'s — the sums `fittedRadii` shrinks by — so what is
  * refused is exactly a size in which a stored radius would not be the one
  * drawn; the size offered is the least stored value the corners fit in. Only
