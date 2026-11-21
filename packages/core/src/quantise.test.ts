@@ -2,10 +2,15 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
 import { EPS_POINT } from './epsilon.js';
-import { QUANTUM_MM, quantise, quantiseAtLeast, quantiseAtMost } from './quantise.js';
+import {
+  COORDINATE_LIMIT_MM,
+  QUANTUM_MM,
+  quantise,
+  quantiseAtLeast,
+  quantiseAtMost,
+} from './quantise.js';
 
-/** The file format's documented coordinate limit. */
-const inRange = fc.double({ min: -100_000, max: 100_000, noNaN: true });
+const inRange = fc.double({ min: -COORDINATE_LIMIT_MM, max: COORDINATE_LIMIT_MM, noNaN: true });
 
 describe('quantise', () => {
   it('snaps to a 0.1 µm grid', () => {
@@ -56,6 +61,35 @@ describe('quantise', () => {
     expect(() => quantise(Number.NaN)).toThrow(RangeError);
     expect(() => quantise(Number.POSITIVE_INFINITY)).toThrow(RangeError);
     expect(() => quantise(Number.NEGATIVE_INFINITY)).toThrow(RangeError);
+  });
+
+  it('rejects a value too large for the grid rather than returning Infinity (QA F1)', () => {
+    // 1e308 is finite, but 1e308 quanta are not: it used to come back as Infinity.
+    expect(() => quantise(1e308)).toThrow(RangeError);
+    expect(() => quantise(-1e305)).toThrow(RangeError);
+  });
+
+  it('returns a finite value or throws, for every finite input', () => {
+    fc.assert(
+      fc.property(fc.double({ noNaN: true, noDefaultInfinity: true }), (v) => {
+        try {
+          return Number.isFinite(quantise(v));
+        } catch (thrown) {
+          return thrown instanceof RangeError;
+        }
+      }),
+    );
+  });
+});
+
+describe('COORDINATE_LIMIT_MM', () => {
+  it('is the ±100 000 mm a project file holds (file-format.md §5)', () => {
+    expect(COORDINATE_LIMIT_MM).toBe(100_000);
+  });
+
+  it('is on the grid, so a value at the limit stays at it', () => {
+    expect(quantise(COORDINATE_LIMIT_MM)).toBe(COORDINATE_LIMIT_MM);
+    expect(quantise(-COORDINATE_LIMIT_MM)).toBe(-COORDINATE_LIMIT_MM);
   });
 });
 

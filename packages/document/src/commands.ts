@@ -1,4 +1,11 @@
-import { EPS_LENGTH, approxEq, formatEditable, type Mm, type Ulid } from '@leathercad/core';
+import {
+  EPS_LENGTH,
+  approxEq,
+  cleanName,
+  formatEditable,
+  type Mm,
+  type Ulid,
+} from '@leathercad/core';
 import type {
   Derivation,
   ExtentRef,
@@ -134,7 +141,9 @@ export function deleteFeatures(ids: Iterable<FeatureId>, resolution?: DeleteReso
   };
 }
 
-export function renameFeature(id: FeatureId, name: string): Command {
+/** Every name is cleaned as it is set (`cleanName`): a typed or pasted one is the trust boundary. */
+export function renameFeature(id: FeatureId, typed: string): Command {
+  const name = cleanName(typed);
   return command({ action: 'rename' }, (document) => ({
     project: mapFeature(document.project, id, (feature) => ({ ...feature, name })),
   }));
@@ -1257,7 +1266,8 @@ function addDerived(partId: PartId, _sourceId: FeatureId, feature: Feature): Com
   return addFeature(partId, feature);
 }
 
-export function setProjectName(name: string): Command {
+export function setProjectName(typed: string): Command {
+  const name = cleanName(typed);
   return command({ action: 'rename-project' }, (document) => ({
     project: { ...document.project, name },
   }));
@@ -1282,7 +1292,8 @@ export function setPageSetup(paper: PaperName, orientation: Orientation): Comman
   });
 }
 
-export function setPartName(id: PartId, name: string): Command {
+export function setPartName(id: PartId, typed: string): Command {
+  const name = cleanName(typed);
   return command({ action: 'rename-part' }, (document) => ({
     project: mapPart(document.project, id, (part) => ({ ...part, name })),
   }));

@@ -22,9 +22,12 @@ import {
   mirrorFeatures,
   rectShape,
   rectanglePart,
+  renameFeature,
   setFeatureLocked,
   setFeatureVisible,
+  setPartName,
   setPartVisible,
+  setProjectName,
   setShape,
   translateFeatures,
 } from './commands.js';
@@ -496,5 +499,27 @@ describe('a new piece’s default name (X35)', () => {
     expect(names(store)).toEqual(['Pocket', 'Pocket 2', 'Pocket 3']);
     store.dispatch(panel('e'));
     expect(names(store)).toEqual(['Pocket', 'Pocket 2', 'Pocket 3', 'Panel']);
+  });
+});
+
+describe('names as they are stored (QA F9)', () => {
+  // As the QA run typed them: NUL, BEL, ESC and a right-to-left override.
+  const typed = 'Proj A\u0000B\u0007C\u001bD\u202eE';
+  const one = (): Document =>
+    addPart(rectanglePart(A, 'cut-a', 'Panel', rectShape({ x: 0, y: 0 }, 10, 10))).apply(
+      emptyDocument('proj'),
+    );
+
+  it('keeps no control or bidi override in a project name', () => {
+    expect(setProjectName(typed).apply(one()).project.name).toBe('Proj ABCDE');
+  });
+
+  it('keeps no control or bidi override in a piece name', () => {
+    expect(setPartName(A, typed).apply(one()).project.parts[0]?.name).toBe('Proj ABCDE');
+  });
+
+  it('keeps no control or bidi override in a feature name', () => {
+    const renamed = renameFeature('cut-a' as FeatureId, typed).apply(one());
+    expect(renamed.project.parts[0]?.features[0]?.name).toBe('Proj ABCDE');
   });
 });

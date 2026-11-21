@@ -34,12 +34,16 @@ describe('the file name a project name gives', () => {
   });
 
   it('is none for a name no file can have, by Windows’ rules everywhere', () => {
-    for (const name of ['', '  ', '.', '..', 'a/b', 'a\\b', 'Belt: brown', 'why?', 'tab\there']) {
+    for (const name of ['', '  ', '.', '..', 'a/b', 'a\\b', 'Belt: brown', 'why?', '\u0007']) {
       expect(projectFileName(name), name).toBeNull();
     }
     for (const name of ['CON', 'nul', 'Com1', 'LPT9.old', 'Wallet.', 'x'.repeat(201)]) {
       expect(projectFileName(name), name).toBeNull();
     }
+    // Cleaned as a project's name is (QA F9): a control dropped, a tab a space.
+    expect(projectFileName('tab\there')).toBe('tab here.lcp');
+    expect(projectFileName('Belt\u202e tlb.lcp')).toBe('Belt tlb.lcp.lcp');
+    expect(projectFileName('Proj A\u0000B\u0007C\u001bD\u202eE')).toBe('Proj ABCDE.lcp');
     // Spaces around a name are the field's, not the name's.
     expect(projectFileName('Wallet ')).toBe('Wallet.lcp');
   });
