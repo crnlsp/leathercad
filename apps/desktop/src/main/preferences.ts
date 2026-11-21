@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { extname, isAbsolute, sep } from 'node:path';
 
-import { quantise } from '@leathercad/core';
+import { COORDINATE_LIMIT_MM, quantise } from '@leathercad/core';
 import { IRON_STYLES, LAYER_ROLES } from '@leathercad/domain';
 import {
   DEFAULT_PREFERENCES,
@@ -249,9 +249,9 @@ function isTemplateShow(value: unknown): value is TemplateShow {
   return value === 'all' || value === 'builtin' || value === 'mine';
 }
 
-/** A length a maker could have typed: finite, above zero, on the storage grid. */
+/** A length a maker could have typed: finite, above zero, within what a project holds, on the storage grid. */
 function readLength(value: unknown): number | undefined {
-  return typeof value === 'number' && Number.isFinite(value) && value > 0
+  return typeof value === 'number' && value > 0 && value <= COORDINATE_LIMIT_MM
     ? quantise(value)
     : undefined;
 }

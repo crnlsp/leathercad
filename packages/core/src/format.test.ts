@@ -9,8 +9,9 @@ import {
   formatNumber,
   parseNumber,
 } from './format.js';
+import { COORDINATE_LIMIT_MM } from './quantise.js';
 
-const inRange = fc.double({ min: -100_000, max: 100_000, noNaN: true });
+const inRange = fc.double({ min: -COORDINATE_LIMIT_MM, max: COORDINATE_LIMIT_MM, noNaN: true });
 const precision = fc.integer({ min: 0, max: 4 });
 
 describe('formatNumber', () => {

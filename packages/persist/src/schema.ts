@@ -1,4 +1,4 @@
-import { EPS_ANGLE } from '@leathercad/core';
+import { COORDINATE_LIMIT_MM, EPS_ANGLE } from '@leathercad/core';
 import { z } from 'zod';
 import { ORIENTATIONS, PAPER_NAMES, type Orientation, type PaperName } from '@leathercad/domain';
 
@@ -22,12 +22,16 @@ import { ORIENTATIONS, PAPER_NAMES, type Orientation, type PaperName } from '@le
  * See docs/file-format.md §5.
  */
 
-/** Rejects NaN, Infinity, and coordinates outside the documented range. */
+/** Rejects NaN, Infinity, and coordinates outside the documented range — the one a field refuses past. */
 const mm = z
   .number()
   .finite()
-  .min(-100_000, { message: 'coordinate below the -100000 mm limit' })
-  .max(100_000, { message: 'coordinate above the 100000 mm limit' });
+  .min(-COORDINATE_LIMIT_MM, {
+    message: `coordinate below the -${String(COORDINATE_LIMIT_MM)} mm limit`,
+  })
+  .max(COORDINATE_LIMIT_MM, {
+    message: `coordinate above the ${String(COORDINATE_LIMIT_MM)} mm limit`,
+  });
 
 const nonNegativeMm = mm.min(0, { message: 'must not be negative' });
 

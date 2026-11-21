@@ -1429,6 +1429,11 @@
       "description": "A seam cannot be evaluated because one of its hole sets is missing or failed to build.",
       "fix": "Restore the missing hole set or correct its source. The seam is kept with the project."
     },
+    "SEAM_JOINS_ITSELF": {
+      "title": "Seam sews holes to themselves",
+      "description": "Both sides of this seam are the same holes, so it joins nothing.",
+      "fix": "Choose the other piece’s hole set for the second side, or another stretch of this one for a fold."
+    },
     "SEAM_RUNS_OFF_THE_LINE": {
       "title": "Seam runs past its line",
       "description": "The seam needs {{length}}, but this side has only {{available}} in the chosen direction.",
@@ -1551,11 +1556,15 @@
       "standard": "Standard"
     },
     "lengthError": {
+      "beyondLimit": "More than a project holds: up to {{limit}} mm either way",
       "mixed": "Give every number in a sum its unit, as in 10cm + 5mm. For 3½ inches, type 3.5in",
       "notALength": "That doesn’t come to a length: a unit goes on a number once, and a length is not multiplied or divided by a length",
       "notFinite": "That doesn’t come to a number",
       "syntax": "Not a size this reads. Try 95, 95-2*3.5 or 3.75in",
       "unit": "“{{unit}}” is not a unit here. Use mm, cm or in"
+    },
+    "numberError": {
+      "beyondLimit": "More than a field holds: up to {{limit}} either way"
     },
     "marking": {
       "alignment": "Alignment",
@@ -1912,6 +1921,8 @@
     "right": "Right",
     "up": "Up",
     "move": "Move",
+    "beyondLimit": "That takes the selection past what a project holds, {{limit}} mm either way. {{enter}} uses {{size}}.",
+    "moveBeyondLimit": "Moving this far takes the selection past what a project holds, {{limit}} mm either way.",
     "x": {
       "min": "Align left",
       "centre": "Centre horizontally",

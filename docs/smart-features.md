@@ -155,6 +155,7 @@ fails if a design rule or a seam or pocket outcome is added to the registry with
 | `POCKET_NOT_MEASURABLE` | DR8 · warning | *Holds* | No pocket reading; held fully and no opening | Nothing stated | — |
 | `SEAM_HOLE_COUNT_MISMATCH` | DR7 · error | A declared seam whose sides resolve | Paired stretches hold different numbers of holes | No seam declared, however alike two pieces are | — |
 | `SEAM_HOLES_DRIFT` | DR7 · warning | As above, counts equal | Worst pair more than 0.5 mm apart along the stitching from the first holes | Within 0.5 mm (kept as information) | — |
+| `SEAM_JOINS_ITSELF` | DR7 · error | A declared seam with both sides on one hole set | Both sides walk the same holes — all round to all round, or one stretch to itself | Two different stretches of the set, as a fold sewn up its sides | — |
 | `SEAM_SIDE_MISSING` | E3 · error | A declared seam | A side's hole set is gone or failed (an older version's delete) | The app's own delete removes the seam too | — |
 | `SEAM_RUNS_OFF_THE_LINE` | E4 · error | A seam side following the other's length | That length runs past the end of its line | — | — |
 | `HOLE_TOO_CLOSE_TO_EDGE` | DR2 · warning | Holes in a piece with an outline | A stitch hole's point, or a hardware or row hole's rim, within 1.5 mm of an edge | Clear of every edge | A stitch hole exactly on the edge — the outline's or a cut-out's — is this at 0 mm, whichever way the piece faces (D29; **KD-1**, fixed by Q44). A stitch hole is read at its centre, not its tooth (contract, §7) |

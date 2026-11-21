@@ -99,3 +99,39 @@ test('the work bar’s corner radius takes inches too, and its reason hangs belo
     await expect(radius).toHaveValue('6.35');
   });
 });
+
+test('a size past what a project holds is refused with the limit, and the window survives (QA F1, F8)', async () => {
+  await withSample(async (window) => {
+    await window.getByTestId('feature-row-outer-outline').click();
+    const panel = window.getByTestId('property-panel');
+    const height = panel.getByLabel('Height');
+    const before = await height.inputValue();
+    const errors: Error[] = [];
+    window.on('pageerror', (error) => errors.push(error));
+
+    // As the QA run typed it, and as scientific notation: both 1e10 mm.
+    for (const text of ['10000000000', '1e10']) {
+      await enter(height, text);
+      await expect(height).toHaveValue(text);
+      await expect(height).toHaveAttribute('aria-invalid', 'true');
+      await expect(height).toHaveAccessibleDescription(/up to 100,000 mm/);
+    }
+    // Enter again does not take it: past the limit is no offer.
+    await height.press('Enter');
+    await expect(height).toHaveAttribute('aria-invalid', 'true');
+    await height.press('Escape');
+    await expect(height).toHaveValue(before);
+
+    // The window is still there, and a size that fits still goes in.
+    await expect(window.getByTestId('feature-row-outer-outline')).toBeVisible();
+    await enter(height, '1e2');
+    await expect(height).toHaveValue('100');
+
+    // A turn has no unit, and the same bound.
+    const turn = panel.getByLabel('Turn');
+    await enter(turn, '1' + '0'.repeat(305));
+    await expect(turn).toHaveAccessibleDescription(/up to 100,000 either way/);
+    await turn.press('Escape');
+    expect(errors).toEqual([]);
+  });
+});

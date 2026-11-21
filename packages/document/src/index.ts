@@ -24,6 +24,7 @@ export {
   partSelectionOf,
   selectedFeatureIds,
   selectionOf,
+  toggledFeatureIds,
 } from './document.js';
 
 export type { HistoryEvent, StoreState } from './store.js';
