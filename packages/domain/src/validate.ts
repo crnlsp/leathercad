@@ -1,5 +1,6 @@
 import { EPS_LENGTH, QUANTUM_MM, approxGte, type Mm } from '@leathercad/core';
 import {
+  MatOps,
   PathOps,
   SegmentOps,
   intersectPaths,
@@ -364,6 +365,15 @@ function ownShape(entry: Extract<ResolvedFeature, { ok: true }>, partId: PartId)
           feature.id,
           { kind: 'points', points: crossings.map((crossing) => crossing.point) },
         ),
+      );
+    } else if (hasNoArea(entry.path)) {
+      // Only where it does not cross itself: a figure of eight's lobes cancel
+      // to no signed area, and it is the crossing that is wrong with it.
+      found.push(
+        placed(problem('CONTOUR_HAS_NO_AREA', about), partId, feature.id, {
+          kind: 'path',
+          path: entry.path,
+        }),
       );
     }
   }
@@ -756,6 +766,25 @@ function crossingsOf(path: Path): readonly Intersection[] {
   const crossings = selfIntersections(path);
   crossingsCache.set(path, crossings);
   return crossings;
+}
+
+/**
+ * DR3: a cut outline that encloses nothing — a piece scaled to nothing, or
+ * flattened onto a line by a singular matrix (QA4). Judged by its mean width,
+ * twice its area over its length, so the test is in millimetres, the same at
+ * any size, and blind to the rounding a long sliver's area carries. The
+ * narrowest strip a maker can store, a quantum wide, is far wider.
+ *
+ * The area is taken with the outline moved to its own start: Green's theorem
+ * sums about the origin, and a closed path's last join, up to `EPS_POINT`
+ * open, then adds that gap times the distance out — more than a sliver's
+ * whole area, two metres away.
+ */
+function hasNoArea(path: Path): boolean {
+  const from = PathOps.start(path);
+  if (from === null) return true;
+  const here = PathOps.transform(path, MatOps.fromTranslation({ x: -from.x, y: -from.y }));
+  return 2 * PathOps.area(here) <= EPS_LENGTH * PathOps.length(path);
 }
 
 function placed(

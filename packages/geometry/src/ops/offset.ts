@@ -14,6 +14,7 @@ import { selfIntersections } from './intersect.js';
 import {
   arc,
   end,
+  isDegenerate,
   length as segmentLength,
   line,
   start,
@@ -142,6 +143,13 @@ export function offsetPathTraced(p: Path, distanceMm: Mm, opts: OffsetOptions): 
   /** offsets index → input segment index, so the trace can speak in inputs. */
   const inputOf: number[] = [];
   for (const [index, s] of p.segments.entries()) {
+    // A side of no length — a repeated vertex — has no direction to move
+    // along, and its neighbours meet across it: it is dropped, as a consumed
+    // arc is, so the offset is the one the path without it has, and the
+    // trace puts it at its corner (QA4). Left in place, it was a stub the
+    // joins either side could not meet, and the whole offset collapsed.
+    if (isDegenerate(s)) continue;
+
     if (s.kind === 'cubic') {
       const fitted = offsetCubic(s, d);
       if (fitted === undefined) return [];
@@ -291,10 +299,8 @@ function trace(
 function offsetLine(s: LineSegment, d: Mm): Segment {
   const u = tryNormalise(sub(s.b, s.a));
 
-  // A zero-length segment has no direction to offset along. Leaving it in
-  // place is right: it contributes nothing, and the neighbouring joins carry
-  // the corner. tryNormalise signals that with null, not undefined — the
-  // compiler caught this guard never firing.
+  // A zero-length segment has no direction to offset along, and never gets
+  // here: `offsetPathTraced` drops it first (QA4). The guard is for the type.
   if (u === null) return s;
 
   const n = scale(perp(u), d);

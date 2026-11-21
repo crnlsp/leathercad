@@ -69,6 +69,35 @@ describe('reading an SVG for the import preview (9.20b)', () => {
     ]);
   });
 
+  it('regression: a polygon with a repeated point imports with nothing to fix (QA4 F4)', () => {
+    // Was "1 error": the repeat read as the outline crossing itself.
+    const reading = readSvg(
+      el('svg', { width: '60mm', height: '40mm', viewBox: '0 0 60 40' }, [
+        el('polygon', { points: '0,0 60,0 60,0 60,40 0,40' }),
+      ]),
+      'card',
+      null,
+    );
+    if (reading.kind !== 'read') throw new Error(reading.kind);
+    expect(diagnose(reading.project)).toEqual([]);
+  });
+
+  it.each(['scale(0)', 'matrix(0 0 0 0 0 0)', 'matrix(1 0 0 0 0 0)'])(
+    'regression: a piece under %s is reported as enclosing nothing (QA4 F5)',
+    (transform) => {
+      // Imported as 0.0 × 0.0 mm with nothing to fix.
+      const reading = readSvg(
+        el('svg', { width: '60mm', height: '40mm', viewBox: '0 0 60 40' }, [
+          el('g', { transform }, [el('rect', { width: '10', height: '10' })]),
+        ]),
+        'card',
+        null,
+      );
+      if (reading.kind !== 'read') throw new Error(reading.kind);
+      expect(diagnose(reading.project).map((d) => d.problem.code)).toEqual(['CONTOUR_HAS_NO_AREA']);
+    },
+  );
+
   it('asks for a density when the file gives no unit, and reads at the one chosen', () => {
     const tree = cardHolder({ width: '100', height: '60', viewBox: '0 0 100 60' });
     expect(readSvg(tree, 'card', null)).toEqual({ kind: 'needs-density' });

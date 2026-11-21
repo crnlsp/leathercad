@@ -121,7 +121,13 @@ export const MATRIX: { readonly [code: string]: RuleCoverage } = {
   },
   CONTOUR_SELF_INTERSECTS: {
     positive: ['SF-A6'],
-    negative: ['SF-A1'],
+    negative: ['SF-A1', 'SF-A13'],
+    notApplicable: { exempt: UNIVERSAL },
+    transition: { exempt: ONE_FEATURE },
+  },
+  CONTOUR_HAS_NO_AREA: {
+    positive: ['SF-A12'],
+    negative: ['SF-A1', 'SF-A13'],
     notApplicable: { exempt: UNIVERSAL },
     transition: { exempt: ONE_FEATURE },
   },

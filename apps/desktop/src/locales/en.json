@@ -1338,6 +1338,11 @@
       "description_other": "{{featureName}} crosses itself {{count}} times, so where to cut is ambiguous.",
       "fix": "Redraw it so the line never crosses."
     },
+    "CONTOUR_HAS_NO_AREA": {
+      "title": "Outline encloses nothing",
+      "description": "{{featureName}} has no width, so there is no piece of leather to cut.",
+      "fix": "Redraw it, or delete it if it came in by mistake."
+    },
     "HOLES_OVERLAP": {
       "title": "Holes run into each other",
       "description": "{{featureName}} has holes {{spacing}} apart that are {{diameter}} across, so no leather is left between them and they cut as one slot.",

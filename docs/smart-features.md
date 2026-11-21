@@ -163,6 +163,7 @@ fails if a design rule or a seam or pocket outcome is added to the registry with
 | `CUT_OUT_OUTSIDE_PART` | DR2 · error | A cut-out and an outline | Part of the cut-out lies outside the outline (sampled) | — | — |
 | `PART_HAS_NO_OUTER_CONTOUR` | DR1 · error | A piece with features | None of them is its outline | An empty piece (that is `EMPTY_PART`) | — |
 | `CONTOUR_SELF_INTERSECTS` | DR3 · error | An outline or cut-out | It crosses itself | — | — |
+| `CONTOUR_HAS_NO_AREA` | DR3 · error | An outline or cut-out | It encloses nothing: scaled to nothing, or flattened onto a line | A repeated vertex, which is a side of no length, not a crossing (QA4) | Flattened going out and back over itself, it crosses itself, and is `CONTOUR_SELF_INTERSECTS` |
 | `HOLES_OVERLAP` | DR3 · warning | A row of round holes | Neighbours no more than a diameter apart | — | Holes meeting across a tight bend, not neighbours |
 | `HOLE_SPACING_DEVIATION` | DR4 · warning | A hole set | Achieved spacing more than 25 % from the iron | — | — |
 | `HOLE_SPACING_UNEVEN` | DR4 · info | A hole set with runs | Runs' spacings differ by more than 5 % of the pitch | — | — |

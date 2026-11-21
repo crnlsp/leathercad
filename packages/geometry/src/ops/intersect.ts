@@ -4,6 +4,7 @@ import { flattenSegment, type Path } from '../path/index.js';
 import {
   ArcOps,
   bbox,
+  isDegenerate,
   pointAt,
   type ArcSegment,
   type LineSegment,
@@ -170,7 +171,8 @@ const hasNaN = (r: Rect): boolean =>
  *
  * Consecutive segments share a vertex by construction, and a closed path's
  * last and first do too. Reporting those would make every path
- * self-intersecting, so neighbours are skipped.
+ * self-intersecting, so neighbours are skipped — and two segments with only
+ * sides of no length between them are neighbours too.
  *
  * A path of `EVERY_PAIR_BELOW` segments or more tests only the pairs that
  * could touch (PERF-006), in the order every pair was, so the first crossing
@@ -183,13 +185,25 @@ export function selfIntersections(p: Path): Intersection[] {
   const kept = new Map<string, Vec2[]>();
   const n = p.segments.length;
 
+  // A side of no length — a repeated vertex — joins the segments either side
+  // of it rather than parting them, so neighbours are counted among the
+  // segments that have a length, by rank: the repeat is not a crossing (QA4).
+  // One without a length is never tested; whatever passes through its point
+  // passes through its neighbours' ends, and is found there.
+  const rank: number[] = [];
+  let ranked = 0;
+  for (const s of p.segments) rank.push(isDegenerate(s) ? -1 : ranked++);
+
   const test = (i: number, j: number): void => {
-    // `j <= i + 1` is this segment, a pair met from its other side already,
+    const ri = rank[i]!;
+    const rj = rank[j]!;
+    if (ri < 0 || rj < 0) return;
+    // `rj <= ri + 1` is this segment, a pair met from its other side already,
     // or the next segment, its neighbour; on a closed path the first and last
     // are neighbours too. Written as inequalities because the float-equality
     // rule cannot tell an array index from a millimetre, and it is right to
     // be suspicious by default.
-    const adjacent = j <= i + 1 || (p.closed && i < 1 && j >= n - 1);
+    const adjacent = rj <= ri + 1 || (p.closed && ri < 1 && rj >= ranked - 1);
     if (adjacent) return;
 
     for (const hit of intersectSegments(p.segments[i]!, p.segments[j]!)) {

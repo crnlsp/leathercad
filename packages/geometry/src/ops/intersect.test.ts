@@ -1,9 +1,10 @@
-import { EPS_POINT } from '@leathercad/core';
+import { EPS_LENGTH, EPS_POINT } from '@leathercad/core';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
 import {
   arbAngle,
+  arbRepeatedVertex,
   arbRigidTransform,
   arbSegment,
   arbSweep,
@@ -11,7 +12,7 @@ import {
 } from '../../test/arbitraries.js';
 import { polyline, transform as transformPath, unsafePath, type Path } from '../path/index.js';
 import type { Rect } from '../rect.js';
-import { arc, bbox, cubic, line, pointAt, type Segment } from '../segment/index.js';
+import { arc, bbox, cubic, isDegenerate, line, pointAt, type Segment } from '../segment/index.js';
 import { circle } from '../shapes.js';
 import { cross, dist, sub, vec, type Vec2 } from '../vec2.js';
 
@@ -629,18 +630,66 @@ describe('selfIntersections', () => {
     expect(selfIntersections(polyline([vec(0, 0), vec(10, 0), vec(20, 5)]))).toEqual([]);
   });
 
+  describe('a side of no length (QA4)', () => {
+    it('regression: a repeated corner is not a crossing', () => {
+      // QA4 F4: reported as one crossing at (100, 0), since the sides either
+      // side of the repeat met there without being each other's neighbour.
+      const repeated = polyline(
+        [vec(0, 0), vec(100, 0), vec(100, 0), vec(100, 70), vec(0, 70)],
+        true,
+      );
+
+      expect(selfIntersections(repeated)).toEqual([]);
+    });
+
+    it('regression: a repeated first corner is not a crossing, across the closing join', () => {
+      const repeated = polyline([vec(0, 0), vec(0, 0), vec(60, 0), vec(60, 40), vec(0, 40)], true);
+
+      expect(selfIntersections(repeated)).toEqual([]);
+    });
+
+    it('a repeated vertex anywhere in a simple polygon never makes it cross itself', () => {
+      fc.assert(
+        fc.property(arbRepeatedVertex, ({ repeated }) => {
+          expect(selfIntersections(polyline(repeated, true))).toEqual([]);
+        }),
+        RUNS,
+      );
+    });
+
+    it('still finds the crossing of a figure eight with a repeated corner', () => {
+      const eight = polyline([vec(0, 0), vec(10, 10), vec(10, 10), vec(10, 0), vec(0, 10)], true);
+
+      expect(selfIntersections(eight).map((hit) => hit.point)).toEqual([vec(5, 5)]);
+    });
+
+    it('a repeat in a path of many segments, which is swept, is not a crossing either', () => {
+      const ring = Array.from({ length: 2 * EVERY_PAIR_BELOW }, (_, i) => {
+        const angle = (i / (2 * EVERY_PAIR_BELOW)) * Math.PI * 2;
+        return vec(100 * Math.cos(angle), 100 * Math.sin(angle));
+      });
+      const repeated = polyline([...ring.slice(0, 7), ring[6]!, ...ring.slice(7)], true);
+
+      expect(selfIntersections(repeated)).toEqual([]);
+    });
+  });
+
   describe('broad phase (PERF-006)', () => {
     /**
      * What `selfIntersections` did before it had a broad phase, and the
      * specification it still meets: every pair of segments that are not
-     * neighbours, in order, the first crossing at a place kept.
+     * neighbours, in order, the first crossing at a place kept. Segments of no
+     * length are left out, and their neighbours are each other's (QA4).
      */
     function everyPair(p: Path): Intersection[] {
       const out: Intersection[] = [];
-      const n = p.segments.length;
-      for (let i = 0; i < n; i++) {
-        for (let j = i + 1; j < n; j++) {
-          if (j <= i + 1 || (p.closed && i < 1 && j >= n - 1)) continue;
+      const kept = [...p.segments.keys()].filter((i) => !isDegenerate(p.segments[i]!));
+      const n = kept.length;
+      for (let a = 0; a < n; a++) {
+        for (let b = a + 1; b < n; b++) {
+          if (b <= a + 1 || (p.closed && a < 1 && b >= n - 1)) continue;
+          const i = kept[a]!;
+          const j = kept[b]!;
           for (const hit of intersectSegments(p.segments[i]!, p.segments[j]!)) {
             if (out.some((h) => dist(h.point, hit.point) < EPS_POINT)) continue;
             out.push({ point: hit.point, tA: i + hit.tA, tB: j + hit.tB });
@@ -664,8 +713,17 @@ describe('selfIntersections', () => {
         ? p
         : unsafePath([...p.segments, ...padding(pointAt(p.segments[0]!, 0))], p.closed);
 
-    /** `a` and `b` apart in a path that is swept: the one pair of the two it tests. */
-    const apart = (a: Segment, b: Segment): Path => unsafePath([a, ...padding(pointAt(a, 0)), b]);
+    /**
+     * `a` and `b` apart in a path that is swept: the one pair of the two it
+     * tests. The padding alone would make them neighbours, so a hair of a line
+     * at `a`'s start keeps them apart; it is both their
+     * neighbour, and is tested against neither.
+     */
+    const apart = (a: Segment, b: Segment): Path => {
+      const from = pointAt(a, 0);
+      const hair = line(from, vec(from.x + 2 * EPS_LENGTH, from.y));
+      return unsafePath([a, hair, ...padding(from), b]);
+    };
 
     /**
      * How far apart two segments are where `intersectSegments` may still call

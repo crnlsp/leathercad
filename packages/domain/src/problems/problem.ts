@@ -309,6 +309,8 @@ export interface ProblemFacts {
     readonly minimumMm: Mm;
   };
   readonly CONTOUR_SELF_INTERSECTS: About & { readonly crossings: number };
+  /** A cut outline that encloses nothing: its mean width is under `EPS_LENGTH` (`validate`). */
+  readonly CONTOUR_HAS_NO_AREA: About;
   readonly HOLES_OVERLAP: About & {
     /** The nearest two neighbours, centre to centre. */
     readonly spacingMm: Mm;

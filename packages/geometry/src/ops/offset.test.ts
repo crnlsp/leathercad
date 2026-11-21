@@ -19,7 +19,7 @@ import { circle, ellipse, roundedRect } from '../shapes.js';
 import { EXPORT_TOLERANCE_MM } from '../tolerance.js';
 import { add, dot, perp, scale, vec, type Vec2 } from '../vec2.js';
 
-import { arbCubicSegment } from '../../test/arbitraries.js';
+import { arbCubicSegment, arbRepeatedVertex } from '../../test/arbitraries.js';
 import { selfIntersections } from './intersect.js';
 import { measure } from '../path/index.js';
 import { pointAt as pointOnSegment } from '../segment/index.js';
@@ -593,6 +593,45 @@ describe('offsetPathTraced', () => {
     expect(piece!.segments).toHaveLength(4);
     expect(piece!.corners).toHaveLength(4);
     expect(piece!.segments.every((range) => range !== null)).toBe(true);
+  });
+
+  describe('a side of no length (QA4)', () => {
+    const repeatedCorner = polyline(
+      [vec(0, 0), vec(100, 0), vec(100, 0), vec(100, 70), vec(0, 70)],
+      true,
+    );
+    const rectangle = polyline([vec(0, 0), vec(100, 0), vec(100, 70), vec(0, 70)], true);
+
+    it('regression: a repeated corner offsets to the rectangle’s own stitch line', () => {
+      // QA4 F4: the side of no length stayed where it was, and the joins
+      // either side of it collapsed the whole inset.
+      expect(offsetPath(repeatedCorner, 3.5, ROUND)).toEqual(offsetPath(rectangle, 3.5, ROUND));
+    });
+
+    it('puts the side of no length at its corner', () => {
+      const [piece] = offsetPathTraced(repeatedCorner, 3.5, ROUND);
+      const [plain] = offsetPathTraced(rectangle, 3.5, ROUND);
+
+      expect(piece!.segments[1]).toBeNull();
+      expect(piece!.corners[0]).toBe(plain!.corners[0]);
+      expect(piece!.corners[1]).toBe(plain!.corners[0]);
+    });
+
+    it('a repeated vertex anywhere in a simple polygon leaves its offset identical', () => {
+      fc.assert(
+        fc.property(
+          arbRepeatedVertex,
+          // A zero offset is the path itself, repeat and all.
+          fc.double({ min: -20, max: 20, noNaN: true }).filter((d) => Math.abs(d) > 1e-3),
+          ({ points, repeated }, d) => {
+            expect(offsetPath(polyline(repeated, true), d, ROUND)).toEqual(
+              offsetPath(polyline(points, true), d, ROUND),
+            );
+          },
+        ),
+        RUNS,
+      );
+    });
   });
 
   it('keeps the corners in order along the result', () => {
