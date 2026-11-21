@@ -1100,6 +1100,7 @@ The diagnostics themselves:
 | `ANCHOR_MISSING` | error | outcome | E4 | built 4.12a for runs; through derivations 4.4b |
 | `TEXT_GLYPH_MISSING` | warning | outcome | E2 | built 4.11a for part names; labels 4.11b |
 | `CONTOUR_SELF_INTERSECTS` | error | rule | DR3 | built 4.12a |
+| `CONTOUR_HAS_NO_AREA` | error (a cut outline no wider than 1e-7 mm on average, twice its area over its length, and not crossing itself) | rule | DR3 | built QA4 — a piece scaled to nothing, or flattened onto a line |
 | `OUTSIDE_PART` | error for stitch and hardware holes, warning for lines | rule | DR2 | built 4.3a; a hardware hole by its rim, Q33; a row's holes by theirs, 4.14; a stitch hole whose iron is said by its tooth's outline, Q46 (its clearance stays from the point); `atEnds` when only an open set's end holes, Q47 |
 | `HOLE_TOO_CLOSE_TO_EDGE` | warning (under 1.5 mm, from a stitch hole's point or a hardware or row hole's rim) | rule | DR2 | built 4.3a; the rim, Q33; a stitch hole on the edge, at 0 mm, Q44; `atEnds` when only an open set's end holes, Q47 |
 | `CUT_OUT_OUTSIDE_PART` | error | rule | DR2 | built 4.3a |

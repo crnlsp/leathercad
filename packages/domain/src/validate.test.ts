@@ -218,6 +218,107 @@ describe('CONTOUR_SELF_INTERSECTS', () => {
       codes(evaluate(project([panel(200, 120, 0), drawn('stitch-line', figureOfEight, true)]))),
     ).toEqual([]);
   });
+
+  it('regression: a repeated corner is not a crossing, and the piece stitches as without it (QA4 F4)', () => {
+    // Reported as crossing itself at (100, 0), and its stitch line collapsed:
+    // OFFSET_COLLAPSED, then SOURCE_FAILED for the holes.
+    const corners = [
+      { x: 0, y: 0 },
+      { x: 100, y: 0 },
+      { x: 100, y: 70 },
+      { x: 0, y: 70 },
+    ];
+    const repeated = [corners[0]!, corners[1]!, corners[1]!, corners[2]!, corners[3]!];
+
+    expect(
+      codes(evaluate(project([drawn('cut-contour', repeated, true), stitchLine(), holeSet()]))),
+    ).toEqual(
+      codes(evaluate(project([drawn('cut-contour', corners, true), stitchLine(), holeSet()]))),
+    );
+    expect(codes(evaluate(project([drawn('cut-contour', repeated, true)])))).toEqual([]);
+  });
+});
+
+// ——— CONTOUR_HAS_NO_AREA ————————————————————————————————————————————————————
+
+describe('CONTOUR_HAS_NO_AREA', () => {
+  const at = (x: number, y: number): Vec2 => ({ x, y });
+
+  it('regression: a piece scaled to nothing is an error on its outline (QA4 F5)', () => {
+    // An SVG rectangle under scale(0) imported as 0.0 × 0.0 mm, with nothing
+    // to fix.
+    const nothing = [at(0, 0), at(0, 0), at(0, 0), at(0, 0)];
+
+    const [diagnostic, ...rest] = validate(
+      evaluate(project([drawn('cut-contour', nothing, true)])),
+    );
+
+    expect(rest).toEqual([]);
+    expect(diagnostic).toMatchObject({
+      problem: {
+        code: 'CONTOUR_HAS_NO_AREA',
+        facts: { featureId: 'cut-1', featureName: 'Outline' },
+      },
+      severity: 'error',
+      partId: 'part-0',
+      featureId: 'cut-1',
+    });
+    expect(diagnostic!.location?.kind).toBe('path');
+  });
+
+  it('regression: a rectangle flattened onto a line is an error (QA4 F5, a singular matrix)', () => {
+    const flat = [at(0, 0), at(10, 0), at(10, 0), at(0, 0)];
+
+    expect(codes(evaluate(project([drawn('cut-contour', flat, true)])))).toEqual([
+      'CONTOUR_HAS_NO_AREA',
+    ]);
+  });
+
+  it('says nothing about the narrowest strip a maker can store', () => {
+    const strip = [at(0, 0), at(100, 0), at(100, QUANTUM_MM), at(0, QUANTUM_MM)];
+
+    expect(codes(evaluate(project([drawn('cut-contour', strip, true)])))).toEqual([]);
+  });
+
+  it('leaves a figure of eight, whose lobes cancel, to CONTOUR_SELF_INTERSECTS', () => {
+    expect(codes(evaluate(project([drawn('cut-contour', figureOfEight, true)])))).toEqual([
+      'CONTOUR_SELF_INTERSECTS',
+    ]);
+  });
+
+  it('any outline with no area is an error the maker sees, wherever and however long', () => {
+    // Points along one line — a shape under a singular matrix — or all in one
+    // place, under scale(0). Going out and back over itself, the line is
+    // also where it crosses itself, and that is the problem it is given.
+    const arbFlat = fc
+      .tuple(
+        fc.array(fc.double({ min: -2000, max: 2000, noNaN: true }), {
+          minLength: 2,
+          maxLength: 8,
+        }),
+        fc.record({
+          x: fc.double({ min: -2000, max: 2000, noNaN: true }),
+          y: fc.double({ min: -2000, max: 2000, noNaN: true }),
+        }),
+        fc.double({ min: -Math.PI, max: Math.PI, noNaN: true }),
+        fc.constantFrom(0, 1),
+      )
+      .map(([along, origin, angle, reach]) =>
+        along.map((t) =>
+          at(origin.x + reach * t * Math.cos(angle), origin.y + reach * t * Math.sin(angle)),
+        ),
+      );
+
+    fc.assert(
+      fc.property(arbFlat, (points) => {
+        const found = codes(evaluate(project([drawn('cut-contour', points, true)])));
+
+        expect(found).toHaveLength(1);
+        expect(['CONTOUR_HAS_NO_AREA', 'CONTOUR_SELF_INTERSECTS']).toContain(found[0]);
+      }),
+      { numRuns: 300 },
+    );
+  });
 });
 
 // ——— Stitching —————————————————————————————————————————————————————————————

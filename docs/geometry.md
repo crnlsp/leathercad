@@ -572,6 +572,13 @@ same, crossing for crossing and in the same order, and a traced outline meets ea
 the few beside it. A path with a coordinate that is not finite tests every pair, as before, and so
 does one of fewer than `EVERY_PAIR_BELOW` (20) segments, where that is cheaper than the sweep.
 
+A side of no length — `isDegenerate`: no longer than `EPS_LENGTH`, as a repeated vertex in an
+imported polygon is — joins its neighbours rather than parting them. `selfIntersections` counts
+neighbours among the segments that have a length and never tests one that has none, so a repeated
+vertex is not a crossing, and Tier 1 offsetting drops it as it drops a consumed arc, giving the
+offset the path without it has, with the side's corner where its neighbours meet (QA4). Both keep
+the input's segment indices, which anchors address; nothing is removed from what is stored.
+
 `intersectSegments(a, b)` and `intersectSegments(b, a)` must agree. Line/line is solved in one
 canonical argument order so they are the same arithmetic, and two collinear segments whose ends are
 less than `EPS_POINT` apart touch at one point — a gap measured in millimetres, never as a parameter,
