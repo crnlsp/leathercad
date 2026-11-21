@@ -182,7 +182,20 @@ describe('rectangle tool', () => {
     // Live dimensions matter more than the rubber band in a millimetre tool.
     const label = overlay.find((item) => item.kind === 'overlay-text');
     expect(label).toBeDefined();
-    if (label?.kind === 'overlay-text') expect(label.text).toBe('40.0 × 25.0 mm');
+    if (label?.kind === 'overlay-text') expect(label.text).toBe('40 × 25 mm');
+  });
+
+  it('spells a size while dragging as Properties and the chips do: 83.33 × 60 mm (U16)', () => {
+    const { ctx } = harness();
+    const tool = createRectangleTool(nextId);
+
+    tool.onPointerDown?.(ctx, pointer({ x: 0, y: 0 }));
+    tool.onPointerMove?.(ctx, pointer({ x: 250 / 3, y: 60 }));
+
+    const label = (tool.buildOverlay?.(ctx).items ?? []).find(
+      (item) => item.kind === 'overlay-text',
+    );
+    expect(label?.kind === 'overlay-text' ? label.text : null).toBe('83.33 × 60 mm');
   });
 
   it('Escape abandons the drag and writes nothing', () => {

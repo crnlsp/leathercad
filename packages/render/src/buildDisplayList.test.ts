@@ -1341,3 +1341,104 @@ describe('leather-specific treatment (F.7)', () => {
     });
   });
 });
+describe('captions of stacked pieces (U17)', () => {
+  /** A piece called `name`: a `width` × `height` outline from `origin`. */
+  const piece = (
+    name: string,
+    origin: { x: number; y: number },
+    width: number,
+    height: number,
+  ): Part => ({
+    id: `part-${name}`,
+    name,
+    quantity: 1,
+    features: [
+      {
+        ...outline,
+        id: `cut-${name}`,
+        source: { kind: 'path', path: Shapes.rect(origin, width, height) },
+      },
+    ],
+  });
+  const project = (parts: Part[]): ResolvedProject =>
+    evaluate({ id: 'p', name: 'Test', settings: DEFAULT_SETTINGS, parts });
+  const named = (part: ResolvedPart): Caption => ({
+    name: part.part.name,
+    detail: `${part.part.name} holes`,
+  });
+  /** Each caption's reach, bottom to top, in mm: its line boxes, 3.5 px under a baseline and 12.5 px over it. */
+  const captionSpans = (list: { readonly items: readonly DisplayItem[] }, zoom: number) => {
+    const spans = new Map<string, { bottom: number; top: number }>();
+    for (const text of texts(list)) {
+      const name = text.text.replace(/ holes$/, '');
+      const bottom = text.at.y - 3.5 / zoom;
+      const top = text.at.y + 12.5 / zoom;
+      const known = spans.get(name);
+      spans.set(name, {
+        bottom: Math.min(bottom, known?.bottom ?? bottom),
+        top: Math.max(top, known?.top ?? top),
+      });
+    }
+    return [...spans.values()];
+  };
+
+  it('writes a pocket’s caption above its back panel’s, not over the panel', () => {
+    const zoom = 4;
+    const list = buildDisplayList(
+      project([piece('Back', { x: 0, y: 0 }, 100, 60), piece('Pocket', { x: 0, y: 0 }, 100, 40)]),
+      { caption: named, pxPerMm: zoom },
+    );
+    const [back, , pocket] = texts(list);
+    expect(back!.text).toBe('Back');
+    expect(pocket!.text).toBe('Pocket');
+    // The panel's caption sits where it always did, above its top at y = 60;
+    // the pocket's two lines and a 4 px gap above that.
+    expect((back!.at.y - 60) * zoom).toBeCloseTo(23.5, 9);
+    expect((pocket!.at.y - back!.at.y) * zoom).toBeCloseTo(36, 9);
+  });
+
+  it('keeps every caption of pieces laid on one another apart, and above them all, at any zoom', () => {
+    const arbPocket = fc.record({
+      x: fc.double({ min: 0, max: 99, noNaN: true }),
+      y: fc.double({ min: 0, max: 59, noNaN: true }),
+      width: fc.double({ min: 1, max: 80, noNaN: true }),
+      height: fc.double({ min: 1, max: 80, noNaN: true }),
+    });
+    fc.assert(
+      fc.property(
+        fc.array(arbPocket, { minLength: 1, maxLength: 5 }),
+        fc.double({ min: 1.6, max: 60, noNaN: true }),
+        (pockets, zoom) => {
+          const parts = [
+            piece('Back', { x: 0, y: 0 }, 100, 60),
+            ...pockets.map((at, index) =>
+              piece(`Pocket ${String(index)}`, at, at.width, at.height),
+            ),
+          ];
+          const highest = Math.max(60, ...pockets.map((at) => at.y + at.height));
+          const spans = captionSpans(
+            buildDisplayList(project(parts), { caption: named, pxPerMm: zoom }),
+            zoom,
+          ).sort((a, b) => a.bottom - b.bottom);
+          expect(spans).toHaveLength(parts.length);
+          expect(spans[0]!.bottom).toBeGreaterThan(highest);
+          for (let index = 1; index < spans.length; index++) {
+            expect(spans[index]!.bottom).toBeGreaterThan(spans[index - 1]!.top);
+          }
+        },
+      ),
+    );
+  });
+
+  it('leaves the captions of pieces lying apart where they were, above each piece', () => {
+    const zoom = 4;
+    const [left, , right] = texts(
+      buildDisplayList(
+        project([piece('Left', { x: 0, y: 0 }, 40, 60), piece('Right', { x: 50, y: 0 }, 40, 30)]),
+        { caption: named, pxPerMm: zoom },
+      ),
+    );
+    expect((left!.at.y - 60) * zoom).toBeCloseTo(23.5, 9);
+    expect((right!.at.y - 30) * zoom).toBeCloseTo(23.5, 9);
+  });
+});

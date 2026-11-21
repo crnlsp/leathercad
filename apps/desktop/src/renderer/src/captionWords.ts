@@ -6,7 +6,7 @@ import type { I18n } from '../../shared/i18n.js';
 
 /**
  * What a piece is called on the board (R-01): "Card pocket ×2" over "52 holes
- * · 3.85 mm" — no ×1 for a piece cut once, and every pitch it is stitched at.
+ * · pitch 3.85 mm" — no ×1 for a piece cut once, and every pitch it is stitched at.
  *
  * The interface's words, so the app's (ADR 0018); `render` counts the holes
  * and places the lines. Paper keeps its own caption, "Card pocket — cut 2".

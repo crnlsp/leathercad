@@ -1,6 +1,7 @@
 import {
   COORDINATE_LIMIT_MM,
   approxEq,
+  formatEditable,
   err,
   ok,
   parseLength,
@@ -12,7 +13,7 @@ import {
 } from '@leathercad/core';
 
 import type { Translate } from '../../shared/i18n.js';
-import { chipNumber, type Refusal, type RefusalWords } from './outlineSizes.js';
+import { type Refusal, type RefusalWords } from './outlineSizes.js';
 
 /**
  * What a field's text comes to. A field in millimetres takes a size as a maker
@@ -61,7 +62,11 @@ export function farthestMove(low: number, high: number, deltaMm: number): number
 /** A place or a move past the limit, offering what fits: "… Enter uses 99,900.0." */
 export function beyondLimitRefusal(use: number, { t, enter }: RefusalWords): Refusal {
   return {
-    reason: t('arrange.beyondLimit', { limit: COORDINATE_LIMIT_MM, size: chipNumber(use), enter }),
+    reason: t('arrange.beyondLimit', {
+      limit: COORDINATE_LIMIT_MM,
+      size: formatEditable(use, 2),
+      enter,
+    }),
     use,
   };
 }

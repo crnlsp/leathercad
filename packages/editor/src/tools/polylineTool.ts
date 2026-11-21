@@ -1,4 +1,4 @@
-import { EPS_POINT, approxZero, formatAngle, formatMm } from '@leathercad/core';
+import { EPS_POINT, approxZero, formatAngle, formatEditable } from '@leathercad/core';
 import {
   PathOps,
   SegmentOps,
@@ -323,12 +323,12 @@ function polylineLike(
         const bend = rubber[0];
         reading =
           bend?.kind === 'arc'
-            ? `R ${formatMm(bend.radius, 1)}`
-            : formatMm(dist(last, pending.end), 1);
+            ? `R ${formatEditable(bend.radius, 2)} mm`
+            : `${formatEditable(dist(last, pending.end), 2)} mm`;
       } else {
         rubber = [SegmentOps.line(last, cursor)];
         const angle = (Math.atan2(cursor.y - last.y, cursor.x - last.x) * 180) / Math.PI;
-        const run = `${formatMm(dist(last, cursor), 1)}  ${formatAngle(angle)}`;
+        const run = `${formatEditable(dist(last, cursor), 2)} mm  ${formatAngle(angle)}`;
         // Placing an arc's end looks like placing a point, so it says so.
         reading = arcNext ? `Arc to · ${run}` : run;
       }

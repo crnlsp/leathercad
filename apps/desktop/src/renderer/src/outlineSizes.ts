@@ -2,7 +2,6 @@ import {
   approxEq,
   approxLte,
   formatEditable,
-  formatNumber,
   quantiseAtLeast,
   quantiseAtMost,
 } from '@leathercad/core';
@@ -166,7 +165,7 @@ export interface RefusalWords {
 
 /**
  * A corner the rectangle would draw smaller than typed (R-12): "Corner is
- * larger than half the height (30.0). Enter uses 30.0." Null when it fits.
+ * larger than half the height (30). Enter uses 30." Null when it fits.
  * The room is `cornerRoom`'s, the very sum `roundedRect` shrinks by, so what
  * is refused is exactly what would never be drawn; the radius offered is the
  * largest stored value within it.
@@ -178,7 +177,7 @@ export function cornerRefusal(
 ): Refusal | null {
   if (approxLte(radius, room.radiusMm)) return null;
   const use = quantiseAtMost(room.radiusMm);
-  const size = chipNumber(use);
+  const size = formatEditable(use, 2);
   const reason = room.shared
     ? room.side === 'height'
       ? t('chips.tooLarge.halfHeight', { size, enter })
@@ -191,7 +190,7 @@ export function cornerRefusal(
 
 /**
  * A width or height the corners would be drawn smaller in (U.14): "Width is
- * less than its corners need (23.0). Enter uses 23.0." Null when they fit.
+ * less than its corners need (23). Enter uses 23." Null when they fit.
  * The need is `cornerNeeds`'s — the sums `fittedRadii` shrinks by — so what is
  * refused is exactly a size in which a stored radius would not be the one
  * drawn; the size offered is the least stored value the corners fit in. Only
@@ -208,7 +207,7 @@ export function sizeRefusal(
   const need = side === 'width' ? needs.widthMm : needs.heightMm;
   if (approxLte(need, size)) return null;
   const use = quantiseAtLeast(need);
-  const shown = chipNumber(use);
+  const shown = formatEditable(use, 2);
   const reason =
     side === 'width'
       ? t('chips.tooSmall.width', { size: shown, enter })
@@ -237,14 +236,4 @@ export function chipRefusal(
     case 'margin':
       return null;
   }
-}
-
-/**
- * A size as a chip shows it at rest, and as a refusal names it: to the tenth,
- * as the board's dimensions read — `95.0`, `r 4.0` — or to the hundredth when
- * that is what was typed, so 95.25 never reads as 95.3.
- */
-export function chipNumber(value: number): string {
-  const typed = formatEditable(value, 2);
-  return typed.includes('.') ? typed : formatNumber(value, 1);
 }
