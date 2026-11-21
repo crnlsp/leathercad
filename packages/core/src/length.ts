@@ -1,4 +1,5 @@
 import { MINUS } from './format.js';
+import { COORDINATE_LIMIT_MM } from './quantise.js';
 import { err, ok, type Result } from './result.js';
 
 /** An inch, by definition (1959): exactly 25.4 mm. */
@@ -17,13 +18,16 @@ export const MM_PER_INCH = 25.4;
  *   already has one, a length times a length, a division by a length.
  * - `notFinite`: it comes to no number at all: a division by zero, or digits
  *   past what a number holds.
+ * - `beyondLimit`: a length past `COORDINATE_LIMIT_MM` either way, which no
+ *   project can hold.
  */
 export type LengthError =
   | { readonly kind: 'syntax' }
   | { readonly kind: 'unit'; readonly unit: string }
   | { readonly kind: 'mixed' }
   | { readonly kind: 'notALength' }
-  | { readonly kind: 'notFinite' };
+  | { readonly kind: 'notFinite' }
+  | { readonly kind: 'beyondLimit' };
 
 const UNITS: Readonly<Record<string, number>> = {
   mm: 1,
@@ -56,16 +60,20 @@ class Refusal {
  * - A unit — mm, cm, in or `"`, in any case — applies to everything multiplied
  *   or divided before it in its term, so `1/2in` is half an inch and `2*3.5mm`
  *   is 7 mm; what follows it scales the length (`10cm/2`).
+ * - A number may have an exponent, `1e3` or `2.5E−2`: an `e` with no digits
+ *   after it is a word, and so not a unit.
  * - A number with no unit is millimetres — but a sum gives every number a
  *   unit or none (`mixed`), and a count or a scale multiplies or divides.
  *
  * Not quantised: the field that stores it does that (CLAUDE.md invariant 8).
+ * Bounded: what it reads is a length a project can hold.
  */
 export function parseLength(text: string): Result<number, LengthError> {
   try {
     const parser = new Parser(text);
     const { mm } = parser.whole();
-    return Number.isFinite(mm) ? ok(mm) : err({ kind: 'notFinite' });
+    if (!Number.isFinite(mm)) return err({ kind: 'notFinite' });
+    return Math.abs(mm) > COORDINATE_LIMIT_MM ? err({ kind: 'beyondLimit' }) : ok(mm);
   } catch (thrown) {
     if (thrown instanceof Refusal) return err(thrown.error);
     throw thrown;
@@ -77,7 +85,7 @@ class Parser {
   private depth = 0;
   // Sticky, and the parser's own: a module-wide one would carry its
   // `lastIndex` from one call to the next.
-  private readonly number = /\d+(?:[.,]\d*)?|[.,]\d+/y;
+  private readonly number = /(?:\d+(?:[.,]\d*)?|[.,]\d+)(?:e[-+\u2212]?\d+)?/iy;
   private readonly unitWord = /[a-z]+|"/iy;
 
   constructor(private readonly text: string) {}
@@ -153,7 +161,10 @@ class Parser {
     const match = this.number.exec(this.text);
     if (match === null) throw new Refusal({ kind: 'syntax' });
     this.at = this.number.lastIndex;
-    return { mm: Number.parseFloat(match[0].replace(',', '.')), length: false };
+    return {
+      mm: Number.parseFloat(match[0].replace(',', '.').replace(MINUS, '-')),
+      length: false,
+    };
   }
 
   /** The next symbol after any space, with either minus read as `-`. */

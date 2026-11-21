@@ -171,7 +171,7 @@ Two QA passes over the release candidate's code found 30 issues, three of them l
 ([findings](superpowers/specs/2026-11-21-1.7-qa-findings.md)). Wave 1 is QA1, QA2, QA4 and QA5;
 then QA3 (after QA1), QA6–QA8; then QA9–QA11. U9, U11 and U14 wait on the maintainer's decision.
 
-- ☐ **QA1 Typed values within limits** — one bound from the file format and a finite check in every number field, scientific notation read, control characters kept out of names (F1, F2, F6, F8, F9).
+- ✅ **QA1 Typed values within limits** — one bound from the file format and a finite check in every number field, scientific notation read, control characters kept out of names (F1, F2, F6, F8, F9).
 - ☐ **QA2 Never lose work when something fails** — the window survives a failing panel, a crash neither skips the unsaved question nor deletes the recovery copy, and Save refuses to write a file it could not reopen (F1, F2).
 - ☐ **QA3 SVG import refuses what it cannot take** — a preview over the resource limit and sizes beyond the format refused in the dialog, no stale selection after a refused import (F2, F3, F7).
 - ☐ **QA4 Degenerate outlines reported truly** — a repeated vertex is not a self-crossing; a zero-size piece is a problem (F4, F5).

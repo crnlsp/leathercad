@@ -121,6 +121,8 @@ describe('reading an SVG for the import preview (9.20b)', () => {
   it('names a file by its name alone, on any platform', () => {
     expect(svgName('/home/maker/Card Holder.SVG')).toBe('Card Holder');
     expect(svgName('C:\\patterns\\wallet.svg')).toBe('wallet');
+    // A file may be named anything; a piece is not (QA F9).
+    expect(svgName('/tmp/Belt\u202egvs.svg')).toBe('Beltgvs');
   });
 
   it('says the import for Undo', () => {

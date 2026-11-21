@@ -1,4 +1,4 @@
-import { approxZero } from '@leathercad/core';
+import { COORDINATE_LIMIT_MM, approxZero } from '@leathercad/core';
 import { useId, useMemo, useState } from 'react';
 import {
   arrangeFeatures,
@@ -13,9 +13,11 @@ import {
 } from '@leathercad/document';
 import type { Project } from '@leathercad/domain';
 
+import { beyondLimitRefusal, farthestMove } from './fieldText.js';
 import { useI18n } from './i18n.js';
 import { ARRANGE_ICON } from './icons/arrange.js';
 import { Icon } from './icons/Icon.js';
+import { useKeysInSentences } from './keyCaps.js';
 import { NumberField } from './NumberField.js';
 import { describeProblem } from './problemText.js';
 import { Tooltip } from './Tooltip.js';
@@ -133,7 +135,9 @@ export function PositionFields({
   ids: readonly string[];
 }) {
   const { t } = useI18n();
+  const keys = useKeysInSentences();
   const reasonId = useId();
+  const farReasonId = useId();
   // What is typed to move by is the field's own until Move uses it, and stays
   // there after, so a second Move goes as far again.
   const [by, setBy] = useState({ x: 0, y: 0 });
@@ -141,6 +145,21 @@ export function PositionFields({
   if (box === null) return null;
   const refusal = moveRefusal(project, ids);
   const describedBy = refusal === null ? undefined : reasonId;
+  const words = { t, enter: keys['enter'] ?? '' };
+  const span = { x: [box.minX, box.maxX], y: [box.minY, box.maxY] } as const;
+  /** A move along `axis` that stays within what a project holds, or what does (QA F2). */
+  const farthest = (axis: ArrangeAxis, deltaMm: number): number | null =>
+    farthestMove(span[axis][0], span[axis][1], deltaMm);
+  const refuseMove = (axis: ArrangeAxis) => (deltaMm: number) => {
+    const use = farthest(axis, deltaMm);
+    return use === null ? null : beyondLimitRefusal(use, words);
+  };
+  const refusePlace = (axis: ArrangeAxis) => (mm: number) => {
+    const use = farthest(axis, mm - span[axis][0]);
+    return use === null ? null : beyondLimitRefusal(span[axis][0] + use, words);
+  };
+  // A second Move goes as far again, which may be too far.
+  const tooFar = farthest('x', by.x) !== null || farthest('y', by.y) !== null;
   return (
     <div className="position-fields" data-testid="position-fields">
       {refusal !== null && (
@@ -154,11 +173,13 @@ export function PositionFields({
           <NumberField
             label={t('arrange.left')}
             value={box.minX}
+            refuse={refusePlace('x')}
             onCommit={(x) => store.dispatch(placeFeatures(ids, 'x', x))}
           />
           <NumberField
             label={t('arrange.bottom')}
             value={box.minY}
+            refuse={refusePlace('y')}
             onCommit={(y) => store.dispatch(placeFeatures(ids, 'y', y))}
           />
         </div>
@@ -169,18 +190,30 @@ export function PositionFields({
           <NumberField
             label={t('arrange.right')}
             value={by.x}
+            refuse={refuseMove('x')}
             onCommit={(x) => setBy({ ...by, x })}
           />
-          <NumberField label={t('arrange.up')} value={by.y} onCommit={(y) => setBy({ ...by, y })} />
+          <NumberField
+            label={t('arrange.up')}
+            value={by.y}
+            refuse={refuseMove('y')}
+            onCommit={(y) => setBy({ ...by, y })}
+          />
         </div>
         <button
           className="tool"
           data-testid="move-by"
-          disabled={approxZero(by.x) && approxZero(by.y)}
+          disabled={(approxZero(by.x) && approxZero(by.y)) || tooFar}
+          aria-describedby={tooFar ? farReasonId : undefined}
           onClick={() => store.dispatch(moveFeaturesBy(ids, by))}
         >
           {t('arrange.move')}
         </button>
+        {tooFar && (
+          <p id={farReasonId} className="reason" data-testid="move-by-reason">
+            {t('arrange.moveBeyondLimit', { limit: COORDINATE_LIMIT_MM })}
+          </p>
+        )}
       </fieldset>
     </div>
   );

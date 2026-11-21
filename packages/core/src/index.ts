@@ -39,7 +39,13 @@ export {
   approxZero,
 } from './epsilon.js';
 
-export { QUANTUM_MM, quantise, quantiseAtLeast, quantiseAtMost } from './quantise.js';
+export {
+  COORDINATE_LIMIT_MM,
+  QUANTUM_MM,
+  quantise,
+  quantiseAtLeast,
+  quantiseAtMost,
+} from './quantise.js';
 
 export {
   MINUS,
@@ -53,6 +59,8 @@ export {
 export { MM_PER_INCH, parseLength, type LengthError } from './length.js';
 
 export { assertFinite, invariant } from './guard.js';
+
+export { cleanName } from './name.js';
 
 export { CROCKFORD_ALPHABET, createIdFactory, type IdSource, type Ulid } from './id.js';
 

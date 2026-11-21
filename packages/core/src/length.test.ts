@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { EPS_LENGTH, approxEq } from './epsilon.js';
 import { formatEditable, formatNumber, parseNumber } from './format.js';
 import { MM_PER_INCH, parseLength, type LengthError } from './length.js';
+import { COORDINATE_LIMIT_MM } from './quantise.js';
 import type { Result } from './result.js';
 
 const mm = (text: string): number => {
@@ -14,8 +15,9 @@ const mm = (text: string): number => {
 const failure = (result: Result<number, LengthError>): LengthError | null =>
   result.ok ? null : result.error;
 
-const inRange = fc.double({ min: -100_000, max: 100_000, noNaN: true });
-const size = fc.double({ min: 0, max: 10_000, noNaN: true });
+const inRange = fc.double({ min: -COORDINATE_LIMIT_MM, max: COORDINATE_LIMIT_MM, noNaN: true });
+/** Small enough that any sum of them below, in inches, stays a length a project holds. */
+const size = fc.double({ min: 0, max: 300, noNaN: true });
 const precision = fc.integer({ min: 0, max: 4 });
 const named = fc.constantFrom('mm', 'cm', 'in', '"', ' mm', ' in', 'IN', 'Cm');
 const unit = fc.oneof(fc.constant(''), named);
@@ -86,6 +88,19 @@ describe('parseLength — what a maker types', () => {
     expect(mm('--5')).toBe(5);
   });
 
+  it('reads scientific notation, with or without a unit (QA F8)', () => {
+    expect(mm('1e3')).toBe(1000);
+    expect(mm('1e-9')).toBe(1e-9);
+    expect(mm('2.5E2')).toBe(250);
+    expect(mm('1,5e2')).toBe(150);
+    expect(mm('1e+2')).toBe(100);
+    expect(mm('1e−2')).toBe(0.01);
+    expect(mm('1e3cm')).toBe(10_000);
+    expect(mm('2e1 in')).toBe(20 * 25.4);
+    expect(mm('1e2 - 5e1')).toBe(50);
+    expect(mm('-1e3')).toBe(-1000);
+  });
+
   it('knows an inch as 25.4 mm exactly', () => {
     expect(MM_PER_INCH).toBe(25.4);
     expect(mm('1in')).toBe(25.4);
@@ -139,6 +154,28 @@ describe('parseLength — what it refuses, and why', () => {
     expect(failure(parseLength('9'.repeat(400)))).toEqual({ kind: 'notFinite' });
   });
 
+  it('refuses a length past what a project holds, either way (QA F1, F2)', () => {
+    for (const text of [
+      '100000.1',
+      '-100000.1',
+      '1e6',
+      '1e10',
+      '1' + '0'.repeat(305),
+      '1e305',
+      '4000in',
+      '10001cm',
+    ])
+      expect(failure(parseLength(text)), text).toEqual({ kind: 'beyondLimit' });
+    expect(mm(String(COORDINATE_LIMIT_MM))).toBe(COORDINATE_LIMIT_MM);
+    expect(mm(`-${String(COORDINATE_LIMIT_MM)}`)).toBe(-COORDINATE_LIMIT_MM);
+    expect(mm('1e5')).toBe(COORDINATE_LIMIT_MM);
+  });
+
+  it('names an exponent with no digits as a unit it does not know', () => {
+    expect(failure(parseLength('1e'))).toEqual({ kind: 'unit', unit: 'e' });
+    expect(failure(parseLength('1e-'))).toEqual({ kind: 'unit', unit: 'e' });
+  });
+
   it('refuses parentheses nested past any sum a person types, rather than overflowing the stack', () => {
     expect(failure(parseLength(`${'('.repeat(100_000)}1${')'.repeat(100_000)}`))).toEqual({
       kind: 'syntax',
@@ -173,7 +210,9 @@ describe('parseLength — properties', () => {
     fc.assert(
       fc.property(fc.oneof(spelt, fc.string()), (text) => {
         const plain = parseNumber(text);
-        return !Number.isFinite(plain) || mm(text) === plain;
+        return (
+          !Number.isFinite(plain) || Math.abs(plain) > COORDINATE_LIMIT_MM || mm(text) === plain
+        );
       }),
     );
   });
@@ -213,12 +252,34 @@ describe('parseLength — properties', () => {
     );
   });
 
-  it('never throws, whatever is typed', () => {
-    const typed = fc.string({ unit: fc.constantFrom(...'0123456789.,+-−*/() incm"x'.split('')) });
+  it('reads scientific notation as the number it spells', () => {
+    const spelt = fc
+      .tuple(
+        fc.double({ min: -9.99, max: 9.99, noNaN: true }),
+        fc.integer({ min: 0, max: 6 }),
+        fc.integer({ min: -30, max: 4 }),
+        fc.constantFrom('e', 'E'),
+      )
+      .map(([m, p, k, e]) => `${m.toFixed(p)}${e}${String(k)}`);
+    fc.assert(fc.property(spelt, (text) => mm(text) === Number.parseFloat(text)));
+  });
+
+  it('agrees with toExponential on every length it holds', () => {
+    fc.assert(
+      fc.property(inRange, fc.integer({ min: 0, max: 16 }), (v, p) =>
+        approxEq(mm(v.toExponential(p)), Number.parseFloat(v.toExponential(p)), EPS_LENGTH),
+      ),
+    );
+  });
+
+  it('never throws, whatever is typed, and holds every length it reads to the limit', () => {
+    const typed = fc.string({ unit: fc.constantFrom(...'0123456789.,+-−*/() incmeE"x'.split('')) });
     fc.assert(
       fc.property(fc.oneof(typed, fc.string()), (text) => {
         const result = parseLength(text);
-        return result.ok ? Number.isFinite(result.value) : typeof result.error.kind === 'string';
+        return result.ok
+          ? Number.isFinite(result.value) && Math.abs(result.value) <= COORDINATE_LIMIT_MM
+          : typeof result.error.kind === 'string';
       }),
     );
   });
