@@ -14,7 +14,6 @@ import { describe, expect, it } from 'vitest';
 import { createI18n } from '../../shared/i18n.js';
 import {
   chipCommand,
-  chipNumber,
   chipRefusal,
   chipSubject,
   chipsOf,
@@ -136,7 +135,7 @@ describe('chipRefusal', () => {
   it('refuses a corner larger than half the height, offering the half', () => {
     const subject = subjectOf(store());
     expect(chipRefusal(subject, 'corner', 48, words)).toEqual({
-      reason: 'Corner radius exceeds half the height (30.0). Enter uses 30.0.',
+      reason: 'Corner radius exceeds half the height (30). Enter uses 30.',
       use: 30,
     });
     expect(chipRefusal(subject, 'corner', 30, words)).toBeNull();
@@ -182,11 +181,11 @@ describe('sizeRefusal', () => {
     // The 80 × 60 panel's 4 mm corners need 8 of each.
     const subject = subjectOf(store());
     expect(chipRefusal(subject, 'width', 7, words)).toEqual({
-      reason: 'Width is less than its corners need (8.0). Enter uses 8.0.',
+      reason: 'Width is less than its corners need (8). Enter uses 8.',
       use: 8,
     });
     expect(chipRefusal(subject, 'height', 7.5, words)).toEqual({
-      reason: 'Height is less than its corners need (8.0). Enter uses 8.0.',
+      reason: 'Height is less than its corners need (8). Enter uses 8.',
       use: 8,
     });
     expect(chipRefusal(subject, 'width', 8, words)).toBeNull();
@@ -243,7 +242,7 @@ describe('cornerRefusal', () => {
       'bottomRight',
     ]);
     expect(cornerRefusal(room, 56, words)?.reason).toBe(
-      'Corner radius exceeds the space available along the height (55.0). Enter uses 55.0.',
+      'Corner radius exceeds the space available along the height (55). Enter uses 55.',
     );
     expect(cornerRefusal(room, 55, words)).toBeNull();
   });
@@ -255,16 +254,7 @@ describe('cornerRefusal', () => {
       'bottomLeft',
       'bottomRight',
     ]);
-    expect(cornerRefusal(room, 31, { t, enter: '↩' })?.reason).toContain('↩ uses 30.0');
-  });
-});
-
-describe('chipNumber', () => {
-  it('shows a size to the tenth, or to the hundredth when it was typed so', () => {
-    expect(chipNumber(95)).toBe('95.0');
-    expect(chipNumber(3.5)).toBe('3.5');
-    expect(chipNumber(95.25)).toBe('95.25');
-    expect(chipNumber(3.175)).toBe('3.18');
+    expect(cornerRefusal(room, 31, { t, enter: '↩' })?.reason).toContain('↩ uses 30');
   });
 });
 

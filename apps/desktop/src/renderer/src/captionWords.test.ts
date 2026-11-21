@@ -30,17 +30,17 @@ const bare = (part: Partial<Part>): ResolvedPart => ({
 });
 
 describe('captionOf', () => {
-  it('reads "Card pocket ×2" over "52 holes · 3.85 mm"', () => {
+  it('reads "Card pocket ×2" over "52 holes · pitch 3.85 mm"', () => {
     expect(captionOf(english, samplePart('Card pocket'))).toEqual({
       name: 'Card pocket ×2',
-      detail: '52 holes · 3.85 mm',
+      detail: '52 holes · pitch 3.85 mm',
     });
   });
 
   it('says no ×1 for a piece cut once', () => {
     expect(captionOf(english, samplePart('Outer'))).toEqual({
       name: 'Outer',
-      detail: '146 holes · 3.85 mm',
+      detail: '146 holes · pitch 3.85 mm',
     });
   });
 
@@ -67,9 +67,9 @@ describe('captionOf', () => {
       } as Feature,
     };
 
-    expect(captionOf(english, { ...outer, features: [one] }).detail).toBe('1 hole · 3.85 mm');
+    expect(captionOf(english, { ...outer, features: [one] }).detail).toBe('1 hole · pitch 3.85 mm');
     expect(captionOf(english, { ...outer, features: [one, atThree] }).detail).toBe(
-      '1 hole · 3.85 mm, 1 hole · 3.00 mm',
+      '1 hole · pitch 3.85 mm, 1 hole · pitch 3.00 mm',
     );
   });
 });

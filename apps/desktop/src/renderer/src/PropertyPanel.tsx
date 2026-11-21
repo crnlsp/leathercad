@@ -1,4 +1,4 @@
-import { formatMm, formatNumber } from '@leathercad/core';
+import { formatEditable, formatMm, formatNumber } from '@leathercad/core';
 import {
   type DocumentStore,
   addHoleRow,
@@ -159,7 +159,7 @@ export function PropertyPanel({
             ).map(([name, label, value]) => (
               <div className="readout" key={name}>
                 <span>{label}</span>
-                <b data-testid={`drawing-${name}`}>{formatMm(value, 1)}</b>
+                <b data-testid={`drawing-${name}`}>{formatEditable(value, 2)} mm</b>
               </div>
             ))}
           </section>

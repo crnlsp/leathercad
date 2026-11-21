@@ -282,7 +282,7 @@ describe('polyline tool', () => {
     tool.onPointerMove?.(ctx, pointer({ x: 10, y: 0 }));
 
     const text = tool.buildOverlay?.(ctx).items.find((i) => i.kind === 'overlay-text');
-    expect(text?.kind === 'overlay-text' ? text.text : '').toContain('10.0 mm');
+    expect(text?.kind === 'overlay-text' ? text.text : '').toContain('10 mm');
   });
 });
 
@@ -539,7 +539,7 @@ describe('arc segments (3.9a)', () => {
     key(tool, ctx, 'a');
     tool.onPointerMove?.(ctx, pointer({ x: 30, y: 0 }));
     const text = tool.buildOverlay?.(ctx).items.find((i) => i.kind === 'overlay-text');
-    expect(text?.kind === 'overlay-text' ? text.text : '').toMatch(/^Arc to · 30\.0 mm/);
+    expect(text?.kind === 'overlay-text' ? text.text : '').toMatch(/^Arc to · 30 mm/);
   });
 
   it('starts every run straight', () => {

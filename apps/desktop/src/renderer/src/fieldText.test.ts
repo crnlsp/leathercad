@@ -91,7 +91,7 @@ describe('farthestMove', () => {
   it('says what it offers, and how to take it', () => {
     expect(beyondLimitRefusal(99_850, { t: english, enter: 'Enter' })).toEqual({
       reason:
-        'That takes the selection past what a project holds, 100,000 mm either way. Enter uses 99850.0.',
+        'That takes the selection past what a project holds, 100,000 mm either way. Enter uses 99850.',
       use: 99_850,
     });
   });

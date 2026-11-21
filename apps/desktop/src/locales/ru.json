@@ -1014,10 +1014,10 @@
   },
   "caption": {
     "cut": "{{name}} ×{{quantity}}",
-    "holes_one": "{{count}} отверстие · {{pitch}}",
-    "holes_few": "{{count}} отверстия · {{pitch}}",
-    "holes_many": "{{count}} отверстий · {{pitch}}",
-    "holes_other": "{{count}} отверстия · {{pitch}}",
+    "holes_one": "{{count}} отверстие · номинальный шаг {{pitch}}",
+    "holes_few": "{{count}} отверстия · номинальный шаг {{pitch}}",
+    "holes_many": "{{count}} отверстий · номинальный шаг {{pitch}}",
+    "holes_other": "{{count}} отверстия · номинальный шаг {{pitch}}",
     "unnamed": "Деталь"
   },
   "spacing": {

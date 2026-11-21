@@ -978,9 +978,9 @@
   },
   "caption": {
     "cut": "{{name}} ×{{quantity}}",
-    "holes_one": "{{count}} trou · {{pitch}}",
-    "holes_other": "{{count}} trous · {{pitch}}",
-    "holes_many": "{{count}} de trous · {{pitch}}",
+    "holes_one": "{{count}} trou · pas nominal {{pitch}}",
+    "holes_other": "{{count}} trous · pas nominal {{pitch}}",
+    "holes_many": "{{count}} de trous · pas nominal {{pitch}}",
     "unnamed": "Pièce"
   },
   "spacing": {

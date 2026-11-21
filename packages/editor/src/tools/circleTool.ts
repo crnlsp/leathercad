@@ -1,4 +1,4 @@
-import { formatMm } from '@leathercad/core';
+import { formatEditable } from '@leathercad/core';
 import { circleShape } from '@leathercad/document';
 import { Shapes, type Vec2 } from '@leathercad/geometry';
 import { CANVAS, pathItem, textItem, type DisplayList } from '@leathercad/render';
@@ -118,7 +118,7 @@ export function createCircleTool(nextId: () => string): Tool {
           textItem(
             'annotation',
             { x: centreMm.x, y: centreMm.y - radius - 3 },
-            `⌀ ${formatMm(radius * 2, 1)}`,
+            `⌀ ${formatEditable(radius * 2, 2)} mm`,
             12,
             CANVAS.overlay.preview,
           ),
