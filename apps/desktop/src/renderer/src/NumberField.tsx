@@ -1,30 +1,11 @@
-import {
-  err,
-  formatEditable,
-  ok,
-  parseLength,
-  parseNumber,
-  quantise,
-  type LengthError,
-  type Result,
-} from '@leathercad/core';
+import { COORDINATE_LIMIT_MM, formatEditable, quantise, type LengthError } from '@leathercad/core';
 import { useId, useRef, useState } from 'react';
 
+import { fieldErrorText, readField } from './fieldText.js';
 import { intoMenu } from './fieldMenu.js';
 import { useI18n } from './i18n.js';
 import { SeverityGlyph } from './SeverityGlyph.js';
 import type { Refusal } from './outlineSizes.js';
-
-/**
- * What a field's text comes to. A field in millimetres takes a size as a maker
- * types it — `95-2*3.5`, `3.75in`, `9,5 cm` (U.15) — so the same text means the
- * same thing in every one; any other field (a count, an angle) a plain number.
- */
-function read(text: string, inMm: boolean): Result<number, LengthError> {
-  if (inMm) return parseLength(text);
-  const value = parseNumber(text);
-  return Number.isFinite(value) ? ok(value) : err({ kind: 'syntax' });
-}
 
 /**
  * A millimetre entry field.
@@ -40,6 +21,10 @@ function read(text: string, inMm: boolean): Result<number, LengthError> {
  * and a unit (`95-2*3.5`, `3.75in`) and shows the result in mm; and Enter on
  * text it cannot read keeps the text, and says why beneath, rather than
  * dropping what was typed. Leaving the field, or Escape, still reverts.
+ *
+ * **Nothing past what a project holds is taken** — ±`COORDINATE_LIMIT_MM`, the
+ * file format's own bound — in any field: Enter keeps the text and names the
+ * limit, and the arrow keys stop at it (QA F1).
  *
  * **A value the field's owner refuses** (`refuse`) — a corner larger than the
  * rectangle draws (U.14) — is kept on Enter with the reason and a warning
@@ -120,9 +105,9 @@ export function NumberField({
       return;
     }
 
-    const parsed = read(pending, inMm);
+    const parsed = readField(pending, inMm);
     if (!parsed.ok) {
-      if (holdUnread && inMm) setUnread(parsed.error);
+      if (holdUnread && (inMm || parsed.error.kind === 'beyondLimit')) setUnread(parsed.error);
       else updateDraft(null);
       return;
     }
@@ -183,8 +168,11 @@ export function NumberField({
               // A blank field steps from its minimum, or from zero: there is no
               // current number to step from, and inventing one would be worse.
               const current = value ?? min ?? 0;
-              const typed = draft === null ? null : read(draft, inMm);
-              const next = quantise((typed?.ok === true ? typed.value : current) + delta);
+              const typed = draft === null ? null : readField(draft, inMm);
+              const stepped = (typed?.ok === true ? typed.value : current) + delta;
+              const next = quantise(
+                Math.min(COORDINATE_LIMIT_MM, Math.max(-COORDINATE_LIMIT_MM, stepped)),
+              );
               updateDraft(null);
               const floored = min !== undefined ? Math.max(min, next) : next;
               // A step past what the field takes stops there.
@@ -201,9 +189,7 @@ export function NumberField({
         // Hidden from the label's name, which stays the field's; the input is
         // described by it instead, as a reason beneath a button is (F.1).
         <span id={reasonId} className="reason field-reason" aria-hidden="true">
-          {unread.kind === 'unit'
-            ? t('editor.lengthError.unit', { unit: unread.unit })
-            : t(`editor.lengthError.${unread.kind}`)}
+          {fieldErrorText(unread, inMm, t)}
         </span>
       )}
       {refused !== null && (

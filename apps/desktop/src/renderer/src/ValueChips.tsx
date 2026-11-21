@@ -24,6 +24,7 @@ import {
 } from 'react';
 
 import { intoMenu } from './fieldMenu.js';
+import { fieldErrorText } from './fieldText.js';
 import { useI18n } from './i18n.js';
 import { useKeysInSentences } from './keyCaps.js';
 import { SeverityGlyph } from './SeverityGlyph.js';
@@ -389,11 +390,7 @@ function Chip({
     const parsed = parseLength(pending);
     if (!parsed.ok) {
       if (leaving === 'blur' || (leaving === 'tab' && said)) return close();
-      const reason =
-        parsed.error.kind === 'unit'
-          ? t('editor.lengthError.unit', { unit: parsed.error.unit })
-          : t(`editor.lengthError.${parsed.error.kind}`);
-      onNote({ chip, reason, use: null });
+      onNote({ chip, reason: fieldErrorText(parsed.error, true, t), use: null });
       return false;
     }
 

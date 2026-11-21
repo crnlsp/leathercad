@@ -13,6 +13,13 @@ export const QUANTUM_MM = 1e-4;
 const PER_MM = 1 / QUANTUM_MM;
 
 /**
+ * The most a stored coordinate or size may be, either way: ±100 m, far past
+ * any hide (file-format.md §5). The file format refuses anything beyond it, so
+ * a field refuses it too — one bound, read by both.
+ */
+export const COORDINATE_LIMIT_MM = 100_000;
+
+/**
  * Snaps a coordinate to the storage grid.
  *
  * Applied to every value entering the model — typed, clicked or snapped — and
@@ -32,6 +39,8 @@ const PER_MM = 1 / QUANTUM_MM;
 export function quantise(value: number): number {
   assertFinite(value, 'quantise value');
   const snapped = Math.round(value * PER_MM) / PER_MM;
+  // Past about 1.8e304 the grid itself overflows: Infinity is no coordinate.
+  assertFinite(snapped, 'quantise value on the grid');
   // -0 and 0 are indistinguishable to a user but not to Object.is, and the
   // difference would surface as a spurious document round-trip failure.
   return Object.is(snapped, -0) ? 0 : snapped;

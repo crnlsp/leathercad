@@ -72,6 +72,17 @@ export function defaultSide(project: Project, id: string): SeamSide {
   };
 }
 
+/**
+ * Where Sew together… starts: the two selected hole sets, or with one, the
+ * first hole set of another piece (QA5). A lone piece keeps its own set on
+ * both sides, which the verdict refuses until the maker picks a second stretch.
+ */
+export function sewingSides(project: Project, a: string, second?: string): Pick<Seam, 'a' | 'b'> {
+  const owner = (id: string) => project.parts.find((p) => p.features.some((f) => f.id === id));
+  const other = holeSets(project).find(({ part }) => part !== owner(a))?.feature.id;
+  return { a: defaultSide(project, a), b: defaultSide(project, second ?? other ?? a) };
+}
+
 interface Draft {
   readonly seam: Seam;
   readonly editing: boolean;

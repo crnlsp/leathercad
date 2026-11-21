@@ -1,4 +1,4 @@
-import { ResourceLimitError } from '@leathercad/core';
+import { ResourceLimitError, cleanName } from '@leathercad/core';
 import { emptyDocument, importPieces, type DrawnPiece } from '@leathercad/document';
 import type { Project } from '@leathercad/domain';
 import {
@@ -80,9 +80,9 @@ export function readSvg(tree: SvgElement, name: string, density: Density | null)
   }
 }
 
-/** A file's name without its folder or its `.svg`: what its pieces are named. */
+/** A file's name without its folder or its `.svg`, cleaned as a typed name is (QA F9): what its pieces are named. */
 export function svgName(path: string): string {
-  return (path.split(/[\\/]/).pop() ?? path).replace(/\.svg$/i, '');
+  return cleanName((path.split(/[\\/]/).pop() ?? path).replace(/\.svg$/i, ''));
 }
 
 /** What each piece holds, in the maker's words: `1 cut-out, 1 fold and 2 markings`. */

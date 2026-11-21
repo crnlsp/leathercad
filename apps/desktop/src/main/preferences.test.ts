@@ -283,7 +283,8 @@ describe('My tools (U.13)', () => {
     expect(kept.stitchMarginMm).toBe(4);
     expect(kept.leatherThicknessMm).toBe(1.2);
 
-    for (const bad of [0, -3, '4', null, Number.MAX_VALUE * 10])
+    // 1e305 and 150 m: past what a project holds, so past what a field takes (QA F2).
+    for (const bad of [0, -3, '4', null, Number.MAX_VALUE * 10, 1e305, 150_000])
       expect(parsePreferences(JSON.stringify({ stitchMarginMm: bad })).stitchMarginMm).toBe(3.5);
     for (const bad of [0, -1, 'thick'])
       expect(

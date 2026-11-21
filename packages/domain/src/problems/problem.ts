@@ -109,6 +109,7 @@ export interface ProblemFacts {
   readonly SEAM_REQUIRES_CLOSED_LINE: { readonly seamId: SeamId; readonly holeSetId: FeatureId };
   readonly SEAM_HOLE_COUNT_MISMATCH: SeamPairFacts;
   readonly SEAM_HOLES_DRIFT: SeamPairFacts;
+  readonly SEAM_JOINS_ITSELF: { readonly seamId: SeamId; readonly holeSetId: FeatureId };
   readonly SEAM_NOT_A_HOLE_SET: { readonly seamId: SeamId; readonly holeSetId: FeatureId };
   readonly SEAM_HAS_NO_LENGTH: { readonly seamId: SeamId };
   readonly SEAM_SIDE_MISSING: { readonly seamId: SeamId; readonly holeSetId: FeatureId };

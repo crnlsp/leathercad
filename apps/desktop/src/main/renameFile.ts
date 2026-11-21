@@ -2,6 +2,8 @@ import { constants } from 'node:fs';
 import { copyFile, link, rename, stat, unlink } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 
+import { cleanName } from '@leathercad/core';
+
 /** What renaming a project's file came to (8.12). */
 export type RenameOutcome =
   | { readonly kind: 'renamed'; readonly path: string }
@@ -20,16 +22,16 @@ const RESERVED = /^(con|prn|aux|nul|com[0-9]|lpt[0-9])(\..*)?$/i;
 const MAX_LENGTH = 200;
 
 /**
- * The file name a project name gives — `Wallet.lcp` for "Wallet" — or null
+ * The file name a project or template name gives — `Wallet.lcp` for "Wallet" — or null
  * when no file could be called that. Checked by Windows' rules everywhere, so
  * a project named on Linux can still be copied to a Windows machine.
  */
 export function projectFileName(name: string): string | null {
-  const trimmed = name.trim();
+  // Cleaned as a project's name is (QA F9), so a file and its project are named alike:
+  // no control character, no bidi override, a tab a space.
+  const trimmed = cleanName(name).trim();
   if (trimmed === '' || trimmed === '.' || trimmed === '..') return null;
   if (trimmed.length > MAX_LENGTH || FORBIDDEN.test(trimmed)) return null;
-  // Nor a control character: a tab, a newline.
-  if ([...trimmed].some((character) => character.charCodeAt(0) < 0x20)) return null;
   // Windows drops a trailing dot or space, so `Wallet.` would be `Wallet`.
   if (/[. ]$/.test(trimmed) || RESERVED.test(trimmed)) return null;
   return `${trimmed}.lcp`;

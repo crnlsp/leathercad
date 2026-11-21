@@ -599,6 +599,14 @@ export function subscribeKeymap(listener: () => void): () => void {
   return () => keymapListeners.delete(listener);
 }
 
+/** A click that adds to or removes from the selection: Shift, or the command key — Ctrl, ⌘ on macOS. */
+export function addsToSelection(
+  event: Pick<KeyPress, 'shiftKey' | 'ctrlKey' | 'metaKey'>,
+  isMac: boolean,
+): boolean {
+  return event.shiftKey || (isMac ? event.metaKey : event.ctrlKey);
+}
+
 /** A command's keys. */
 export function keysOf(id: CommandId, keymap = current): readonly Binding[] {
   return keymap.find((command) => command.id === id)?.keys ?? [];

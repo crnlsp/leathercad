@@ -1,4 +1,4 @@
-import { deleteFeatures } from '@leathercad/document';
+import { deleteFeatures, setSeam } from '@leathercad/document';
 import { alignmentMarks, evaluate, seamVerdict, type Project, type Seam } from '@leathercad/domain';
 import { QUANTUM_MM } from '@leathercad/core';
 import { describe, expect, it } from 'vitest';
@@ -268,5 +268,46 @@ describe('G — pieces sewn together', () => {
           },
         },
       ]);
+  });
+  it('SF-G11 · a hole set sewn all round to itself is an error, and choosing the other piece for its second side clears it', () => {
+    // QA5 U1: Sew together… from one selected hole set once offered this, as "82 = 82".
+    const self: Seam = {
+      id: 'self',
+      a: { holeSetId: holesOf('back'), stretch: { kind: 'whole' } },
+      b: { holeSetId: holesOf('back'), stretch: { kind: 'whole' } },
+    };
+    new Bench()
+      .do(...panel('back', 100), ...panel('front', 100, 120), sew(self))
+      .expect([
+        {
+          code: 'SEAM_JOINS_ITSELF',
+          severity: 'error',
+          on: holesOf('back'),
+          related: [holesOf('back')],
+          facts: { seamId: 'self', holeSetId: holesOf('back') },
+        },
+      ])
+      .do(setSeam({ ...self, b: { holeSetId: holesOf('front'), stretch: { kind: 'whole' } } }))
+      .expect([], 'sewn to the front all round')
+      .undo()
+      .expect(
+        [{ code: 'SEAM_JOINS_ITSELF', severity: 'error', on: holesOf('back') }],
+        'after undo',
+      );
+  });
+
+  it('SF-G12 · a fold sewing two opposite sides of one hole set together pairs them, and is not joining itself', () => {
+    const side = (from: number) =>
+      ({ kind: 'between', fromAnchor: from, toAnchor: (from + 1) % 4 }) as const;
+    new Bench()
+      .do(
+        ...panel('back', 100),
+        sew({
+          id: 'fold',
+          a: { holeSetId: holesOf('back'), stretch: side(0) },
+          b: { holeSetId: holesOf('back'), stretch: side(2) },
+        }),
+      )
+      .expect([]);
   });
 });

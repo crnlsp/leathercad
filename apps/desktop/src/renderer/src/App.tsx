@@ -54,7 +54,7 @@ import {
 import { createI18n, resolveLocale, type Translate } from '../../shared/i18n.js';
 import { encodeProject } from './lcpEncoder.js';
 import { AboutDialog } from './AboutDialog.js';
-import { defaultSide, SeamWorkflow, sewableIds } from './seams.js';
+import { SeamWorkflow, sewableIds, sewingSides } from './seams.js';
 import { SeamPanel } from './SeamPanel.js';
 import { CanvasHost, type CanvasHandle, type CanvasStatus, type CanvasView } from './CanvasHost.js';
 import { CanvasLegend } from './CanvasLegend.js';
@@ -444,13 +444,10 @@ export function App({
       togglePanel('properties', 'keyboard');
   };
   const startSewing = () => {
-    const a = sewingIds[0];
+    const [a, b] = sewingIds;
     if (a === undefined) return;
     const project = store.getState().document.project;
-    seamWorkflow.open(
-      { id: nextId(), a: defaultSide(project, a), b: defaultSide(project, sewingIds[1] ?? a) },
-      false,
-    );
+    seamWorkflow.open({ id: nextId(), ...sewingSides(project, a, b) }, false);
     showSeamProperties();
   };
   const selectedSeams = (storeState.document.project.seams ?? []).filter(

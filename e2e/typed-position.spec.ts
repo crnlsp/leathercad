@@ -83,3 +83,35 @@ test('a locked piece shows the fields disabled, and says why (3.15)', async () =
     await expect(position(window).getByTestId('move-by')).toBeDisabled();
   });
 });
+
+test('a place or a move past what a project holds offers the farthest that fits (QA F2, F6)', async () => {
+  await withApp(async (window) => {
+    await drawAPanel(window, { parts: '1' });
+    await pickThePiece(window);
+    await type(window, 'Left', '0');
+    const width = Number(await panel(window).getByLabel('Width').inputValue());
+    const errors: Error[] = [];
+    window.on('pageerror', (error) => errors.push(error));
+
+    // Left at the limit would put the right edge past it: refused, then Enter takes what fits.
+    await type(window, 'Left', '100000');
+    await expect(field(window, 'Left')).toHaveAccessibleDescription(/100,000 mm either way/);
+    await field(window, 'Left').press('Enter');
+    await expect(field(window, 'Left')).toHaveValue(String(100_000 - width));
+
+    // Move by 1e305, as the QA run typed it: refused, and Move stays off.
+    await type(window, 'Right', '1' + '0'.repeat(305));
+    await expect(field(window, 'Right')).toHaveAttribute('aria-invalid', 'true');
+    await field(window, 'Right').press('Escape');
+    await expect(position(window).getByTestId('move-by')).toBeDisabled();
+
+    // A move that fits once, but not twice, is refused the second time.
+    await type(window, 'Left', '0');
+    await type(window, 'Right', String(60_000));
+    await position(window).getByTestId('move-by').click();
+    await expect(field(window, 'Left')).toHaveValue('60000');
+    await expect(position(window).getByTestId('move-by')).toBeDisabled();
+    await expect(position(window).getByTestId('move-by-reason')).toBeVisible();
+    expect(errors).toEqual([]);
+  });
+});

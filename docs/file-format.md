@@ -445,7 +445,9 @@ and everything past the loader assumes a sound graph
   expected number, got string`), not "invalid file".
 - A part's structure is checked the same way (S5, S6): a part with two outlines, or an outline that
   encloses nothing, refuses the file. Only hand-editing or a bug can make such a file.
-- Numeric sanity: reject `NaN`, `Infinity`, and coordinates outside ±100 000 mm.
+- Numeric sanity: reject `NaN`, `Infinity`, and coordinates outside ±100 000 mm —
+  `COORDINATE_LIMIT_MM` in `packages/core/src/quantise.ts`, which every number field and the typed
+  size chips refuse past too, so the app never holds a value its file would refuse.
 
 **Principle: recover where recovery is unambiguous; refuse where it is not.** A user's project file
 is hours of their work.
