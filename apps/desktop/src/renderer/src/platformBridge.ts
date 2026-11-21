@@ -44,6 +44,7 @@ interface PreloadBridge {
   findRecovery(): Promise<RecoveredCopy | null>;
   resolveRecovery(id: string, how: 'adopt' | 'corrupt'): Promise<void>;
   getRecoveryIntervalMs(): Promise<number>;
+  windowFailed(): Promise<void>;
   onMenuAction(listener: (action: MenuAction) => void): () => void;
   getPreferences(): Promise<Preferences>;
   setPreferences(changes: Partial<Preferences>): Promise<void>;

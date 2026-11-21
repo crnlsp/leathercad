@@ -23,6 +23,7 @@ export const IPC = {
   findRecovery: 'platform:findRecovery',
   resolveRecovery: 'platform:resolveRecovery',
   getRecoveryIntervalMs: 'platform:getRecoveryIntervalMs',
+  windowFailed: 'platform:windowFailed',
   getPreferences: 'platform:getPreferences',
   setPreferences: 'platform:setPreferences',
   getSystemLanguages: 'platform:getSystemLanguages',

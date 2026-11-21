@@ -125,6 +125,14 @@ export interface PlatformHost {
   getRecoveryIntervalMs(): Promise<number>;
 
   /**
+   * The window's whole interface failed to draw (QA2): it stays open, blank
+   * but for a notice, and its unsaved-changes question is gone with it. The
+   * session's recovery copies, and any written after this, are kept through
+   * the quit that follows, for the next start to offer.
+   */
+  windowFailed(): Promise<void>;
+
+  /**
    * Listens for a choice from macOS's native menu (8.5a, 8.7) — Linux and
    * Windows have none. The menu belongs to the operating system; what each
    * item does belongs to the renderer, which runs the same handler its key and

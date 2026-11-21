@@ -5119,3 +5119,41 @@ button.problem-row,
 .selection-bar:has(.pocket-summary) .selection-bar-line {
   flex-wrap: wrap;
 }
+
+/* A part of the window that failed to draw (QA2): the board or a panel says so
+   in its place, and the rest of the window keeps working. */
+.failure-notice {
+  max-width: 44ch;
+  margin: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-left: 2px solid var(--error);
+  color: var(--text);
+  font: var(--t-body);
+}
+
+.canvas-column > .failure-notice {
+  flex: 1;
+  max-width: none;
+}
+
+/* The last resort: the whole interface failed, and only this is left. */
+.window-failure {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  height: 100vh;
+  padding: var(--space-6) var(--space-4);
+  background: var(--shell-900);
+  color: var(--text);
+  font: var(--t-body);
+}
+
+.window-failure h1 {
+  margin: 0;
+  font: var(--t-dialog);
+}
+
+.window-failure p {
+  max-width: 60ch;
+  margin: 0;
+}

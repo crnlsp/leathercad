@@ -2,7 +2,9 @@ import { DEFAULT_PREFERENCES, type Preferences } from '@leathercad/platform';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
+import { createI18n, resolveLocale } from '../../shared/i18n.js';
 import { App } from './App.js';
+import { WindowBoundary } from './Failure.js';
 import { IS_MAC } from './keyCaps.js';
 import { applyBindings } from './keymap.js';
 import { readBindings } from './rebind.js';
@@ -45,11 +47,28 @@ async function start(root: HTMLElement): Promise<void> {
   }
   // The maker's keys (U.12), before anything shows one or hears one.
   applyBindings(readBindings(preferences.keyBindings, IS_MAC));
+  // The words of the last resort, should the whole interface fail (QA2).
+  const i18n = createI18n(resolveLocale(preferences.language, systemLanguages));
   createRoot(root).render(
     <StrictMode>
-      <App initialPreferences={preferences} systemLanguages={systemLanguages} />
+      <WindowBoundary i18n={i18n} onFailed={reportWindowFailed}>
+        <App initialPreferences={preferences} systemLanguages={systemLanguages} />
+      </WindowBoundary>
     </StrictMode>,
   );
+}
+
+/** Tells the main process the window failed, so its quit keeps the recovery copies (QA2). */
+function reportWindowFailed(): void {
+  try {
+    void getPlatformHost()
+      .windowFailed()
+      .catch((error: unknown) =>
+        console.error('the main process was not told the window failed:', error),
+      );
+  } catch (error) {
+    console.error('the main process was not told the window failed:', error);
+  }
 }
 
 void start(container);

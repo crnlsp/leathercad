@@ -119,6 +119,13 @@ export function useRecovery({
     return () => {
       cancelled = true;
       window.clearInterval(timer);
+      // The window never unmounts on a close or a reload, only when its whole
+      // interface fails (QA2): then each tab's latest work is copied now, not
+      // up to a minute ago, for the next start to offer. A version arriving
+      // only writes a copy that was due a little early.
+      for (const tab of tabs.tabs) {
+        if (copies.due(tab)) void copies.write(tab, appVersion).catch(() => undefined);
+      }
     };
   }, [appVersion, copies, host, tabs]);
 

@@ -295,6 +295,48 @@ describe('a clean exit', () => {
   });
 });
 
+/**
+ * QA2, F1: a window whose whole interface failed to draw — a render error no
+ * notice could catch — lives on, blank, and its close asks nothing. Its quit
+ * is not a clean exit.
+ */
+describe('a quit after the window failed', () => {
+  it('keeps the window’s copy, and the next start offers it', async () => {
+    const me = session(101);
+    await me.write(TAB, bytes('before the failure'));
+    me.windowFailed();
+    me.releaseOnQuit();
+    crash(101);
+
+    const next = session(102);
+    const found = await next.findAbandoned();
+    expect(found?.id).toBe(`101-1000-${TAB}`);
+    expect(new TextDecoder().decode(found?.data)).toBe('before the failure');
+  });
+
+  it('keeps the copy the failed window writes last, as it fails', async () => {
+    const me = session(101);
+    await me.write(TAB, bytes('a minute old'));
+    me.windowFailed();
+    await me.write(TAB, bytes('the latest work'));
+    me.releaseOnQuit();
+
+    const kept = files().map((name) => readFileSync(join(dir, name), 'utf8'));
+    expect(kept).toContain('the latest work');
+  });
+
+  it('keeps the copies the session had taken over from a crash before', async () => {
+    const old = `202-1000-${TAB}`;
+    writeFileSync(join(dir, `${old}.lcp`), 'theirs');
+    const me = session(101);
+    await me.adopt(old);
+    me.windowFailed();
+    me.releaseOnQuit();
+
+    expect(files()).toContain(`${old}.lcp`);
+  });
+});
+
 describe('a window opened again after its renderer crashed (macOS keeps the app running)', () => {
   it('offers the crashed renderer’s copy, though its process is still alive', async () => {
     const me = session(101);
