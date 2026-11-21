@@ -198,16 +198,19 @@ was found from changes. **Un-accept** counts it again. An error cannot be accept
 
 ### Sew two pieces together
 
-A pocket's holes have to meet the holes of the panel it is sewn to. Select the two hole sets — or
-one, for a piece folded onto itself — and choose **Sew together…** under *Seams* in Properties.
-Say where each side runs (*All round*, between two corners or ends, or part of a run from a
+A pocket's holes have to meet the holes of the panel it is sewn to. Select the two hole sets —
+click one, then Shift-click or Ctrl-click (⌘ on macOS) the other, on the board or in Parts — and
+choose **Sew together…** under *Seams* in Properties. With one selected, the second side starts on
+another piece's holes; for a piece folded onto itself, choose its own hole set and another stretch
+of it. Say where each side runs (*All round*, between two corners or ends, or part of a run from a
 corner), and the preview reads both at once: how many holes each side has, and how far the pairs
 **drift** apart along the line. **Sew** keeps it, one Undo step; *Edit* and *Unsew* sit beside the
 seam afterwards. The board highlights the paired holes and numbers every fifth pair, and the
 selection bar adds the seam's reading.
 
-Problems then says when the two sides have different numbers of holes (an error), or when a pair
-drifts more than 0.5 mm (a warning). A seam is kept in the file, and goes with its pieces when you
+Problems then says when the two sides have different numbers of holes (an error), when both sides
+are the same holes, so the seam joins nothing (an error), or when a pair drifts more than 0.5 mm
+(a warning). A seam is kept in the file, and goes with its pieces when you
 copy them or save them as a template.
 
 **Alignment marks** on a seam — *First and last pair*, or *Every few pairs…* — put a short tick

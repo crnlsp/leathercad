@@ -377,6 +377,61 @@ describe('seam stretches (9.6a)', () => {
     );
   });
 
+  it('reports SEAM_JOINS_ITSELF for a hole set sewn all round to itself, an error in Problems', () => {
+    const side = { holeSetId: 'holes', stretch: { kind: 'whole' } } as const;
+    const self: Seam = { id: 'self', a: side, b: side };
+    expect(seamVerdict(project(), self)).toEqual({
+      ok: false,
+      problem: { code: 'SEAM_JOINS_ITSELF', facts: { seamId: 'self', holeSetId: 'holes' } },
+    });
+    expect(diagnose({ ...project(), seams: [self] })).toContainEqual(
+      expect.objectContaining({
+        severity: 'error',
+        problem: expect.objectContaining({ code: 'SEAM_JOINS_ITSELF' }),
+      }),
+    );
+  });
+
+  it('reports any stretch of a hole set sewn to the same holes of itself, whichever way it is walked', () => {
+    const corner = fc.integer({ min: 0, max: 3 });
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 10, max: 300 }),
+        fc.integer({ min: 10, max: 300 }),
+        corner,
+        corner,
+        (w, h, from, to) => {
+          const stretch = { kind: 'between', fromAnchor: from, toAnchor: to } as const;
+          const a = { holeSetId: 'holes', stretch };
+          const verdict = seamVerdict(project(w, h), { id: 'self', a, b: a });
+          expect(!verdict.ok && verdict.problem.code).toBe('SEAM_JOINS_ITSELF');
+        },
+      ),
+    );
+  });
+
+  it('never reports two different sides of one rectangle sewn together as joining itself', () => {
+    const corner = fc.integer({ min: 0, max: 3 });
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 10, max: 300 }),
+        fc.integer({ min: 10, max: 300 }),
+        corner,
+        corner,
+        (w, h, i, j) => {
+          fc.pre(i !== j);
+          const side = (n: number) =>
+            ({
+              holeSetId: 'holes',
+              stretch: { kind: 'between', fromAnchor: n, toAnchor: (n + 1) % 4 },
+            }) as const;
+          const verdict = seamVerdict(project(w, h), { id: 'fold', a: side(i), b: side(j) });
+          expect(verdict.ok || verdict.problem.code !== 'SEAM_JOINS_ITSELF').toBe(true);
+        },
+      ),
+    );
+  });
+
   it('keeps two seam outcomes on the same hole set distinct and stable', () => {
     const p = project();
     const a = { ...seam, b: { ...seam.b, holeSetId: 'gone' } };
