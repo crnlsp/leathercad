@@ -165,6 +165,24 @@ as any item that will not make it does.
 - ☐ **R17 Full regression and packaged qualification**, on every platform there is.
 - ✅ **R18 Release documentation** — README media, getting started, keys, formats, known limitations.
 
+### Stage 7 — QA fixes
+
+Two QA passes over the release candidate's code found 30 issues, three of them losing work
+([findings](superpowers/specs/2026-11-21-1.7-qa-findings.md)). Wave 1 is QA1, QA2, QA4 and QA5;
+then QA3 (after QA1), QA6–QA8; then QA9–QA11. U9, U11 and U14 wait on the maintainer's decision.
+
+- ☐ **QA1 Typed values within limits** — one bound from the file format and a finite check in every number field, scientific notation read, control characters kept out of names (F1, F2, F6, F8, F9).
+- ☐ **QA2 Never lose work when something fails** — the window survives a failing panel, a crash neither skips the unsaved question nor deletes the recovery copy, and Save refuses to write a file it could not reopen (F1, F2).
+- ☐ **QA3 SVG import refuses what it cannot take** — a preview over the resource limit and sizes beyond the format refused in the dialog, no stale selection after a refused import (F2, F3, F7).
+- ☐ **QA4 Degenerate outlines reported truly** — a repeated vertex is not a self-crossing; a zero-size piece is a problem (F4, F5).
+- ☐ **QA5 Sewing two pieces starts right** — *Sew together* never pairs a hole set with itself; Shift/Ctrl-click in Parts adds to the selection (U1, U3).
+- ☐ **QA6 Stitching and pocket feedback** — an open run starts clear of the edge, one reason for the seam allowance, the pocket check says "fits" once, problem wording (U2, U6, U7, U15).
+- ☐ **QA7 A new project starts focused** — Ctrl+N focuses the new board; one name and key cap for a new project (U4, U20).
+- ☐ **QA8 Board labels say what they mean** — pitch named as pitch, one number format, captions of stacked pieces apart (U5, U16, U17).
+- ☐ **QA9 Screen-reader names** — the eye button's state, the *Cut* field's name, the template dialog's role (U8, U10, U19).
+- ☐ **QA10 Templates confirm and show** — a notice after *Save as template*; *Insert pieces*' checklist in view (U12, U13).
+- ☐ **QA11 Panels at 1440 and 860** — rows that do not wrap; a folded panel's chip that does not look on (U18, U21).
+
 ### Collected from makers, and decided
 
 Rows that hold no release, carried from 1.6's *Release engineering* until a maker's report or a
