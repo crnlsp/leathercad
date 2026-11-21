@@ -1,4 +1,4 @@
-import { checkResourceLimit } from '@leathercad/core';
+import { COORDINATE_LIMIT_MM, checkResourceLimit } from '@leathercad/core';
 import {
   EXPORT_TOLERANCE_MM,
   maxArcStepForTolerance,
@@ -9,6 +9,7 @@ import {
   polyline,
   type Mat2x3,
   type Path,
+  type Segment,
 } from '@leathercad/geometry';
 import { numbers, SvgImportError } from './numbers.js';
 import { readPath } from './path.js';
@@ -120,6 +121,17 @@ function viewport(root: SvgElement, dpi: number | undefined): { matrix: Mat2x3; 
     matrix: { a: sx, b: 0, c: 0, d: sy, e: tx, f: ty },
     userUnit: 25.4 / (dpi ?? 96),
   };
+}
+/** The numbers a project file stores of a segment: its schema holds each to the coordinate limit. */
+function stored(segment: Segment): number[] {
+  switch (segment.kind) {
+    case 'line':
+      return [segment.a.x, segment.a.y, segment.b.x, segment.b.y];
+    case 'arc':
+      return [segment.centre.x, segment.centre.y, segment.radius];
+    case 'cubic':
+      return [segment.p0, segment.p1, segment.p2, segment.p3].flatMap((p) => [p.x, p.y]);
+  }
 }
 function shape(
   node: SvgElement,
@@ -275,6 +287,13 @@ function convertSvg(root: SvgElement, options: SvgOptions): SvgGeometry {
         const bounds = PathOps.bbox({ segments: [segment], closed: false });
         if (bounds === null || !Object.values(bounds).every(Number.isFinite))
           throw new SvgImportError('INVALID_SVG');
+        // What reaches past the limit could be imported but never saved and reopened (QA F2).
+        if (
+          [...Object.values(bounds), ...stored(segment)].some(
+            (v) => Math.abs(v) > COORDINATE_LIMIT_MM,
+          )
+        )
+          throw new SvgImportError('BEYOND_LIMIT');
       }
     shapes.push({
       element: node,

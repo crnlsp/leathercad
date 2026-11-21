@@ -1,6 +1,7 @@
-import { ResourceLimitError, cleanName } from '@leathercad/core';
+import { COORDINATE_LIMIT_MM, ResourceLimitError, cleanName } from '@leathercad/core';
 import { emptyDocument, importPieces, type DrawnPiece } from '@leathercad/document';
-import type { Project } from '@leathercad/domain';
+import { evaluate, type Project } from '@leathercad/domain';
+import { buildExportScene, pageSetupFor, planSheets } from '@leathercad/export';
 import {
   assignRoles,
   importSvg,
@@ -72,6 +73,11 @@ export function readSvg(tree: SvgElement, name: string, density: Density | null)
     const project = importPieces(pieces, () => `preview-${String(n++)}`).command.apply(
       emptyDocument('preview'),
     ).project;
+    // What a project of these pieces could not hold — too many characters,
+    // too many sheets — the store would refuse on import, and the preview
+    // could not draw: refused here, before either (QA F3, F7). Evaluation
+    // keeps each feature, so the preview's own is then a lookup.
+    planSheets(buildExportScene(evaluate(project), project.name), pageSetupFor(project.settings));
     return { kind: 'read', scale, pattern, omitted: geometry.omitted, pieces, project };
   } catch (error) {
     if (error instanceof SvgImportError || error instanceof ResourceLimitError)
@@ -132,7 +138,11 @@ export function leftOutLines(
 
 /** Why a drawing could not be imported, in the maker's words. */
 export function refusalText(error: SvgImportError | ResourceLimitError, { t }: I18n): string {
-  if (error instanceof SvgImportError) return t(`svgImport.refused.${error.code}`);
+  if (error instanceof SvgImportError) {
+    return error.code === 'BEYOND_LIMIT'
+      ? t('svgImport.refused.BEYOND_LIMIT', { limit: COORDINATE_LIMIT_MM })
+      : t(`svgImport.refused.${error.code}`);
+  }
   const megabytes = error.limit / 2 ** 20;
   switch (error.resource) {
     case 'svgBytes':
@@ -143,6 +153,10 @@ export function refusalText(error: SvgImportError | ResourceLimitError, { t }: I
       return t('svgImport.refused.segments', { limit: error.limit });
     case 'svgShapeTests':
       return t('svgImport.refused.svgShapeTests');
+    case 'characters':
+      return t('svgImport.refused.characters', { limit: error.limit });
+    case 'pages':
+      return t('svgImport.refused.pages', { limit: error.limit });
     default:
       return t('svgImport.refused.tooBig', { limit: error.limit });
   }

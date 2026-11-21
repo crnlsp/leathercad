@@ -1545,6 +1545,9 @@ export function App({
         return;
       }
       store.dispatch(made.command);
+      // Refused — the open project and these pieces need too many sheets: the
+      // status bar says so, and the selection and the view stay as they were.
+      if (store.getState().resourceLimit !== null) return;
       store.selectParts(made.partIds);
       runZoom('fitSelection');
     },
