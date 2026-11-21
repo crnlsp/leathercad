@@ -974,9 +974,9 @@
   },
   "caption": {
     "cut": "{{name}} ×{{quantity}}",
-    "holes_one": "{{count}} agujero · {{pitch}}",
-    "holes_other": "{{count}} agujeros · {{pitch}}",
-    "holes_many": "{{count}} agujeros · {{pitch}}",
+    "holes_one": "{{count}} agujero · paso nominal {{pitch}}",
+    "holes_other": "{{count}} agujeros · paso nominal {{pitch}}",
+    "holes_many": "{{count}} agujeros · paso nominal {{pitch}}",
     "unnamed": "Pieza"
   },
   "spacing": {

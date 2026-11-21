@@ -1008,10 +1008,10 @@
   },
   "caption": {
     "cut": "{{name}} ×{{quantity}}",
-    "holes_one": "{{count}} otwór · {{pitch}}",
-    "holes_few": "{{count}} otwory · {{pitch}}",
-    "holes_many": "{{count}} otworów · {{pitch}}",
-    "holes_other": "{{count}} otworu · {{pitch}}",
+    "holes_one": "{{count}} otwór · nominalnie {{pitch}}",
+    "holes_few": "{{count}} otwory · nominalnie {{pitch}}",
+    "holes_many": "{{count}} otworów · nominalnie {{pitch}}",
+    "holes_other": "{{count}} otworu · nominalnie {{pitch}}",
     "unnamed": "Część"
   },
   "spacing": {

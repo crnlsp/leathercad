@@ -32,7 +32,7 @@ export interface Stitching {
 /**
  * A piece's stitching as its caption counts it (R-01): the holes, per pitch,
  * in the order the pitches are met. The facts only; the app says them — "52
- * holes · 3.85 mm".
+ * holes · pitch 3.85 mm".
  *
  * Sets at one pitch are added up whatever iron made them: two irons of a pitch
  * punch the same holes. Only what is drawn counts: a hidden or failed set has
