@@ -327,12 +327,9 @@ test('the status bar keeps its 28 px, chips and all, folded or not, at every wid
   });
 });
 
-test('a feature’s name in Parts wraps only between words at 1024, where Parts is 208 px', async () => {
-  // At 220 px "Stitch holes" fit on one line; at U.5's 208 it wrapped, and U.5
-  // won it back. U.8 keeps every row's lock and eye room at rest, so a hole
-  // set's count never moves when they show: the deepest "Stitch holes" and
-  // "Cut-out mirrored" take two lines again — between their words, never
-  // inside one (F.6) — and every other name keeps its one line.
+test('a feature’s name in Parts stays on one line at 1024, where Parts is 208 px (U18)', async () => {
+  // Before U18 the deepest "Stitch holes" and "Cut-out mirrored" took two
+  // lines there; a name too long is cut with an ellipsis now.
   await withSample(async (window, app) => {
     await resize(app, window, 1024, 700);
     const lines = await window.getByTestId('parts-list').evaluate((parts) =>
@@ -346,10 +343,7 @@ test('a feature’s name in Parts wraps only between words at 1024, where Parts 
     );
     expect(lines.length).toBeGreaterThan(8);
     for (const line of lines) expect(line.lines, line.name).toBeLessThanOrEqual(line.words);
-    expect(lines.filter((line) => line.lines > 1).map((line) => line.name)).toEqual([
-      'Stitch holes',
-      'Cut-out mirrored',
-    ]);
+    expect(lines.filter((line) => line.lines > 1).map((line) => line.name)).toEqual([]);
   });
 });
 

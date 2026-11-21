@@ -50,12 +50,12 @@ test('a right-click inside a selection keeps all of it, and one undo takes the a
     await window.getByTestId('context-lock').click();
 
     const locks = window.locator('[data-testid^="feature-locked-"]');
-    await expect(locks.nth(0)).toHaveAttribute('aria-pressed', 'true');
-    await expect(locks.nth(1)).toHaveAttribute('aria-pressed', 'true');
+    await expect(locks.nth(0)).toHaveAccessibleName('Unlock');
+    await expect(locks.nth(1)).toHaveAccessibleName('Unlock');
 
     await window.getByTestId('undo').click();
-    await expect(locks.nth(0)).toHaveAttribute('aria-pressed', 'false');
-    await expect(locks.nth(1)).toHaveAttribute('aria-pressed', 'false');
+    await expect(locks.nth(0)).toHaveAccessibleName('Lock');
+    await expect(locks.nth(1)).toHaveAccessibleName('Lock');
   } finally {
     await closeApp(app);
   }
@@ -75,9 +75,8 @@ test('a locked piece is still reached by a right-click on the board, to unlock i
     await expect(window.getByTestId('context-delete')).toHaveAttribute('aria-disabled', 'true');
     await window.getByTestId('context-lock').click();
 
-    await expect(window.locator('[data-testid^="feature-locked-"]').first()).toHaveAttribute(
-      'aria-pressed',
-      'false',
+    await expect(window.locator('[data-testid^="feature-locked-"]').first()).toHaveAccessibleName(
+      'Lock',
     );
   } finally {
     await closeApp(app);

@@ -269,7 +269,7 @@ export function PropertiesStrip({
 /**
  * One of the status bar's three chips (R-04), always there, so nothing is ever
  * out of reach: Parts `[`, Focus `\`, Properties `]`. One whose panel is
- * hidden — folded, or by focus mode — has the accent border.
+ * hidden — folded, or by focus mode — is muted with a dashed border.
  */
 export function PanelChip({
   testId,

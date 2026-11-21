@@ -933,6 +933,7 @@
       "rect": "It stops being a rectangle: its width, height and corners can no longer be typed, but it can be sheared and its points moved."
     },
     "cut": "Cut",
+    "cutName": "Cut, number of pieces",
     "cutSuffix": "off",
     "mirroredPair": "Cut as a mirrored pair",
     "mirroredPairNote": "Half are cut with the template turned over, so you get lefts and rights. Paper says so under the piece.",

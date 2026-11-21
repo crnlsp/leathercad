@@ -509,6 +509,7 @@ function PartFields({
         label={t('properties.cut')}
         value={part.quantity}
         suffix={t('properties.cutSuffix')}
+        accessibleName={t('properties.cutName')}
         min={1}
         precision={0}
         onCommit={(value) => store.dispatch(setPartQuantity(part.id, value))}

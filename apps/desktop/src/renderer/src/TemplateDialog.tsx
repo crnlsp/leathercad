@@ -954,7 +954,7 @@ export function SaveTemplateDialog({
 
   return (
     <div className="dialog-backdrop" onClick={onClose}>
-      <form
+      <div
         className="dialog"
         role="dialog"
         aria-modal="true"
@@ -965,50 +965,54 @@ export function SaveTemplateDialog({
           event.stopPropagation();
           if (event.key === 'Escape') onClose();
         }}
-        onSubmit={(event) => {
-          event.preventDefault();
-          save(false);
-        }}
       >
-        <h2 id="save-template-title">{t('templates.saveTitle')}</h2>
-        <label className="field">
-          <span>{t('templates.saveName')}</span>
-          <input
-            ref={field}
-            id="template-name"
-            data-testid="template-name"
-            value={name}
-            onChange={(event) => {
-              setName(event.target.value);
-              setProblem(null);
-            }}
-          />
-        </label>
-        {problem !== null && (
-          <p className="status-error" role="alert" data-testid="template-problem">
-            {problem.said}
-          </p>
-        )}
-        <div className="dialog-actions">
-          <button type="button" className="tool" onClick={onClose}>
-            {t('actions.cancel')}
-          </button>
-          {problem?.taken === true ? (
-            <button
-              type="button"
-              className="tool danger"
-              data-testid="template-replace"
-              onClick={() => save(true)}
-            >
-              {t('templates.replace')}
-            </button>
-          ) : (
-            <button type="submit" className="tool primary" data-testid="template-save">
-              {t('templates.save')}
-            </button>
+        <form
+          className="dialog-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            save(false);
+          }}
+        >
+          <h2 id="save-template-title">{t('templates.saveTitle')}</h2>
+          <label className="field">
+            <span>{t('templates.saveName')}</span>
+            <input
+              ref={field}
+              id="template-name"
+              data-testid="template-name"
+              value={name}
+              onChange={(event) => {
+                setName(event.target.value);
+                setProblem(null);
+              }}
+            />
+          </label>
+          {problem !== null && (
+            <p className="status-error" role="alert" data-testid="template-problem">
+              {problem.said}
+            </p>
           )}
-        </div>
-      </form>
+          <div className="dialog-actions">
+            <button type="button" className="tool" onClick={onClose}>
+              {t('actions.cancel')}
+            </button>
+            {problem?.taken === true ? (
+              <button
+                type="button"
+                className="tool danger"
+                data-testid="template-replace"
+                onClick={() => save(true)}
+              >
+                {t('templates.replace')}
+              </button>
+            ) : (
+              <button type="submit" className="tool primary" data-testid="template-save">
+                {t('templates.save')}
+              </button>
+            )}
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

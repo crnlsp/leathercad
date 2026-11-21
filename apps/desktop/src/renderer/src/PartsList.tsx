@@ -544,7 +544,9 @@ function PieceRow({
         ) : (
           // The name and its ×N give way together, the ×N after the name's last word.
           <span className="part-title">
-            <span className="part-label">{part.name}</span>
+            <span className="part-label" title={part.name}>
+              {part.name}
+            </span>
             {/*
               A space before a pair's words, so the row's text reads as its
               name does, "Pocket 1 + 1 mirrored", not "Pocket1"; "×2" needs
@@ -723,7 +725,9 @@ function FeatureRow({
         {renaming ? (
           <RowName name={feature.name} onDone={onRename} />
         ) : (
-          <span className="feature-name">{feature.name}</span>
+          <span className="feature-name" title={feature.name}>
+            {feature.name}
+          </span>
         )}{' '}
         <CountBadge badge={problems} />{' '}
         {holes !== null && (
@@ -894,7 +898,8 @@ function isMirroredFeature(feature: Feature): boolean {
 }
 
 /**
- * A small on/off control that says what pressing it would do. Out of the Tab
+ * A small on/off control that says what pressing it would do. Its name changes
+ * with its state and it has no `aria-pressed`: both flipping read as the reverse (U8). Out of the Tab
  * order — the row is the tree's one stop, and Space and the right-click menu
  * do what these do from the keyboard. Pressed by the pointer, it lets go of
  * focus (U.4).
@@ -929,7 +934,6 @@ function IconToggle({
           .filter((name) => name !== '')
           .join(' ')}
         data-testid={testId}
-        aria-pressed={on}
         aria-label={label}
         tabIndex={-1}
         onClick={(event) => {
