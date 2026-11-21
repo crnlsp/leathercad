@@ -1,8 +1,8 @@
-import { EPS_LENGTH, approxEq, approxLte } from '@leathercad/core';
+import { EPS_LENGTH, approxEq, approxLte, formatEditable } from '@leathercad/core';
 import { toothOfStyle, type Derivation, type Tooth } from '@leathercad/domain';
 import type { Iron, Preferences } from '@leathercad/platform';
 
-import { chipNumber, type Refusal, type RefusalWords } from './outlineSizes.js';
+import { type Refusal, type RefusalWords } from './outlineSizes.js';
 
 /**
  * Pricking irons, by the pitch stamped on them — the maker's own, from
@@ -88,6 +88,6 @@ export function slitRefusal(
   { t, enter }: RefusalWords,
 ): Refusal | null {
   if (approxLte(lengthMm, pitchMm, EPS_LENGTH)) return null;
-  const size = chipNumber(pitchMm);
+  const size = formatEditable(pitchMm, 2);
   return { reason: t('editor.tooth.longerThanPitch', { size, enter }), use: pitchMm };
 }

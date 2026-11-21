@@ -59,7 +59,7 @@ test('an idle board wakes for tools, pointers, typed drafts, history, camera and
     await width.fill('40');
     // Tab applies a draft size without dispatching a document command.
     await repaints(() => width.press('Tab'));
-    await expect(window.getByTestId('drawing-width')).toHaveText('40.0 mm');
+    await expect(window.getByTestId('drawing-width')).toHaveText('40 mm');
     await height.fill('25');
     await repaints(() => height.press('Enter'));
     await expect(window.getByTestId('part-count')).toHaveText('1');

@@ -50,8 +50,8 @@ test('105 Tab 75 Tab 8 Enter makes a 105 × 75 outline with 8 mm corners, one un
     await window.keyboard.type('8');
 
     // Properties mirrors what is typed while the shape is drawn.
-    await expect(window.getByTestId('drawing-width')).toHaveText('105.0 mm');
-    await expect(window.getByTestId('drawing-height')).toHaveText('75.0 mm');
+    await expect(window.getByTestId('drawing-width')).toHaveText('105 mm');
+    await expect(window.getByTestId('drawing-height')).toHaveText('75 mm');
 
     await window.keyboard.press('Enter');
     await expect(window.getByTestId('part-count')).toHaveText('1');
@@ -61,7 +61,7 @@ test('105 Tab 75 Tab 8 Enter makes a 105 × 75 outline with 8 mm corners, one un
     const panel = window.getByTestId('property-panel');
     await expect(panel.getByLabel('Width')).toHaveValue('105');
     await expect(panel.getByLabel('Height')).toHaveValue('75');
-    await expect(field(window, 'corner')).toHaveValue('8.0');
+    await expect(field(window, 'corner')).toHaveValue('8');
 
     await window.getByTestId('undo').click();
     await expect(window.getByTestId('part-count')).toHaveText('0');
@@ -105,11 +105,11 @@ test('a corner the shape would not draw is refused, saying why, and Enter takes 
     await window.keyboard.type('15');
     await window.keyboard.press('Enter');
     // Still drawing: the chip stays open, with the reason.
-    await expect(window.getByTestId('value-chip-note')).toContainText('half the height (10.0)');
+    await expect(window.getByTestId('value-chip-note')).toContainText('half the height (10)');
     await expect(window.getByTestId('part-count')).toHaveText('0');
     await window.keyboard.press('Enter');
     await expect(window.getByTestId('part-count')).toHaveText('1');
-    await expect(field(window, 'corner')).toHaveValue('10.0');
+    await expect(field(window, 'corner')).toHaveValue('10');
   });
 });
 
@@ -123,7 +123,7 @@ async function cornerThenShrink(window: Page): Promise<{ x: number; y: number }>
   await field(window, 'corner').fill('8');
   // Leaving the chip applies it; the board has the keys again.
   await window.getByTestId('editor-canvas').focus();
-  await expect(window.getByTestId('drawing-corner')).toHaveText('8.0 mm');
+  await expect(window.getByTestId('drawing-corner')).toHaveText('8 mm');
   const small = { x: corner.x + 12, y: corner.y - 8 };
   await window.mouse.move(small.x, small.y);
   return small;

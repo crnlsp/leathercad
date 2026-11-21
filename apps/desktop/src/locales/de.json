@@ -940,8 +940,8 @@
   },
   "caption": {
     "cut": "{{name}} ×{{quantity}}",
-    "holes_one": "{{count}} Loch · {{pitch}}",
-    "holes_other": "{{count}} Löcher · {{pitch}}",
+    "holes_one": "{{count}} Loch · Nennabstand {{pitch}}",
+    "holes_other": "{{count}} Löcher · Nennabstand {{pitch}}",
     "unnamed": "Teil"
   },
   "spacing": {

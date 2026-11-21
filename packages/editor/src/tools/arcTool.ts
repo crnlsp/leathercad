@@ -1,4 +1,4 @@
-import { formatAngle, formatMm } from '@leathercad/core';
+import { formatAngle, formatEditable } from '@leathercad/core';
 import { arcShape } from '@leathercad/document';
 import { Shapes, type Path, type Segment, type Vec2 } from '@leathercad/geometry';
 import { CANVAS, pathItem, textItem, type DisplayList } from '@leathercad/render';
@@ -135,7 +135,7 @@ export function createArcTool(nextId: () => string): Tool {
             textItem(
               'annotation',
               { x: state.cursor.x, y: state.cursor.y + 3 },
-              `r ${formatMm(shape.radius, 1)} · ${formatAngle(Math.abs((shape.sweepAngle * 180) / Math.PI), 0)}`,
+              `r ${formatEditable(shape.radius, 2)} mm · ${formatAngle(Math.abs((shape.sweepAngle * 180) / Math.PI), 0)}`,
               12,
               CANVAS.overlay.preview,
             ),

@@ -1,9 +1,9 @@
 import type { Feature, ResolvedFeature, ResolvedPart } from '@leathercad/domain';
-import { Shapes } from '@leathercad/geometry';
+import { RectOps, Shapes } from '@leathercad/geometry';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
-import { stitchingOf } from './captions.js';
+import { captionStacks, stitchingOf } from './captions.js';
 
 /** A resolved hole set: `count` holes from an iron of `pitchMm`, named `label`. */
 function holeSet(
@@ -117,5 +117,79 @@ describe('stitchingOf — what a piece’s caption counts (R-01)', () => {
         ]);
       }),
     );
+  });
+});
+describe('captionStacks (U17)', () => {
+  const arbBox = fc
+    .record({
+      x: fc.double({ min: -200, max: 200, noNaN: true }),
+      y: fc.double({ min: -200, max: 200, noNaN: true }),
+      width: fc.double({ min: 0, max: 150, noNaN: true }),
+      height: fc.double({ min: 0, max: 150, noNaN: true }),
+    })
+    .map(({ x, y, width, height }) => ({
+      minX: x,
+      minY: y,
+      maxX: x + width,
+      maxY: y + height,
+    }));
+  const arbBoxes = fc.array(arbBox, { maxLength: 12 });
+
+  it('captions every piece exactly once, nearest first in the order given', () => {
+    fc.assert(
+      fc.property(arbBoxes, (boxes) => {
+        const members = captionStacks(boxes).flatMap((stack) => stack.members);
+        expect([...members].sort((a, b) => a - b)).toEqual(boxes.map((_, index) => index));
+        for (const stack of captionStacks(boxes)) {
+          expect(stack.members).toEqual([...stack.members].sort((a, b) => a - b));
+        }
+      }),
+    );
+  });
+
+  it('stacks pieces that overlap together, and keeps apart only pieces that do not', () => {
+    fc.assert(
+      fc.property(arbBoxes, (boxes) => {
+        const stacks = captionStacks(boxes);
+        const stackOf = (index: number) =>
+          stacks.findIndex((stack) => stack.members.includes(index));
+        boxes.forEach((a, i) =>
+          boxes.forEach((b, j) => {
+            if (RectOps.intersects(a, b)) expect(stackOf(i)).toBe(stackOf(j));
+          }),
+        );
+      }),
+    );
+  });
+
+  it('stacks above the highest piece in the stack', () => {
+    fc.assert(
+      fc.property(arbBoxes, (boxes) => {
+        for (const { members, topMm } of captionStacks(boxes)) {
+          expect(topMm).toBe(Math.max(...members.map((member) => boxes[member]!.maxY)));
+        }
+      }),
+    );
+  });
+
+  it('leaves a piece clear of the rest a stack of its own, above its own top', () => {
+    const boxes = [
+      { minX: 0, minY: 0, maxX: 100, maxY: 60 },
+      { minX: 10, minY: 0, maxX: 90, maxY: 40 },
+      { minX: 120, minY: 0, maxX: 160, maxY: 30 },
+    ];
+    expect(captionStacks(boxes)).toEqual([
+      { members: [0, 1], topMm: 60 },
+      { members: [2], topMm: 30 },
+    ]);
+  });
+
+  it('joins pieces that overlap only through a third', () => {
+    const boxes = [
+      { minX: 0, minY: 0, maxX: 10, maxY: 10 },
+      { minX: 20, minY: 0, maxX: 30, maxY: 20 },
+      { minX: 5, minY: 5, maxX: 25, maxY: 8 },
+    ];
+    expect(captionStacks(boxes)).toEqual([{ members: [0, 1, 2], topMm: 20 }]);
   });
 });

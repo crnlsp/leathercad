@@ -1053,8 +1053,8 @@
   "caption": {
     "cut": "{{name}} ×{{quantity}}",
     "cutMirrored": "{{name}} {{drawn}} + {{turned}} mirrored",
-    "holes_one": "{{count}} hole · {{pitch}}",
-    "holes_other": "{{count}} holes · {{pitch}}",
+    "holes_one": "{{count}} hole · pitch {{pitch}}",
+    "holes_other": "{{count}} holes · pitch {{pitch}}",
     "unnamed": "Part"
   },
   "spacing": {
