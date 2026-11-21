@@ -307,7 +307,7 @@ test('Properties refuses a corner larger than fits, the same way (U.14)', async 
     await expect(topLeft).toBeFocused();
     await expect(topLeft).toHaveAttribute('aria-invalid', 'true');
     await expect(topLeft).toHaveAccessibleDescription(
-      /Corner radius exceeds the space available along the height \(90\.0\)\. Enter uses 90\.0\.$/,
+      /Corner radius exceeds the space available along the height \(90\)\. Enter uses 90\.$/,
     );
     await topLeft.press('Enter');
     await expect(topLeft).toHaveValue('90');
@@ -402,7 +402,7 @@ test('a width or height its corners do not fit in is refused, on the board and i
     await expect(height).toHaveAttribute('aria-invalid', 'true');
     // After the warning glyph's own word, as a corner's refusal reads.
     await expect(height).toHaveAccessibleDescription(
-      /Height is less than its corners need \(10\.0\)\. Enter uses 10\.0\.$/,
+      /Height is less than its corners need \(10\)\. Enter uses 10\.$/,
     );
     await expect(field(window, 'height')).toHaveValue('95');
     await height.press('Enter');
