@@ -2,7 +2,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
 import { createI18n } from '../../shared/i18n.js';
-import { describeCounts, indicatorOf } from './problemsIndicator.js';
+import { describeCounts, exportCounts, indicatorOf } from './problemsIndicator.js';
 
 /**
  * Print's second half (R-06): a check when there is nothing to fix, then the
@@ -55,5 +55,20 @@ describe('describeCounts', () => {
 
   it('says nothing for nothing', () => {
     expect(describeCounts({ error: 0, warning: 0, info: 0 }, i18n)).toBeNull();
+  });
+});
+
+describe('exportCounts (U15)', () => {
+  it('says "lists it" of one problem and "lists them" of more, for the paper or the file', () => {
+    expect(exportCounts({ error: 1, warning: 0, info: 0 }, false, i18n)).toBe(
+      'The design has 1 error. The Problems panel lists it. Everything that could be built is in the PDF.',
+    );
+    expect(exportCounts({ error: 1, warning: 1, info: 0 }, true, i18n)).toBe(
+      'The design has 1 error, 1 warning. The Problems panel lists them. Everything that could be built is in the file.',
+    );
+  });
+
+  it('says nothing when there is nothing', () => {
+    expect(exportCounts({ error: 0, warning: 0, info: 0 }, false, i18n)).toBeNull();
   });
 });

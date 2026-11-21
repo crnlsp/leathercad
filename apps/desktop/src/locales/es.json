@@ -784,8 +784,12 @@
     "title": "Exportar {{format}}"
   },
   "exportNotice": {
-    "counts": "El diseño tiene {{counts}}. Se detallan en el panel Problemas. Todo lo que se pudo generar está en el PDF.",
-    "countsFile": "El diseño tiene {{counts}}. Se detallan en el panel Problemas. Todo lo que se pudo generar está en el archivo.",
+    "counts_one": "El diseño tiene {{counts}}. Se detalla en el panel Problemas. Todo lo que se pudo generar está en el PDF.",
+    "counts_many": "El diseño tiene {{counts}}. Se detallan en el panel Problemas. Todo lo que se pudo generar está en el PDF.",
+    "counts_other": "El diseño tiene {{counts}}. Se detallan en el panel Problemas. Todo lo que se pudo generar está en el PDF.",
+    "countsFile_one": "El diseño tiene {{counts}}. Se detalla en el panel Problemas. Todo lo que se pudo generar está en el archivo.",
+    "countsFile_many": "El diseño tiene {{counts}}. Se detallan en el panel Problemas. Todo lo que se pudo generar está en el archivo.",
+    "countsFile_other": "El diseño tiene {{counts}}. Se detallan en el panel Problemas. Todo lo que se pudo generar está en el archivo.",
     "inPart": "en {{part}}",
     "omitted": "— no se pudieron generar, por lo que faltan en el PDF.",
     "omittedFile": "— no se pudieron generar, por lo que faltan en el archivo.",
@@ -1270,7 +1274,6 @@
     },
     "OUTSIDE_PART": {
       "title": "Fuera del material",
-      "holes": "{{featureName}} tiene agujeros fuera del material, más allá del contorno o dentro de un vaciado. No se pueden perforar ahí.",
       "line": "{{featureName}} sale del material, por lo que una parte no se puede marcar."
     },
     "HOLE_TOO_CLOSE_TO_EDGE": {

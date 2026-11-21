@@ -32,3 +32,14 @@ export function describeCounts(counts: SeverityCounts, i18n: I18n): string | nul
   ].filter((part): part is string => part !== null);
   return said.length === 0 ? null : i18n.list(said, 'unit');
 }
+
+/**
+ * What an export says of the problems it went ahead with — in the PDF, or in
+ * the file — agreeing with how many there are in all (U15); null for none.
+ */
+export function exportCounts(counts: SeverityCounts, file: boolean, i18n: I18n): string | null {
+  const said = describeCounts(counts, i18n);
+  if (said === null) return null;
+  const count = counts.error + counts.warning + counts.info;
+  return i18n.t(file ? 'exportNotice.countsFile' : 'exportNotice.counts', { counts: said, count });
+}

@@ -1,11 +1,14 @@
-import type { Mm } from '@leathercad/core';
+import { EPS_LENGTH, type Mm } from '@leathercad/core';
 import {
   ID1_CARD,
   contentSize,
+  fitsAcross,
   type PocketRequirement,
   type ResolvedPart,
 } from '@leathercad/domain';
 import type { Path } from '@leathercad/geometry';
+
+import type { I18n } from '../../shared/i18n.js';
 
 /** What Properties' *Holds* menu offers (9.14b). */
 export type HoldsChoice = 'none' | PocketRequirement['content']['kind'];
@@ -35,6 +38,21 @@ export function withChoice(
     easeMm,
     fully,
   };
+}
+
+/**
+ * *Holds*' verdict across the pocket (U7): fits or too narrow, by the judgement
+ * `POCKET_TOO_NARROW` makes, with the width and what it was measured for.
+ */
+export function acrossVerdict(widthMm: Mm, holds: PocketRequirement, i18n: I18n): string {
+  const number = new Intl.NumberFormat(i18n.locale, { maximumFractionDigits: 2 });
+  const verdict = fitsAcross(widthMm, holds) ? 'fits' : 'tooNarrow';
+  const ease = holds.easeMm > EPS_LENGTH ? 'Ease' : '';
+  return i18n.t(`pocket.holds.${verdict}${ease}`, {
+    width: number.format(widthMm),
+    content: number.format(contentSize(holds.content).widthMm),
+    ease: number.format(holds.easeMm),
+  });
 }
 
 /** The part's outline as evaluated, if it resolved: where a pocket's opening is read from. */

@@ -761,8 +761,10 @@
     "title": "{{format}} exportieren"
   },
   "exportNotice": {
-    "counts": "Der Entwurf hat {{counts}}. Sie sind im Bereich Probleme aufgelistet. Alles, dessen Geometrie berechnet werden konnte, ist in der PDF enthalten.",
-    "countsFile": "Der Entwurf hat {{counts}}. Sie sind im Bereich Probleme aufgelistet. Alles, dessen Geometrie berechnet werden konnte, ist in der Datei enthalten.",
+    "counts_one": "Der Entwurf hat {{counts}}. Mehr dazu im Bereich Probleme. Alles, dessen Geometrie berechnet werden konnte, ist in der PDF enthalten.",
+    "counts_other": "Der Entwurf hat {{counts}}. Sie sind im Bereich Probleme aufgelistet. Alles, dessen Geometrie berechnet werden konnte, ist in der PDF enthalten.",
+    "countsFile_one": "Der Entwurf hat {{counts}}. Mehr dazu im Bereich Probleme. Alles, dessen Geometrie berechnet werden konnte, ist in der Datei enthalten.",
+    "countsFile_other": "Der Entwurf hat {{counts}}. Sie sind im Bereich Probleme aufgelistet. Alles, dessen Geometrie berechnet werden konnte, ist in der Datei enthalten.",
     "inPart": "in Teil {{part}}",
     "omitted": "— ihre Geometrie konnte nicht berechnet werden; sie fehlen deshalb in der PDF.",
     "omittedFile": "— ihre Geometrie konnte nicht berechnet werden; sie fehlen deshalb in der Datei.",
@@ -1231,7 +1233,6 @@
     },
     "OUTSIDE_PART": {
       "title": "Außerhalb des Materials",
-      "holes": "Löcher von {{featureName}} liegen außerhalb des Materials, jenseits des Umrisses oder in einem Ausschnitt. Dort können sie nicht gestanzt werden.",
       "line": "{{featureName}} verläuft außerhalb des Materials. Ein Teil der Linie kann dort nicht markiert werden."
     },
     "HOLE_TOO_CLOSE_TO_EDGE": {

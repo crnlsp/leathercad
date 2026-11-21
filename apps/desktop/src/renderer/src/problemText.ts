@@ -52,7 +52,11 @@ const CATALOGUE: { readonly [K in ProblemCode]: Describe<K> } = {
   WOULD_LOOP: (f, t) => t('problems.WOULD_LOOP.description', f),
   CYCLE: (f, t) => t('problems.CYCLE.description', f),
   DERIVATION_INCOMPATIBLE: (f, t) => t(`problems.DERIVATION_INCOMPATIBLE.rule.${f.rule}`),
-  PART_ALREADY_HAS_OUTER: (f, t) => t('problems.PART_ALREADY_HAS_OUTER.description', f),
+  PART_ALREADY_HAS_OUTER: (f, t) =>
+    t(`problems.PART_ALREADY_HAS_OUTER.${f.allowance === true ? 'allowance' : 'description'}`, {
+      partName: f.partName,
+      outerName: f.outerName,
+    }),
   CONTOUR_NOT_CLOSED: (f, t) =>
     t(`problems.CONTOUR_NOT_CLOSED.${f.role}${f.closable ? 'Closable' : ''}`, {
       subject: 'drawing' in f ? t(`problems.drawing.${f.drawing}`) : f.featureName,

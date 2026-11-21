@@ -29,7 +29,8 @@ for (const size of [
       await expect(reading.getByTestId('pocket-width')).toHaveText('99 mm');
       await expect(reading.getByTestId('pocket-depth')).toHaveText('41.35 mm');
       await expect(reading).toContainText('the pocket opening may extend above it');
-      await expect(reading).toContainText('Leather thickness and stitching tension');
+      // The leather-thickness caveat is said once, under Holds (U7).
+      await expect(reading).not.toContainText('Leather thickness');
       expect(await reading.evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
       await window.getByTestId('editor-canvas').focus();
       await window.keyboard.press('Shift+Digit2');
@@ -101,9 +102,9 @@ test('a pocket says whether its card goes in, with the maker’s own ease (9.14b
     const problems = panel.getByTestId('feature-problems');
     await expect(problems).toContainText('Pocket too narrow');
     await expect(problems).toContainText('a payment card with 4.00 mm of ease needs 89.60 mm');
-    // What was measured, and to which edge (Q49): never a verdict of its own.
+    // DR8's verdict across, with what was measured (U7); the depth line says to which edge (Q49).
     await expect(panel.getByTestId('pocket-across')).toHaveText(
-      '89 mm between stitch lines; 85.6 mm stated, with 4 mm ease.',
+      'Too narrow: 89 mm across for 85.6 mm and 4 mm ease.',
     );
     await expect(panel.getByTestId('pocket-down')).toHaveText(
       "57 mm below Card pocket's edge, 4 mm above the stitch ends; 53.98 mm stated.",

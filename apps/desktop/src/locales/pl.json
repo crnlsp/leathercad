@@ -807,8 +807,14 @@
     "title": "Eksportuj {{format}}"
   },
   "exportNotice": {
-    "counts": "Projekt zawiera: {{counts}}. Są wymienione w panelu Problemy. PDF zawiera wszystko, co udało się wyznaczyć.",
-    "countsFile": "Projekt zawiera: {{counts}}. Są wymienione w panelu Problemy. Plik zawiera wszystko, co udało się wyznaczyć.",
+    "counts_one": "Projekt zawiera: {{counts}}. Szczegóły w panelu Problemy. PDF zawiera wszystko, co udało się wyznaczyć.",
+    "counts_few": "Projekt zawiera: {{counts}}. Są wymienione w panelu Problemy. PDF zawiera wszystko, co udało się wyznaczyć.",
+    "counts_many": "Projekt zawiera: {{counts}}. Są wymienione w panelu Problemy. PDF zawiera wszystko, co udało się wyznaczyć.",
+    "counts_other": "Projekt zawiera: {{counts}}. Są wymienione w panelu Problemy. PDF zawiera wszystko, co udało się wyznaczyć.",
+    "countsFile_one": "Projekt zawiera: {{counts}}. Szczegóły w panelu Problemy. Plik zawiera wszystko, co udało się wyznaczyć.",
+    "countsFile_few": "Projekt zawiera: {{counts}}. Są wymienione w panelu Problemy. Plik zawiera wszystko, co udało się wyznaczyć.",
+    "countsFile_many": "Projekt zawiera: {{counts}}. Są wymienione w panelu Problemy. Plik zawiera wszystko, co udało się wyznaczyć.",
+    "countsFile_other": "Projekt zawiera: {{counts}}. Są wymienione w panelu Problemy. Plik zawiera wszystko, co udało się wyznaczyć.",
     "inPart": "w części {{part}}",
     "omitted": "— nie udało się wyznaczyć ich geometrii, więc nie ma ich w PDF.",
     "omittedFile": "— nie udało się wyznaczyć ich geometrii, więc nie ma ich w pliku.",
@@ -1309,7 +1315,6 @@
     },
     "OUTSIDE_PART": {
       "title": "Poza materiałem",
-      "holes": "Otwory {{featureName}} wychodzą poza materiał — za obrys lub do wycięcia. Nie można ich tam wybić.",
       "line": "Element {{featureName}} wychodzi poza materiał, więc część linii nie może zostać naniesiona."
     },
     "HOLE_TOO_CLOSE_TO_EDGE": {

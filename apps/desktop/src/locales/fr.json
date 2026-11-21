@@ -784,8 +784,12 @@
     "title": "Exporter en {{format}}"
   },
   "exportNotice": {
-    "counts": "Le patron présente {{counts}}. Le panneau Problèmes les liste. Tout ce qui a pu être construit figure dans le PDF.",
-    "countsFile": "Le patron présente {{counts}}. Le panneau Problèmes les liste. Tout ce qui a pu être construit figure dans le fichier.",
+    "counts_one": "Le patron présente {{counts}}. Voir le panneau Problèmes. Tout ce qui a pu être construit figure dans le PDF.",
+    "counts_many": "Le patron présente {{counts}}. Le panneau Problèmes les liste. Tout ce qui a pu être construit figure dans le PDF.",
+    "counts_other": "Le patron présente {{counts}}. Le panneau Problèmes les liste. Tout ce qui a pu être construit figure dans le PDF.",
+    "countsFile_one": "Le patron présente {{counts}}. Voir le panneau Problèmes. Tout ce qui a pu être construit figure dans le fichier.",
+    "countsFile_many": "Le patron présente {{counts}}. Le panneau Problèmes les liste. Tout ce qui a pu être construit figure dans le fichier.",
+    "countsFile_other": "Le patron présente {{counts}}. Le panneau Problèmes les liste. Tout ce qui a pu être construit figure dans le fichier.",
     "inPart": "dans {{part}}",
     "omitted": "— leur construction a échoué ; ils ne figurent donc pas dans le PDF.",
     "omittedFile": "— leur construction a échoué ; ils ne figurent donc pas dans le fichier.",
@@ -1270,7 +1274,6 @@
     },
     "OUTSIDE_PART": {
       "title": "Hors de la matière",
-      "holes": "{{featureName}} comporte des trous hors de la matière, au-delà du contour extérieur ou dans une découpe intérieure. Ils ne peuvent pas y être percés.",
       "line": "{{featureName}} sort de la matière : une partie ne peut pas être marquée."
     },
     "HOLE_TOO_CLOSE_TO_EDGE": {

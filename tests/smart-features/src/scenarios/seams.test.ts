@@ -7,6 +7,7 @@ import {
   at,
   drawRectangle,
   holesOf,
+  FROM_THE_VERY_ENDS,
   punchHoles,
   resize,
   setHoles,
@@ -136,7 +137,7 @@ describe('G — pieces sewn together', () => {
     const pocket = (piece: string, x: number): Action[] => [
       drawRectangle(piece, { x, y: 0, width: 100, height: 60 }),
       stitchLeavingOpen(piece, 'top', 3),
-      punchHoles(piece),
+      punchHoles(piece, FROM_THE_VERY_ENDS),
     ];
     const onTheEdge = (piece: string): Expected => ({
       code: 'HOLE_TOO_CLOSE_TO_EDGE',
