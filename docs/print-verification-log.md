@@ -173,7 +173,7 @@ printer.
 
 | Date | Build | OS, viewer and scale setting | Printer, driver, paper | I (diameter · first to last) | J (across · up · centre cross) | K | L (calibration readings x · y, then A–F) | M (A–F) | Result |
 |---|---|---|---|---|---|---|---|---|---|
-| _pending_ | | | | | | | | | |
+| 2026-11-21 | `develop` at b8b9b57 (1.7, after R11's fixture), `paper-check-assembly.lcp` | Linux (CachyOS), CUPS 2.4.20, libcupsfilters 2.2.1; I–K: the PDF written as *Print* writes it (`exportPdf`, upright, no correction) and sent to `lp` with *Print*'s own options; L and M: LeatherCAD's own *Print* and *Calibrate this printer…* | Brother HL-L2442DW, driverless (IPP Everywhere), the printer's default settings, A4 | Pass | Pass | Pass: headed *Not to scale*, the panel on it smaller | Pass | Pass | **Pass — every check as expected, by the maintainer's reading**; exact readings, the stored correction and D tip to tip against the extension lines not noted |
 
 ## Built-in template construction — 8.14b
 
