@@ -388,7 +388,7 @@
     "duplicatePiece": "Duplicate the selected piece, or the features picked in one piece",
     "arc": "Polyline: the next segment is an arc",
     "straight": "Polyline: the next segment is straight",
-    "cancel": "Cancel what the tool is doing, clear the selection, or leave focus mode",
+    "cancel": "Cancel what the tool is doing, go back to Select, clear the selection, or leave focus mode",
     "contextMenu": "Open the menu for the selection, as a right-click does",
     "delete": "Delete what is selected (Select tool)",
     "design": "Design: the board you draw on",

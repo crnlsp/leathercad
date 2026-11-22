@@ -1,7 +1,13 @@
 import { DocumentStore, addPart, emptyDocument, rectShape, shapePart } from '@leathercad/document';
 import { describe, expect, it } from 'vitest';
 
-import type { KeyInput, PointerInput, Tool, ToolContext } from '../tool.js';
+import {
+  ToolManager,
+  type KeyInput,
+  type PointerInput,
+  type Tool,
+  type ToolContext,
+} from '../tool.js';
 import { Viewport } from '../viewport.js';
 import { createArcTool } from './arcTool.js';
 import { createCircleTool } from './circleTool.js';
@@ -106,5 +112,60 @@ describe('Escape that gives something up', () => {
     expect(tool.onKey?.(ctx, ESCAPE)).toBe(true);
     expect(store.getState().selection.features.size).toBe(0);
     expect(tool.onKey?.(ctx, ESCAPE) === true).toBe(false);
+  });
+});
+
+/**
+ * Escape on an idle tool returns to Select (QA U11): a drawing tool otherwise
+ * stayed on after its shape, and the next click on empty board began another.
+ * Asked of the manager, the one place a key reaches a tool, so every tool is
+ * held to it alike.
+ */
+describe('Escape with nothing under way, in the manager', () => {
+  function managed(): { manager: ToolManager; store: DocumentStore } {
+    const { ctx, store } = harness();
+    const tools = TOOLS.map(([, make]) => make());
+    return { manager: new ToolManager(ctx, tools[0]!, tools), store };
+  }
+
+  it.each(TOOLS.filter(([id]) => id !== 'select'))('returns the idle %s tool to Select', (id) => {
+    const { manager } = managed();
+    manager.activate(id);
+    expect(manager.key(ESCAPE)).toBe(true);
+    expect(manager.activeTool.id).toBe('select');
+  });
+
+  it('leaves Select as it is, and the key to the window', () => {
+    const { manager } = managed();
+    expect(manager.key(ESCAPE)).toBe(false);
+    expect(manager.activeTool.id).toBe('select');
+  });
+
+  it.each(['rectangle', 'circle', 'arc', 'polyline'])(
+    'cancels a %s under way first, and leaves the tool on the second press',
+    (id) => {
+      const { manager } = managed();
+      manager.activate(id);
+      manager.pointerMove(pointer(0, 0));
+      manager.pointerDown(pointer(0, 0));
+      manager.pointerUp(pointer(0, 0));
+      expect(manager.key(ESCAPE)).toBe(true);
+      expect(manager.activeTool.id).toBe(id);
+      expect(manager.key(ESCAPE)).toBe(true);
+      expect(manager.activeTool.id).toBe('select');
+    },
+  );
+
+  it('keeps the tool on between shapes drawn one after another', () => {
+    const { manager, store } = managed();
+    manager.activate('rectangle');
+    for (const x of [0, 100]) {
+      manager.pointerMove(pointer(x, 0));
+      manager.pointerDown(pointer(x, 0));
+      manager.pointerMove(pointer(x + 40, 30));
+      manager.pointerUp(pointer(x + 40, 30));
+    }
+    expect(store.getState().document.project.parts).toHaveLength(2);
+    expect(manager.activeTool.id).toBe('rectangle');
   });
 });

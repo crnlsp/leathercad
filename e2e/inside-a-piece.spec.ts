@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import { boardMap } from './boardMap.js';
-import { withApp } from './launchApp.js';
+import { placeAt, readPosition, withApp } from './launchApp.js';
 import { fromProjectMenu } from './projectMenu.js';
 
 /**
@@ -10,12 +10,19 @@ import { fromProjectMenu } from './projectMenu.js';
  * ends fully round, so its centre line is y = 13; its rivet sits at (14, 13),
  * mirrored across the fold. The rivet is typed 3 mm up first, then dragged
  * back near the line by its rim where it starts, at 0°.
+ *
+ * Its centre is read from Arrange's Bottom and its diameter (QA U9): Bottom is
+ * its box's lower edge, a radius below the centre.
  */
 
 const ROOM = { size: [1440, 1000] } as const;
 
 const panel = (window: Page) => window.getByTestId('property-panel');
-const centreY = (window: Page) => panel(window).getByRole('textbox', { name: 'Y mm', exact: true });
+const diameter = async (window: Page): Promise<number> =>
+  Number(await panel(window).getByLabel('Diameter').inputValue());
+/** The rivet's centre, from its box's bottom edge. */
+const centreY = async (window: Page): Promise<number> =>
+  (await readPosition(window, 'Bottom')) + (await diameter(window)) / 2;
 
 async function openKeyFob(window: Page) {
   await fromProjectMenu(window, 'new-template');
@@ -23,9 +30,8 @@ async function openKeyFob(window: Page) {
   await expect(window.getByTestId('project-name')).toHaveText('Key fob');
   await window.getByTestId('tool-select').click();
   await window.getByTestId('feature-row-strap-rivet-a').click();
-  await centreY(window).fill('16');
-  await centreY(window).press('Enter');
-  await expect(centreY(window)).toHaveValue('16');
+  await placeAt(window, 'Bottom', 16 - (await diameter(window)) / 2);
+  await expect.poll(() => centreY(window)).toBeCloseTo(16, 2);
   return boardMap(window);
 }
 
@@ -45,10 +51,10 @@ test("a rivet dragged near the strap's centre line lands on it exactly, in one u
   await withApp(async (window) => {
     const board = await openKeyFob(window);
     await carry(window, board);
-    await expect(centreY(window)).toHaveValue('13');
+    await expect.poll(() => centreY(window)).toBeCloseTo(13, 2);
 
     await window.getByTestId('undo').click();
-    await expect(centreY(window)).toHaveValue('16');
+    await expect.poll(() => centreY(window)).toBeCloseTo(16, 2);
   }, ROOM);
 });
 
@@ -56,7 +62,7 @@ test('Ctrl held while dragging the rivet suspends the line (3.18)', async () => 
   await withApp(async (window) => {
     const board = await openKeyFob(window);
     await carry(window, board, true);
-    const value = Number((await centreY(window).inputValue()).replace('−', '-'));
+    const value = await centreY(window);
     expect(value).toBeGreaterThan(13.1);
     expect(value).toBeLessThan(13.7);
   }, ROOM);

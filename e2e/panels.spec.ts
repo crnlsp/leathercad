@@ -115,7 +115,7 @@ test('on a German keyboard the keys are ü, + and #, by their place', async () =
   });
 });
 
-test('Esc gives up a drawing in progress before it leaves focus mode', async () => {
+test('Esc gives up a drawing in progress, then the tool, before it leaves focus mode (QA U11)', async () => {
   await withSample(async (window, app) => {
     await resize(app, window, 1440, 900);
     await window.keyboard.press('Backslash');
@@ -126,6 +126,11 @@ test('Esc gives up a drawing in progress before it leaves focus mode', async () 
     await window.mouse.move(box.x + 320, box.y + 300);
 
     await window.keyboard.press('Escape');
+    await expect(window.getByTestId('toggle-focus')).toHaveAttribute('aria-pressed', 'true');
+    await expect(window.getByTestId('tool-rectangle')).toHaveClass(/active/);
+    // One press, one thing: the idle tool goes back to Select next.
+    await window.keyboard.press('Escape');
+    await expect(window.getByTestId('tool-select')).toHaveClass(/active/);
     await expect(window.getByTestId('toggle-focus')).toHaveAttribute('aria-pressed', 'true');
     await window.keyboard.press('Escape');
     await expect(window.getByTestId('toggle-focus')).toHaveAttribute('aria-pressed', 'false');

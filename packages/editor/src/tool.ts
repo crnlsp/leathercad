@@ -172,7 +172,8 @@ export interface Tool {
    * the Arc or Line tool (3.9a). Anything else leaves shortcuts as they are.
    *
    * Escape is claimed when it gives something up — a gesture, a picked point,
-   * a selection — and left to the window when there is nothing to, where it
+   * a selection — and not when there is nothing to. The manager then takes
+   * it back to Select (QA U11); on Select it is left to the window, where it
    * closes an overlay or leaves focus mode (U.5): one press, one thing.
    */
   onKey?(ctx: ToolContext, event: KeyInput): boolean | void;
@@ -322,6 +323,9 @@ export class ToolManager {
   /** The arrow keys' move of the selection (3.14): the board's, whichever tool is active. */
   private readonly nudge = createNudge();
 
+  /** The tool the board starts with, and Escape returns to (QA U11). */
+  private readonly home: Tool;
+
   constructor(
     private readonly context: ToolContext,
     initial: Tool,
@@ -329,6 +333,7 @@ export class ToolManager {
     private readonly reportError: ToolErrorReporter = reportToConsole,
   ) {
     this.active = initial;
+    this.home = initial;
   }
 
   get activeTool(): Tool {
@@ -523,6 +528,15 @@ export class ToolManager {
     }
     if (this.active.onKey?.(this.context, event) === true) return true;
     if (this.underway()) return false;
+    // Escape with nothing left to give up leaves the tool for the one the
+    // board starts with, Select (QA U11): a drawing tool otherwise stays on, and the next click on
+    // empty board starts another shape. Mid-shape the tool claimed it above, so
+    // cancelling and then leaving is two presses. Drawing several in a row needs
+    // no Escape between them.
+    if (event.key === 'Escape' && this.active !== this.home) {
+      this.activate(this.home.id);
+      return true;
+    }
     if (means(event, 'selectAllPieces')) {
       const { store } = this.context;
       store.selectParts(selectablePieces(evaluate(store.getState().document.project)));
