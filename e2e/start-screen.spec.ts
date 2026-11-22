@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
 import { expectNoViolations, launchApp } from './launchApp.js';
@@ -29,6 +29,25 @@ test('the start screen offers the blank project first, then the templates drawn 
 
     await window.getByTestId('start-card-builtin:card-holder').click();
     await expect(window.getByTestId('part-count')).toHaveText('2');
+  });
+});
+
+test('a new project has one name and one key cap, on the start screen and in the Project menu (QA7, U20)', async () => {
+  await onStartScreen(async (window) => {
+    const card = window.getByTestId('start-new');
+    await expect(window.locator('#start-title')).toHaveText('New project');
+    await expect(card.locator('.start-card-name')).toHaveText(/^New project/);
+    await window.getByTestId('project-menu').click();
+    await expect(window.getByTestId('new')).toHaveText(/^New project/);
+    await window.keyboard.press('Escape');
+
+    const look = (kbd: Locator) =>
+      kbd.evaluate((each) => {
+        const style = getComputedStyle(each);
+        return [style.font, style.color, style.backgroundColor, style.padding].join(' | ');
+      });
+    const openKey = window.getByTestId('start-open').locator('kbd');
+    expect(await look(card.locator('kbd'))).toBe(await look(openKey));
   });
 });
 

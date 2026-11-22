@@ -464,7 +464,13 @@ export function App({
   // What went wrong opening a project from the start screen, where no tab is
   // there to say it (8.12).
   const [startError, setStartError] = useState<unknown>(null);
-  const initialiseTool = useCallback((opened: ProjectTab) => {
+  // A project new in a tab — Ctrl+N, + › New, the Project menu, a template,
+  // Open, a recent one, the start screen — takes the keys to its board from
+  // wherever they were: a size typed next draws, and Enter presses nothing
+  // left behind (X20, QA7). Every way in comes through here.
+  const boardWanted = useRef(false);
+  const startTab = useCallback((opened: ProjectTab) => {
+    boardWanted.current = true;
     const initial = opened.untitled > 0 ? 'rectangle' : 'select';
     // A tab restored on Sheets must bring Select back to Design too, rather
     // than the drawing tool the window last used (Q41).
@@ -479,7 +485,7 @@ export function App({
     blank,
     t,
     setStartError,
-    initialiseTool,
+    startTab,
   );
   // Read from the tab, which the store's mirror re-renders for.
   const dirty = isDirty(tab);
@@ -1045,20 +1051,16 @@ export function App({
     return () => window.clearInterval(timer);
   }, [started, keepSessionNow, openTabs, active]);
 
-  // A project opened from the start screen — blank, a card, the picker, Open,
-  // a recent one — takes the place of what had the focus, which goes with the
-  // screen. The maker on the keys lands on the board, not on nothing, where
-  // the next Tab started again at the window's top (X20, WCAG 2.4.3).
-  const onStartScreen = started && active === null;
-  const wasOnStartScreen = useRef(onStartScreen);
+  // Once the new tab's board is drawn, and after a menu or dialog closing
+  // with it has given its focus back (`startTab`).
   useEffect(() => {
-    const left = wasOnStartScreen.current && !onStartScreen;
-    wasOnStartScreen.current = onStartScreen;
-    const focused = document.activeElement;
-    if (left && (focused === null || focused === document.body)) {
-      document.querySelector<HTMLElement>('[data-testid="editor-canvas"]')?.focus();
-    }
-  }, [onStartScreen]);
+    if (!boardWanted.current || active === null) return;
+    boardWanted.current = false;
+    // A dialog open over the new tab keeps the keys — the crash-recovery offer
+    // at launch, or a refusal — and its own buttons where they start.
+    if (document.querySelector('[aria-modal="true"]') !== null) return;
+    document.querySelector<HTMLElement>('[data-testid="editor-canvas"]')?.focus();
+  }, [active]);
 
   // A recent project (8.2, 8.7), a second launch's (8.11), macOS's open-file:
   // the main process chose and granted the path, and it opens in a tab.
