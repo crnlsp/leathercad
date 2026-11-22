@@ -16,7 +16,7 @@ import type { Feature, FeatureId, PartId, Tooth } from './feature.js';
 import type { ResolvedFeature, ResolvedProject } from './evaluate.js';
 import { distanceToEdge, isOnMaterial, materialOf, type Material } from './material.js';
 import { hasOuterContour } from './partStructure.js';
-import { contentSize, pocketOpening, pocketSize } from './pocket.js';
+import { contentSize, fitsAcross, pocketOpening, pocketSize } from './pocket.js';
 import type { StitchHole, StitchHoles } from './stitch.js';
 import { toothOutline } from './tooth.js';
 import {
@@ -295,7 +295,7 @@ function pocketFit(
   const needs = contentSize(content);
   const found: Diagnostic[] = [];
   const neededWidthMm = needs.widthMm + easeMm;
-  if (!approxGte(size.widthMm, neededWidthMm, EPS_LENGTH)) {
+  if (!fitsAcross(size.widthMm, feature.holds)) {
     found.push(
       here(
         problem('POCKET_TOO_NARROW', {

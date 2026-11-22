@@ -136,7 +136,9 @@ close it.
    and keeps its centre marks everywhere until you pick its iron again.
 
    On an open stitch line, **Start offset** and **End offset** move the first and last holes in
-   from the line's ends; every corner keeps its hole.
+   from the line's ends; every corner keeps its hole. Opening a line at a square corner sets them
+   for you, to the line's edge margin, so the end holes start as far from the open edge as the
+   others are from theirs.
 
 The bar under the selected piece says the same in one line — holes, spacing against the pitch,
 the runs (each side's holes, its corner holes counted on both sides they join) and how many to cut
@@ -150,14 +152,14 @@ cut-outs and not what to buy. **Copy** puts the same lines on the clipboard.
 
 An open U-shaped stitch line with straight sides also shows **Width between stitch lines** and
 **Stitch depth** in Properties and on the selection bar. Stitch depth starts at the line joining
-the stitching's two ends: the leather opening can be higher. Leather thickness and stitching
-tension reduce usable room, so these measurements do not guarantee that a card fits. A shape
+the stitching's two ends: the leather opening can be higher. A shape
 without two unambiguous straight sides shows no numeric pocket reading.
 
 Say what the pocket is for under **Holds**: a payment card or another size, and an **Ease** — the
 room you leave for the leather and the stitching, which starts from *Settings → My tools → Pocket
 ease* when you set one there. Problems then warns *Pocket too narrow* when the stitch lines are
-closer than the content and its ease. Depth is shown, not judged — a card holder lets its cards
+closer than the content and its ease, and under **Holds** the width line gives the verdict —
+*Fits: 89 mm across for 85.6 mm and 3 mm ease*, or *Too narrow* with the same numbers. Depth is shown, not judged — a card holder lets its cards
 stand proud — unless you tick **Holds it fully**: then the content itself must fit below the opening,
 which is read from the outline above the stitch ends. **Holds** then names the piece whose edge
 the depth was read to, and how far that edge rises above the stitch ends, so you can see what was
@@ -168,7 +170,9 @@ To stitch only some sides, as a pocket is, select its derived stitch line and ch
 *Stitched sides* in Properties. On a rectangle square to the board, *Open at the top* and its
 three siblings name the side left open; otherwise choose *Between corners* and the outline corners
 the run follows — the board numbers the corners while a corner field has focus. Changing the
-outline keeps the stitching attached. Check the endpoint holes in Problems.
+outline keeps the stitching attached. Where the run ends at a square corner it meets the edge it
+leaves open, so its holes' *Start offset* and *End offset* become the edge margin: the end holes
+start clear of that edge, and Problems has nothing to say about them.
 For endpoints that do not lie at those corners, draw the stitch line yourself with
 *Draw as: Stitch* and the Polyline tool, along the sides to be sewn.
 

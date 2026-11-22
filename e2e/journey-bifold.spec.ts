@@ -69,7 +69,7 @@ test('the bifold from its template: its seams, a card that fits, and the PDF mea
     await fields.getByTestId('pocket-holds').selectOption('id-1');
     await enter(fields.getByRole('textbox', { name: 'Ease' }), '3');
     await expect(fields.getByTestId('pocket-across')).toHaveText(
-      '89 mm between stitch lines; 85.6 mm stated, with 3 mm ease.',
+      'Fits: 89 mm across for 85.6 mm and 3 mm ease.',
     );
     await expect(fields.getByTestId('feature-problems')).toHaveCount(0);
     await expect(window.getByTestId('problems-verdict')).toHaveText('Nothing to fix.');

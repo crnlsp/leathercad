@@ -8,6 +8,7 @@ import {
 } from '@leathercad/core';
 import type {
   Derivation,
+  EndOffsets,
   ExtentRef,
   Feature,
   FeatureId,
@@ -35,6 +36,7 @@ import {
   anchorsOf,
   cornerDistances,
   dependentsOf,
+  endOffsetsClearOfTheEdge,
   seamsDependingOn,
   derivationRefusal,
   evaluate,
@@ -1209,8 +1211,7 @@ export function addStitchHoles(
             corners: op?.corners ?? 'hole-at-corner',
             ...(op?.ironLabel === undefined ? {} : { ironLabel: op.ironLabel }),
             ...(op?.tooth === undefined ? {} : { tooth: op.tooth }),
-            ...(op?.startOffsetMm === undefined ? {} : { startOffsetMm: op.startOffsetMm }),
-            ...(op?.endOffsetMm === undefined ? {} : { endOffsetMm: op.endOffsetMm }),
+            ...clearOfTheEdge(document.project, sourceId, op),
           },
         },
       }).apply(document);
@@ -1251,8 +1252,62 @@ export function setDerivation(id: FeatureId, op: Derivation): Command {
       return document;
     const candidate: Feature = { ...feature, source: { ...feature.source, op } };
     if (derivationRefusal(document.project, candidate) !== null) return document;
-    return { project: mapFeature(document.project, id, () => candidate) };
+    const project = mapFeature(document.project, id, () => candidate);
+    const opened =
+      feature.source.op.type === 'offset' &&
+      feature.source.op.run.kind === 'whole' &&
+      project !== document.project;
+    return { project: opened ? clearHolesOfTheEdge(project, id) : project };
   });
+}
+
+/**
+ * The offsets a new hole set along this line starts with (U2): those the
+ * caller names, or — where the line is opened on a side and its ends lie on
+ * that edge — what clears its end holes of it. Naming one end is the maker's
+ * choice, and the other is then left unset.
+ */
+function clearOfTheEdge(
+  project: Project,
+  lineId: FeatureId,
+  op: Partial<Extract<Derivation, { type: 'stitch-holes' }>> | undefined,
+): EndOffsets {
+  const { startOffsetMm, endOffsetMm } =
+    op?.startOffsetMm === undefined && op?.endOffsetMm === undefined
+      ? endOffsetsClearOfTheEdge(project, lineId)
+      : op;
+  return {
+    ...(startOffsetMm === undefined ? {} : { startOffsetMm }),
+    ...(endOffsetMm === undefined ? {} : { endOffsetMm }),
+  };
+}
+
+/**
+ * The hole sets along a stitch line just opened on a side, their end holes
+ * moved clear of that edge (U2). A set whose offsets the maker chose keeps
+ * them, and a file's are never touched: only this act sets them.
+ */
+function clearHolesOfTheEdge(project: Project, lineId: FeatureId): Project {
+  const offsets = endOffsetsClearOfTheEdge(project, lineId);
+  if (offsets.startOffsetMm === undefined && offsets.endOffsetMm === undefined) return project;
+  const holeSets = project.parts
+    .flatMap((part) => part.features)
+    .filter((f) => f.source.kind === 'derived' && f.source.sourceId === lineId);
+  return holeSets.reduce(
+    (p, holes) =>
+      mapFeature(p, holes.id, (f) => {
+        if (
+          f.kind !== 'stitch-hole-set' ||
+          f.source.kind !== 'derived' ||
+          f.source.op.type !== 'stitch-holes'
+        )
+          return f;
+        const { startOffsetMm, endOffsetMm } = f.source.op;
+        if (startOffsetMm !== undefined || endOffsetMm !== undefined) return f;
+        return { ...f, source: { ...f.source, op: { ...f.source.op, ...offsets } } };
+      }),
+    project,
+  );
 }
 
 /**
@@ -1523,6 +1578,20 @@ export function allowanceRefusal(project: Project, stitchId: FeatureId): Problem
   const { part, feature } = found;
   if (feature.kind !== 'stitch-line') {
     return problem('NOT_DERIVED', { featureId: feature.id, featureName: feature.name });
+  }
+
+  // A piece cut to an outline has its allowance already — the leather between
+  // the edge and the stitching — and the bar ticks it (U6). Said first, so it
+  // is the one reason whether the stitching is closed or open.
+  const outer = part.features.find((f) => f.kind === 'cut-contour' && f.role === 'outer');
+  if (outer !== undefined) {
+    return problem('PART_ALREADY_HAS_OUTER', {
+      featureId: feature.id,
+      featureName: feature.name,
+      partName: part.name,
+      outerName: outer.name,
+      allowance: true,
+    });
   }
 
   // Everything else the compatibility table has to say — the run must be
