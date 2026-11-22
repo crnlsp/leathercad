@@ -746,7 +746,16 @@ export function App({
   } | null>(null);
   const saveTabAsTemplate = (tab: ProjectTab | null): void =>
     setSavingTemplate(
-      tab === null ? null : { project: tab.store.committedDocument.project, name: tabName(tab, t) },
+      tab === null
+        ? null
+        : {
+            project: tab.store.committedDocument.project,
+            // The project's own name, as the summary calls it: *Untitled 2* only tells tabs apart.
+            name:
+              tab.file.path === null && isUnnamed(tab.store.committedDocument.project.name)
+                ? t('app.untitled')
+                : tabName(tab, t),
+          },
     );
   // The picker chooses pieces to insert (9.7) rather than a project to start.
   const [insertingPieces, setInsertingPieces] = useState(false);

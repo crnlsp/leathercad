@@ -176,11 +176,11 @@ then QA3 (after QA1), QA6–QA8; then QA9–QA11. U9, U11 and U14 wait on the ma
 - ✅ **QA3 SVG import refuses what it cannot take** — a drawing past `COORDINATE_LIMIT_MM`, or one whose pieces a project could not name or print, is refused in the dialog with *Import* off; a refused import leaves the selection as it was (F2, F3, F7).
 - ✅ **QA4 Degenerate outlines reported truly** — a repeated vertex is not a self-crossing; a zero-size piece is a problem (F4, F5).
 - ✅ **QA5 Sewing two pieces starts right** — *Sew together* never pairs a hole set with itself: one selected starts its second side on another piece, and a seam whose sides are the same holes is `SEAM_JOINS_ITSELF`, an error; Shift/Ctrl-click (⌘ on macOS) in Parts adds to or removes from the selection (U1, U3).
-- ✅ **QA7 A new project starts focused** — Ctrl+N focuses the new board; one name and key cap for a new project (U4, U20).
 - ✅ **QA6 Stitching and pocket feedback** — an open run starts clear of the edge, one reason for the seam allowance, the pocket check says "fits" once, problem wording (U2, U6, U7, U15).
+- ✅ **QA7 A new project starts focused** — Ctrl+N focuses the new board; one name and key cap for a new project (U4, U20).
 - ✅ **QA8 Board labels say what they mean** — a caption reads "86 holes · pitch 3.85 mm"; a drawn size reads as Properties writes it, "83.33 × 60 mm", while dragging, on the chips and in Properties; pieces laid on one another share one stack of captions above them all (U5, U16, U17).
 - ✅ **QA9 Screen-reader names** — the eye button's state, the *Cut* field's name, the template dialog's role (U8, U10, U19).
-- ☐ **QA10 Templates confirm and show** — a notice after *Save as template*; *Insert pieces*' checklist in view (U12, U13).
+- ✅ **QA10 Templates confirm and show** — a notice after *Save as template*; *Insert pieces*' checklist in view (U12, U13).
 - ✅ **QA11 Panels at 1440 and 860** — rows that do not wrap; a folded panel's chip that does not look on (U18, U21).
 
 ### Collected from makers, and decided
