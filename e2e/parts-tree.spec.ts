@@ -367,9 +367,9 @@ test('the tree’s keys move, fold, hide and rename — and the window’s keys 
     // Space hides and shows, and Ctrl+Z from the row undoes it.
     const eye = window.getByTestId('feature-visible-outer-outline');
     await window.keyboard.press('Space');
-    await expect(eye).toHaveAttribute('aria-pressed', 'false');
+    await expect(eye).toHaveAccessibleName('Show');
     await window.keyboard.press('ControlOrMeta+z');
-    await expect(eye).toHaveAttribute('aria-pressed', 'true');
+    await expect(eye).toHaveAccessibleName('Hide');
     await expect(window.getByTestId('feature-row-outer-outline')).toBeFocused();
 
     // F2 renames in place: Enter keeps it, as one step of undo; Escape puts it back.
@@ -455,10 +455,7 @@ test('a locked feature is reached from the tree by keyboard, and unlocked from i
   await withSample(async (window) => {
     await row(window, 'outer-outline').hover();
     await window.getByTestId('feature-locked-outer-outline').click();
-    await expect(window.getByTestId('feature-locked-outer-outline')).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
+    await expect(window.getByTestId('feature-locked-outer-outline')).toHaveAccessibleName('Unlock');
     await piece(window, 'outer').focus();
     await window.keyboard.press('ArrowDown');
     await expect(window.getByTestId('feature-row-outer-outline')).toBeFocused();
@@ -467,10 +464,7 @@ test('a locked feature is reached from the tree by keyboard, and unlocked from i
     await expect(window.getByTestId('context-lock')).toHaveText(/Unlock/);
     await window.getByTestId('context-lock').focus();
     await window.keyboard.press('Enter');
-    await expect(window.getByTestId('feature-locked-outer-outline')).toHaveAttribute(
-      'aria-pressed',
-      'false',
-    );
+    await expect(window.getByTestId('feature-locked-outer-outline')).toHaveAccessibleName('Lock');
   });
 });
 

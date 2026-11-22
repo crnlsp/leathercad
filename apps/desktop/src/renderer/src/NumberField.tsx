@@ -49,6 +49,7 @@ export function NumberField({
   precision = 2,
   hideLabel = false,
   glyph,
+  accessibleName,
   refuse,
 }: {
   label: string;
@@ -65,6 +66,8 @@ export function NumberField({
   hideLabel?: boolean;
   /** What is seen in the label's place, when `label` is too long to show: "↖" for "Top-left corner radius" (X40). */
   glyph?: string;
+  /** The input's name where the label plus its suffix reads as another meaning: "Cut off" (U10). */
+  accessibleName?: string;
   /** Why a value that reads cannot be stored as it is, and what to store instead (U.14). */
   refuse?: (value: number) => Refusal | null;
 }) {
@@ -144,6 +147,7 @@ export function NumberField({
           placeholder={placeholder}
           disabled={disabled}
           step={step}
+          aria-label={accessibleName}
           aria-invalid={unread !== null || refused !== null || undefined}
           aria-describedby={unread !== null || refused !== null ? reasonId : undefined}
           onChange={(event) => updateDraft(event.target.value)}

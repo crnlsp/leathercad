@@ -2225,14 +2225,14 @@ body {
   letter-spacing: var(--tracking-micro);
 }
 
-/* A panel hidden — folded, or by focus mode — says so on its chip. */
+/* A panel hidden — folded, or by focus mode — says so on its chip: a dashed
+   border, the bar's own text — --text-mute is under 4.5:1 there. The accent outline means "on" elsewhere (U21). */
 .chip.hiding {
-  border-color: var(--tan);
+  border-style: dashed;
 }
 
 /* Forced colours draw every border alike: the system's highlight says which. */
 @media (forced-colors: active) {
-  .chip.hiding,
   .strip-button[aria-pressed='true'],
   .strip-button.current {
     border-color: Highlight;
@@ -5159,4 +5159,27 @@ button.problem-row,
 .window-failure p {
   max-width: 60ch;
   margin: 0;
+}
+
+/* The Save-as-template dialog's form sits inside the dialog element, since a
+   form may not take the dialog role (U19); it lays out as the dialog does. */
+.dialog-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* A checkbox's label takes the room and the box sits beside it, on one line
+   (U18): it stays beside its words, never alone beneath them. */
+.field:has(> input[type='checkbox']) {
+  flex-wrap: nowrap;
+}
+
+.field:has(> input[type='checkbox']) > .field-label {
+  flex: 1 1 auto;
+}
+
+.field:has(> input[type='checkbox']) > input {
+  flex: none;
+  width: auto;
 }
