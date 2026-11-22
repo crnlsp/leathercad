@@ -149,3 +149,41 @@ test('a template’s description is edited beside its drawing, at the smallest w
     { size: [860, 600] },
   );
 });
+
+test('Save as template says so in the status bar, and offers the project as Untitled (QA10, U12)', async () => {
+  await withApp(async (window) => {
+    await drawAPanel(window, { parts: '1' });
+    // A second project: its tab reads Untitled 2, its summary Untitled.
+    await window.keyboard.press('ControlOrMeta+N');
+    await drawAPanel(window, { parts: '1' });
+    await fromProjectMenu(window, 'save-template');
+    await expect(window.getByTestId('template-name')).toHaveValue('Untitled');
+    await window.getByTestId('template-save').click();
+    await expect(window.getByTestId('save-template-dialog')).toHaveCount(0);
+    await expect(window.getByTestId('written-note')).toHaveText(
+      'Saved as a template. Find it under All templates › Mine',
+    );
+  });
+});
+
+for (const size of [
+  [860, 600],
+  [1440, 900],
+] as const) {
+  test(`Insert pieces shows its checklist without scrolling at ${size[0]} × ${size[1]} (QA10, U13)`, async () => {
+    await withApp(
+      async (window) => {
+        await window.keyboard.press('ControlOrMeta+N');
+        await fromProjectMenu(window, 'insert-pieces');
+        const dialog = window.getByTestId('template-dialog');
+        await dialog.getByTestId('template-builtin:card-holder').click();
+        const boxes = dialog.getByTestId('template-pieces').getByRole('checkbox');
+        expect(await boxes.count()).toBeGreaterThan(1);
+        await expect(boxes.first()).toBeInViewport({ ratio: 1 });
+        await expect(boxes.last()).toBeInViewport({ ratio: 1 });
+        await expectNoViolations(window, 'template picker choosing pieces to insert');
+      },
+      { size: [size[0], size[1]] },
+    );
+  });
+}

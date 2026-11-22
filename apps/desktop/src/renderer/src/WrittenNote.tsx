@@ -37,9 +37,11 @@ export function WrittenNote({ written }: { written: Written | null }) {
         // Keyed by the write, so a second save of the same file lights again.
         <span key={shown.serial} data-testid="written-note">
           <Icon of="check" size={12} />
-          {t(shown.kind === 'save' ? 'status.saved' : 'status.exported', {
-            name: fileName(shown.path),
-          })}
+          {shown.kind === 'template'
+            ? t('status.savedTemplate')
+            : t(shown.kind === 'save' ? 'status.saved' : 'status.exported', {
+                name: fileName(shown.path),
+              })}
         </span>
       )}
     </span>
