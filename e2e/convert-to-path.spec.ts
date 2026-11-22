@@ -31,7 +31,7 @@ test('a circle converted to a drawn path can be squashed, and undo brings the ci
 
     // Refused, and the reason names the way out while the drag is still on.
     await squash();
-    await expect(window.getByTestId('tool-notice')).toContainText(/ellipse/i);
+    await expect(window.getByTestId('tool-notice')).toContainText(/oval/i);
     await expect(window.getByTestId('tool-notice')).toContainText(/drawn path/i);
     await window.mouse.up();
     await expect(diameter).toHaveValue(typed);

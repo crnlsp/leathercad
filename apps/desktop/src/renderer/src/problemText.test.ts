@@ -218,7 +218,7 @@ describe('the message catalogue, in English', () => {
 
   it('says what a too-narrow pocket has and what a card with its ease needs (9.14b)', () => {
     expect(describeProblem(sample('POCKET_TOO_NARROW'), t)).toContain(
-      'The pocket is 89.00 mm across between its stitching; a payment card with 4.00 mm of ease needs 89.60 mm.',
+      'The pocket is 89.00 mm across between its stitching; a credit card with 4.00 mm of ease needs 89.60 mm.',
     );
   });
 
@@ -249,7 +249,7 @@ describe('the message catalogue, in English', () => {
       t,
     );
     expect(sentence).toContain(
-      'Some holes fall off the piece — through its outline, or into a cut-out — so they cannot be punched there.',
+      'Some holes fall off the leather, past the outline or into a cut-out, so they can’t be punched there.',
     );
   });
 
@@ -286,14 +286,13 @@ describe('the message catalogue, in English', () => {
   const unchanged: Array<[Problem, string]> = [
     [
       problem('WOULD_BECOME_ELLIPSE', { shape: 'circle' }),
-      'A circle or arc cannot survive a non-uniform scale — it would become an ellipse, which this ' +
-        'editor cannot represent. Scale it evenly, or convert it to a drawn path in Properties first.',
+      'Stretching a circle or arc unevenly would make an oval, which it can’t be. ' +
+        'Scale it evenly, or convert it to a drawn path in Properties first.',
     ],
     [
       problem('WOULD_SHEAR', {}),
-      'A turned rectangle cannot be stretched along one axis — it would shear, and its corners ' +
-        'would stop being square. Rotate it back to 0°, scale it evenly, or convert it to a drawn path ' +
-        'in Properties first.',
+      'Stretching a turned rectangle one way would skew it, and its corners would no longer be ' +
+        'square. Turn it back to 0°, scale it evenly, or convert it to a drawn path in Properties first.',
     ],
     [problem('TRANSFORM_FLATTENS', {}), 'That would flatten the shape to nothing.'],
     [
@@ -310,7 +309,7 @@ describe('the message catalogue, in English', () => {
     ],
     [
       problem('TARGET_SPANS_PARTS', { what: 'line' }),
-      'Select one part: this belongs to a single part, and the selection spans more than one.',
+      'Select just one part: this belongs to a single part.',
     ],
     [problem('FOLLOWS_ITSELF', named), 'Stitch line cannot follow itself.'],
     [
@@ -327,13 +326,12 @@ describe('the message catalogue, in English', () => {
     [problem('SOURCE_MISSING', named), 'Stitch line follows a feature that does not exist.'],
     [
       problem('OFFSET_COLLAPSED', { ...named, distanceMm: 60, side: 'inward' }),
-      'A 60 mm edge margin is deeper than this edge can hold, so no offset path can be built. ' +
+      'A 60 mm margin is too deep for this edge, so the line can’t be drawn. ' +
         'Reduce the inset or allowance in Properties, or give the source line more room.',
     ],
     [
       problem('SOURCE_FAILED', { ...named, sourceId: 'o', sourceName: 'Outline' }),
-      'Outline, which it follows, could not be built, so this feature has no source geometry. ' +
-        'Fix the named source feature first; this feature will rebuild with it.',
+      'Outline, which this follows, couldn’t be built. Fix that first, and this rebuilds with it.',
     ],
     [
       problem('ANCHOR_MISSING', { ...named, anchor: 9, available: 4 }),
@@ -355,7 +353,7 @@ describe('the message catalogue, in English', () => {
     ],
     [
       problem('HOLE_SPACING_DEVIATION', { ...named, achievedMm: 5, pitchMm: 3.85 }),
-      'The holes are 5.00 mm apart, but the iron’s pitch is 3.85 mm. The pricking iron will not land on every hole. Change the pitch or the ' +
+      'The holes are 5.00 mm apart, but the iron’s pitch is 3.85 mm, so the pricking iron won’t land on every hole. Change the pitch or the ' +
         'edge margin to bring them closer.',
     ],
   ];

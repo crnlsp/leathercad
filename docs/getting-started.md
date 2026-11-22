@@ -156,7 +156,7 @@ An open U-shaped stitch line with straight sides also shows **Width between stit
 the stitching's two ends: the leather opening can be higher. A shape
 without two unambiguous straight sides shows no numeric pocket reading.
 
-Say what the pocket is for under **Holds**: a payment card or another size, and an **Ease** — the
+Say what the pocket is for under **Holds**: a credit card or another size, and an **Ease** — the
 room you leave for the leather and the stitching, which starts from *Settings → My tools → Pocket
 ease* when you set one there. Problems then warns *Pocket too narrow* when the stitch lines are
 closer than the content and its ease, and under **Holds** the width line gives the verdict —

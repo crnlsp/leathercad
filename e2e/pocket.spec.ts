@@ -28,7 +28,7 @@ for (const size of [
       const reading = window.getByTestId('pocket-reading');
       await expect(reading.getByTestId('pocket-width')).toHaveText('99 mm');
       await expect(reading.getByTestId('pocket-depth')).toHaveText('41.35 mm');
-      await expect(reading).toContainText('the pocket opening may extend above it');
+      await expect(reading).toContainText('the opening may be higher');
       // The leather-thickness caveat is said once, under Holds (U7).
       await expect(reading).not.toContainText('Leather thickness');
       expect(await reading.evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
@@ -101,7 +101,7 @@ test('a pocket says whether its card goes in, with the maker’s own ease (9.14b
     await expect(panel.getByRole('textbox', { name: 'Ease' })).toHaveValue('4');
     const problems = panel.getByTestId('feature-problems');
     await expect(problems).toContainText('Pocket too narrow');
-    await expect(problems).toContainText('a payment card with 4.00 mm of ease needs 89.60 mm');
+    await expect(problems).toContainText('a credit card with 4.00 mm of ease needs 89.60 mm');
     // DR8's verdict across, with what was measured (U7); the depth line says to which edge (Q49).
     await expect(panel.getByTestId('pocket-across')).toHaveText(
       'Too narrow: 89 mm across for 85.6 mm and 4 mm ease.',
@@ -144,7 +144,7 @@ test('a pocket says whether its card goes in, with the maker’s own ease (9.14b
     // Asked to hold it fully, the card holder says plainly that it cannot.
     await panel.getByTestId('pocket-fully').check();
     await expect(problems).toContainText('Pocket too shallow');
-    await expect(problems).toContainText('a payment card needs 53.98 mm to go in fully');
+    await expect(problems).toContainText('a credit card needs 53.98 mm to go in fully');
     await expectNoViolations(cardHolder.window, 'a pocket that says what it holds');
   } finally {
     await closeApp(cardHolder.app);

@@ -21,7 +21,7 @@ describe('a move in words', () => {
       '3.50 mm from the edge',
     );
     expect(clearanceWords({ verdict: 'off', clearanceMm: Infinity }, english.t)).toBe(
-      'Off the material',
+      'Off the leather',
     );
   });
 

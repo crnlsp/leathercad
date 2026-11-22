@@ -111,7 +111,7 @@ test('a printer calibrated in the preview prints corrected, and says so, until t
     await along.fill('200');
     await along.press('Enter');
     await expect(step.getByTestId('calibration-too-far')).toContainText(
-      'This is almost certainly a print-settings problem, not a printer problem.',
+      'That much is almost always a print setting, not the printer.',
     );
     await expect(step.getByTestId('calibration-save')).toBeDisabled();
 

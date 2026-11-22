@@ -132,7 +132,7 @@ export function punchHoles(
  */
 export const FROM_THE_VERY_ENDS = { startOffsetMm: 0, endOffsetMm: 0 } as const;
 
-/** *Holds › Payment card* in Properties, with the maker's ease and whether it goes in fully. */
+/** *Holds › Credit card* in Properties, with the maker's ease and whether it goes in fully. */
 export function holdsCard(stitch: FeatureId, easeMm: number, fully = false): Command {
   return setPocketRequirement(stitch, { content: { kind: 'id-1' }, easeMm, fully });
 }

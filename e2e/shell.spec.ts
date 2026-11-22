@@ -1036,7 +1036,7 @@ test('refuses to squash a circle, and says why on screen', async () => {
     await window.mouse.down();
     await window.mouse.move(box!.x + 620, box!.y + 300, { steps: 6 });
 
-    await expect(window.getByTestId('tool-notice')).toContainText(/ellipse/i);
+    await expect(window.getByTestId('tool-notice')).toContainText(/oval/i);
     await window.mouse.up();
 
     await expect(diameter).toHaveValue(before);
@@ -1538,9 +1538,9 @@ test('an inset too deep for its outline is listed, selectable and fixable', asyn
     // The root says what is wrong; the holes say only that what they follow
     // failed, rather than repeating the inset's reason (E3).
     await expect(rows.first()).toHaveAttribute('data-code', 'OFFSET_COLLAPSED');
-    await expect(rows.first()).toContainText('60 mm edge margin is deeper');
+    await expect(rows.first()).toContainText('60 mm margin is too deep');
     await expect(rows.nth(1)).toHaveAttribute('data-code', 'SOURCE_FAILED');
-    await expect(rows.nth(1)).toContainText('Stitch line, which it follows, could not be built');
+    await expect(rows.nth(1)).toContainText('Stitch line, which this follows, couldn’t be built');
     await expect(window.getByTestId('problem-count')).toHaveText('2');
 
     // Clicking a problem selects what it is about, and the property panel
@@ -1548,7 +1548,7 @@ test('an inset too deep for its outline is listed, selectable and fixable', asyn
     await window.getByTestId('parts-list').getByText('Outline').click();
     await rows.first().click();
     await expect(window.getByTestId('selected-count')).toHaveText('1');
-    await expect(panel.getByTestId('feature-problems')).toContainText('deeper than this edge');
+    await expect(panel.getByTestId('feature-problems')).toContainText('too deep for this edge');
 
     // Fixing the cause clears it everywhere.
     await inset.fill('3.5');
@@ -2508,7 +2508,7 @@ test('Edit Points says a rectangle is changed by its measurements (3.9c)', async
 
     await window.getByTestId('tool-points').click();
     await window.mouse.move(box!.x + 300, box!.y + 250);
-    await expect(window.getByTestId('canvas-notice')).toContainText('not a drawn path');
+    await expect(window.getByTestId('canvas-notice')).toContainText('has no points of its own');
   });
 });
 

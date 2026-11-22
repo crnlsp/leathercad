@@ -110,7 +110,7 @@ test('SF-UI2 · a pocket said to hold a card warns while it is too narrow, and u
     await parts.getByText('Stitch line', { exact: true }).click();
     const problems = panel.getByTestId('feature-problems');
     await expect(problems).toContainText('Pocket too narrow');
-    await expect(problems).toContainText('a payment card with 2.00 mm of ease needs 87.60 mm');
+    await expect(problems).toContainText('a credit card with 2.00 mm of ease needs 87.60 mm');
     await window.getByTestId('problems-toggle').click();
     await expect(listed).toHaveCount(1);
     await expectNoViolations(window, 'a pocket too narrow for its card');
@@ -334,7 +334,7 @@ test('SF-UI4 · Holds says which edge it measured to, says no ease, and stays wh
       if (!(await row.isVisible())) await window.getByTestId('toggle-parts').click();
       await row.click();
     };
-    const note = 'A geometric check of the stitching';
+    const note = 'Checks the stitching only';
 
     // A pass read to the panel's edge says so, and how far above the stitch ends that is.
     await select('panel-stitch');
