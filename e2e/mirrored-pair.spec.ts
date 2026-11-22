@@ -38,10 +38,10 @@ test('cut the pocket as a mirrored pair: Parts and the summary say 1 + 1 mirrore
     // With nothing selected, the summary counts the pair as two to cut.
     await window.keyboard.press('Escape');
     const summary = panel.getByTestId('production-summary');
-    await expect(summary.getByTestId('production-pieces')).toContainText('To cut3');
-    await expect(summary.getByTestId('production-pieces')).toContainText(
-      'Pocket 1 + 1 mirrored, 49 holes',
-    );
+    await expect(summary.getByTestId('production-pieces')).toHaveText('3pieces');
+    await expect(
+      summary.getByTestId('production-cut-list').getByRole('img', { name: '1 + 1 mirrored' }),
+    ).toBeVisible();
     await expectNoViolations(window, 'a mirrored pair in the production summary');
 
     await window.getByTestId('save').click();

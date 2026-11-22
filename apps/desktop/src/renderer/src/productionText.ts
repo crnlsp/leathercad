@@ -14,15 +14,114 @@ export interface ProductionRow {
 /** mm² as the cm² and dm² a maker prices leather in. */
 const MM2_PER_CM2 = 100;
 const CM2_PER_DM2 = 100;
+const MM_PER_M = 1000;
+
+const roundTo = (value: number, places: number) => Number(value.toFixed(places));
+const metresOf = (summary: ProductionSummary) => roundTo(summary.threadMm / MM_PER_M, 1);
+
+function threadRule(summary: ProductionSummary, { t }: I18n): string {
+  return t('production.threadRule', {
+    factor: THREAD_STITCH_FACTOR,
+    stitching: Math.round(summary.stitchingMm),
+    round: THREAD_ROUND_MM / 10,
+  });
+}
+
+function hardwareLines(summary: ProductionSummary, { t }: I18n): string[] {
+  return summary.hardware.map((line) => {
+    const words = {
+      type: t(`hardware.${line.hardwareType}`),
+      diameter: line.diameterMm,
+      pieces: line.pieces,
+    };
+    return line.holes === line.pieces
+      ? t('production.hardwareLine', words)
+      : t('production.hardwareLineFolded', { ...words, count: line.holes });
+  });
+}
+
+/** One of the summary's four figures: a number, the word under it, and what it means. */
+export interface ProductionFigure {
+  readonly id: 'pieces' | 'holes' | 'thread' | 'leather';
+  readonly value: string;
+  readonly caption: string;
+  /** The tooltip: what the figure counts, or the rule of an estimate. */
+  readonly tip: string;
+}
+
+/** A line of the cut list: a piece, how many, and whether half of them are turned over. */
+export interface CutLine {
+  readonly name: string;
+  readonly quantity: string;
+  /** "1 + 1 mirrored", or null for a piece cut only as drawn. */
+  readonly mirrored: string | null;
+}
+
+/** What the Summary panel shows: the figures at a glance, then the list to cut by. */
+export interface ProductionSheet {
+  readonly figures: readonly ProductionFigure[];
+  readonly cutList: readonly CutLine[];
+  readonly hardware: readonly string[];
+}
+
+/**
+ * The summary as the panel shows it: short words for a glance, the long ones
+ * in tooltips. *Copy* keeps writing `productionRows`, every word spelled out.
+ */
+export function productionSheet(summary: ProductionSummary, i18n: I18n): ProductionSheet {
+  const { t, locale } = i18n;
+  // One decimal at most: a glance, not a quote. The tooltip and Copy keep the detail.
+  const number = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 });
+  return {
+    figures: [
+      {
+        id: 'pieces',
+        value: number.format(summary.toCut),
+        caption: t('production.figurePieces', { count: summary.toCut }),
+        tip: t('production.pieces'),
+      },
+      {
+        id: 'holes',
+        value: number.format(summary.holes),
+        caption: t('production.figureHoles', { count: summary.holes }),
+        tip: t('production.holes'),
+      },
+      {
+        id: 'thread',
+        value: t('production.figureThread', { metres: number.format(metresOf(summary)) }),
+        caption: t('production.figureThreadCaption'),
+        tip: summary.threadMm === 0 ? t('production.noStitching') : threadRule(summary, i18n),
+      },
+      {
+        id: 'leather',
+        value: number.format(summary.leatherMm2 / MM2_PER_CM2 / CM2_PER_DM2),
+        caption: t('production.figureLeatherUnit'),
+        tip: t('production.leatherNote'),
+      },
+    ],
+    cutList: summary.pieces.map((piece) => ({
+      name: piece.name,
+      quantity: t('production.quantity', { count: piece.quantity }),
+      mirrored:
+        piece.turnedOver > 0
+          ? t('production.mirroredPair', {
+              drawn: piece.quantity - piece.turnedOver,
+              turned: piece.turnedOver,
+            })
+          : null,
+    })),
+    hardware: hardwareLines(summary, i18n),
+  };
+}
 
 /**
  * The production summary's words (9.12): facts from the domain, worded here
  * (ADR 0018). A number is written as the language writes it, so a number is
  * passed, never formatted by hand.
  */
-export function productionRows(summary: ProductionSummary, { t, locale }: I18n): ProductionRow[] {
+export function productionRows(summary: ProductionSummary, i18n: I18n): ProductionRow[] {
+  const { t, locale } = i18n;
   const number = new Intl.NumberFormat(locale, { maximumFractionDigits: 2 });
-  const roundTo = (value: number, places: number) => Number(value.toFixed(places));
   const cm2 = summary.leatherMm2 / MM2_PER_CM2;
 
   return [
@@ -55,16 +154,7 @@ export function productionRows(summary: ProductionSummary, { t, locale }: I18n):
       id: 'hardware',
       label: t('production.hardware'),
       value: summary.hardware.length === 0 ? t('production.none') : '',
-      details: summary.hardware.map((line) => {
-        const words = {
-          type: t(`hardware.${line.hardwareType}`),
-          diameter: line.diameterMm,
-          pieces: line.pieces,
-        };
-        return line.holes === line.pieces
-          ? t('production.hardwareLine', words)
-          : t('production.hardwareLineFolded', { ...words, count: line.holes });
-      }),
+      details: hardwareLines(summary, i18n),
     },
     {
       id: 'thread',
@@ -72,17 +162,8 @@ export function productionRows(summary: ProductionSummary, { t, locale }: I18n):
       value:
         summary.threadMm === 0
           ? t('production.none')
-          : t('production.threadValue', { metres: roundTo(summary.threadMm / 1000, 1) }),
-      details:
-        summary.threadMm === 0
-          ? []
-          : [
-              t('production.threadRule', {
-                factor: THREAD_STITCH_FACTOR,
-                stitching: Math.round(summary.stitchingMm),
-                round: THREAD_ROUND_MM / 10,
-              }),
-            ],
+          : t('production.threadValue', { metres: metresOf(summary) }),
+      details: summary.threadMm === 0 ? [] : [threadRule(summary, i18n)],
     },
     {
       id: 'leather',

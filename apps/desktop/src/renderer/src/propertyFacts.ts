@@ -1,28 +1,17 @@
 import type { Feature, Orientation, Part, Project } from '@leathercad/domain';
 import { isScaleCheckOnly } from '@leathercad/export';
 
-import { resolvedFor, sheetPlanFor } from './sheets.js';
+import { sheetPlanFor } from './sheets.js';
 
 /**
  * The job, as Properties says it with nothing selected (R-05, the spec's §7
- * question 4): pieces to cut, holes to punch, sheets to print — what a maker
- * plans a session at the bench from. Facts only; the panel words them.
+ * question 4): the sheets to print. Facts only; the panel words them. What to
+ * cut and punch is `productionSummary`'s, shown under it.
  *
- * **What prints is what is counted** (Q20): a hidden piece is not on the
- * sheets, so it is not cut from them and its holes are not punched. Every
- * piece still counts towards `pieces`, as the parts list counts it. Read from
- * `sheetPlanFor`'s plan, the one the PDF writes, and the evaluation it was
- * built from, so these numbers and the paper cannot disagree.
+ * Read from `sheetPlanFor`'s plan, the one the PDF writes, so the count and the
+ * paper cannot disagree.
  */
 export interface JobTotals {
-  /** Every piece in the project, printed or not. */
-  readonly pieces: number;
-  /** Each printed piece, times its Cut. */
-  readonly toCut: number;
-  /** Every hole on the printed pieces, each set times its piece's Cut. */
-  readonly holes: number;
-  /** Each hole set that prints, in the parts list's order, with its piece's Cut. */
-  readonly holeSets: readonly { readonly holes: number; readonly cut: number }[];
   readonly sheets: number;
   /** The paper's name, as the plan has it: `A4`. */
   readonly paper: string;
@@ -33,22 +22,7 @@ export interface JobTotals {
 
 export function jobTotals(project: Project): JobTotals {
   const plan = sheetPlanFor(project);
-  const printed = resolvedFor(project).parts.filter(({ part }) => plan.parts.has(part.id));
-
-  const holeSets = printed.flatMap(({ part, features }) =>
-    features.flatMap((entry) =>
-      // As the export scene draws them: a hidden or failed set is not on paper.
-      entry.ok && entry.feature.visible && entry.holes !== undefined && entry.holes.count > 0
-        ? [{ holes: entry.holes.count, cut: part.quantity }]
-        : [],
-    ),
-  );
-
   return {
-    pieces: project.parts.length,
-    toCut: printed.reduce((sum, { part }) => sum + part.quantity, 0),
-    holes: holeSets.reduce((sum, set) => sum + set.holes * set.cut, 0),
-    holeSets,
     sheets: plan.sheets.length,
     paper: plan.setup.paper.name,
     orientation: plan.setup.orientation,

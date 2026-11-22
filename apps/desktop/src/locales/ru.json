@@ -976,16 +976,9 @@
       "piece": "Связанное отражение создаёт зависимую деталь."
     },
     "job": {
-      "holes": "Отверстия",
       "paper": "{{paper}}, {{orientation}}",
-      "pieces": "Детали",
       "scaleCheckOnly": "{{paper}}, {{orientation}}, только проверка масштаба",
-      "sheets": "Листы",
-      "timesCut": "{{holes}} ×{{cut}}",
-      "toCut_one": "Вырезать: {{count}}",
-      "toCut_few": "Вырезать: {{count}}",
-      "toCut_many": "Вырезать: {{count}}",
-      "toCut_other": "Вырезать: {{count}}"
+      "sheets": "Листы"
     },
     "manyPartsSelected_one": "Выбрана {{count}} деталь. Выберите одну для редактирования.",
     "manyPartsSelected_few": "Выбраны {{count}} детали. Выберите одну для редактирования.",

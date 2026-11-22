@@ -88,8 +88,8 @@ test('the bifold from its template: its seams, a card that fits, and the PDF mea
     await window.getByTestId('editor-canvas').focus();
     await window.keyboard.press('Escape');
     const summary = fields.getByTestId('production-summary');
-    await expect(summary.getByTestId('production-pieces')).toContainText('To cut4');
-    await expect(summary.getByTestId('production-holes')).toHaveText('Holes to punch250');
+    await expect(summary.getByTestId('production-pieces')).toHaveText('4pieces');
+    await expect(summary.getByTestId('production-holes')).toHaveText('250holes');
 
     // ── The PDF: each piece, its size and holes, and the lining's slots ────
     const pdf = join(dir, 'Bifold.pdf');

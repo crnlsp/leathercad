@@ -151,8 +151,8 @@ test('a card holder from blank to PDF: nudge, a guide and its seams, holes linin
     await window.getByTestId('editor-canvas').focus();
     await window.keyboard.press('Escape');
     const summary = fields.getByTestId('production-summary');
-    await expect(summary.getByTestId('production-pieces')).toContainText('To cut3');
-    await expect(summary.getByTestId('production-holes')).toHaveText('Holes to punch184');
+    await expect(summary.getByTestId('production-pieces')).toHaveText('3pieces');
+    await expect(summary.getByTestId('production-holes')).toHaveText('184holes');
 
     // ── The PDF, measured: each piece's size and holes, on its sheet ───────
     const pdf = join(dir, 'Card holder.pdf');
