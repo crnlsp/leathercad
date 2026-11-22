@@ -867,6 +867,7 @@
   },
   "panels": {
     "featureIn": "{{feature}} · {{part}}",
+    "help": "About this",
     "hideParts": "Hide Parts",
     "hideProperties": "Hide Properties",
     "partsFolded": "Parts, folded",
@@ -1522,7 +1523,8 @@
     "decimals": "Decimals",
     "diameter": "Diameter",
     "direction": "Direction",
-    "drawnByHand": "Drawn by hand, so it has points, not sizes. Change them with Edit points ({{points}}).",
+    "drawnByHand": "It has points, not sizes. Change them with Edit points ({{points}}).",
+    "drawnByHandLabel": "Drawn by hand",
     "edgeMargin": "Edge margin",
     "endOffset": "End offset",
     "fit": "Fit",

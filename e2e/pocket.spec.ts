@@ -28,10 +28,12 @@ for (const size of [
       const reading = window.getByTestId('pocket-reading');
       await expect(reading.getByTestId('pocket-width')).toHaveText('99 mm');
       await expect(reading.getByTestId('pocket-depth')).toHaveText('41.35 mm');
-      await expect(reading).toContainText('the opening may be higher');
       // The leather-thickness caveat is said once, under Holds (U7).
       await expect(reading).not.toContainText('Leather thickness');
       expect(await reading.evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
+      // Where it measures from is said in the heading's (?), not under the reading.
+      await reading.getByRole('button', { name: 'About this' }).hover();
+      await expect(window.getByRole('tooltip')).toContainText('the opening may be higher');
       await window.getByTestId('editor-canvas').focus();
       await window.keyboard.press('Shift+Digit2');
       for (let i = 0; i < 15; i++) {

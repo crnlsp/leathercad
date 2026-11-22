@@ -3,7 +3,7 @@ import { useId, type ReactNode } from 'react';
 
 import { useI18n } from './i18n.js';
 import { describeProblem } from './problemText.js';
-import { Tooltip } from './Tooltip.js';
+import { HelpTip, Tooltip } from './Tooltip.js';
 
 export interface ReasonedButtonProps {
   readonly children: ReactNode;
@@ -60,10 +60,13 @@ export function ReasonedButton(props: ReasonedButtonProps) {
  */
 export function ReasonedRow({
   label,
+  help,
   buttons,
 }: {
   /** What the row does, before its buttons: Arrange's "Flip" and "Mirror" (R-05). */
   label?: string;
+  /** What the buttons make, in a (?) after the label. */
+  help?: string;
   buttons: readonly ReasonedButtonProps[];
 }) {
   const { t } = useI18n();
@@ -79,7 +82,12 @@ export function ReasonedRow({
   return (
     <div className="reasoned-row">
       <div className="toolbar">
-        {label !== undefined && <span className="field-label">{label}</span>}
+        {label !== undefined && (
+          <span className="field-label">
+            {label}
+            {help !== undefined && <HelpTip text={help} />}
+          </span>
+        )}
         {buttons.map((button) => (
           <Button key={button.testId} {...button} reasonId={idFor(button.reason)} />
         ))}

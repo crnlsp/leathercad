@@ -3416,10 +3416,6 @@ body {
   margin-bottom: var(--space-3);
 }
 
-.shortcuts-intro .setting-note {
-  margin: 0;
-}
-
 .shortcuts-groups {
   display: flex;
   flex-direction: column;
@@ -4340,6 +4336,27 @@ button.problem-row[aria-current='true'] {
 
 .tooltip-anchor {
   display: inline-flex;
+}
+
+/* The (?) beside a label (HelpTip): quiet until pointed at, and centred on
+   the words or the button it follows. */
+.tooltip-anchor:has(> .help-tip) {
+  vertical-align: middle;
+}
+
+.help-tip {
+  display: inline-flex;
+  margin-left: 4px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--text-dim);
+  cursor: help;
+}
+
+.help-tip:hover {
+  color: var(--text);
 }
 
 /* One line up to 360 px, then wrapping at that width and never narrower
