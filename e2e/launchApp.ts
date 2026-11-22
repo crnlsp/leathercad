@@ -7,9 +7,11 @@ import {
   _electron as electron,
   expect,
   type ElectronApplication,
+  type Locator,
   type Page,
 } from '@playwright/test';
 
+import { parseNumber } from '../packages/core/src/index.js';
 import { closeApp } from './closeApp.js';
 
 const DESKTOP_DIR = resolve(import.meta.dirname, '../apps/desktop');
@@ -196,6 +198,26 @@ export async function drawAPanel(
   await window.mouse.move(box.x + left + 150, box.y + 260, { steps: 5 });
   await window.mouse.up();
   if (parts !== undefined) await expect(window.getByTestId('part-count')).toHaveText(parts);
+}
+
+/**
+ * Properties › Arrange › Position: where the selection's box is, Left or
+ * Bottom — the one place a shape is placed by typing (QA U9).
+ */
+export function positionField(window: Page, name: 'Left' | 'Bottom'): Locator {
+  return window.getByTestId('property-panel').getByTestId('position-fields').getByLabel(name);
+}
+
+/** A position field's value, in millimetres. */
+export async function readPosition(window: Page, name: 'Left' | 'Bottom'): Promise<number> {
+  return parseNumber(await positionField(window, name).inputValue());
+}
+
+/** Types `mm` into a position field and presses Enter: one move. */
+export async function placeAt(window: Page, name: 'Left' | 'Bottom', mm: number): Promise<void> {
+  const field = positionField(window, name);
+  await field.fill(String(mm));
+  await field.press('Enter');
 }
 
 /**

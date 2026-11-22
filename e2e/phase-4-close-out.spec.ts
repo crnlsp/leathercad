@@ -7,7 +7,7 @@ import { expect, test, type ElectronApplication } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
 import { readoutAt } from './cursorReadout.js';
-import { launchApp } from './launchApp.js';
+import { launchApp, placeAt, positionField } from './launchApp.js';
 import { fromProjectMenu, renameProject } from './projectMenu.js';
 
 /**
@@ -144,10 +144,10 @@ test('a card holder, from the first outline to the printed page', async () => {
 
     // Keep it where it was drawn, on whole millimetres, so everything after
     // can be placed relative to it.
-    const ox = Math.round(num(await field(window, 'X').inputValue()));
-    const oy = Math.round(num(await field(window, 'Y').inputValue()));
-    await type(window, 'X', ox);
-    await type(window, 'Y', oy);
+    const ox = Math.round(num(await positionField(window, 'Left').inputValue()));
+    const oy = Math.round(num(await positionField(window, 'Bottom').inputValue()));
+    await placeAt(window, 'Left', ox);
+    await placeAt(window, 'Bottom', oy);
     await type(window, 'Width', 180);
     await type(window, 'Height', 95);
     for (const corner of [
@@ -183,8 +183,8 @@ test('a card holder, from the first outline to the printed page', async () => {
     await useTool(window, 'rectangle', 'cut-out');
     await drag(window, at(ox + 20, oy + 55), at(ox + 70, oy + 65));
     await expect(features).toHaveText('5');
-    await type(window, 'X', ox + 15);
-    await type(window, 'Y', oy + 60);
+    await placeAt(window, 'Left', ox + 15);
+    await placeAt(window, 'Bottom', oy + 60);
     await type(window, 'Width', 60);
     await type(window, 'Height', 3);
 
@@ -217,8 +217,8 @@ test('a card holder, from the first outline to the printed page', async () => {
     await expect(window.getByTestId('part-count')).toHaveText('2');
     await expect(features).toHaveText('8');
     await expect(panel).toContainText('Stitch line');
-    await type(window, 'X', ox + 210);
-    await type(window, 'Y', oy);
+    await placeAt(window, 'Left', ox + 210);
+    await placeAt(window, 'Bottom', oy);
     await type(window, 'Width', 90);
     await type(window, 'Height', 60);
     for (const corner of [
@@ -269,7 +269,7 @@ test('a card holder, from the first outline to the printed page', async () => {
     await row(window, /Cut-out/)
       .first()
       .click();
-    await type(window, 'Y', oy + 89);
+    await placeAt(window, 'Bottom', oy + 89);
     // The slot now crosses the stitching, so the line and its holes run into it.
     await expect(problems.getByTestId('count-badge')).toHaveText('2');
     await window.getByTestId('problems-toggle').click();
@@ -282,7 +282,7 @@ test('a card holder, from the first outline to the printed page', async () => {
     await row(window, /Cut-out/)
       .first()
       .click();
-    await type(window, 'Y', oy + 60);
+    await placeAt(window, 'Bottom', oy + 60);
     await expect(window.getByTestId('count-badge')).toHaveCount(0);
     await expect(problems).toContainText('Nothing to fix');
 

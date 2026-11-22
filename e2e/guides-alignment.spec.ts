@@ -5,7 +5,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { parseNumber } from '../packages/core/src/index.js';
 
-import { drawAPanel, expectNoViolations, withApp } from './launchApp.js';
+import { drawAPanel, expectNoViolations, readPosition, withApp } from './launchApp.js';
 import { resizeWindow } from './windowSize.js';
 
 async function number(window: Page, label: string, value: number): Promise<void> {
@@ -174,9 +174,7 @@ test('independent pieces align and distribute with equal gaps, and undo restores
     const positions: number[] = [];
     for (let index = 0; index < 3; index++) {
       await rows.nth(index).click();
-      positions.push(
-        parseNumber(await window.getByTestId('property-panel').getByLabel('Y').inputValue()),
-      );
+      positions.push(await readPosition(window, 'Bottom'));
     }
     expect(positions[1]).toBeCloseTo(positions[0] ?? 0, 2);
     expect(positions[2]).toBeCloseTo(positions[0] ?? 0, 2);
@@ -187,7 +185,7 @@ test('independent pieces align and distribute with equal gaps, and undo restores
       await rows.nth(index).click();
       const panel = window.getByTestId('property-panel');
       edges.push({
-        x: parseNumber(await panel.getByLabel('X').inputValue()),
+        x: await readPosition(window, 'Left'),
         width: parseNumber(await panel.getByLabel('Width').inputValue()),
       });
     }
@@ -216,8 +214,7 @@ test('drawing snaps to a selected guide and the snap-suspension modifier release
     await window.mouse.down();
     await window.mouse.move(box.x + 350, box.y + 260, { steps: 5 });
     await window.mouse.up();
-    const x = () =>
-      window.getByTestId('property-panel').getByLabel('X').inputValue().then(parseNumber);
+    const x = () => readPosition(window, 'Left');
     expect(await x()).toBeCloseTo(guideX, 2);
     await window.keyboard.down('Control');
     try {
@@ -237,9 +234,9 @@ test('a guide dragged from a ruler snaps to a corner, and Ctrl releases it (3.10
     await drawAPanel(window, { parts: '1' });
     const panel = window.getByTestId('property-panel');
     const top =
-      parseNumber(await panel.getByLabel('Y').inputValue()) +
+      (await readPosition(window, 'Bottom')) +
       parseNumber(await panel.getByLabel('Height').inputValue());
-    const bottom = parseNumber(await panel.getByLabel('Y').inputValue());
+    const bottom = await readPosition(window, 'Bottom');
     const box = await window.getByTestId('editor-canvas').boundingBox();
     if (box === null) throw new Error('canvas is missing');
     const dragFromTopRuler = async (y: number) => {

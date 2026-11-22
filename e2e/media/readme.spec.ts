@@ -3,9 +3,10 @@ import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync }
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
-import { _electron as electron, expect, test, type Page } from '@playwright/test';
+import { _electron as electron, expect, test, type Locator, type Page } from '@playwright/test';
 
 import { closeApp } from '../closeApp.js';
+import { positionField } from '../launchApp.js';
 import { renameProject } from '../projectMenu.js';
 
 /**
@@ -91,7 +92,15 @@ function field(window: Page, label: string) {
 
 /** Types a value the way a person does, so the demo shows it being typed. */
 async function type(window: Page, label: string, value: number | string): Promise<void> {
-  const input = field(window, label);
+  await typeInto(field(window, label), value);
+}
+
+/** Where the piece goes, typed into *Arrange › Position*. */
+async function place(window: Page, name: 'Left' | 'Bottom', value: number): Promise<void> {
+  await typeInto(positionField(window, name), value);
+}
+
+async function typeInto(input: Locator, value: number | string): Promise<void> {
   await input.click();
   await input.fill('');
   await input.pressSequentially(String(value), { delay: 60 });
@@ -183,8 +192,8 @@ test('README media', async () => {
     await expect(legend).toHaveAttribute('aria-expanded', 'false');
     await expect(window.getByTestId('part-count')).toHaveText('1');
     await window.getByTestId('part-name').fill('Outer');
-    await type(window, 'X', 0);
-    await type(window, 'Y', 0);
+    await place(window, 'Left', 0);
+    await place(window, 'Bottom', 0);
     await type(window, 'Width', 200);
     await type(window, 'Height', 95);
     for (const corner of [
@@ -219,8 +228,8 @@ test('README media', async () => {
     await useTool(window, 'rectangle', 'outline');
     await drag(window, at(0, -40), at(80, -10));
     await window.getByTestId('part-name').fill('Lining');
-    await type(window, 'X', 2);
-    await type(window, 'Y', -110);
+    await place(window, 'Left', 2);
+    await place(window, 'Bottom', -110);
     await type(window, 'Width', 196);
     await type(window, 'Height', 91);
     for (const corner of [

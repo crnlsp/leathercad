@@ -46,8 +46,8 @@ import { TextLabelEditor } from './TextLabelEditor.js';
  * relationship that produced it and no coordinates of its own.
  *
  * Keeping them separate is what lets a fold line drawn freehand still have an
- * editable direction, and a hardware hole get its centre and diameter from
- * `CircleEditor` without restating them.
+ * editable direction, and a hardware hole get its diameter from
+ * `CircleEditor` without restating it.
  */
 export function FeatureEditor({
   store,

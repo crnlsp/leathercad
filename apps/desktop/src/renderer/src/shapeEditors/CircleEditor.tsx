@@ -7,7 +7,7 @@ import { NumberField } from '../NumberField.js';
 type Circle = Extract<ParametricShape, { type: 'circle' }>;
 
 /**
- * Centre and diameter.
+ * Its diameter — where it is, *Arrange* says (QA U9).
  *
  * The record stores a radius; the panel asks for a diameter, because that is
  * the number stamped on a punch and printed in a hardware catalogue — the same
@@ -26,18 +26,6 @@ export function CircleEditor({
   const { t } = useI18n();
   return (
     <>
-      <div className="field-pair">
-        <NumberField
-          label="X"
-          value={shape.centre.x}
-          onCommit={(x) => onChange({ ...shape, centre: { ...shape.centre, x } })}
-        />
-        <NumberField
-          label="Y"
-          value={shape.centre.y}
-          onCommit={(y) => onChange({ ...shape, centre: { ...shape.centre, y } })}
-        />
-      </div>
       <NumberField
         label={t('editor.diameter')}
         value={shape.radius * 2}

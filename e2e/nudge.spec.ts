@@ -1,6 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { drawAPanel, expectNoViolations, withApp } from './launchApp.js';
+import {
+  drawAPanel,
+  expectNoViolations,
+  positionField,
+  readPosition,
+  withApp,
+} from './launchApp.js';
 
 /**
  * 3.14: with the board focused, the arrow keys move what is selected — 1 mm,
@@ -11,15 +17,17 @@ import { drawAPanel, expectNoViolations, withApp } from './launchApp.js';
 
 const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';
 
-const panel = (window: Page) => window.getByTestId('property-panel');
 const rows = (window: Page) => window.locator('[data-testid^="feature-row-"]');
 
-/** Where a piece's outline starts, read from Properties — which takes the focus to its row. */
+/**
+ * Where a piece's box starts, its Left and Bottom, read from Properties —
+ * which takes the focus to its row.
+ */
 async function origin(window: Page, row = 0): Promise<{ x: number; y: number }> {
   await rows(window).nth(row).click();
   return {
-    x: Number(await panel(window).getByLabel('X').inputValue()),
-    y: Number(await panel(window).getByLabel('Y').inputValue()),
+    x: await readPosition(window, 'Left'),
+    y: await readPosition(window, 'Bottom'),
   };
 }
 
@@ -95,7 +103,7 @@ test('in a field the arrows move the caret and the select-all key selects its te
     await drawAPanel(window, { parts: '1' });
     const start = await origin(window);
 
-    const field = panel(window).getByLabel('X');
+    const field = positionField(window, 'Left');
     await field.click();
     await field.press('End');
     await field.press('ArrowLeft');

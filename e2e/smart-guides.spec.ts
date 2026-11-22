@@ -6,7 +6,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { loadProject } from '../packages/persist/src/index.js';
 
 import { boardMap } from './boardMap.js';
-import { drawAPanel, withApp } from './launchApp.js';
+import { drawAPanel, placeAt, withApp } from './launchApp.js';
 import { fromProjectMenu } from './projectMenu.js';
 
 /**
@@ -67,11 +67,11 @@ test("dragging the pocket near the outer's left edge lines it up exactly, in one
 
     await carry(window, board);
     await expect(left(window)).toHaveValue('0');
-    // Each rectangle's own X, as stored: the pocket's equal to the outer's,
-    // exact to the storage quantum the field shows.
+    // Each piece's Left: the pocket's equal to the outer's, to the 0.01 mm
+    // the field shows.
     const x = async (row: string): Promise<string> => {
       await window.getByTestId(`feature-row-${row}`).click();
-      return panel(window).getByLabel('X').inputValue();
+      return left(window).inputValue();
     };
     expect(await x('pocket-outline')).toBe(await x('outer-outline'));
     expect(await x('pocket-outline')).toBe('0');
@@ -146,8 +146,8 @@ test('a third pocket dragged near the gap of the first two repeats it exactly, i
       await rows.nth(index).click();
       await field('Width', 40);
       await field('Height', 30);
-      await field('X', x);
-      await field('Y', 0);
+      await placeAt(window, 'Left', x);
+      await placeAt(window, 'Bottom', 0);
     };
     await place(0, 0);
     await place(1, 55);
@@ -163,10 +163,10 @@ test('a third pocket dragged near the gap of the first two repeats it exactly, i
     await window.mouse.move(to.x, to.y, { steps: 8 });
     await window.mouse.up();
     await rows.nth(2).click();
-    await expect(panel(window).getByLabel('X')).toHaveValue('110');
+    await expect(left(window)).toHaveValue('110');
 
     await window.getByTestId('undo').click();
     await rows.nth(2).click();
-    await expect(panel(window).getByLabel('X')).toHaveValue('200');
+    await expect(left(window)).toHaveValue('200');
   }, ROOM);
 });

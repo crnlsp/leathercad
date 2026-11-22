@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import { boardMap } from './boardMap.js';
-import { openSample, withApp } from './launchApp.js';
+import { openSample, readPosition, withApp } from './launchApp.js';
 
 /**
  * 3.13: a click on a piece's body selects the piece (smart-guides spec §3). On
@@ -65,7 +65,7 @@ test('a drag from a piece’s body moves the piece whole, as one step of undo (3
     const board = await boardMap(window);
     const x = async (row: string): Promise<number> => {
       await window.getByTestId(`feature-row-${row}`).click();
-      return Number(await window.getByTestId('property-panel').getByLabel('X').inputValue());
+      return readPosition(window, 'Left');
     };
     const outline = await x('outer-outline');
     await window.keyboard.press('Escape');

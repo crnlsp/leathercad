@@ -20,7 +20,7 @@ import {
   size,
   stitchAndPunch,
 } from './journeys.js';
-import { expectNoViolations, openApp } from './launchApp.js';
+import { expectNoViolations, openApp, positionField } from './launchApp.js';
 import { piecesInPdf } from './pdfPieces.js';
 
 /**
@@ -45,8 +45,8 @@ test('a card holder from blank to PDF: nudge, a guide and its seams, holes linin
     // ── The outer: 105 × 70, 4 mm corners, stitched 3 mm in all round ──────
     await drawRectangle(window, [200, 150, 420, 300]);
     await shapePiece(window, { name: 'Outer', width: 105, height: 70, radii: [4, 4, 4, 4] });
-    await enter(fields.getByLabel('X'), '0');
-    await enter(fields.getByLabel('Y'), '0');
+    await enter(positionField(window, 'Left'), '0');
+    await enter(positionField(window, 'Bottom'), '0');
     await stitchAndPunch(window, 3);
     await expect(featureRow(window, 'Outer', 'Stitch holes')).toContainText('86');
 
@@ -59,8 +59,8 @@ test('a card holder from blank to PDF: nudge, a guide and its seams, holes linin
       radii: [3, 3, 4, 4],
     });
     await enter(fields.getByRole('textbox', { name: 'Cut, number of pieces' }), '2');
-    await enter(fields.getByLabel('X'), '10');
-    await enter(fields.getByLabel('Y'), '-70');
+    await enter(positionField(window, 'Left'), '10');
+    await enter(positionField(window, 'Bottom'), '-70');
     await stitchAndPunch(window, 3, 'Open at the top');
     await expect(featureRow(window, 'Pocket', 'Stitch holes')).toContainText('49');
     await expect(window.getByTestId('problems-verdict')).toHaveText('Nothing to fix.');
