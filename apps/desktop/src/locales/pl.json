@@ -976,16 +976,9 @@
       "piece": "Odbicie tworzy powiązaną część."
     },
     "job": {
-      "holes": "Otwory",
       "paper": "{{paper}}, {{orientation}}",
-      "pieces": "Części",
       "scaleCheckOnly": "{{paper}}, {{orientation}}, tylko wzorzec skali",
-      "sheets": "Arkusze",
-      "timesCut": "{{holes}} ×{{cut}}",
-      "toCut_one": "{{count}} do wycięcia",
-      "toCut_few": "{{count}} do wycięcia",
-      "toCut_many": "{{count}} do wycięcia",
-      "toCut_other": "{{count}} do wycięcia"
+      "sheets": "Arkusze"
     },
     "manyPartsSelected_one": "Zaznaczono {{count}} część. Wybierz jedną, aby ją edytować.",
     "manyPartsSelected_few": "Zaznaczono {{count}} części. Wybierz jedną, aby ją edytować.",

@@ -146,9 +146,11 @@ the runs (each side's holes, its corner holes counted on both sides they join) a
 makes it with your margin and default iron (*Settings → My tools*), and **Ctrl+Z** takes it back.
 **F6** goes into the bar and back to the board. *Settings → Appearance* turns it off.
 
-With nothing selected, **Properties** sums up the job under **Production**: the pieces to cut, the
-holes to punch, the hardware, the thread — an estimate, with its rule — and the leather, net of
-cut-outs and not what to buy. **Copy** puts the same lines on the clipboard.
+With nothing selected, **Properties** names the project and its sheets, then sums up the job under
+**Summary**: the pieces to cut, the holes to punch, the thread and the leather at a glance — point
+at one for its rule: the thread is an estimate, the leather net of cut-outs and not what to buy —
+then the **Cut list**, each piece with how many to cut, and the hardware when there is any. The
+copy button puts it all on the clipboard, every line spelled out.
 
 An open U-shaped stitch line with straight sides also shows **Width between stitch lines** and
 **Stitch depth** in Properties and on the selection bar. Stitch depth starts at the line joining

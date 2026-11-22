@@ -16,13 +16,20 @@ test('Properties says what to cut, punch and buy, and Copy puts it on the clipbo
   });
   try {
     const summary = window.getByTestId('property-panel').getByTestId('production-summary');
-    await expect(summary.getByTestId('production-pieces')).toContainText('To cut3');
-    await expect(summary.getByTestId('production-pieces')).toContainText('Pocket ×2, 49 holes');
-    await expect(summary.getByTestId('production-holes')).toHaveText('Holes to punch184');
-    await expect(summary.getByTestId('production-hardware')).toContainText('None');
-    await expect(summary.getByTestId('production-thread')).toContainText('about 1.3 m');
-    await expect(summary.getByTestId('production-thread')).toContainText('An estimate');
-    await expect(summary.getByTestId('production-leather')).toContainText('about 173 cm²');
+    await expect(summary.locator('.panel-heading')).toHaveText('Summary');
+    await expect(summary.getByTestId('production-pieces')).toHaveText('3pieces');
+    await expect(summary.getByTestId('production-holes')).toHaveText('184holes');
+    await expect(summary.getByTestId('production-thread')).toHaveText('1.3 mthread');
+    await expect(summary.getByTestId('production-leather')).toHaveText('1.7dm²');
+    // No hardware, so no hardware list.
+    await expect(summary.getByTestId('production-hardware')).toHaveCount(0);
+    await expect(summary.getByTestId('production-cut-list').getByRole('listitem')).toHaveText([
+      'Outer×1',
+      'Pocket×2',
+    ]);
+    // The estimate gives its rule in the thread's tooltip.
+    await summary.getByTestId('production-thread').hover();
+    await expect(window.getByRole('tooltip')).toContainText('An estimate: 4 × 324 mm');
 
     await summary.getByTestId('production-copy').click();
     await expect(summary.getByTestId('production-copy-status')).toHaveText('Copied');

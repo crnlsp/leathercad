@@ -409,9 +409,9 @@ export function PropertyPanel({
 }
 
 /**
- * The job, with nothing selected (R-05, the spec's §7 question 4): the pieces
- * to cut, the holes to punch, the sheets to print — "3 · 4 to cut", "250 ·
- * 146 + 52 ×2", "2 · A4, portrait", as mockup 01 reads the sample.
+ * The job, with nothing selected (R-05, the spec's §7 question 4): its name and
+ * the sheets to print, "2 · A4, portrait". What to cut and punch is the
+ * Summary's, under it.
  */
 function JobTotals({ project }: { project: Project }) {
   const { t } = useI18n();
@@ -420,53 +420,25 @@ function JobTotals({ project }: { project: Project }) {
     paper: job.paper,
     orientation: t(`sheets.orientation.${job.orientation}`),
   };
-  const holeSets = job.holeSets.map((set) =>
-    set.cut > 1
-      ? t('properties.job.timesCut', { holes: set.holes, cut: set.cut })
-      : String(set.holes),
-  );
-  const rows = [
-    {
-      id: 'pieces',
-      label: t('properties.job.pieces'),
-      value: job.pieces,
-      detail: t('properties.job.toCut', { count: job.toCut }),
-    },
-    {
-      id: 'holes',
-      label: t('properties.job.holes'),
-      value: job.holes,
-      // Only when it adds something: one set cut once is the total again.
-      detail:
-        holeSets.length > 1 || job.holeSets.some((set) => set.cut > 1)
-          ? holeSets.join(' + ')
-          : null,
-    },
-    {
-      id: 'sheets',
-      label: t('properties.job.sheets'),
-      value: job.sheets,
-      detail: t(
-        job.scaleCheckOnly ? 'properties.job.scaleCheckOnly' : 'properties.job.paper',
-        paper,
-      ),
-    },
-  ];
 
   return (
     <section className="panel-group job" data-testid="job-totals">
       <div className="panel-heading">
         {project.name.trim() === '' ? t('app.untitled') : project.name}
       </div>
-      {rows.map((row) => (
-        <div key={row.id} className="job-row" data-testid={`job-${row.id}`}>
-          <span className="field-label">{row.label}</span>
-          <span className="job-value">
-            <b>{row.value}</b>
-            {row.detail !== null && <span className="job-detail"> · {row.detail}</span>}
+      <div className="job-row" data-testid="job-sheets">
+        <span className="field-label">{t('properties.job.sheets')}</span>
+        <span className="job-value">
+          <b>{job.sheets}</b>
+          <span className="job-detail">
+            {' · '}
+            {t(
+              job.scaleCheckOnly ? 'properties.job.scaleCheckOnly' : 'properties.job.paper',
+              paper,
+            )}
           </span>
-        </div>
-      ))}
+        </span>
+      </div>
     </section>
   );
 }
