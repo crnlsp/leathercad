@@ -9,10 +9,12 @@ import {
   holesOf,
   outlineOf,
   punchHardware,
+  FROM_THE_VERY_ENDS,
   punchHoles,
   setHoles,
   setInset,
   stitchAllRound,
+  openStitching,
   stitchLeavingOpen,
   stitchOf,
   turnPiece,
@@ -65,13 +67,43 @@ describe('D — geometry that resembles a pocket, or a seam, and is not one', ()
 describe('K — holes on, and teeth across, the cut edge', () => {
   const sides: readonly Side[] = ['top', 'bottom', 'left', 'right'];
 
-  /** The pocket a maker draws first: square corners, stitched 3 mm in, open on one side. */
+  /**
+   * The pocket a maker draws first: square corners, stitched 3 mm in, open on
+   * one side — its holes from the line's very ends, which is how its end holes
+   * come to sit on the cut edge (SF-K8 is the pocket as made today).
+   */
   const squarePocket = (open: Side) =>
     new Bench().do(
       drawRectangle('pocket', { x: 0, y: 0, width: 100, height: 60 }),
       stitchLeavingOpen('pocket', open, 3),
-      punchHoles('pocket'),
+      punchHoles('pocket', FROM_THE_VERY_ENDS),
     );
+
+  /**
+   * U2: opening a run on a square-cornered piece starts its end holes as far
+   * in from the open edge as the stitching is from the others, so the pocket
+   * *Getting started* makes has nothing to fix — whichever side is open, and
+   * whether the holes were punched before the run was opened or after.
+   */
+  it('SF-K8 · the same pocket, stitched open as a maker does, starts its end holes clear of the edge', () => {
+    for (const open of sides) {
+      new Bench()
+        .do(
+          drawRectangle('pocket', { x: 0, y: 0, width: 100, height: 60 }),
+          stitchLeavingOpen('pocket', open, 3),
+          punchHoles('pocket'),
+        )
+        .expect([], `open at the ${open}, holes after`);
+      new Bench()
+        .do(
+          drawRectangle('pocket', { x: 0, y: 0, width: 100, height: 60 }),
+          stitchAllRound('pocket', 3),
+          punchHoles('pocket'),
+          openStitching('pocket', open),
+        )
+        .expect([], `open at the ${open}, holes before`);
+    }
+  });
 
   it('SF-K1 · with 3 mm corners, the same pocket says nothing whichever side is open', () => {
     for (const open of sides) {

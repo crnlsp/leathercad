@@ -12,7 +12,37 @@ import {
 } from '@leathercad/geometry';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { ID1_CARD, contentSize, pocketOpening, pocketSize } from './pocket.js';
+import { ID1_CARD, contentSize, fitsAcross, pocketOpening, pocketSize } from './pocket.js';
+
+describe('fitsAcross (U7)', () => {
+  const requirement = fc.record({
+    content: fc.oneof(
+      fc.constant({ kind: 'id-1' as const }),
+      fc.record({
+        kind: fc.constant('size' as const),
+        widthMm: fc.double({ min: 1, max: 500, noNaN: true }),
+        heightMm: fc.double({ min: 1, max: 500, noNaN: true }),
+      }),
+    ),
+    easeMm: fc.double({ min: 0, max: 20, noNaN: true }),
+    fully: fc.boolean(),
+  });
+
+  it('is met exactly when the stitching is at least the content and its ease apart', () => {
+    fc.assert(
+      fc.property(requirement, fc.double({ min: -50, max: 50, noNaN: true }), (holds, by) => {
+        fc.pre(Math.abs(by) > 2 * EPS_LENGTH);
+        const neededMm = contentSize(holds.content).widthMm + holds.easeMm;
+        expect(fitsAcross(neededMm + by, holds)).toBe(by > 0);
+      }),
+    );
+  });
+
+  it('counts stitching at the need, to the length tolerance, as met', () => {
+    const holds = { content: { kind: 'id-1' as const }, easeMm: 4, fully: false };
+    expect(fitsAcross(89.6 - EPS_LENGTH / 2, holds)).toBe(true);
+  });
+});
 
 const depthBelowOpening = (stitch: Path, outline: Path) =>
   pocketOpening(stitch, outline)?.depthMm ?? null;

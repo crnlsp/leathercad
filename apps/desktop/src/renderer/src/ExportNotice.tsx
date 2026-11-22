@@ -2,7 +2,7 @@ import { TILE_OVERLAP_MM } from '@leathercad/export';
 import { useEffect, useRef } from 'react';
 
 import { useI18n } from './i18n.js';
-import { describeCounts } from './problemsIndicator.js';
+import { exportCounts } from './problemsIndicator.js';
 import { describeTiled } from './sheetWords.js';
 import type { ExportReport } from './useProjectFile.js';
 
@@ -92,8 +92,9 @@ export function ExportFindings({
   // What the paper or the file holds: an SVG or a DXF is a file, not a sheet.
   const file = report.format !== 'pdf';
   const counts = withCounts
-    ? describeCounts(
+    ? exportCounts(
         { error: readiness.errors, warning: readiness.warnings, info: readiness.infos },
+        file,
         i18n,
       )
     : null;
@@ -137,11 +138,7 @@ export function ExportFindings({
         </section>
       )}
 
-      {counts !== null && (
-        <p data-testid="export-counts">
-          {t(file ? 'exportNotice.countsFile' : 'exportNotice.counts', { counts })}
-        </p>
-      )}
+      {counts !== null && <p data-testid="export-counts">{counts}</p>}
     </>
   );
 }
