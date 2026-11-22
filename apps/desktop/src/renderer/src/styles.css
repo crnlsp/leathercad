@@ -3906,29 +3906,41 @@ button.problem-row[aria-current='true'] {
   border-bottom-left-radius: 2px;
 }
 
-/* A row is one line (U18): a name that does not fit is cut with an ellipsis,
-   its full text in the row's title, and the marks, count and toggles keep
-   their room. The lock is the way back, so the name gives way to it, never
-   the reverse. */
+/* Names wrap rather than truncate (§7.1) — "Stitch hol…" told nobody which
+   feature it was. The name still gives way to the toggles: a long name must
+   not push the lock off the edge of the panel, because the lock is the way
+   back. */
 .part-label,
 .feature-name {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  /* At word boundaries, and inside a word only when one cannot fit a line:
+     "Stit / ch / hole / s" told nobody which feature it was (F.6). */
+  overflow-wrap: break-word;
 }
 
-/* The name and its ×N: the name shortens, the ×N stays after it. */
+/* A piece's row holds the most — its fold, thumbnail, ×N, the actions' room
+   and a not-printed mark — so where those leave its name less than its
+   longest word ("Card pock / et" at 208 px, hidden), its marks take a line
+   of their own below, at the right, rather than the name breaking inside a
+   word. Decided by the row's room, never by hover, so nothing moves. */
+.piece-row .tree-line {
+  flex-wrap: wrap;
+}
+
+.part-label {
+  min-width: min(min-content, 100%);
+}
+
+/* From nothing, so the line breaks by its longest word, not by the whole
+   name: the name wraps between words first, and only where its longest word
+   cannot fit do the marks take the line below (U.19). */
 .part-title {
-  display: flex;
   flex: 1 1 0;
-  gap: var(--space-1);
-  align-items: center;
-  min-width: 0;
+  min-width: min(min-content, 100%);
 }
 
 .part-title > .badge {
-  flex: none;
+  margin-left: var(--space-1);
 }
 
 /* The numbers a maker cares about, and the marks, at the row's right end. */

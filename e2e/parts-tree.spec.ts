@@ -97,13 +97,10 @@ async function rowLayouts(window: Page) {
       const name = line.querySelector('.feature-name, .part-label')!;
       const range = document.createRange();
       range.selectNodeContents(name);
-      const lines = new Set(
-        [...range.getClientRects()]
-          .filter((rect) => rect.width > 0)
-          .map((rect) => Math.round(rect.top)),
-      ).size;
-      // The name's own box: a cut name's text runs on past it, unseen.
-      const parts = [{ what: 'name 1', rect: name.getBoundingClientRect() }];
+      const parts = [...range.getClientRects()]
+        .filter((rect) => rect.width > 0)
+        .map((rect, at) => ({ what: `name ${String(at + 1)}`, rect }));
+      const lines = new Set(parts.map((part) => Math.round(part.rect.top))).size;
       for (const [what, selector] of [
         ['fold', ':scope > .tree-fold > svg'],
         ['thumbnail', ':scope > svg.thumbnail'],
@@ -155,8 +152,16 @@ async function rowLayouts(window: Page) {
   );
 }
 
-test('every row is one 28 px line, at 1440 and 1024: nothing overlapping, a long name cut (U18)', async () => {
+test('every row is 28 px, or holds its second line whole: nothing clipped, nothing overlapping', async () => {
   await withSample(async (window, app) => {
+    // The rows that take a second line, by the maintainer's accepted layout
+    // (#90): the deepest "Stitch holes" and "Cut-out mirrored" wrap between
+    // their words, and "Card pocket ×2" puts its actions and marks below.
+    const tall = [
+      'feature-row-outer-holes',
+      'feature-row-lining-slot-mirrored',
+      'part-heading-pocket',
+    ];
     const check = async (state: string): Promise<void> => {
       const rows = await rowLayouts(window);
       expect(rows.length, state).toBe(15);
@@ -165,11 +170,21 @@ test('every row is one 28 px line, at 1440 and 1024: nothing overlapping, a long
         expect(row.outside, `${where}, outside the row`).toEqual([]);
         expect(row.overlaps, `${where}, overlapping`).toEqual([]);
         expect(row.clipped, `${where}, clipped`).toBe(false);
-        // One line each, a long name cut with an ellipsis (U18).
-        expect(row.lines, where).toBe(1);
-        expect(row.height, where).toBe(28);
+        if (tall.includes(row.row)) {
+          // Taller by its real second line: the content's own extent, and
+          // the row's border and padding about it — nothing substituted.
+          expect(row.height, where).toBeGreaterThan(28);
+          expect(row.height - row.content, where).toBeGreaterThanOrEqual(0);
+          expect(row.height - row.content, where).toBeLessThanOrEqual(12);
+        } else {
+          expect(row.lines, where).toBe(1);
+          expect(row.height, where).toBe(28);
+        }
       }
-      // What was measured: the pocket's name, pill, thumbnail, fold, eye and
+      expect(
+        rows.filter((row) => row.height !== 28).map((row) => row.row),
+        state,
+      ).toEqual(tall); // What was measured: the pocket's name, pill, thumbnail, fold, eye and
       // menu — and, hidden, its crossed printer.
       const pocket = rows.find((row) => row.row === 'part-heading-pocket')!;
       expect(pocket.found, state).toEqual(
@@ -185,7 +200,7 @@ test('every row is one 28 px line, at 1440 and 1024: nothing overlapping, a long
       if (state.includes('hidden')) expect(pocket.found, state).toContain('mark at the end 1');
       const holes = rows.find((row) => row.row === 'feature-row-outer-holes')!;
       expect(holes.found, state).toEqual(
-        expect.arrayContaining(['name 1', 'mark 1', 'count 1', 'action 1', 'action 2']),
+        expect.arrayContaining(['name 1', 'name 2', 'mark 1', 'count 1', 'action 1', 'action 2']),
       );
     };
 

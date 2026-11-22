@@ -6,7 +6,9 @@ import { resizeWindow } from './windowSize.js';
 
 /**
  * QA9 and QA11: what a screen reader hears of the Parts tree and Properties
- * (U8, U10, U19), and that their rows fit one line at 1440 and 860 (U18, U21).
+ * (U8, U10, U19), a checkbox beside its words at 1440 and 860 (U18), and a folded
+ * panel's chip (U21). Names in Parts still wrap between words, never cut (F.6):
+ * the maintainer kept that over U18's one-line rows; `sample.spec.ts` holds it.
  */
 
 const piece = (window: Page, id: string): Locator => window.getByTestId(`part-heading-${id}`);
@@ -52,23 +54,12 @@ for (const [width, height] of [
   [1440, 900],
   [860, 600],
 ] as const) {
-  test(`Parts rows are one line and the mirrored-pair box sits beside its words at ${String(width)} × ${String(height)} (U18)`, async () => {
+  test(`the mirrored-pair box sits beside its words at ${String(width)} × ${String(height)} (U18)`, async () => {
     await withSample(async (window, app) => {
       await resizeWindow(app, window, width, height);
       const narrow = width < 1000;
       if (narrow) await window.getByTestId('toggle-parts').click();
-      const rows = await window
-        .getByRole('tree')
-        .locator('[role="treeitem"]')
-        .evaluateAll((items) =>
-          items.map((item) => ({
-            row: item.getAttribute('data-testid') ?? '',
-            height: item.getBoundingClientRect().height,
-          })),
-        );
-      expect(rows.length).toBeGreaterThan(0);
-      for (const { row, height: tall } of rows) expect(tall, row).toBe(28);
-      // A long name is cut, the full one kept for the pointer.
+      // The full name is also the row's title, for the pointer.
       await expect(piece(window, 'pocket').locator('.part-label')).toHaveAttribute(
         'title',
         'Card pocket',
