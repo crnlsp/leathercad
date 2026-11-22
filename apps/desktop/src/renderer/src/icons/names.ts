@@ -63,6 +63,10 @@ export const ICON_NAMES = [
   'search',
   'menu',
   'changed-outside',
+  'scissors',
+  'holes',
+  'spool',
+  'hide',
 ] as const;
 
 export type IconName = (typeof ICON_NAMES)[number];

@@ -1,13 +1,13 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import { setFeatureVisible, setPartVisible } from '@leathercad/document';
 import { evaluate, productionSummary, type Project } from '@leathercad/domain';
 import { loadProject } from '@leathercad/persist';
 import { describe, expect, it } from 'vitest';
 
 import { createI18n } from '../../shared/i18n.js';
-import { jobTotals } from './propertyFacts.js';
-import { productionRows, productionText } from './productionText.js';
+import { productionRows, productionSheet, productionText } from './productionText.js';
 
 /**
  * The production summary on the shipped templates (9.12): the numbers the
@@ -70,16 +70,37 @@ describe('the card holder', () => {
       ].join('\n'),
     );
   });
+
+  it('shows four figures at a glance, the long words kept for tooltips', () => {
+    const { figures } = productionSheet(summary, english);
+    expect(figures.map((f) => [f.id, f.value, f.caption])).toEqual([
+      ['pieces', '3', 'pieces'],
+      ['holes', '184', 'holes'],
+      ['thread', '1.3 m', 'thread'],
+      ['leather', '1.7', 'dm²'],
+    ]);
+    expect(figures.find((f) => f.id === 'thread')?.tip).toBe(
+      'An estimate: 4 × 324 mm of stitching, rounded up to the next 10 cm.',
+    );
+  });
+
+  it('lists each piece once with how many to cut, and no hardware', () => {
+    const sheet = productionSheet(summary, english);
+    expect(sheet.cutList).toEqual([
+      { name: 'Outer', quantity: '×1', mirrored: null },
+      { name: 'Pocket', quantity: '×2', mirrored: null },
+    ]);
+    expect(sheet.hardware).toEqual([]);
+  });
 });
 
 describe('the bifold wallet', () => {
   const project = template('bifold-wallet');
   const summary = summaryOf(project);
 
-  it('reads the job as Properties already does: 4 to cut, 250 holes', () => {
-    const job = jobTotals(project);
-    expect(summary.toCut).toBe(job.toCut);
-    expect(summary.holes).toBe(job.holes);
+  it('cuts 4 pieces and punches 146 + 52 ×2 holes', () => {
+    expect(summary.toCut).toBe(4);
+    expect(summary.holes).toBe(146 + 2 * 52);
     expect(summary.pieces.map((p) => [p.name, p.quantity])).toEqual([
       ['Outer', 1],
       ['Lining', 1],
@@ -90,6 +111,18 @@ describe('the bifold wallet', () => {
   it('threads every hole set once, a card pocket twice', () => {
     expect(summary.stitchingMm).toBeCloseTo(562.57 + 2 * 195, 1);
     expect(summary.threadMm).toBe(3900);
+  });
+
+  it('leaves a hidden piece out of what is cut and punched, since it does not print', () => {
+    const hidden = summaryOf(setPartVisible('pocket', false).apply({ project }).project);
+    expect(hidden.toCut).toBe(2);
+    expect(hidden.holes).toBe(146);
+  });
+
+  it('leaves out a hidden hole set on a piece that prints', () => {
+    const hidden = summaryOf(setFeatureVisible(['outer-holes'], false).apply({ project }).project);
+    expect(hidden.toCut).toBe(4);
+    expect(hidden.holes).toBe(2 * 52);
   });
 
   it('takes the lining’s two cut-outs out of its leather', () => {
@@ -104,6 +137,14 @@ describe('the key fob', () => {
     expect(summary.hardware).toEqual([
       { hardwareType: 'rivet', diameterMm: 4, holes: 2, pieces: 1 },
     ]);
+  });
+
+  it('lists that rivet under the cut list, the pair across the fold named', () => {
+    const sheet = productionSheet(summaryOf(template('key-fob')), english);
+    expect(sheet.hardware).toEqual([
+      productionRows(summaryOf(template('key-fob')), english)[2]?.details[0],
+    ]);
+    expect(sheet.hardware[0]).toContain('Ø 4 mm');
   });
 });
 
@@ -125,5 +166,10 @@ describe('the card holder with its pockets cut as a mirrored pair (Q21)', () => 
   it('says the pocket is 1 + 1 mirrored', () => {
     const pieces = productionRows(summary, english).find((row) => row.id === 'pieces');
     expect(pieces?.details).toEqual(['Outer ×1, 86 holes', 'Pocket 1 + 1 mirrored, 49 holes']);
+  });
+
+  it('marks the pocket mirrored in the cut list, still two to cut', () => {
+    const pocket = productionSheet(summary, english).cutList[1];
+    expect(pocket).toEqual({ name: 'Pocket', quantity: '×2', mirrored: '1 + 1 mirrored' });
   });
 });

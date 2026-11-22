@@ -942,15 +942,9 @@
       "piece": "La symétrie crée une pièce symétrique liée."
     },
     "job": {
-      "holes": "Trous",
       "paper": "{{paper}}, {{orientation}}",
-      "pieces": "Pièces",
       "scaleCheckOnly": "{{paper}}, {{orientation}}, contrôle d’échelle uniquement",
-      "sheets": "Feuilles",
-      "timesCut": "{{holes}} ×{{cut}}",
-      "toCut_one": "{{count}} à découper",
-      "toCut_other": "{{count}} à découper",
-      "toCut_many": "{{count}} à découper"
+      "sheets": "Feuilles"
     },
     "manyPartsSelected_one": "{{count}} pièce sélectionnée. Sélectionnez-en une pour la modifier.",
     "manyPartsSelected_other": "{{count}} pièces sélectionnées. Sélectionnez-en une pour la modifier.",

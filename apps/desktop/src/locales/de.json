@@ -908,14 +908,9 @@
       "piece": "Verknüpft spiegeln erzeugt ein abhängiges Gegenstück als Teil."
     },
     "job": {
-      "holes": "Löcher",
       "paper": "{{paper}}, {{orientation}}",
-      "pieces": "Teile",
       "scaleCheckOnly": "{{paper}}, {{orientation}}, nur Maßstabskontrolle",
-      "sheets": "Bögen",
-      "timesCut": "{{holes}} ×{{cut}}",
-      "toCut_one": "{{count}} zuzuschneiden",
-      "toCut_other": "{{count}} zuzuschneiden"
+      "sheets": "Bögen"
     },
     "manyPartsSelected_one": "{{count}} Teil ausgewählt. Eines zum Bearbeiten auswählen.",
     "manyPartsSelected_other": "{{count}} Teile ausgewählt. Eines zum Bearbeiten auswählen."

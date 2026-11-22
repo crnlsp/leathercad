@@ -942,15 +942,9 @@
       "piece": "Reflejar crea una pieza contraparte."
     },
     "job": {
-      "holes": "Agujeros",
       "paper": "{{paper}}, {{orientation}}",
-      "pieces": "Piezas",
       "scaleCheckOnly": "{{paper}}, {{orientation}}, solo comprobación de escala",
-      "sheets": "Hojas",
-      "timesCut": "{{holes}} ×{{cut}}",
-      "toCut_one": "{{count}} para cortar",
-      "toCut_other": "{{count}} para cortar",
-      "toCut_many": "{{count}} para cortar"
+      "sheets": "Hojas"
     },
     "manyPartsSelected_one": "{{count}} pieza seleccionada. Selecciona una para editarla.",
     "manyPartsSelected_other": "{{count}} piezas seleccionadas. Selecciona una para editarla.",

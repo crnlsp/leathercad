@@ -432,6 +432,27 @@ const GLYPHS = {
       {dot(8, 11.5, 0.85)}
     </>
   ),
+
+  // The summary's figures (Properties, nothing selected): what the job takes.
+  scissors: (
+    <>
+      <circle cx="4.5" cy="4.5" r="2" />
+      <circle cx="4.5" cy="11.5" r="2" />
+      <path d="M6.2 5.7 14 12M6.2 10.3 14 4" />
+    </>
+  ),
+  // Round, so it is never read as More's three diamonds.
+  holes: (
+    <>
+      {dot(3, 8, 1.75)}
+      {dot(8, 8, 1.75)}
+      {dot(13, 8, 1.75)}
+    </>
+  ),
+  spool: <path d="M3.5 2.5h9M3.5 13.5h9M5 2.5v11M11 2.5v11M5 6l6-1.5M5 9l6-1.5M5 12l6-1.5" />,
+  hide: (
+    <path d="M5 2.25l1.25 1.5h3.5L11 2.25l1.5 2-1 1.75.5 3.25 1.5 1.5-1.25 2.25-2-1H5.75l-2 1L2.5 10.75 4 9.25 4.5 6l-1-1.75z" />
+  ),
 } satisfies Readonly<Record<IconName, ReactElement>>;
 
 /**

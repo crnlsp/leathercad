@@ -2902,11 +2902,142 @@ body {
   font: var(--t-num);
 }
 
-.production-detail {
-  padding-left: 8px;
+/* The summary: four figures at a glance, then the cut list. */
+.production-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.production-copy {
+  display: grid;
+  place-items: center;
+  width: var(--h-control);
+  height: var(--h-control);
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
   color: var(--text-dim);
+  cursor: pointer;
+  transition:
+    background-color var(--motion),
+    color var(--motion);
+}
+
+.production-copy:hover {
+  background: var(--shell-700);
+  color: var(--text);
+}
+
+.production-figures {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-1);
+}
+
+.production-figure {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  border-radius: var(--r-sm);
+}
+
+/* The board's colours on a scrap of the board, as a value chip carries them. */
+.production-tile {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--r-sm);
+  background: var(--ground);
+  color: var(--role-cut);
+}
+
+.production-tile:is([data-figure='holes'], [data-figure='thread']) {
+  color: var(--role-stitch);
+}
+
+.production-tile[data-figure='leather'] {
+  color: var(--role-annotation);
+}
+
+.production-value {
+  max-width: 100%;
+  color: var(--text);
+  font: var(--t-num-lg);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.production-caption {
+  color: var(--text-dim);
+  font: var(--t-micro);
+}
+
+.production-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--shell-line);
+}
+
+.production-list + .production-list {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.production-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--text-dim);
+}
+
+.production-list-head h3 {
+  margin: 0;
   font: var(--t-label);
+}
+
+.production-list-head span {
+  font: var(--t-num-micro);
+}
+
+.production-list ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.production-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--row-height);
+  color: var(--text);
+  font: var(--t-body);
+}
+
+.production-line-name {
+  flex: 1;
+  min-width: 0;
   overflow-wrap: anywhere;
+}
+
+.production-mirrored {
+  display: inline-flex;
+  color: var(--text-dim);
+}
+
+.production-line-quantity {
+  min-width: 24px;
+  color: var(--text-dim);
+  font: var(--t-num);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
 .badge {

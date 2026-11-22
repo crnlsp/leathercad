@@ -208,14 +208,15 @@ test('with nothing selected, Properties says what the job is (R-05, §7 question
   await withSample([1440, 900], async (window) => {
     const totals = window.getByTestId('property-panel').getByTestId('job-totals');
     await expect(totals).toContainText('Bifold wallet');
-    await expect(totals.getByTestId('job-pieces')).toHaveText('Pieces3 · 4 to cut');
-    await expect(totals.getByTestId('job-holes')).toHaveText('Holes250 · 146 + 52 ×2');
     await expect(totals.getByTestId('job-sheets')).toHaveText('Sheets2 · A4, portrait');
+    const summary = window.getByTestId('property-panel').getByTestId('production-summary');
+    await expect(summary.getByTestId('production-pieces')).toHaveText('4pieces');
+    await expect(summary.getByTestId('production-holes')).toHaveText('250holes');
 
     // A hidden piece is not printed, so it is not cut from these sheets.
     await window.getByTestId('part-visible-pocket').click();
-    await expect(totals.getByTestId('job-pieces')).toHaveText('Pieces3 · 2 to cut');
-    await expect(totals.getByTestId('job-holes')).toHaveText('Holes146');
+    await expect(summary.getByTestId('production-pieces')).toHaveText('2pieces');
+    await expect(summary.getByTestId('production-holes')).toHaveText('146holes');
 
     await expectNoViolations(window, 'the job, with nothing selected');
   });
