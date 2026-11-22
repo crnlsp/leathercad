@@ -11,6 +11,7 @@ import {
 
 import { NumberField } from './NumberField.js';
 import { useI18n } from './i18n.js';
+import { HelpTip } from './Tooltip.js';
 
 export function GuidesPanel({
   store,
@@ -42,8 +43,10 @@ export function GuidesPanel({
   };
   return (
     <section className="panel-section" data-testid="guides-panel">
-      <h3 className="panel-heading">{t('guides.title')}</h3>
-      <p className="panel-note">{t('guides.help')}</p>
+      <h3 className="panel-heading">
+        {t('guides.title')}
+        <HelpTip text={t('guides.help')} />
+      </h3>
       <div className="guide-actions">
         <button className="tool" data-testid="guide-add-horizontal" onClick={() => add(0)}>
           {t('guides.horizontal')}

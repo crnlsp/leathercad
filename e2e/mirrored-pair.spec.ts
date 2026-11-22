@@ -26,7 +26,6 @@ test('cut the pocket as a mirrored pair: Parts and the summary say 1 + 1 mirrore
     await expect(pair).not.toBeChecked();
 
     await pair.check();
-    await expect(panel.getByTestId('part-mirrored-pair-note')).toBeVisible();
     await expect(window.getByTestId('part-heading-pocket')).toContainText('1 + 1 mirrored');
     await expectNoViolations(window, 'a mirrored pair in Properties');
 

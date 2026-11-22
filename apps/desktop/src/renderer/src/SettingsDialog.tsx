@@ -2,7 +2,6 @@ import { IRON_STYLES, MIN_PITCH_MM } from '@leathercad/domain';
 import type { Iron, Preferences, UpdateStatus } from '@leathercad/platform';
 import {
   useEffect,
-  useId,
   useRef,
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
@@ -47,6 +46,7 @@ import {
 } from './rebind.js';
 import { shortcutGroups } from './shortcuts.js';
 import { Spinner, useChecking } from './Spinner.js';
+import { HelpTip } from './Tooltip.js';
 import { useMinutesUntilAgain } from './updateWait.js';
 
 export type SettingsSection =
@@ -216,9 +216,11 @@ function General({ recentCount, onClearRecent, preferences, onPreferences }: Pro
       />
       <div className="setting">
         <div className="setting-text">
-          <span className="setting-name">{t('settings.recent.name')}</span>
+          <span>
+            <span className="setting-name">{t('settings.recent.name')}</span>
+            <HelpTip text={t('settings.recent.note')} />
+          </span>
           <span className="setting-note">
-            {t('settings.recent.note')}{' '}
             {recentCount === 0
               ? t('settings.recent.none')
               : t('settings.recent.count', { count: recentCount })}
@@ -305,8 +307,10 @@ function MyTools({ preferences, onPreferences, nextId }: Props) {
 
   return (
     <>
-      <p className="setting-note">{t('settings.tools.intro')}</p>
-      <h4 className="settings-subhead">{t('settings.tools.irons')}</h4>
+      <h4 className="settings-subhead">
+        {t('settings.tools.irons')}
+        <HelpTip text={t('settings.tools.intro')} />
+      </h4>
       {irons.length === 0 ? (
         <p className="setting-note" data-testid="no-irons">
           {t('settings.tools.noIrons')}
@@ -418,8 +422,10 @@ function MyTools({ preferences, onPreferences, nextId }: Props) {
       <h4 className="settings-subhead">{t('settings.tools.forNewPieces')}</h4>
       <div className="setting">
         <div className="setting-text">
-          <span className="setting-name">{t('settings.tools.margin.name')}</span>
-          <span className="setting-note">{t('settings.tools.margin.note')}</span>
+          <span>
+            <span className="setting-name">{t('settings.tools.margin.name')}</span>
+            <HelpTip text={t('settings.tools.margin.note')} />
+          </span>
         </div>
         <span className="setting-number" data-testid="setting-margin">
           <NumberField
@@ -434,8 +440,10 @@ function MyTools({ preferences, onPreferences, nextId }: Props) {
       </div>
       <div className="setting">
         <div className="setting-text">
-          <span className="setting-name">{t('settings.tools.thickness.name')}</span>
-          <span className="setting-note">{t('settings.tools.thickness.note')}</span>
+          <span>
+            <span className="setting-name">{t('settings.tools.thickness.name')}</span>
+            <HelpTip text={t('settings.tools.thickness.note')} />
+          </span>
         </div>
         <span className="setting-number" data-testid="setting-thickness">
           <NumberField
@@ -453,8 +461,10 @@ function MyTools({ preferences, onPreferences, nextId }: Props) {
       </div>
       <div className="setting">
         <div className="setting-text">
-          <span className="setting-name">{t('settings.tools.pocketEase.name')}</span>
-          <span className="setting-note">{t('settings.tools.pocketEase.note')}</span>
+          <span>
+            <span className="setting-name">{t('settings.tools.pocketEase.name')}</span>
+            <HelpTip text={t('settings.tools.pocketEase.note')} />
+          </span>
         </div>
         <span className="setting-number" data-testid="setting-pocket-ease">
           <NumberField
@@ -538,7 +548,6 @@ function IronName({
 function Language({ preferences, onPreferences, systemLanguages }: Props) {
   const i18n = useI18n();
   const { t } = i18n;
-  const noteId = useId();
   const named = (tag: string): string => languageName(catalogueFor(tag) ?? tag, i18n.locale);
 
   const followed = resolveLocale(SYSTEM_LANGUAGE, systemLanguages);
@@ -554,11 +563,11 @@ function Language({ preferences, onPreferences, systemLanguages }: Props) {
   return (
     <div className="setting">
       <div className="setting-text">
-        <label className="setting-name" htmlFor="setting-language">
-          {t('settings.language.name')}
-        </label>
-        <span className="setting-note" id={noteId}>
-          {t('settings.language.note')}
+        <span>
+          <label className="setting-name" htmlFor="setting-language">
+            {t('settings.language.name')}
+          </label>
+          <HelpTip text={t('settings.language.note')} />
         </span>
         {unavailable && (
           <span className="setting-note" data-testid="language-unavailable">
@@ -580,7 +589,6 @@ function Language({ preferences, onPreferences, systemLanguages }: Props) {
       <select
         id="setting-language"
         data-testid="setting-language"
-        aria-describedby={noteId}
         value={preferences.language}
         onChange={(event) => onPreferences({ language: event.target.value })}
       >
@@ -631,19 +639,21 @@ function Updates({ updates, onCheckUpdates }: Props) {
         ) : null}
       </div>
       <div className="setting">
-        <p className="setting-note" data-testid="updates-note">
-          {t('settings.updates.note')}
-        </p>
-        <button
-          type="button"
-          className="tool"
-          data-testid="check-updates"
-          disabled={checking || wait !== null}
-          onClick={check}
-        >
-          {checking ? <Spinner /> : wait !== null ? <Icon of="clock" size={14} /> : null}
-          {wait !== null ? t('settings.updates.again', { count: wait }) : t('settings.updates.now')}
-        </button>
+        <span>
+          <button
+            type="button"
+            className="tool"
+            data-testid="check-updates"
+            disabled={checking || wait !== null}
+            onClick={check}
+          >
+            {checking ? <Spinner /> : wait !== null ? <Icon of="clock" size={14} /> : null}
+            {wait !== null
+              ? t('settings.updates.again', { count: wait })
+              : t('settings.updates.now')}
+          </button>
+          <HelpTip text={t('settings.updates.note')} />
+        </span>
       </div>
     </>
   );
@@ -707,22 +717,18 @@ function Toggle({
   checked: boolean;
   onChange: (on: boolean) => void;
 }) {
-  const noteId = useId();
   return (
     <div className="setting">
-      <div className="setting-text">
+      <span>
         <label className="setting-name" htmlFor={`setting-${id}`}>
           {name}
         </label>
-        <span className="setting-note" id={noteId}>
-          {note}
-        </span>
-      </div>
+        <HelpTip text={note} />
+      </span>
       <input
         id={`setting-${id}`}
         type="checkbox"
         data-testid={`setting-${id}`}
-        aria-describedby={noteId}
         checked={checked}
         onChange={(event) => onChange(event.target.checked)}
       />
@@ -853,21 +859,23 @@ function Shortcuts({ preferences, onPreferences }: Props) {
   return (
     <>
       <div className="shortcuts-intro">
-        <p className="setting-note">{t('settings.shortcuts.intro', sentences)}</p>
-        <button
-          type="button"
-          className="tool"
-          data-testid="shortcuts-reset-all"
-          disabled={!changed}
-          onClick={() => {
-            onPreferences({ keyBindings: {} });
-            setClash(null);
-            setListening(null);
-            setSaid(t('settings.shortcuts.allReset'));
-          }}
-        >
-          {t('settings.shortcuts.resetAll')}
-        </button>
+        <span>
+          <button
+            type="button"
+            className="tool"
+            data-testid="shortcuts-reset-all"
+            disabled={!changed}
+            onClick={() => {
+              onPreferences({ keyBindings: {} });
+              setClash(null);
+              setListening(null);
+              setSaid(t('settings.shortcuts.allReset'));
+            }}
+          >
+            {t('settings.shortcuts.resetAll')}
+          </button>
+          <HelpTip text={t('settings.shortcuts.intro', sentences)} />
+        </span>
       </div>
       <p className="visually-hidden" role="status" aria-live="polite">
         {said}

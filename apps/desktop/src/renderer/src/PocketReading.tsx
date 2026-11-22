@@ -3,6 +3,7 @@ import { pocketSize } from '@leathercad/domain';
 import type { Path } from '@leathercad/geometry';
 
 import { useI18n } from './i18n.js';
+import { HelpTip } from './Tooltip.js';
 
 /**
  * The same domain reading in Properties and beside the selected stitching.
@@ -56,9 +57,11 @@ export function PocketReading({
       data-testid="pocket-reading"
       aria-label={t('pocket.title')}
     >
-      <div className="panel-heading">{t('pocket.title')}</div>
+      <div className="panel-heading">
+        {t('pocket.title')}
+        {size !== null && <HelpTip text={t('pocket.note')} />}
+      </div>
       {reading}
-      {size !== null && <p className="panel-note">{t('pocket.note')}</p>}
       {children}
     </section>
   );

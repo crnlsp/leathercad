@@ -24,7 +24,7 @@ import type { FlipAxis, MirrorDirection } from '@leathercad/document';
 import type { SizeDraft } from '@leathercad/editor';
 import { PathOps } from '@leathercad/geometry';
 import { followRefusal, isHolesAlongALine, type ResolvedFeature } from '@leathercad/domain';
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 
 import { PocketReading } from './PocketReading.js';
 import { PocketRequirementEditor } from './PocketRequirementEditor.js';
@@ -35,6 +35,7 @@ import { KeyCap, useKeysInSentences } from './keyCaps.js';
 import { MARGIN_MIN_MM, MARGIN_STEP_MM, type MakerTools } from './irons.js';
 import { allowanceCommand, derive, holesCommand, stitchLineCommand } from './nextSteps.js';
 import { NumberField } from './NumberField.js';
+import { HelpTip } from './Tooltip.js';
 import { GuidesPanel } from './GuidesPanel.js';
 import { ArrangePanel, PositionFields } from './ArrangePanel.js';
 import { ProblemSection } from './ProblemSection.js';
@@ -380,15 +381,13 @@ export function PropertyPanel({
         */}
         <ReasonedRow
           label={t('properties.mirrorLabel')}
+          help={t(`properties.mirrorNote.${isOutline ? 'piece' : 'counterpart'}`)}
           buttons={[
             mirrorButton(store, project, feature, 'horizontal', nextId, t),
             mirrorButton(store, project, feature, 'vertical', nextId, t),
             ...foldMirrorButton(store, project, part, feature, nextId, t),
           ]}
         />
-        <p className="panel-note">
-          {t(`properties.mirrorNote.${isOutline ? 'piece' : 'counterpart'}`)}
-        </p>
       </section>
 
       {/*
@@ -489,6 +488,7 @@ function PartFields({
   underOutline?: boolean;
 }) {
   const { t } = useI18n();
+  const pairId = useId();
   return (
     <section className="panel-section">
       {!underOutline && <div className="panel-heading">{t('properties.part')}</div>}
@@ -514,20 +514,20 @@ function PartFields({
         precision={0}
         onCommit={(value) => store.dispatch(setPartQuantity(part.id, value))}
       />
-      <label className="field">
-        <span className="field-label">{t('properties.mirroredPair')}</span>
+      {/* A div, not a label: the (?) inside would join the box's name. */}
+      <div className="field">
+        <span className="field-label">
+          <label htmlFor={pairId}>{t('properties.mirroredPair')}</label>
+          <HelpTip text={t('properties.mirroredPairNote')} />
+        </span>
         <input
+          id={pairId}
           type="checkbox"
           data-testid="part-mirrored-pair"
           checked={part.mirroredPair === true}
           onChange={(event) => store.dispatch(setPartMirroredPair(part.id, event.target.checked))}
         />
-      </label>
-      {part.mirroredPair === true && (
-        <p className="panel-note" data-testid="part-mirrored-pair-note">
-          {t('properties.mirroredPairNote')}
-        </p>
-      )}
+      </div>
     </section>
   );
 }
@@ -1088,7 +1088,10 @@ function AfterTheOutline({
   const { t } = useI18n();
   return (
     <section className="panel-group" data-testid="drawing-defaults">
-      <div className="panel-heading">{t('properties.afterOutline.title')}</div>
+      <div className="panel-heading">
+        {t('properties.afterOutline.title')}
+        <HelpTip text={t('properties.afterOutline.note', { tools: t('settings.section.tools') })} />
+      </div>
       <NumberField
         label={t('properties.afterOutline.stitchLine')}
         value={tools.stitchMarginMm}
@@ -1116,9 +1119,6 @@ function AfterTheOutline({
           </span>
         </label>
       )}
-      <p className="panel-note">
-        {t('properties.afterOutline.note', { tools: t('settings.section.tools') })}
-      </p>
     </section>
   );
 }

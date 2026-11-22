@@ -8,10 +8,11 @@ import {
   type StitchLine,
 } from '@leathercad/domain';
 import type { Path } from '@leathercad/geometry';
-import { useMemo } from 'react';
+import { useId, useMemo } from 'react';
 
 import { useI18n } from './i18n.js';
 import { NumberField } from './NumberField.js';
+import { HelpTip } from './Tooltip.js';
 import { acrossVerdict, choiceOf, withChoice, type HoldsChoice } from './pocketRequirement.js';
 
 /**
@@ -42,6 +43,7 @@ export function PocketRequirementEditor({
   const i18n = useI18n();
   const { t, locale } = i18n;
   const holds = feature.holds;
+  const holdsId = useId();
   const set = (next: PocketRequirement | undefined) =>
     store.dispatch(setPocketRequirement(feature.id, next));
   const size = useMemo(() => (path === null ? null : pocketSize(path)), [path]);
@@ -57,9 +59,14 @@ export function PocketRequirementEditor({
       disabled={feature.locked}
       data-testid="pocket-requirement"
     >
-      <label className="field">
-        <span className="field-label">{t('pocket.holds.label')}</span>
+      {/* A div, not a label: the (?) inside would join the select's name. */}
+      <div className="field">
+        <span className="field-label">
+          <label htmlFor={holdsId}>{t('pocket.holds.label')}</label>
+          {holds?.content.kind === 'size' && <HelpTip text={t('pocket.holds.note')} />}
+        </span>
         <select
+          id={holdsId}
           data-testid="pocket-holds"
           value={choiceOf(holds)}
           onChange={(event) =>
@@ -75,7 +82,7 @@ export function PocketRequirementEditor({
           </option>
           <option value="size">{t('pocket.holds.size')}</option>
         </select>
-      </label>
+      </div>
       {holds === undefined && size !== null && (
         <p className="panel-note" data-testid="pocket-invite">
           {t('pocket.holds.invite')}
@@ -147,7 +154,6 @@ export function PocketRequirementEditor({
               })}
             </p>
           )}
-          <p className="panel-note">{t('pocket.holds.note')}</p>
         </>
       )}
     </fieldset>

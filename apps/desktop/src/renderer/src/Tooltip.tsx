@@ -8,6 +8,8 @@ import {
   type ReactElement,
 } from 'react';
 
+import { useI18n } from './i18n.js';
+import { Icon } from './icons/Icon.js';
 import { KeyCap } from './keyCaps.js';
 import type { CommandId } from './keymap.js';
 import { placeTooltip } from './tooltipPlacement.js';
@@ -138,5 +140,23 @@ export function Tooltip({
         )}
       </span>
     </span>
+  );
+}
+
+/**
+ * A (?) beside a label, holding what the label's control does in its tooltip
+ * rather than in a paragraph under it: the explanation is there when asked
+ * for and the panel stays short. A button, so the keyboard reaches it too.
+ * It sits beside a `<label>`, never inside one, or its name would join the
+ * control's.
+ */
+export function HelpTip({ text }: { text: string }) {
+  const { t } = useI18n();
+  return (
+    <Tooltip text={text}>
+      <button type="button" className="help-tip" aria-label={t('panels.help')}>
+        <Icon of="help" size={14} />
+      </button>
+    </Tooltip>
   );
 }

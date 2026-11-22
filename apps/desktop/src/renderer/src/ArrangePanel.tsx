@@ -20,7 +20,7 @@ import { Icon } from './icons/Icon.js';
 import { useKeysInSentences } from './keyCaps.js';
 import { NumberField } from './NumberField.js';
 import { describeProblem } from './problemText.js';
-import { Tooltip } from './Tooltip.js';
+import { HelpTip, Tooltip } from './Tooltip.js';
 
 const AXES: readonly ArrangeAxis[] = ['x', 'y'];
 const MODES: readonly ArrangeMode[] = ['min', 'centre', 'max', 'distribute'];
@@ -58,8 +58,10 @@ export function ArrangePanel({
   );
   return (
     <section className="panel-section" data-testid="arrange-panel">
-      <h3 className="panel-heading">{t('arrange.title')}</h3>
-      <p className="panel-note">{t('arrange.help')}</p>
+      <h3 className="panel-heading">
+        {t('arrange.title')}
+        <HelpTip text={t('arrange.help')} />
+      </h3>
       <PositionFields store={store} project={project} ids={ids} />
       {AXES.map((axis) => {
         const reasons = MODES.map((mode) => {
