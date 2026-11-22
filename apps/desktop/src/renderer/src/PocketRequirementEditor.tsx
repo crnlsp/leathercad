@@ -63,7 +63,7 @@ export function PocketRequirementEditor({
       <div className="field">
         <span className="field-label">
           <label htmlFor={holdsId}>{t('pocket.holds.label')}</label>
-          {holds?.content.kind === 'size' && <HelpTip text={t('pocket.holds.note')} />}
+          {holds !== undefined && <HelpTip text={t('pocket.holds.note')} />}
         </span>
         <select
           id={holdsId}
