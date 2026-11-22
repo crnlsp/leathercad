@@ -8,12 +8,14 @@ import {
   type Tooth,
 } from '@leathercad/domain';
 import type { Iron } from '@leathercad/platform';
+import { useId } from 'react';
 
 import { NumberField } from '../NumberField.js';
 import { ironOf, shownTooth, slitRefusal, withIron, withTypedTooth } from '../irons.js';
 import { useKeysInSentences } from '../keyCaps.js';
 import { useI18n } from '../i18n.js';
 import { Icon } from '../icons/Icon.js';
+import { HelpTip } from '../Tooltip.js';
 import { SeverityGlyph } from '../SeverityGlyph.js';
 import {
   SPACING_DECIMALS,
@@ -222,6 +224,7 @@ function ToothFields({ op, onChange }: { op: HolesOp; onChange: (op: HolesOp) =>
   const words = { t, enter: keys['enter'] ?? '' };
   const tooth = shownTooth(op);
   const type = (next: Tooth): void => onChange(withTypedTooth(op, next));
+  const leanId = useId();
 
   return (
     <>
@@ -274,10 +277,16 @@ function ToothFields({ op, onChange }: { op: HolesOp; onChange: (op: HolesOp) =>
             precision={1}
             onCommit={(angle) => type({ ...tooth, slantDeg: tooth.slantDeg < 0 ? -angle : angle })}
           />
-          <label className="field">
-            <span className="field-label">{t('editor.tooth.lean')}</span>
+          {/* A div, not a label: the (?) inside would join the select's name. */}
+          <div className="field">
+            <span className="field-label">
+              <label htmlFor={leanId}>{t('editor.tooth.lean')}</label>
+              {/* No check that stacked pieces' slits cross: that needs layers (D28). */}
+              <HelpTip text={t('editor.tooth.stacked')} />
+            </span>
             <span className="field-input">
               <select
+                id={leanId}
                 data-testid="tooth-lean"
                 value={tooth.slantDeg < 0 ? 'inverse' : 'standard'}
                 onChange={(event) => {
@@ -289,9 +298,7 @@ function ToothFields({ op, onChange }: { op: HolesOp; onChange: (op: HolesOp) =>
                 <option value="inverse">{t('editor.tooth.inverse')}</option>
               </select>
             </span>
-          </label>
-          {/* No check that stacked pieces' slits cross: that needs layers (D28). */}
-          <p className="panel-note">{t('editor.tooth.stacked')}</p>
+          </div>
         </>
       )}
     </>

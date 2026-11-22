@@ -113,7 +113,9 @@ test('the app asks nothing as it starts, and Check now asks once', async () => {
 
         await window.getByTestId('settings').click();
         await window.getByTestId('settings-tab-updates').click();
-        await expect(window.getByTestId('updates-note')).toBeVisible();
+        await expect(
+          window.getByTestId('settings-pane-updates').getByRole('button', { name: 'About this' }),
+        ).toBeVisible();
         await window.getByTestId('check-updates').click();
         await expect(
           window.getByTestId('settings-pane-updates').getByTestId('update-status'),
@@ -161,7 +163,9 @@ test('the Flatpak never asks: Settings says Flathub keeps it up to date', async 
         await window.getByTestId('settings-tab-updates').click();
         await expect(window.getByTestId('updates-managed')).toBeVisible();
         await expect(window.getByTestId('check-updates')).toHaveCount(0);
-        await expect(window.getByTestId('updates-note')).toHaveCount(0);
+        await expect(
+          window.getByTestId('settings-pane-updates').getByRole('button', { name: 'About this' }),
+        ).toHaveCount(0);
         expect(server.asked()).toBe(0);
       },
       { env: { LEATHERCAD_RELEASES_URL: server.url, FLATPAK_ID: 'io.github.crnlsp.LeatherCAD' } },
