@@ -133,6 +133,9 @@ export { anchorsOf, cornerDistances, cornerSites, cornersThroughEdit } from './a
 export type { Material } from './material.js';
 export { distanceToEdge, isOnMaterial, materialOf } from './material.js';
 
+export type { EndOffsets } from './openRunOffsets.js';
+export { endOffsetsClearOfTheEdge } from './openRunOffsets.js';
+
 export {
   dependentsOf,
   seamsDependingOn,
@@ -173,4 +176,11 @@ export { IRON_STYLES, toothOfStyle, toothOutline } from './tooth.js';
 
 export { checkProjectSize } from './resourceSize.js';
 
-export { ID1_CARD, contentSize, pocketOpening, pocketSize, type PocketSize } from './pocket.js';
+export {
+  ID1_CARD,
+  contentSize,
+  fitsAcross,
+  pocketOpening,
+  pocketSize,
+  type PocketSize,
+} from './pocket.js';

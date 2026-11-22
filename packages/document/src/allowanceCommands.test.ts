@@ -6,6 +6,8 @@ import { describe, expect, it } from 'vitest';
 import {
   addAllowance,
   addAllowancePart,
+  addPart,
+  addStitchLine,
   addStitchHoles,
   allowanceRefusal,
   deleteFeatures,
@@ -13,9 +15,11 @@ import {
   setDerivation,
   setShape,
   rectShape,
+  shapePart,
   translateFeatures,
 } from './commands.js';
 import type { Document } from './document.js';
+import { DocumentStore } from './store.js';
 
 const PART = 'part-1' as PartId;
 const STITCH = 'stitch-1' as FeatureId;
@@ -195,6 +199,34 @@ describe('Add seam allowance, on a stitch line already drawn', () => {
     expect(allowanceRefusal(once.project, STITCH)).toMatchObject({
       code: 'PART_ALREADY_HAS_OUTER',
     });
+  });
+
+  it('says once, open or closed, that a piece cut to its outline has its allowance already (U6)', () => {
+    const once = addAllowance(PART, EDGE, STITCH, 4).apply(drawnOpening());
+    const line = featureIn(once.project, STITCH);
+    if (line?.source.kind !== 'shape') throw new Error('the opening is a drawn rectangle');
+    const reason = {
+      code: 'PART_ALREADY_HAS_OUTER',
+      facts: { featureId: STITCH, outerName: 'Outline', allowance: true },
+    };
+    expect(allowanceRefusal(once.project, STITCH)).toMatchObject(reason);
+
+    // The piece *Getting started* makes: an outline, its stitch line inset and opened.
+    const inset = new DocumentStore(emptyDocument('proj'));
+    inset.dispatch(addPart(shapePart(PART, 'cut-1', 'Pocket', rectShape({ x: 0, y: 0 }, 95, 70))));
+    inset.dispatch(addStitchLine(PART, STITCH, 'cut-1' as FeatureId, 3.5));
+    const closed = allowanceRefusal(inset.getState().document.project, STITCH);
+    inset.dispatch(
+      setDerivation(STITCH, {
+        type: 'offset',
+        distanceMm: 3.5,
+        side: 'inward',
+        run: { kind: 'between', fromAnchor: 2, toAnchor: 1 },
+      }),
+    );
+    const open = allowanceRefusal(inset.getState().document.project, STITCH);
+    expect(closed).toEqual(open);
+    expect(open).toMatchObject({ code: 'PART_ALREADY_HAS_OUTER', facts: { allowance: true } });
   });
 
   it('refuses an open stitch line: an outline has to enclose the part', () => {

@@ -130,6 +130,12 @@ export interface ProblemFacts {
   readonly PART_ALREADY_HAS_OUTER: About & {
     readonly partName: string;
     readonly outerName: string;
+    /**
+     * Asked for a seam allowance from the stitching (U6): the leather between
+     * the outline and the stitching already is one, so there is nothing to
+     * draw as a cut-out instead.
+     */
+    readonly allowance?: true;
   };
   /**
    * S6: an outline or a cut-out has to enclose an area to be cut out.

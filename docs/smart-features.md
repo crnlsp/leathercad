@@ -205,8 +205,8 @@ new panel, toast, badge or dialog, and nothing on the board for a pass.
 | State | Domain today | Properties should say | Problems |
 |---|---|---|---|
 | **Nothing stated** | No `holds` | The reading only; under *Holds: Nothing stated*, one optional line: "Say what goes in to check that it fits" | Nothing |
-| **Checked, met geometrically** | No diagnostic | One line per check, with both numbers and what they were measured to: "94 mm between stitch lines, 87.6 mm stated (card 85.6 + ease 2)"; held fully: "57 mm below Pocket's edge, 3 mm above the stitch ends; 53.98 mm stated". Never "fits" | Nothing |
-| **Checked, not met** | `POCKET_TOO_NARROW` / `_SHALLOW` | The same line, marked as short by how much, beside the problem row it already shows | One warning |
+| **Checked, met geometrically** | No diagnostic | One line per check, with both numbers and what they were measured to. Across, DR8's own verdict (`fitsAcross`, U7): "Fits: 94 mm across for 85.6 mm and 2 mm ease"; held fully: "57 mm below Pocket's edge, 3 mm above the stitch ends; 53.98 mm stated". The "fits" is geometric, and the note under the lines says so once | Nothing |
+| **Checked, not met** | `POCKET_TOO_NARROW` / `_SHALLOW` | The same line — across, "Too narrow: …" — marked as short by how much, beside the problem row it already shows | One warning |
 | **Cannot be checked** | `POCKET_NOT_MEASURABLE` | "Not checked: …" with the reason the problem gives; and while the stitching fails to build, the requirement still shown, with "Not checked until the stitch line builds" (L3) | One warning, or the root failure |
 | **Not verified physically** | Nothing — no model | One note under the lines, always, never per line: "Geometric only — leather thickness, stitch pull and how many cards are not counted" | Nothing |
 
@@ -326,7 +326,7 @@ minimum that proves the workflows, about 10 s more:
 |---|---|
 | Sides named in *Stitched sides* | From a square-cornered rectangle, choose *Open at the top*; the board marks the run, Properties reads 94 mm across, and the opening is above the stitch ends |
 | Hole offsets in Properties | The same pocket with its end holes on the edge: *Problems* says 1 warning (Q44); type 3 mm start and end offsets, *Nothing to fix*; undo brings the warning back. Reachable by keyboard. Built by Q47 as SF-UI3 |
-| *Holds* says what it measured to | SF-E4's construction reads "117 mm below Panel's edge, 78 mm above the stitch ends"; ease 0 says "no ease"; *Nothing stated* offers one optional line; a collapsed inset still shows *Holds*, "Not checked until the stitch line builds", which clears and comes back with undo; no line says "fits". Built by Q49 as SF-UI4 |
+| *Holds* says what it measured to | SF-E4's construction reads "117 mm below Panel's edge, 78 mm above the stitch ends"; ease 0 says "no ease"; *Nothing stated* offers one optional line; a collapsed inset still shows *Holds*, "Not checked until the stitch line builds", which clears and comes back with undo. Built by Q49 as SF-UI4; since U7 (QA6) the width line is the verdict, "Fits: 94 mm across for 85.6 mm and 2 mm ease", and the thickness caveat is said once, under *Holds* |
 | Requirement shown from the holes | Click a hole on the board (not the parts tree): Properties shows the stitch line's *Pocket too narrow* and a button to its stitch line; pressing it selects the line with *Holds* focused; axe clean |
 | *Use as stitching* | Import an SVG with an unlayered open U (`e2e/svgPatterns.ts`): it is a marking; *Use as stitching* makes it a stitch line with a reading and *Holds*; undo makes it a marking again |
 | The five states | One test walks a U through nothing stated, met, not met and not measurable, reading each line, and finds no line on a closed stitch line or an outline |
@@ -355,7 +355,12 @@ on the leather (D29), so every rule that asks it shares the answer; the two end 
 `HOLE_TOO_CLOSE_TO_EDGE` at 0 mm whichever side is open and however the piece is turned. SF-K3
 asserts that list, and a property turns and moves a square-cornered pocket open on any side. Since
 Q47 the warning says it is the end holes (`atEnds`) and names *Start offset* and *End offset*,
-which move them in and keep the corners' holes (SF-K7).
+which move them in and keep the corners' holes (SF-K7). *Since U2 (QA6)* the maker rarely meets
+it: opening a run sets each end's offset to what that end lacks of the line's inset — the inset at
+a square corner, nothing at a rounded one (`endOffsetsClearOfTheEdge`) — so the pocket stitched
+open as *Getting started* says has nothing to fix, holes punched before the run was opened or after
+(SF-K8). A saved file keeps its own offsets; SF-K2, SF-K3 and SF-K7 type them as 0 to reach the
+edge.
 
 **KD-2** — *A mirrored hardware hole is never checked.* `punchesOf` in `validate.ts` reads a
 hardware hole only when its source is a drawn circle; a mirror's source is a derivation. The key

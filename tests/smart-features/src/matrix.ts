@@ -96,13 +96,13 @@ export const MATRIX: { readonly [code: string]: RuleCoverage } = {
   // ——— DR2: everything in a part lies on its material ———
   HOLE_TOO_CLOSE_TO_EDGE: {
     positive: ['SF-A4', 'SF-A5', 'SF-K7'],
-    negative: ['SF-A2', 'SF-K1', 'SF-K6'],
+    negative: ['SF-A2', 'SF-K1', 'SF-K6', 'SF-K8'],
     notApplicable: { exempt: UNIVERSAL },
     transition: ['SF-A4', 'SF-K7'],
   },
   OUTSIDE_PART: {
     positive: ['SF-E3', 'SF-K4', 'SF-K5', 'SF-A11'],
-    negative: ['SF-A2', 'SF-K1', 'SF-K6'],
+    negative: ['SF-A2', 'SF-K1', 'SF-K6', 'SF-K8'],
     notApplicable: { exempt: UNIVERSAL },
     transition: ['SF-A11', 'SF-K4'],
   },

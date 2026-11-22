@@ -125,6 +125,13 @@ export function punchHoles(
   return addStitchHoles(piece as PartId, holesOf(piece), stitchOf(piece), op);
 }
 
+/**
+ * Holes from a stitch line's very ends: *Start offset* and *End offset* typed
+ * as 0, as a project saved before U2 has them. On a square-cornered piece
+ * stitched open, its end holes then sit on the open edge.
+ */
+export const FROM_THE_VERY_ENDS = { startOffsetMm: 0, endOffsetMm: 0 } as const;
+
 /** *Holds › Payment card* in Properties, with the maker's ease and whether it goes in fully. */
 export function holdsCard(stitch: FeatureId, easeMm: number, fully = false): Command {
   return setPocketRequirement(stitch, { content: { kind: 'id-1' }, easeMm, fully });
