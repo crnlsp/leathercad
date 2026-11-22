@@ -393,3 +393,23 @@ describe('the target part, once parts can be selected (§3.1)', () => {
     expect(targetPart(ctx)).toBeNull();
   });
 });
+
+describe('a drawn shape', () => {
+  it('is stored on the 1e-4 mm grid, as a typed one is (invariant 8, QA U9)', () => {
+    const { ctx, store, draw } = harness();
+    draw.commit(ctx, nextId, 'Panel', {
+      kind: 'shape',
+      shape: rectShape(vec(10.123456789, -7.000033), 40.00004, 30.99996),
+    });
+    draw.commit(ctx, nextId, 'Disc', {
+      kind: 'shape',
+      shape: { type: 'circle', centre: vec(1.23456, 2.34567), radius: 5.00007 },
+    });
+    const shapes = store
+      .getState()
+      .document.project.parts.flatMap((part) => part.features)
+      .map((feature) => (feature.source.kind === 'shape' ? feature.source.shape : null));
+    expect(shapes[0]).toMatchObject({ origin: { x: 10.1235, y: -7 }, width: 40, height: 31 });
+    expect(shapes[1]).toMatchObject({ centre: { x: 1.2346, y: 2.3457 }, radius: 5.0001 });
+  });
+});
