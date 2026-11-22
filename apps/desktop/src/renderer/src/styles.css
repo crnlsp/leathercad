@@ -2491,8 +2491,11 @@ body {
   cursor: not-allowed;
 }
 
+/* One key cap for every key named beside an action: the start screen's
+   New project card wears the one Open existing project has (QA7). */
 .tool kbd,
-.menu-item kbd {
+.menu-item kbd,
+.start-card-name kbd {
   padding: 0 4px;
   border-radius: var(--r-sm);
   background: var(--shell-900);

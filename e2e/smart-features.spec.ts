@@ -343,11 +343,12 @@ test('SF-UI4 · Holds says which edge it measured to, says no ease, and stays wh
       "117 mm below Panel's edge, 78 mm above the stitch ends; 53.98 mm stated.",
     );
     await expect(panel.getByTestId('pocket-across')).toHaveText(
-      '94 mm between stitch lines; 85.6 mm stated, with 2 mm ease.',
+      'Fits: 94 mm across for 85.6 mm and 2 mm ease.',
     );
     await expect(panel.getByTestId('feature-problems')).toHaveCount(0);
     await expect(holds).toContainText(note);
-    await expect(holds).not.toContainText(/\bfits\b/);
+    // The caveat is said once, under Holds (U7): not again in the reading above it.
+    await expect(panel.getByTestId('pocket-reading')).not.toContainText('Leather thickness');
     await expectNoViolations(window, 'a requirement read to another edge');
 
     // With no ease, the width line says so rather than nothing.
@@ -355,7 +356,7 @@ test('SF-UI4 · Holds says which edge it measured to, says no ease, and stays wh
     await ease.fill('0');
     await ease.press('Enter');
     await expect(panel.getByTestId('pocket-across')).toHaveText(
-      '94 mm between stitch lines; 85.6 mm stated, no ease.',
+      'Fits: 94 mm across for 85.6 mm, with no ease.',
     );
 
     // Nothing stated: one optional line, never "missing".

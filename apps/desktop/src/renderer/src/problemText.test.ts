@@ -218,7 +218,38 @@ describe('the message catalogue, in English', () => {
 
   it('says what a too-narrow pocket has and what a card with its ease needs (9.14b)', () => {
     expect(describeProblem(sample('POCKET_TOO_NARROW'), t)).toContain(
-      'leaves 89.00 mm between its stitch lines; a payment card with 4.00 mm of ease needs 89.60 mm.',
+      'The pocket is 89.00 mm across between its stitching; a payment card with 4.00 mm of ease needs 89.60 mm.',
+    );
+  });
+
+  it('says a piece cut to its outline has its seam allowance already, as the bar’s tick does (U6)', () => {
+    expect(
+      describeProblem(
+        problem('PART_ALREADY_HAS_OUTER', {
+          ...named,
+          partName: 'Pocket',
+          outerName: 'Outline',
+          allowance: true,
+        }),
+        t,
+      ),
+    ).toBe(
+      'Pocket is cut to Outline, so the leather between that edge and the stitching is already its seam allowance.',
+    );
+  });
+
+  it('says holes off the material about the holes and the piece, not the hole set (U15)', () => {
+    const sentence = describeProblem(
+      problem('OUTSIDE_PART', {
+        featureId: 'h',
+        featureName: 'Stitch holes',
+        what: 'holes',
+        atEnds: false,
+      }),
+      t,
+    );
+    expect(sentence).toContain(
+      'Some holes fall off the piece — through its outline, or into a cut-out — so they cannot be punched there.',
     );
   });
 
@@ -233,7 +264,7 @@ describe('the message catalogue, in English', () => {
       }),
       t,
     );
-    expect(sentence).toContain('leaves 89.5999 mm');
+    expect(sentence).toContain('is 89.5999 mm across');
     expect(sentence).toContain('needs 89.60 mm');
   });
 

@@ -24,8 +24,9 @@ import { piecesInPdf } from './pdfPieces.js';
 /**
  * R16, the journey the Smart Features audit found hardest: a card pocket from
  * a blank, square-cornered rectangle. Stitched *Open at the top* (Q48), its
- * two end holes land on the cut edge, and Problems says so; *Start offset* and
- * *End offset* move them in (Q47). Said to hold a payment card with the
+ * two end holes start as far in from the cut edge as the stitching is (U2);
+ * typed back to 0, *Start offset* and *End offset* put them on it, and Problems
+ * says so and names those fields (Q47). Said to hold a payment card with the
  * maker's own ease from My tools (9.14b), it is too narrow, and widening it is
  * the fix. Each state's whole diagnostic list is read back from the saved
  * file, as the Smart Features scenarios read theirs, and the PDF is measured.
@@ -55,13 +56,23 @@ test('a card pocket from a blank rectangle: open at the top, the edge problem, o
     );
     await expect(fields.getByTestId('pocket-width')).toHaveText('86 mm');
 
-    // ── The edge problem: its two end holes are on the cut edge ─────────────
-    // The iron My tools holds cuts a slit, and at each end it would run off
-    // the leather (Q46): the same one problem, as an error.
-    await expect(verdict).toHaveText('1 error');
+    // ── Opened, its end holes start as far in as the stitching: 3 mm (U2) ──
+    await expect(verdict).toHaveText('Nothing to fix.');
     let project = await saveAs(app, window, file);
     const holes = featureId(project, 'Card pocket', 'Stitch holes');
     const stitch = featureId(project, 'Card pocket', 'Stitch line');
+    expectDiagnostics(project, []);
+    const after = holeCounts(project)['Card pocket › Stitch holes'];
+
+    // ── Offsets typed as 0: the end holes on the cut edge ───────────────────
+    // The iron My tools holds cuts a slit, and at each end it would run off
+    // the leather (Q46): one problem, an error, whose advice names the fields.
+    await featureRow(window, 'Card pocket', 'Stitch holes').click();
+    await expect(fields.getByRole('textbox', { name: 'Start offset' })).toHaveValue('3');
+    await enter(fields.getByRole('textbox', { name: 'Start offset' }), '0');
+    await enter(fields.getByRole('textbox', { name: 'End offset' }), '0');
+    await expect(verdict).toHaveText('1 error');
+    project = await saveAs(app, window, file);
     expectDiagnostics(project, [
       {
         code: 'OUTSIDE_PART',
@@ -72,25 +83,20 @@ test('a card pocket from a blank rectangle: open at the top, the edge problem, o
       },
     ]);
     const before = holeCounts(project)['Card pocket › Stitch holes'];
-
-    // F8 goes to it, and its advice names the fields that fix it.
-    await window.getByTestId('editor-canvas').focus();
-    await window.keyboard.press('F8');
     const problems = fields.getByTestId('feature-problems');
     await expect(problems).toContainText('Off the material');
     await expect(problems).toContainText('raise Start offset and End offset');
+    // A hole kept on every corner: the run is shorter, by no more than its two ends.
+    expect(after).toBeLessThanOrEqual(before!);
+    expect(after).toBeGreaterThanOrEqual(before! - 2);
 
-    // ── Offsets: both end holes 3 mm in ─────────────────────────────────────
+    // ── Both back to 3 mm ───────────────────────────────────────────────────
     await enter(fields.getByRole('textbox', { name: 'Start offset' }), '3');
     await expect(verdict).toHaveText('1 error');
     await enter(fields.getByRole('textbox', { name: 'End offset' }), '3');
     await expect(verdict).toHaveText('Nothing to fix.');
     project = await saveAs(app, window, file);
     expectDiagnostics(project, []);
-    // A hole kept on every corner: the run is shorter, by no more than its two ends.
-    const after = holeCounts(project)['Card pocket › Stitch holes'];
-    expect(after).toBeLessThanOrEqual(before!);
-    expect(after).toBeGreaterThanOrEqual(before! - 2);
 
     // ── Holds a payment card, with the 4 mm ease from My tools ─────────────
     await featureRow(window, 'Card pocket', 'Stitch line').click();
@@ -100,7 +106,7 @@ test('a card pocket from a blank rectangle: open at the top, the edge problem, o
     await expect(problems).toContainText('Pocket too narrow');
     await expect(problems).toContainText('a payment card with 4.00 mm of ease needs 89.60 mm');
     await expect(fields.getByTestId('pocket-across')).toHaveText(
-      '86 mm between stitch lines; 85.6 mm stated, with 4 mm ease.',
+      'Too narrow: 86 mm across for 85.6 mm and 4 mm ease.',
     );
     await expectNoViolations(window, 'a pocket too narrow for its card');
     project = await saveAs(app, window, file);
@@ -138,5 +144,34 @@ test('a card pocket from a blank rectangle: open at the top, the edge problem, o
     await window.screenshot({ path: test.info().outputPath('card-pocket.png') });
     await closeApp(app);
     rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+/**
+ * U2, in the order *Getting started* §3 gives: stitch line, holes, and only
+ * then *Open at the top*. Opening the run moves the end holes off the open
+ * edge, so there is nothing to fix; Ctrl+Z takes the run and the offsets back
+ * as one step.
+ */
+test('U2 · a pocket stitched, punched, then opened at the top has nothing to fix', async () => {
+  const { app, window } = await openApp({ size: [1440, 1000] });
+  try {
+    const fields = panel(window);
+    const verdict = window.getByTestId('problems-verdict');
+    await drawRectangle(window, [200, 200, 480, 380]);
+    await shapePiece(window, { name: 'Pocket', width: 92, height: 60 });
+    await stitchAndPunch(window, 3.5);
+    await expect(verdict).toHaveText('Nothing to fix.');
+
+    await featureRow(window, 'Pocket', 'Stitch line').click();
+    await fields.getByTestId('stitch-run').selectOption({ label: 'Open at the top' });
+    await expect(verdict).toHaveText('Nothing to fix.');
+
+    await featureRow(window, 'Pocket', 'Stitch holes').click();
+    await expect(fields.getByRole('textbox', { name: 'Start offset' })).toHaveValue('3.5');
+    await expect(fields.getByRole('textbox', { name: 'End offset' })).toHaveValue('3.5');
+  } finally {
+    await window.screenshot({ path: test.info().outputPath('open-at-the-top.png') });
+    await closeApp(app);
   }
 });

@@ -12,7 +12,28 @@ import {
 import { loadProject } from '@leathercad/persist';
 import { describe, expect, it } from 'vitest';
 
-import { choiceOf, outlineOf, withChoice } from './pocketRequirement.js';
+import { createI18n } from '../../shared/i18n.js';
+import { acrossVerdict, choiceOf, outlineOf, withChoice } from './pocketRequirement.js';
+
+describe('acrossVerdict (U7)', () => {
+  const i18n = createI18n('en');
+  const card = (easeMm: number): PocketRequirement => ({
+    content: { kind: 'id-1' },
+    easeMm,
+    fully: false,
+  });
+
+  it('says a card that fits fits, in one line, with what it was measured for', () => {
+    expect(acrossVerdict(89, card(0), i18n)).toBe('Fits: 89 mm across for 85.6 mm, with no ease.');
+    expect(acrossVerdict(89, card(3), i18n)).toBe('Fits: 89 mm across for 85.6 mm and 3 mm ease.');
+  });
+
+  it('says one that does not is too narrow, as Problems does', () => {
+    expect(acrossVerdict(89, card(4), i18n)).toBe(
+      'Too narrow: 89 mm across for 85.6 mm and 4 mm ease.',
+    );
+  });
+});
 
 const shipped = (name: string): Project =>
   loadProject(

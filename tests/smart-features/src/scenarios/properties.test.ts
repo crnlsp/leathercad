@@ -16,6 +16,7 @@ import {
   holds,
   holesOf,
   movePiece,
+  FROM_THE_VERY_ENDS,
   punchHoles,
   resize,
   setInset,
@@ -149,7 +150,7 @@ describe('properties of a pocket that holds what it must', () => {
       new Bench().do(
         drawRectangle('pocket', { x: 0, y: 0, ...size }),
         stitchLeavingOpen('pocket', open, 3),
-        punchHoles('pocket'),
+        punchHoles('pocket', FROM_THE_VERY_ENDS),
       );
     fc.assert(
       fc.property(

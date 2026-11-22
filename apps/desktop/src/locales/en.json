@@ -60,8 +60,7 @@
     "followExists": "The project is called “{{name}}” again, but its file keeps the name it has: a file named “{{file}}” is already in its folder."
   },
   "start": {
-    "title": "Start new project",
-    "blank": "Blank",
+    "title": "New project",
     "fromTemplate": "All templates…",
     "open": "Open existing project",
     "lede": "Start a new pattern, open one from disk, or pick up where you left off.",
@@ -155,7 +154,7 @@
     "exportNothing": "Nothing to export yet. No part has a line to cut.",
     "exportSvg": "Export SVG…",
     "exportSvgNote": "Millimetres, for laser cutters, plotters and vector editors",
-    "new": "New project from scratch",
+    "new": "New project",
     "open": "Open…",
     "recent": "Recent projects",
     "recentEmpty": "Projects you open or save appear here.",
@@ -843,8 +842,10 @@
     "title": "Export {{format}}"
   },
   "exportNotice": {
-    "counts": "The design has {{counts}}. The Problems panel lists them. Everything that could be built is in the PDF.",
-    "countsFile": "The design has {{counts}}. The Problems panel lists them. Everything that could be built is in the file.",
+    "counts_one": "The design has {{counts}}. The Problems panel lists it. Everything that could be built is in the PDF.",
+    "counts_other": "The design has {{counts}}. The Problems panel lists them. Everything that could be built is in the PDF.",
+    "countsFile_one": "The design has {{counts}}. The Problems panel lists it. Everything that could be built is in the file.",
+    "countsFile_other": "The design has {{counts}}. The Problems panel lists them. Everything that could be built is in the file.",
     "inPart": "in {{part}}",
     "omitted": "— each failed to build, so it is missing from the PDF.",
     "omittedFile": "— each failed to build, so it is missing from the file.",
@@ -1125,7 +1126,8 @@
     },
     "PART_ALREADY_HAS_OUTER": {
       "title": "Already has an outline",
-      "description": "{{partName}} is already cut to {{outerName}}. A part is one piece of leather, so it has one outline — draw this as a cut-out, or start another part."
+      "description": "{{partName}} is already cut to {{outerName}}. A part is one piece of leather, so it has one outline — draw this as a cut-out, or start another part.",
+      "allowance": "{{partName}} is cut to {{outerName}}, so the leather between that edge and the stitching is already its seam allowance."
     },
     "CONTOUR_NOT_CLOSED": {
       "title": "Does not enclose anything",
@@ -1378,7 +1380,7 @@
     },
     "OUTSIDE_PART": {
       "title": "Off the material",
-      "holes": "{{featureName}} has holes that leave the material — through the outline, or into a cut-out. They cannot be punched there.",
+      "holes": "Some holes fall off the piece — through its outline, or into a cut-out — so they cannot be punched there.",
       "line": "{{featureName}} runs off the material, so part of it cannot be marked.",
       "fix": "Move the feature back onto the material, or adjust its source line and inset in Properties.",
       "fixEnds": "Only the end holes are off the leather: in Properties, raise Start offset and End offset to move them in from the edge."
@@ -1391,9 +1393,9 @@
     },
     "POCKET_TOO_NARROW": {
       "title": "Pocket too narrow",
-      "id-1": "{{featureName}} leaves {{width}} between its stitch lines; a payment card with {{ease}} of ease needs {{needed}}.",
-      "size": "{{featureName}} leaves {{width}} between its stitch lines; what it holds, with {{ease}} of ease, needs {{needed}}.",
-      "fix": "Stitch the sides farther apart, or make the piece wider. Leather thickness and the stitching's pull are not counted, so lower the ease only if you know the leather allows it."
+      "id-1": "The pocket is {{width}} across between its stitching; a payment card with {{ease}} of ease needs {{needed}}.",
+      "size": "The pocket is {{width}} across between its stitching; what it holds, with {{ease}} of ease, needs {{needed}}.",
+      "fix": "Stitch the sides farther apart, or make the piece wider."
     },
     "POCKET_TOO_SHALLOW": {
       "title": "Pocket too shallow",
@@ -1732,7 +1734,7 @@
     "width": "Width between stitch lines",
     "depth": "Stitch depth",
     "value": "{{value}} mm",
-    "note": "Measured between stitch centres. Depth starts at the line joining the stitch ends; the pocket opening may extend above it. Leather thickness and stitching tension reduce usable space.",
+    "note": "Measured between stitch centres. Depth starts at the line joining the stitch ends; the pocket opening may extend above it.",
     "holds": {
       "label": "Holds",
       "none": "Nothing stated",
@@ -1743,8 +1745,10 @@
       "ease": "Ease",
       "fully": "Holds it fully",
       "invite": "Say what goes in to check that it fits.",
-      "across": "{{width}} mm between stitch lines; {{content}} mm stated, no ease.",
-      "acrossEase": "{{width}} mm between stitch lines; {{content}} mm stated, with {{ease}} mm ease.",
+      "fits": "Fits: {{width}} mm across for {{content}} mm, with no ease.",
+      "fitsEase": "Fits: {{width}} mm across for {{content}} mm and {{ease}} mm ease.",
+      "tooNarrow": "Too narrow: {{width}} mm across for {{content}} mm, with no ease.",
+      "tooNarrowEase": "Too narrow: {{width}} mm across for {{content}} mm and {{ease}} mm ease.",
       "down": "{{depth}} mm below {{piece}}'s edge, {{rise}} mm above the stitch ends; {{content}} mm stated.",
       "unbuilt": "Not checked until the stitch line builds.",
       "note": "A geometric check of the stitching: leather thickness and the stitching's pull are not counted — leave ease for them across the pocket. Without Holds it fully, depth is shown and not judged; with it, what it holds must fit below the opening."

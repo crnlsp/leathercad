@@ -1,4 +1,3 @@
-import { EPS_LENGTH } from '@leathercad/core';
 import { setPocketRequirement, type DocumentStore } from '@leathercad/document';
 import {
   ID1_CARD,
@@ -13,13 +12,13 @@ import { useMemo } from 'react';
 
 import { useI18n } from './i18n.js';
 import { NumberField } from './NumberField.js';
-import { choiceOf, withChoice, type HoldsChoice } from './pocketRequirement.js';
+import { acrossVerdict, choiceOf, withChoice, type HoldsChoice } from './pocketRequirement.js';
 
 /**
  * What the maker says a pocket holds (9.14b), under its reading in
- * Properties. Each change is one command; the rule's verdict is listed with
- * the stitch line's problems, so nothing here judges: the lines say what was
- * measured, and to which piece's edge (Q49, smart-features §5), never "fits".
+ * Properties. Each change is one command. The width line gives the verdict
+ * DR8 makes, fits or too narrow, with what it measured (U7); the depth line
+ * says what was measured, and to which piece's edge (Q49, smart-features §5).
  */
 export function PocketRequirementEditor({
   store,
@@ -40,7 +39,8 @@ export function PocketRequirementEditor({
   /** Settings › My tools: what a first requirement's ease starts at. */
   makerEaseMm: number | null;
 }) {
-  const { t, locale } = useI18n();
+  const i18n = useI18n();
+  const { t, locale } = i18n;
   const holds = feature.holds;
   const set = (next: PocketRequirement | undefined) =>
     store.dispatch(setPocketRequirement(feature.id, next));
@@ -134,16 +134,7 @@ export function PocketRequirementEditor({
           )}
           {size !== null && (
             <p className="panel-note" data-testid="pocket-across">
-              {holds.easeMm > EPS_LENGTH
-                ? t('pocket.holds.acrossEase', {
-                    width: number.format(size.widthMm),
-                    content: number.format(contentSize(holds.content).widthMm),
-                    ease: number.format(holds.easeMm),
-                  })
-                : t('pocket.holds.across', {
-                    width: number.format(size.widthMm),
-                    content: number.format(contentSize(holds.content).widthMm),
-                  })}
+              {acrossVerdict(size.widthMm, holds, i18n)}
             </p>
           )}
           {opening !== null && (

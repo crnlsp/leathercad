@@ -1,4 +1,4 @@
-import { EPS_LENGTH, EPS_POINT, approxEq, type Mm } from '@leathercad/core';
+import { EPS_LENGTH, EPS_POINT, approxEq, approxGte, type Mm } from '@leathercad/core';
 import {
   PathOps,
   SegmentOps,
@@ -13,7 +13,7 @@ import {
   type Vec2,
 } from '@leathercad/geometry';
 
-import type { PocketContent } from './feature.js';
+import type { PocketContent, PocketRequirement } from './feature.js';
 
 export interface PocketSize {
   readonly widthMm: number;
@@ -100,6 +100,15 @@ function chordFrame(
 export const ID1_CARD = { widthMm: 85.6, heightMm: 53.98 } as const;
 
 /** The size a pocket's content needs before ease: across the opening, then into the pocket. */
+/**
+ * Whether stitching this far apart takes what the maker said the pocket holds,
+ * with its ease (DR8): the one judgement `POCKET_TOO_NARROW` and Properties'
+ * verdict both read (U7), so the two cannot disagree. Geometric only.
+ */
+export function fitsAcross(widthMm: Mm, holds: PocketRequirement): boolean {
+  return approxGte(widthMm, contentSize(holds.content).widthMm + holds.easeMm, EPS_LENGTH);
+}
+
 export function contentSize(content: PocketContent): { widthMm: Mm; heightMm: Mm } {
   switch (content.kind) {
     case 'id-1':

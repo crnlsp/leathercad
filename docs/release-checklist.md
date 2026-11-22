@@ -310,10 +310,10 @@ A failure is lost work, which is a blocker above.
 
 Since 8.11–8.14, on each platform, with the packaged app.
 
-1. Start the app: the start screen shows, headed *Start new project*, with *All templates…* and
-   *Open existing project* beside it; the *Blank* card first, then the templates drawn as cards;
-   and the recent projects, each with its date. Enter on a card opens it with the focus on the
-   board.
+1. Start the app: the start screen shows, headed *New project*, with *All templates…* and
+   *Open existing project* beside it; the *New project* card first, its Ctrl+N in the key cap
+   Open's Ctrl+O wears, then the templates drawn as cards; and the recent projects, each with its
+   date. Enter on a card, or Ctrl+N from an open project, opens one with the focus on the board.
 2. Open two saved projects and start a new one: three tabs, the new one *Untitled*. Edit two of
    them. Ctrl+Page Down and Ctrl+Page Up go round them (⌘ on macOS); each keeps its own drawing,
    undo, Design or Sheets view and zoom.
