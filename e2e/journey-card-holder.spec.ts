@@ -58,7 +58,7 @@ test('a card holder from blank to PDF: nudge, a guide and its seams, holes linin
       height: 47.3487,
       radii: [3, 3, 4, 4],
     });
-    await enter(fields.getByRole('textbox', { name: 'Cut off' }), '2');
+    await enter(fields.getByRole('textbox', { name: 'Cut, number of pieces' }), '2');
     await enter(fields.getByLabel('X'), '10');
     await enter(fields.getByLabel('Y'), '-70');
     await stitchAndPunch(window, 3, 'Open at the top');

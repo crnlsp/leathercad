@@ -2017,7 +2017,8 @@ test('the parts panel shows what follows what, and locks it down', async () => {
     // way back, because a locked feature is out of hit-testing.
     const outline = panel.locator('[data-testid^="feature-locked-"]').first();
     await outline.click();
-    await expect(outline).toHaveAttribute('aria-pressed', 'true');
+    // Named for what pressing it would do (U8): locked, it offers Unlock.
+    await expect(outline).toHaveAccessibleName('Unlock');
 
     await panel.locator('[data-testid^="feature-row-"]').first().click();
     await expect(window.getByTestId('selected-count')).toHaveText('1');
@@ -2030,7 +2031,7 @@ test('the parts panel shows what follows what, and locks it down', async () => {
 
     // Unlock, and it deletes as it always did.
     await outline.click();
-    await expect(outline).toHaveAttribute('aria-pressed', 'false');
+    await expect(outline).toHaveAccessibleName('Lock');
     await expect(remove).toBeEnabled();
   });
 });
@@ -2076,14 +2077,14 @@ test('hiding a part takes it off the drawing, and brings it back', async () => {
     const eye = panel.locator('[data-testid^="part-visible-"]').first();
 
     await eye.click();
-    await expect(eye).toHaveAttribute('aria-pressed', 'false');
-    await expect(panel.locator('[data-testid^="feature-visible-"]').first()).toHaveAttribute(
-      'aria-pressed',
-      'false',
+    // Named for what pressing it would do (U8): hidden, it offers Show.
+    await expect(eye).toHaveAccessibleName('Show part');
+    await expect(panel.locator('[data-testid^="feature-visible-"]').first()).toHaveAccessibleName(
+      'Show',
     );
 
     await eye.click();
-    await expect(eye).toHaveAttribute('aria-pressed', 'true');
+    await expect(eye).toHaveAccessibleName('Hide part');
   });
 });
 

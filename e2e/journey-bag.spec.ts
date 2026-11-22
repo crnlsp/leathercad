@@ -78,7 +78,7 @@ test('a five-piece bag, with a pocket copied from another tab: sewn, checked and
     await expect(window.getByTestId('part-count')).toHaveText('5');
     await expect(fields.getByTestId('part-name')).toHaveValue('Pocket');
     // One inside the bag, where the card holder cut two.
-    await enter(fields.getByRole('textbox', { name: 'Cut off' }), '1');
+    await enter(fields.getByRole('textbox', { name: 'Cut, number of pieces' }), '1');
 
     // ── Front sewn to back, along the whole of their stitching ─────────────
     await featureRow(window, 'Front', 'Stitch holes').click();
