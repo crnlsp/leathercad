@@ -169,7 +169,8 @@ as any item that will not make it does.
 
 Two QA passes over the release candidate's code found 30 issues, three of them losing work
 ([findings](superpowers/specs/2026-11-21-1.7-qa-findings.md)). Wave 1 is QA1, QA2, QA4 and QA5;
-then QA3 (after QA1), QA6–QA8; then QA9–QA11. U9, U11 and U14 wait on the maintainer's decision.
+then QA3 (after QA1), QA6–QA8; then QA9–QA11; then QA12, the maintainer's decisions on U9, U11
+and U14.
 
 - ✅ **QA1 Typed values within limits** — one bound from the file format and a finite check in every number field, scientific notation read, control characters kept out of names (F1, F2, F6, F8, F9).
 - ✅ **QA2 Never lose work when something fails** — the window survives a failing panel, a crash neither skips the unsaved question nor deletes the recovery copy, and Save refuses to write a file it could not reopen (F1, F2).
@@ -182,6 +183,7 @@ then QA3 (after QA1), QA6–QA8; then QA9–QA11. U9, U11 and U14 wait on the ma
 - ✅ **QA9 Screen-reader names** — the eye button's state, the *Cut* field's name, the template dialog's role (U8, U10, U19).
 - ✅ **QA10 Templates confirm and show** — a notice after *Save as template*; *Insert pieces*' checklist in view (U12, U13).
 - ✅ **QA11 Panels at 1440 and 860** — rows that do not wrap; a folded panel's chip that does not look on (U18, U21).
+- ✅ **QA12 One position editor; Escape leaves an idle drawing tool** — the maintainer's decisions on U9 and U11 (U14 moved to Later).
 
 ### Collected from makers, and decided
 
@@ -337,6 +339,9 @@ decisions, research and smaller items behind them.
 - **A general curve editor** (Béziers) on top of 3.9. An edge drawn with it can be stitched, since
   9.19, where it meets its neighbours smoothly or the stitching runs outside it.
 - **Pieces gliding** between Design and Sheets.
+- **A piece punched through with another is not offered its own stitch line** — the bifold's
+  lining is offered *Next: Stitch line* though its holes are the outer's (QA U14). It needs a
+  "punched through with" relation between pieces, which nothing has yet.
 - **Radial, angular, chained and baseline dimensions,** and dimensions between parts.
 - **A screen-calibration step,** which would make 1:1 literal on screen too.
 - **Draw tools in their role's colour** — still an open question in the UI decisions record.

@@ -9,7 +9,7 @@ import { cornerRefusal, sizeRefusal, type Refusal } from '../outlineSizes.js';
 type Rect = Extract<ParametricShape, { type: 'rect' }>;
 
 /**
- * Position, size, and a radius per corner. A corner larger than the corners
+ * Size, turn, and a radius per corner — where it is, *Arrange* says (QA U9). A corner larger than the corners
  * beside it leave is refused, with the largest that fits to take instead, and
  * a width or height its corners do not fit in, with the least they do — as
  * the chips on the board refuse them (U.14): stored, a radius that is never
@@ -33,18 +33,6 @@ export function RectEditor({ shape, onChange }: { shape: Rect; onChange: (shape:
 
   return (
     <>
-      <div className="field-pair">
-        <NumberField
-          label="X"
-          value={shape.origin.x}
-          onCommit={(x) => onChange({ ...shape, origin: { ...shape.origin, x } })}
-        />
-        <NumberField
-          label="Y"
-          value={shape.origin.y}
-          onCommit={(y) => onChange({ ...shape, origin: { ...shape.origin, y } })}
-        />
-      </div>
       <div className="field-pair">
         <NumberField
           label={t('editor.width')}

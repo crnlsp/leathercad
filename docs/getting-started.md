@@ -90,7 +90,8 @@ open ones are listed in each release's notes.
 A card pocket, 96 × 60 mm, the shape a card holder is made from.
 
 1. Choose **Rectangle** (**R**) in the tool rail. With *Draw as: Outline*, drag out a rectangle
-   anywhere. It becomes a new part, listed on the left.
+   anywhere. It becomes a new part, listed on the left. The tool stays on for the next one;
+   **Esc** goes back to Select — or, halfway through a rectangle, cancels it first.
 2. In **Properties** on the right, type **96** for *Width* and **60** for *Height*. Every number is
    in millimetres, and every number is exact: what you type is what prints. A size can also be
    typed as a sum or in another unit, and is shown in millimetres: `95-2*3.5`, `3.75in`, `3/4"`,
@@ -336,7 +337,7 @@ not cut through both: move them apart, or *Export anyway*.
   by** takes a distance **Right** and **Up** — **−12** goes 12 mm left — and **Move** moves it,
   again each time you press it. Both take a sum or a unit, such as `95-2*3.5` or `2cm`, and each
   move is one Undo step.
-- **Keyboard:** each tool's key is on its button; **Ctrl+Z** and **Ctrl+Shift+Z** undo and redo;
+- **Keyboard:** each tool's key is on its button, and **Esc** goes back to Select; **Ctrl+Z** and **Ctrl+Shift+Z** undo and redo;
   **Ctrl+1** and **Ctrl+2** switch between Design and Sheets; **Ctrl+N**, **Ctrl+O**, **Ctrl+S**
   and **Ctrl+Shift+S** make, open, save and save as; **Ctrl+E** exports the PDF and **Ctrl+P**
   prints; **Ctrl+C**, **Ctrl+V** and **Ctrl+D** copy, paste and duplicate on the board; **F8** and

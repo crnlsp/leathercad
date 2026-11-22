@@ -6,7 +6,7 @@ import { _electron as electron, expect, test } from '@playwright/test';
 
 import { parseNumber } from '../packages/core/src/index.js';
 import { closeApp } from './closeApp.js';
-import { withApp } from './launchApp.js';
+import { positionField, readPosition, withApp } from './launchApp.js';
 
 /**
  * Q30: a piece moved by its outline, dragged or typed, takes its rivet with it.
@@ -44,7 +44,7 @@ test('dragging or retyping a piece’s outline moves its rivet with it (Q30)', a
     await expect(rows).toHaveCount(2);
     const x = async (row: number): Promise<number> => {
       await rows.nth(row).click();
-      return Number(await window.getByTestId('property-panel').getByLabel('X').inputValue());
+      return readPosition(window, 'Left');
     };
     const outline = await x(0);
     const rivet = await x(1);
@@ -60,9 +60,9 @@ test('dragging or retyping a piece’s outline moves its rivet with it (Q30)', a
     // Each reading is shown to 0.01 mm.
     expect((await x(1)) - rivet).toBeCloseTo(moved, 1);
 
-    // Retyped: the outline's X, ten millimetres on.
+    // Retyped: the piece's Left, ten millimetres on.
     await rows.nth(0).click();
-    const field = window.getByTestId('property-panel').getByLabel('X');
+    const field = positionField(window, 'Left');
     await field.fill(String(outline + moved + 10));
     await field.press('Enter');
     expect((await x(1)) - rivet).toBeCloseTo(moved + 10, 1);
@@ -110,8 +110,9 @@ test('scaling a piece by its outline keeps its rivet hole and slot their sizes (
     const outline = await read(0, 'Width');
     const slot = { width: await read(1, 'Width'), height: await read(1, 'Height') };
     const rivet = await read(2, 'Diameter');
-    // How far the rivet sits from the outline's X: the scale stretches it.
-    const offset = async (): Promise<number> => (await read(2, 'X')) - (await read(0, 'X'));
+    // How far the rivet's centre sits from the outline's left: the scale stretches it.
+    const offset = async (): Promise<number> =>
+      (await read(2, 'Left')) + rivet / 2 - (await read(0, 'Left'));
     const apart = await offset();
 
     // The outline picked, and grown evenly by half again: pressed on its right

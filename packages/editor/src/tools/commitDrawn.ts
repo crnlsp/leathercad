@@ -17,7 +17,8 @@ import {
   type Problem,
 } from '@leathercad/domain';
 
-import type { Mm } from '@leathercad/core';
+import { quantise, type Mm } from '@leathercad/core';
+import { Vec2Ops } from '@leathercad/geometry';
 
 import type { ToolContext } from '../tool.js';
 
@@ -95,15 +96,55 @@ export function createDrawCommit(): DrawCommit {
     },
 
     commit(ctx, nextId, name, source) {
-      held = drawRefusal(ctx, source);
+      const drawn = onGrid(source);
+      held = drawRefusal(ctx, drawn);
       if (held !== null) return null;
-      return fileDrawn(ctx, nextId, name, source);
+      return fileDrawn(ctx, nextId, name, drawn);
     },
 
     notice(ctx) {
       return held ?? drawTargetNotice(ctx);
     },
   };
+}
+
+/**
+ * A drawn shape's place and size on the storage grid, as a typed one is
+ * (invariant 8, geometry.md §3.3): the pointer's millimetres are user input
+ * too. Without it a drawn corner sits between grid points, and Arrange's Left
+ * and Bottom — the one place a shape is placed by typing (QA U9) — move it by
+ * whole quanta and land beside the number typed.
+ *
+ * An arc is left as drawn: it runs through the points clicked, or snapped to,
+ * and a centre and radius moved onto the grid would move its ends off them.
+ * Nor are a drawn path's points quantised here; no field places them.
+ */
+function onGrid(source: DrawnSource): DrawnSource {
+  if (source.kind !== 'shape') return source;
+  const shape = source.shape;
+  switch (shape.type) {
+    case 'rect':
+      return {
+        ...source,
+        shape: {
+          ...shape,
+          origin: Vec2Ops.quantiseVec(shape.origin),
+          width: quantise(shape.width),
+          height: quantise(shape.height),
+        },
+      };
+    case 'arc':
+      return source;
+    case 'circle':
+      return {
+        ...source,
+        shape: {
+          ...shape,
+          centre: Vec2Ops.quantiseVec(shape.centre),
+          radius: quantise(shape.radius),
+        },
+      };
+  }
 }
 
 /**

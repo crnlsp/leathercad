@@ -496,6 +496,9 @@ window's match agree on every layout.
 Every tool carries an explicit `state` discriminant — `'idle' | 'awaiting-second-corner' | …` —
 rather than a scatter of booleans. This one convention prevents most of the mess that canvas tools
 accumulate. Every tool must handle Escape by rolling back its transaction and returning to `idle`.
+An Escape the tool does not claim — it had nothing to give up — is the `ToolManager`'s: on any
+tool but Select it goes back to Select (QA U11), so cancelling a shape and then leaving the tool is
+two presses, and shapes drawn one after another need none.
 
 Ephemeral drawing state (points placed so far) lives in the tool, not in the document. A half-drawn
 polyline is not part of the file.

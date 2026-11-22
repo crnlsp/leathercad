@@ -626,6 +626,8 @@ export function CanvasHost({
   requestDeleteRef.current = requestDelete;
   const requestDeletePartRef = useRef(requestDeletePart);
   requestDeletePartRef.current = requestDeletePart;
+  const onToolChangeRef = useRef(onToolChange);
+  onToolChangeRef.current = onToolChange;
   const onContextMenuRef = useRef(onContextMenu);
   onContextMenuRef.current = onContextMenu;
   const onBoardContextMenuRef = useRef(onBoardContextMenu);
@@ -989,6 +991,7 @@ export function CanvasHost({
       // No tool acts on the Sheets view: Delete there must not delete. On the
       // board the active tool hears a key first, undo included, so a key the
       // maker gave a tool under way is never another command's (U.12).
+      const before = managerRef.current?.activeTool;
       const claimed =
         !onSheets &&
         managerRef.current?.key({
@@ -1007,6 +1010,9 @@ export function CanvasHost({
       // event whose default is prevented.
       if (claimed) {
         event.preventDefault();
+        // Escape on an idle tool went back to Select (QA U11): the app's tool too.
+        const now = managerRef.current?.activeTool;
+        if (now !== undefined && now !== before) onToolChangeRef.current(now.id);
         return;
       }
 

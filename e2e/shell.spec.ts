@@ -7,7 +7,7 @@ import { expect, test, type ElectronApplication } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
 import { readoutAt } from './cursorReadout.js';
-import { launchApp, withApp } from './launchApp.js';
+import { launchApp, placeAt, positionField, readPosition, withApp } from './launchApp.js';
 import { closeActiveTab, fromProjectMenu, renameProject } from './projectMenu.js';
 import { resizeWindow } from './windowSize.js';
 
@@ -168,8 +168,8 @@ test('draw roughly, then type exact millimetres', async () => {
       await input.press('Enter');
     };
 
-    await setField('X', '0');
-    await setField('Y', '0');
+    await placeAt(window, 'Left', 0);
+    await placeAt(window, 'Bottom', 0);
     await setField('Width', '105');
     await setField('Height', '75');
     for (const corner of [
@@ -241,10 +241,7 @@ test('a negative reads with a true minus, and can be typed with either', async (
     await window.mouse.move(box!.x + 330, box!.y + 270, { steps: 5 });
     await window.mouse.up();
 
-    const x = window
-      .getByTestId('property-panel')
-      .locator('label', { hasText: /^X/ })
-      .locator('input');
+    const x = positionField(window, 'Left');
     await x.fill('-12.5');
     await x.press('Enter');
     await expect(x).toHaveValue('−12.5');
@@ -1227,9 +1224,6 @@ test("a second panel starts exactly on the first panel's corner", async () => {
   // invisible on screen and wrong on leather.
   await withApp(async (window) => {
     const box = await window.getByTestId('editor-canvas').boundingBox();
-    const panel = window.getByTestId('property-panel');
-    const numberIn = async (label: string): Promise<number> =>
-      num(await panel.getByLabel(label).inputValue());
 
     const drag = async (x1: number, y1: number, x2: number, y2: number): Promise<void> => {
       await window.mouse.move(box!.x + x1, box!.y + y1);
@@ -1240,7 +1234,7 @@ test("a second panel starts exactly on the first panel's corner", async () => {
 
     await window.getByTestId('tool-rectangle').click();
     await drag(140, 140, 340, 260);
-    const firstX = await numberIn('X');
+    const firstX = await readPosition(window, 'Left');
 
     // Start the second panel three pixels off the first one's lower-left
     // corner — close enough to mean it, far enough to miss by hand — and drag
@@ -1250,7 +1244,7 @@ test("a second panel starts exactly on the first panel's corner", async () => {
     await drag(137, 263, 250, 340);
 
     await expect(window.getByTestId('part-count')).toHaveText('2');
-    expect(await numberIn('X')).toBeCloseTo(firstX, 3);
+    expect(await readPosition(window, 'Left')).toBeCloseTo(firstX, 3);
   });
 });
 
@@ -1457,9 +1451,9 @@ test('the panel measures what a feature has, and reads a dimension (F.1)', async
 
     // Type the outline to a known size, then dimension its right-hand edge.
     await window.getByTestId('parts-list').getByText('Outline').click();
+    await placeAt(window, 'Left', 0);
+    await placeAt(window, 'Bottom', 0);
     for (const [label, value] of [
-      ['X', '0'],
-      ['Y', '0'],
       ['Width', '105'],
       ['Height', '75'],
     ] as const) {
@@ -1823,8 +1817,8 @@ test('flipping a panel mirrors it, rather than turning it round', async () => {
       await input.press('Enter');
     };
 
-    await set('X', '10');
-    await set('Y', '20');
+    await placeAt(window, 'Left', 10);
+    await placeAt(window, 'Bottom', 20);
     await set('Width', '100');
     await set('Height', '60');
     // One rounded corner, so the flip has something to carry across.
@@ -1834,8 +1828,8 @@ test('flipping a panel mirrors it, rather than turning it round', async () => {
 
     // The piece stays on its own footprint. Either spelling: a field the user
     // typed keeps their text until the model gives it a new number.
-    await expect(field('X')).toHaveValue(/^10(\.00)?$/);
-    await expect(field('Y')).toHaveValue(/^20(\.00)?$/);
+    await expect(positionField(window, 'Left')).toHaveValue(/^10(\.00)?$/);
+    await expect(positionField(window, 'Bottom')).toHaveValue(/^20(\.00)?$/);
     // ...lying the way it was...
     await expect(field('Turn')).toHaveValue(/^0(\.00)?$/);
     // ...with the rounded corner now on the other side, adjacent rather than

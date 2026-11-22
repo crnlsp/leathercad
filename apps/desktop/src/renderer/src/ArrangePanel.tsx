@@ -118,8 +118,9 @@ export function ArrangePanel({
 /**
  * Where the selection is, typed (3.15, smart-guides spec §4): its box's X and
  * Y, named Left and Bottom for the edge each is — as the rulers read them, Y up
- * — and kept apart by name from a shape's own X and Y in the same panel; and
- * Move by, a distance right and up, so −12 goes left.
+ * — and Move by, a distance right and up, so −12 goes left. The one place a
+ * shape is placed by typing: its editor shows no X and Y of its own, which
+ * for a circle were its centre where these are its box (QA U9).
  *
  * Two groups rather than one field taking a `+`, because −12 is as much a
  * place as a move. Each is one command and one undo step; the fields take the

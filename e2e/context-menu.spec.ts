@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
-import { drawAPanel, openApp } from './launchApp.js';
+import { drawAPanel, openApp, readPosition } from './launchApp.js';
 
 /** Slice 8.8: the right-click menu, on the board and in Parts. */
 
@@ -194,10 +194,11 @@ test('flipping a piece from its outline takes its rivet to the mirrored place, a
     await expect(rows).toHaveCount(2);
 
     await rows.nth(0).click();
-    const left = await read('X');
+    const left = await readPosition(window, 'Left');
     const width = await read('Width');
     await rows.nth(1).click();
-    const rivet = await read('X');
+    const rivet = await readPosition(window, 'Left');
+    const diameter = await read('Diameter');
 
     await window.getByTestId('tool-select').click();
     await rightClick(window, 150, 200);
@@ -205,13 +206,17 @@ test('flipping a piece from its outline takes its rivet to the mirrored place, a
 
     await rows.nth(1).click();
     // Three readings each shown to 0.01 mm; the unit tests hold the exact place.
-    expect(await read('X')).toBeCloseTo(2 * (left + width / 2) - rivet, 1);
+    // Its box's left edge, where its right edge was mirrored to.
+    expect(await readPosition(window, 'Left')).toBeCloseTo(
+      2 * (left + width / 2) - rivet - diameter,
+      1,
+    );
     await rows.nth(0).click();
-    expect(await read('X')).toBeCloseTo(left, 2);
+    expect(await readPosition(window, 'Left')).toBeCloseTo(left, 2);
 
     await window.getByTestId('undo').click();
     await rows.nth(1).click();
-    expect(await read('X')).toBeCloseTo(rivet, 2);
+    expect(await readPosition(window, 'Left')).toBeCloseTo(rivet, 2);
   } finally {
     await closeApp(app);
   }

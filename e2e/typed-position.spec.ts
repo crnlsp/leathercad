@@ -34,8 +34,7 @@ test("typing Left puts the piece's left edge there, a sum and a unit read, one u
 
     await type(window, 'Left', '10+10');
     await expect(field(window, 'Left')).toHaveValue('20');
-    // The rectangle's own origin is its left edge: the piece moved, not resized.
-    await expect(panel(window).getByLabel('X')).toHaveValue('20');
+    // The piece moved, not resized.
     await expect(panel(window).getByLabel('Width')).toHaveValue(width);
     await expect(field(window, 'Bottom')).toHaveValue(bottom);
 
@@ -113,5 +112,33 @@ test('a place or a move past what a project holds offers the farthest that fits 
     await expect(position(window).getByTestId('move-by')).toBeDisabled();
     await expect(position(window).getByTestId('move-by-reason')).toBeVisible();
     expect(errors).toEqual([]);
+  });
+});
+
+test('a shape is placed in one place, Left and Bottom, with no X or Y of its own (QA U9)', async () => {
+  await withApp(async (window) => {
+    await drawAPanel(window, { parts: '1' });
+    await pickThePiece(window);
+    // One position editor: a second pair, named X and Y, said the same in other words.
+    await expect(panel(window).getByRole('textbox', { name: /^[XY] mm$/ })).toHaveCount(0);
+
+    // A circle too, whose X and Y were its centre where Left and Bottom are its box.
+    const box = (await window.getByTestId('editor-canvas').boundingBox())!;
+    await window.getByTestId('tool-circle').click();
+    await window.mouse.move(box.x + 500, box.y + 300);
+    await window.mouse.down();
+    await window.mouse.move(box.x + 540, box.y + 300, { steps: 4 });
+    await window.mouse.up();
+    await expect(window.getByTestId('part-count')).toHaveText('2');
+    await window.locator('[data-testid^="feature-row-"]').last().click();
+    await expect(position(window)).toBeVisible();
+    await expect(panel(window).getByRole('textbox', { name: /^[XY] mm$/ })).toHaveCount(0);
+    const diameter = await panel(window).getByLabel('Diameter').inputValue();
+
+    await type(window, 'Left', '30');
+    await type(window, 'Bottom', '40');
+    await expect(field(window, 'Left')).toHaveValue('30');
+    await expect(field(window, 'Bottom')).toHaveValue('40');
+    await expect(panel(window).getByLabel('Diameter')).toHaveValue(diameter);
   });
 });

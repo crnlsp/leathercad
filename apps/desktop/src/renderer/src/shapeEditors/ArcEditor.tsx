@@ -8,7 +8,8 @@ type Arc = Extract<ParametricShape, { type: 'arc' }>;
 const DEG = 180 / Math.PI;
 
 /**
- * Centre, radius, and the two angles that place the run on its circle.
+ * Radius, and the two angles that place the run on its circle — where the
+ * circle is, *Arrange* says (QA U9).
  *
  * Degrees in the panel, radians in the record. Nobody describes a strap end as
  * 3.14 radians, and `quantise()` is a millimetre grid that does not apply to an
@@ -23,18 +24,6 @@ export function ArcEditor({ shape, onChange }: { shape: Arc; onChange: (shape: A
   const { t } = useI18n();
   return (
     <>
-      <div className="field-pair">
-        <NumberField
-          label="X"
-          value={shape.centre.x}
-          onCommit={(x) => onChange({ ...shape, centre: { ...shape.centre, x } })}
-        />
-        <NumberField
-          label="Y"
-          value={shape.centre.y}
-          onCommit={(y) => onChange({ ...shape, centre: { ...shape.centre, y } })}
-        />
-      </div>
       <NumberField
         label={t('editor.radius')}
         value={shape.radius}
