@@ -311,7 +311,7 @@ test('Ctrl+A selects nothing outside a field, and a field’s text inside one', 
     // Properties is the project's again.
     await expect(window.getByTestId('status-counts')).toContainText('3 pieces selected');
     await window.keyboard.press('Escape');
-    await window.getByTestId('property-panel').getByText('Pieces').dblclick();
+    await window.getByTestId('job-sheets').getByText('Sheets').dblclick();
     expect(await selected()).toBe(0);
 
     /** Ctrl+A in a field selects the whole of its text. */
