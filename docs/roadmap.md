@@ -86,7 +86,7 @@ as any item that will not make it does.
 ### Stage 1 — Foundation ([plan](superpowers/plans/2026-11-03-release-1.7.md#stage-1--foundation))
 
 - ✅ **R11 1.6's printing, measured on paper** — arrowheads, hole rows, taped grids and calibration: every check passed on paper on Linux ([log](print-verification-log.md#16s-printing--checks-i-to-m-r11)).
-- ☐ **PERF-018 Packaged baselines** — startup, idle, memory and a soak on the packaged app, and 1.7's workloads.
+- ✅ **PERF-018 Packaged baselines** — startup, idle, memory and a two-hour soak on the packaged app, and 1.7's workloads: on Linux; Windows and macOS only on shared runners ([record](performance-backlog.md#17-baseline-perf-018)).
 - ✅ **U.21 The UX baseline** — every screen inspected on Linux, keyboard-only and through the accessibility tree a screen reader reads; the [register](superpowers/specs/2026-11-03-1.7-ux-audit.md) complete, X19–X39 added. Orca's own speech, Windows and macOS wait for the candidate (R17).
 - ✅ **R13 The Windows installer, installed in CI** — install, upgrade from 1.6.0 and uninstall, with the maker's data checked.
 - ✅ **Q41 An opened project starts with Select** — every opening route, restored and recovered work included; new blank projects start in Rectangle and tab switches keep the chosen tool.
