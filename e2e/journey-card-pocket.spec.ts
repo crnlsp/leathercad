@@ -84,7 +84,7 @@ test('a card pocket from a blank rectangle: open at the top, the edge problem, o
     ]);
     const before = holeCounts(project)['Card pocket › Stitch holes'];
     const problems = fields.getByTestId('feature-problems');
-    await expect(problems).toContainText('Off the material');
+    await expect(problems).toContainText('Off the leather');
     await expect(problems).toContainText('raise Start offset and End offset');
     // A hole kept on every corner: the run is shorter, by no more than its two ends.
     expect(after).toBeLessThanOrEqual(before!);
@@ -104,7 +104,7 @@ test('a card pocket from a blank rectangle: open at the top, the edge problem, o
     await expect(fields.getByRole('textbox', { name: 'Ease' })).toHaveValue('4');
     await expect(verdict).toHaveText('1 warning');
     await expect(problems).toContainText('Pocket too narrow');
-    await expect(problems).toContainText('a payment card with 4.00 mm of ease needs 89.60 mm');
+    await expect(problems).toContainText('a credit card with 4.00 mm of ease needs 89.60 mm');
     await expect(fields.getByTestId('pocket-across')).toHaveText(
       'Too narrow: 86 mm across for 85.6 mm and 4 mm ease.',
     );

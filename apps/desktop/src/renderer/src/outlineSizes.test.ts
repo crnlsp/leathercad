@@ -135,7 +135,7 @@ describe('chipRefusal', () => {
   it('refuses a corner larger than half the height, offering the half', () => {
     const subject = subjectOf(store());
     expect(chipRefusal(subject, 'corner', 48, words)).toEqual({
-      reason: 'Corner radius exceeds half the height (30). Enter uses 30.',
+      reason: 'Corner radius is more than half the height (30). Enter uses 30.',
       use: 30,
     });
     expect(chipRefusal(subject, 'corner', 30, words)).toBeNull();
@@ -242,7 +242,7 @@ describe('cornerRefusal', () => {
       'bottomRight',
     ]);
     expect(cornerRefusal(room, 56, words)?.reason).toBe(
-      'Corner radius exceeds the space available along the height (55). Enter uses 55.',
+      'Corner radius is more than the height allows (55). Enter uses 55.',
     );
     expect(cornerRefusal(room, 55, words)).toBeNull();
   });

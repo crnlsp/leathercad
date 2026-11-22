@@ -61,10 +61,10 @@ describe('describeCounts', () => {
 describe('exportCounts (U15)', () => {
   it('says "lists it" of one problem and "lists them" of more, for the paper or the file', () => {
     expect(exportCounts({ error: 1, warning: 0, info: 0 }, false, i18n)).toBe(
-      'The design has 1 error. The Problems panel lists it. Everything that could be built is in the PDF.',
+      'The design has 1 error, listed in Problems. Everything that could be built is in the PDF.',
     );
     expect(exportCounts({ error: 1, warning: 1, info: 0 }, true, i18n)).toBe(
-      'The design has 1 error, 1 warning. The Problems panel lists them. Everything that could be built is in the file.',
+      'The design has 1 error, 1 warning, listed in Problems. Everything that could be built is in the file.',
     );
   });
 

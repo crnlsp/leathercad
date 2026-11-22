@@ -97,7 +97,7 @@ test('Shift+1 fits the drawing and Shift+2 the selection, a part picked by its h
     await level.click();
     const fitSelection = window.getByTestId('zoom-fit-selection');
     await expect(fitSelection).toHaveAttribute('aria-disabled', 'true');
-    await expect(fitSelection).toContainText('Select something drawn on the board to fit it');
+    await expect(fitSelection).toContainText('Select something on the board to fit it');
     await window.keyboard.press('Escape');
     await expect(level).toBeFocused();
 

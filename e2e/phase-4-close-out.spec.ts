@@ -273,7 +273,7 @@ test('a card holder, from the first outline to the printed page', async () => {
     // The slot now crosses the stitching, so the line and its holes run into it.
     await expect(problems.getByTestId('count-badge')).toHaveText('2');
     await window.getByTestId('problems-toggle').click();
-    await expect(problems).toContainText('Off the material');
+    await expect(problems).toContainText('Off the leather');
 
     // Clicking selects what is wrong, not what was just edited.
     await problems.getByTestId('problem-row').first().click();

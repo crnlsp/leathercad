@@ -182,8 +182,8 @@ test('Settings lists the nudges and Select all, by the keys they have (3.14)', a
   await withApp(async (window) => {
     await window.keyboard.press('?');
     const list = window.getByRole('dialog');
-    await expect(list.getByText('Move what is selected 10 mm left')).toBeVisible();
-    await expect(list.getByText('Move what is selected 0.1 mm up')).toBeVisible();
+    await expect(list.getByText('Move the selection 10 mm left')).toBeVisible();
+    await expect(list.getByText('Move the selection 0.1 mm up')).toBeVisible();
     await expect(list.getByText('Select every piece on the board')).toBeVisible();
   });
 });
