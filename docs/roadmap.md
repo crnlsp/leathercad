@@ -220,13 +220,13 @@ planned*. *Pieces that fit* and *Problems that explain themselves* moved into 1.
 Decided on 2026-11-23 ([spec](superpowers/specs/2026-11-23-main-screen-design.md),
 [plan](superpowers/plans/2026-11-23-main-screen.md)); kept out of 1.7 so it does not hold the release.
 
-- ☐ **MS.1 Print earns its green** — green only when there is nothing to fix; a status, never a menu, in its second half.
-- ☐ **MS.2 Row 1 holds the document** — Undo and Redo beside the project tabs; no Save button, Ctrl+S and the tab's dot instead.
-- ☐ **MS.3 Settings into ☰, Help into the corner** — Settings… in the project menu with Ctrl+, and the update mark; Help and Keyboard shortcuts at the status bar's right, on the start screen too.
-- ☐ **MS.4 Design and Sheets as tabs; Paper as a field** — icon and word, underlined when selected; "Paper 2 × A4 landscape ▾".
-- ☐ **MS.5 Row 3: the tool, and Draw as by workshop step** — the rail's head names the tool; Cut · Stitch · Mark, each choice with its line; the hint in the status bar.
-- ☐ **MS.6 The panels' titles and the status bar** — the selection leads beside the drawing; the status bar says what is happening now.
-- ☐ **MS.7 Narrow windows, pixels and the record** — a fixed give-way order down to 860 px, in English and German; baselines, README media and docs.
+- ✅ **MS.1 Print earns its green** — green only when there is nothing to fix; a status, never a menu, in its second half.
+- ✅ **MS.2 Row 1 holds the document** — Undo and Redo beside the project tabs; no Save button, Ctrl+S and the tab's dot instead.
+- ✅ **MS.3 Settings into ☰, Help into the corner** — Settings… in the project menu with Ctrl+, and the update mark; Help and Keyboard shortcuts at the status bar's right, on the start screen too.
+- ✅ **MS.4 Design and Sheets as tabs; Paper as a field** — icon and word, underlined when selected; "Paper 2 × A4 landscape ▾".
+- ✅ **MS.5 Row 3: the tool, and Draw as by workshop step** — the rail's head names the tool; Cut · Stitch · Mark, each choice with its line; the hint in the status bar.
+- ✅ **MS.6 The panels' titles and the status bar** — the selection leads beside the drawing; the status bar says what is happening now.
+- ✅ **MS.7 Narrow windows, pixels and the record** — a fixed give-way order down to 860 px, in English and German; baselines, README media and docs.
 
 ### Start from something
 

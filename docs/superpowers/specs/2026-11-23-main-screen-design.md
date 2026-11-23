@@ -23,7 +23,7 @@ numbers, check the sheets, print at 1:1. Each row now answers one question of th
 | 2 | 40 px | What you look at, and where it goes | Design · Sheets (view tabs) ··· Paper · Export PDF ▾ · Print |
 | 3 | 36 px | The active tool | the rail's head cell (the tool) · Draw as: Cut · Stitch · Mark ··· ? all keys |
 
-The status bar (24 px) holds the panel keys, the tool's hint, the cursor, and **?** (Help) at the
+The status bar (28 px, the app's `--status-bar-h`) holds the panel keys, the tool's hint, the cursor, and **?** (Help) at the
 far right.
 
 Every row's first glyph starts 12 px from the window's left edge, as the rail's icons do. Every
@@ -100,6 +100,24 @@ What gives way, in order: the rail's names (below 1280, as today), Properties to
 ? corner still lists every key), the group names Cut, Stitch and Mark, and, only when the choices
 themselves do not fit, the Draw as choices become the select the app already has. The rail's head
 cell shows the tool's icon only while the rail is narrow.
+
+**As built (MS.7).** The first three steps go at the window's widths, as the frame's rooms say
+(`panelLayout.ts`). Below 900 px Parts leaves its column as U.5 left it: both panels then open over
+the board from their chips in the status bar, rather than standing as strips. The paper's field
+keeps "2 × A4" there too, and "Paper" is no longer seen but still names it. Row 3's steps go by
+measure, not by width: `fitWorkRow` (`workRow.ts`) takes each part's width as drawn, in the
+language shown, and the room the row has. A step is taken only when the ones before it were not
+enough, and is never undone by the room it frees. Measured in the build, with the rail narrow:
+
+| Row 3 needs | English | German | French |
+|---|---|---|---|
+| Everything | 941 px | 1024 px | 1220 px |
+| Without "? all keys" | 877 px | 909 px | 1096 px |
+| Without the group names too | 774 px | 806 px | 993 px |
+
+So at 1024 px English and German keep everything, and French lets "? all keys" and the group names
+go. At 860 px English and German keep their chips without the names, and French takes the select.
+With the rail's names, from 1280 px, the head is 96 px wider.
 
 ## Words
 
