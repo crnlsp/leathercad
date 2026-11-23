@@ -1707,6 +1707,76 @@ test('exports a part named in Polish, which used to be impossible', async () => 
   }
 });
 
+test('Ctrl+S from a field saves what was typed in it, without Enter (never lose work)', async () => {
+  const target = join(tmpdir(), `leathercad-e2e-field-${Date.now()}.lcp`);
+  const instance = await launchApp();
+  try {
+    const window = await instance.firstWindow();
+    await window.waitForLoadState('domcontentloaded');
+    await instance.evaluate(({ dialog }, path) => {
+      dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
+      dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
+    }, target);
+
+    const box = await window.getByTestId('editor-canvas').boundingBox();
+    await window.getByTestId('tool-rectangle').click();
+    await window.mouse.move(box!.x + 150, box!.y + 150);
+    await window.mouse.down();
+    await window.mouse.move(box!.x + 330, box!.y + 270, { steps: 5 });
+    await window.mouse.up();
+
+    // A number typed and left pending: neither Enter nor a blur has committed it.
+    const width = window
+      .getByTestId('property-panel')
+      .locator('label', { hasText: /^Width/ })
+      .locator('input');
+    await width.fill('87');
+    await expect(width).toBeFocused();
+    await window.keyboard.press('Control+S');
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
+    await expect(width).toHaveValue('87');
+
+    // Read back from disk: the typed width is in the file.
+    await closeActiveTab(window);
+    await fromProjectMenu(window, 'open');
+    await window
+      .getByTestId('parts-list')
+      .getByRole('treeitem', { name: /Outline/ })
+      .click();
+    await expect(width).toHaveValue('87');
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
+  } finally {
+    await closeApp(instance);
+    rmSync(target, { force: true });
+  }
+});
+
+test('Ctrl+S from the tab name field saves the name typed, without Enter', async () => {
+  const target = join(tmpdir(), `leathercad-e2e-name-${Date.now()}.lcp`);
+  const instance = await launchApp();
+  try {
+    const window = await instance.firstWindow();
+    await window.waitForLoadState('domcontentloaded');
+    await instance.evaluate(({ dialog }, path) => {
+      dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
+      dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
+    }, target);
+
+    await fromProjectMenu(window, 'rename');
+    await window.getByTestId('project-name-input').fill('Pending name');
+    await window.keyboard.press('Control+S');
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
+
+    await closeActiveTab(window);
+    await fromProjectMenu(window, 'open');
+    await expect(window.getByTestId('project-tab')).toContainText('Pending name');
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
+  } finally {
+    await closeApp(instance);
+    rmSync(target, { force: true });
+  }
+});
+
 test('a label is placed on a part, typed in the panel, and survives a save', async () => {
   // Slice 4.11b. The words are the user's own, so unlike a part caption they
   // are stored — as words, a place and a size, never as outlines.

@@ -1345,6 +1345,9 @@ export function App({
       const action = actions[command];
       if (action === undefined) return;
       event.preventDefault();
+      // Leaving the field first commits what is pending in it (a number
+      // typed, a name), synchronously, so the file holds it.
+      if (savesFromField && event.target instanceof HTMLElement) event.target.blur();
       action();
     };
     window.addEventListener('keydown', onKey);
