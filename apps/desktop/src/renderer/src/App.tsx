@@ -902,6 +902,9 @@ export function App({
     tabMenuAt === null ? undefined : openTabs.find((each) => each.id === tabMenuAt.id);
   const [trashing, setTrashing] = useState<ProjectTab | null>(null);
 
+  // A rename of a saved project's file under way, resolving to whether the name
+  // took. Ctrl+S from the rename field waits for it, then saves to the renamed file.
+  const pendingRename = useRef<Promise<boolean> | null>(null);
   const renamed = useCallback(
     (next: string | null) => {
       const named = tabs.active;
@@ -910,7 +913,7 @@ export function App({
       if (back) requestAnimationFrame(() => projectMenuRef.current?.focus());
       if (named === null || next === null) return;
       if (next.trim() === named.store.getState().document.project.name.trim()) return;
-      void (async () => {
+      const run = (async (): Promise<boolean> => {
         // A project with a file renames its file too (8.12) — never over
         // another: then nothing is renamed, and the maker is told why. A
         // name cleared leaves the file as it is; the tab shows its name.
@@ -920,22 +923,27 @@ export function App({
             const outcome = await getPlatformHost().renameProjectFile(path, next);
             if (outcome.kind === 'exists') {
               setRenameRefusal(t('rename.exists', { file: outcome.file }));
-              return;
+              return false;
             }
             if (outcome.kind === 'invalid') {
               setRenameRefusal(t('rename.invalid', { name: next.trim() }));
-              return;
+              return false;
             }
             tabs.update(named.id, (each) => {
               each.file = { ...each.file, path: outcome.path };
             });
           } catch (error) {
             setRenameRefusal(t('rename.failed', { reason: fileErrorText(error, t) }));
-            return;
+            return false;
           }
         }
         named.store.dispatch(setProjectName(next.trim()));
+        return true;
       })();
+      pendingRename.current = run;
+      void run.finally(() => {
+        if (pendingRename.current === run) pendingRename.current = null;
+      });
     },
     [renaming, setRenameRefusal, t, tabs],
   );
@@ -1348,7 +1356,11 @@ export function App({
       // Leaving the field first commits what is pending in it (a number
       // typed, a name), synchronously, so the file holds it.
       if (savesFromField && event.target instanceof HTMLElement) event.target.blur();
-      action();
+      // A rename the blur started (a saved project's file moves) finishes
+      // first, and a refused one saves nothing: its own message stays.
+      const rename = pendingRename.current;
+      if (rename === null) action();
+      else void rename.then((took) => (took ? action() : undefined));
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);

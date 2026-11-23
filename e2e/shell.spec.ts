@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 
@@ -1774,6 +1774,37 @@ test('Ctrl+S from the tab name field saves the name typed, without Enter', async
   } finally {
     await closeApp(instance);
     rmSync(target, { force: true });
+  }
+});
+
+test('Ctrl+S from the tab name field of a saved project waits for the file rename', async () => {
+  const folder = mkdtempSync(join(tmpdir(), 'leathercad-e2e-rename-'));
+  const target = join(folder, 'Old name.lcp');
+  const instance = await launchApp();
+  try {
+    const window = await instance.firstWindow();
+    await window.waitForLoadState('domcontentloaded');
+    await instance.evaluate(({ dialog }, path) => {
+      dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
+    }, target);
+
+    await window.keyboard.press('Control+S');
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
+    expect(readdirSync(folder)).toEqual(['Old name.lcp']);
+
+    await fromProjectMenu(window, 'rename');
+    await window.getByTestId('project-name-input').fill('New name');
+    await window.keyboard.press('Control+S');
+
+    await expect(window.getByTestId('project-tab')).toContainText('New name');
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
+    await expect(window.getByTestId('project-tab')).not.toHaveClass(/unsaved/);
+    // One file, the renamed one: the save did not write to the old path.
+    expect(readdirSync(folder)).toEqual(['New name.lcp']);
+    expect(statSync(join(folder, 'New name.lcp')).size).toBeGreaterThan(0);
+  } finally {
+    await closeApp(instance);
+    rmSync(folder, { recursive: true, force: true });
   }
 });
 
