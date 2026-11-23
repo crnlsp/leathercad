@@ -79,7 +79,7 @@ test('a strap too long for A4 portrait is printed whole by turning the paper, an
     // portrait. With nothing drawn, the PDF is one sheet with the scale check,
     // and the paper button says exactly that (7.4a).
     await on('1 × A4 portrait, scale check only');
-    await expect(paper).toHaveText('1 × A4 portrait');
+    await expect(paper).toHaveText('Paper 1 × A4 portrait');
 
     // A strap, 275 × 100 mm: longer than A4 portrait prints either way —
     // across, or turned down its 268.5 mm.

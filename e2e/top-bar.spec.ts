@@ -145,8 +145,8 @@ test('the top bar fits every window, its words shortening with the room (8.7, R-
     await expect(window.getByTestId('announce-save')).toHaveText('Unsaved changes');
 
     for (const [width, paper] of [
-      [1920, '5 × A5 portrait'],
-      [1024, '5 × A5'],
+      [1920, 'Paper 5 × A5 portrait'],
+      [1024, 'Paper 5 × A5'],
       [860, '5'],
     ] as const) {
       await resizeWindow(app, window, width, 600);
@@ -236,6 +236,8 @@ test('the project menu glyph starts 12 px in', async () => {
       (await window.getByTestId(id).locator('svg').first().boundingBox())!.x;
     expect(await left('project-menu')).toBeGreaterThanOrEqual(11);
     expect(await left('project-menu')).toBeLessThanOrEqual(13);
+    expect(await left('view-design')).toBeGreaterThanOrEqual(11);
+    expect(await left('view-design')).toBeLessThanOrEqual(13);
     // The rail's first icon measures 19 px today, not 12: it is the rail's own
     // slice that moves it, so it is not asserted here.
   } finally {
@@ -545,6 +547,45 @@ test('keys still reach Settings and Help after they leave the bar', async () => 
     await window.keyboard.press('Escape');
     await expect(window.getByTestId('help-menu-items')).toHaveCount(0);
     await expect(help).toBeFocused();
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('view tabs read as tabs', async () => {
+  const { app, window } = await launch(fresh());
+  try {
+    const bar = window.getByTestId('project-bar');
+    const tabs = bar.getByRole('tablist', { name: /view/i });
+    await expect(bar.locator('button, [role="tablist"]').first()).toHaveAttribute(
+      'role',
+      'tablist',
+    );
+    const selected = tabs.getByRole('tab', { selected: true });
+    expect(await selected.evaluate((el) => getComputedStyle(el).fontWeight)).toBe('600');
+    const accent = await window.evaluate(() =>
+      getComputedStyle(document.documentElement).getPropertyValue('--tan').trim(),
+    );
+    const shadow = await selected.evaluate((el) => getComputedStyle(el).boxShadow);
+    const rgb = (hex: string): string =>
+      `rgb(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(', ')})`;
+    expect(shadow).toContain(rgb(accent));
+    for (const id of ['view-design', 'view-sheets']) {
+      await expect(window.getByTestId(id).locator('svg')).toHaveCount(1);
+    }
+    await expect(window.getByTestId('view-design')).toContainText('Design');
+    await expect(window.getByTestId('view-sheets')).toContainText('Sheets');
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('the paper reads as a field', async () => {
+  const { app, window } = await launch(fresh());
+  try {
+    const paper = window.getByTestId('paper-button');
+    await expect(paper).toContainText(/^Paper\s*\d/);
+    await expect(paper.locator('svg')).toHaveCount(1);
   } finally {
     await closeApp(app);
   }

@@ -1560,7 +1560,8 @@ body {
   display: flex;
   align-items: center;
   gap: var(--space-4);
-  padding: 4px 14px;
+  min-height: 40px;
+  padding: 0 14px 0 0;
   background: var(--shell-900);
   border-bottom: 1px solid var(--shell-line);
 }
@@ -1610,30 +1611,24 @@ body {
   outline: none;
 }
 
-/* Design | Sheets (R-06): a pill switch on a dark track, in the middle of the
-   bar. The tab shown is raised, with an accent outline and an accent icon. */
+/* Design | Sheets (MS.4): tabs at the row's left, full height. The selected
+   one is semibold with an accent underline on the row's bottom edge. */
 .view-switch {
   display: flex;
   flex: none;
-  gap: 2px;
-  margin: 0 auto;
-  padding: 2px;
-  border: 1px solid var(--shell-line);
-  border-radius: var(--r-pill);
-  background: var(--shell-900);
+  align-self: stretch;
 }
 
 .view-tab {
   display: inline-flex;
   gap: 6px;
   align-items: center;
-  min-height: 24px;
   padding: 0 12px;
-  border: 1px solid transparent;
-  border-radius: var(--r-pill);
+  border: 0;
   background: transparent;
   color: var(--text-dim);
   font: var(--t-label);
+  font-size: 14px;
   white-space: nowrap;
   cursor: pointer;
   transition: color var(--motion);
@@ -1648,18 +1643,14 @@ body {
 }
 
 .view-tab.active {
-  border-color: var(--tan);
-  background: var(--shell-600);
+  box-shadow: inset 0 -2px 0 var(--tan);
   color: var(--text);
-}
-
-.view-tab.active .icon {
-  color: var(--tan);
+  font-weight: 600;
 }
 
 .view-tab:focus-visible {
   outline: 2px solid var(--tan);
-  outline-offset: 1px;
+  outline-offset: -2px;
 }
 
 /* The sheet count, the same number as the paper button's. */
@@ -1671,14 +1662,21 @@ body {
   font: var(--t-num-micro);
 }
 
-/* The output and the application sit at the right. */
+/* The output sits at the right. */
 .project-output {
   flex: none;
+  margin-left: auto;
 }
 
-/* The paper (7.4a, R-06): quiet, its count first. */
+/* The paper (MS.4): a field, not a button: "Paper", its value, a chevron. */
 .paper-button {
   gap: 6px;
+  border: 1px solid var(--shell-line);
+  background: var(--shell-900);
+  color: var(--text);
+}
+
+.paper-word {
   color: var(--text-dim);
 }
 
@@ -1904,13 +1902,14 @@ body {
 @media (forced-colors: active) {
   .split-main,
   .split-side,
-  .view-switch,
-  .view-tab,
   .segment {
     border: 1px solid ButtonText;
   }
 
-  .view-tab.active,
+  .view-tab.active {
+    text-decoration: underline;
+  }
+
   .segment.active {
     border-color: Highlight;
   }

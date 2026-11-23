@@ -117,7 +117,7 @@ export function PaperButton({
         <button
           ref={button}
           type="button"
-          className="tool quiet paper-button"
+          className="tool paper-button"
           data-testid="paper-button"
           data-sheets={count}
           aria-label={t('projectBar.paper', { sheets: name })}
@@ -126,7 +126,9 @@ export function PaperButton({
           aria-controls={open ? `${ids}popover` : undefined}
           onClick={() => setOpen((was) => !was)}
         >
-          <Icon of="paper" />
+          <span className={room === 'cramped' ? 'visually-hidden' : 'paper-word'}>
+            {t('sheets.paper')}
+          </span>{' '}
           <span className="paper-face">{face}</span>
           <Icon of="chevron-down" size={12} />
         </button>

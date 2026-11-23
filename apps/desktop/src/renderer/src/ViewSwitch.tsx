@@ -13,9 +13,9 @@ import { Tooltip } from './Tooltip.js';
 const VIEWS: readonly CanvasView[] = ['design', 'sheets'];
 
 /**
- * Design or Sheets (7.4c, R-06): the two views of one pattern, a pill switch
- * in the middle of the top bar — between the project and its output, since
- * the Sheets view is where the project meets the paper. A tab list: the arrow
+ * Design or Sheets (7.4c, R-06): the two views of one pattern, tabs
+ * at the left of the second row, full height, the selected one semibold and
+ * underlined. A tab list: the arrow
  * keys, Home and End move between the two and switch as they go, and `Ctrl+1`
  * / `Ctrl+2` switch from anywhere. Light and reversible — each view keeps its
  * camera, the selection is shared, and nothing about the document changes by
