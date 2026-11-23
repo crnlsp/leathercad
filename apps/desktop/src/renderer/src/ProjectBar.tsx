@@ -175,7 +175,7 @@ export function ProjectBar({
               <Icon of="chevron-down" size={12} />
             </MenuButton>
           </div>
-          <div className="split primary">
+          <div className="split primary" data-state={indicator.state}>
             <Tooltip
               text={t('projectBar.printTooltip', {
                 sheets: describeSheets(plan, t),
@@ -202,8 +202,8 @@ export function ProjectBar({
                 data-state={indicator.state}
                 aria-label={
                   problems === null
-                    ? t('projectBar.problemsNone')
-                    : t('projectBar.problems', { counts: problems })
+                    ? t('projectBar.problemsShowNone')
+                    : t('projectBar.problemsShow', { counts: problems })
                 }
                 onClick={(event) => onShowProblems(pressOf(event))}
               >

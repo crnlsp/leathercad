@@ -1890,24 +1890,35 @@ body {
   background: var(--shell-line);
 }
 
-/* Print, the one primary action: the paper's colour. */
+/* Print, the one primary action: green while nothing needs fixing, on the
+   shell like Export while something does (MS.1). */
 .split.primary .split-main {
-  background: var(--primary);
-  color: var(--on-primary);
+  background: var(--shell-600);
+  color: var(--text);
   font-weight: 600;
 }
 
 .split.primary .split-main:hover,
 .split.primary .split-main:focus-visible {
-  background: var(--primary-hover);
+  background: var(--shell-line);
 }
 
-/* Print's second half is the problems indicator: a check on the paper's
-   shade, the warning's triangle and count on its orange, the error's on its
-   red. What is only to note shows its dot, as the drawer does. */
+.split.primary[data-state='clear'] .split-main {
+  background: var(--ready);
+  color: var(--on-primary);
+}
+
+.split.primary[data-state='clear'] .split-main:hover,
+.split.primary[data-state='clear'] .split-main:focus-visible {
+  background: var(--ready-hover);
+}
+
+/* Print's second half is the problems indicator: a check on the ready green,
+   the warning's triangle and count on its orange, the error's on its red.
+   What is only to note shows its dot, as the drawer does. */
 .problems-indicator {
   gap: 3px;
-  background: var(--primary-side);
+  background: var(--ready-side);
   color: var(--on-primary);
   font: var(--t-num-micro);
   font-weight: 600;
@@ -1926,9 +1937,9 @@ body {
   color: inherit;
 }
 
-.problems-indicator:hover,
-.problems-indicator:focus-visible {
-  background: var(--primary-hover);
+.problems-indicator.clear:hover,
+.problems-indicator.clear:focus-visible {
+  background: var(--ready);
 }
 
 .problems-indicator.warning:hover,

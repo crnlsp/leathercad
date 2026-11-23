@@ -245,6 +245,12 @@ describe('the four planes (F.5)', () => {
     }
   });
 
+  it('ready keeps its words readable (MS.1)', () => {
+    expect(contrast(ACTION.onPrimary, ACTION.ready)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(ACTION.onPrimary, ACTION.readySide)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(SHELL.text, SHELL[600])).toBeGreaterThanOrEqual(4.5);
+  });
+
   it('keeps Export PDF’s words readable on both of its halves (U.7)', () => {
     for (const fill of [SHELL[600], ACTION.secondarySide]) {
       expect(contrast(SHELL.text, fill)).toBeGreaterThanOrEqual(4.5);

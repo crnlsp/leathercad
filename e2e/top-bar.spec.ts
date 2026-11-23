@@ -321,13 +321,39 @@ test('the paper button, the Sheets tab and the job totals count the same sheets 
   }
 });
 
+test('print is green only while nothing needs fixing (MS.1)', async () => {
+  const { app, window } = await launch(fresh());
+  try {
+    await openSample(window);
+    const print = window.getByTestId('print');
+    const background = () => print.evaluate((el) => getComputedStyle(el).backgroundColor);
+    await expect(window.getByTestId('print-problems')).toHaveAttribute('data-state', 'clear');
+    await expect.poll(background).toBe('rgb(74, 222, 128)');
+
+    // One warning: a piece named in letters the typeface cannot print.
+    await window.getByTestId('parts-list').getByText('Lining', { exact: true }).click();
+    await window.getByTestId('part-name').fill('Подкладка');
+    await window.getByTestId('part-name').press('Enter');
+    const indicator = window.getByTestId('print-problems');
+    await expect(indicator).toHaveAttribute('data-state', 'warning');
+    await expect(indicator).toHaveText('1');
+    await expect.poll(background).toBe('rgb(42, 46, 52)');
+
+    await window.getByTestId('undo').click();
+    await expect(indicator).toHaveAttribute('data-state', 'clear');
+    await expect.poll(background).toBe('rgb(74, 222, 128)');
+  } finally {
+    await closeApp(app);
+  }
+});
+
 test('Print’s second half shows the problems, opens the drawer, and Print lists them first (R-06)', async () => {
   const { app, window } = await launch(fresh());
   try {
     await openSample(window);
     const indicator = window.getByTestId('print-problems');
     await expect(indicator).toHaveAttribute('data-state', 'clear');
-    await expect(indicator).toHaveAccessibleName('Problems: nothing to fix');
+    await expect(indicator).toHaveAccessibleName('Problems: nothing to fix. Show Problems');
 
     // A warning: a piece named in letters the typeface cannot print.
     await window.getByTestId('parts-list').getByText('Lining', { exact: true }).click();
@@ -335,7 +361,7 @@ test('Print’s second half shows the problems, opens the drawer, and Print list
     await window.getByTestId('part-name').press('Enter');
     await expect(indicator).toHaveAttribute('data-state', 'warning');
     await expect(indicator).toHaveText('1');
-    await expect(indicator).toHaveAccessibleName('Problems: 1 warning');
+    await expect(indicator).toHaveAccessibleName('Problems: 1 warning. Show Problems');
 
     // And an error, which outranks it: an edge margin deeper than the edge.
     await window.getByTestId('parts-list').getByText('Stitch line').first().click();
@@ -347,12 +373,12 @@ test('Print’s second half shows the problems, opens the drawer, and Print list
     await margin.press('Enter');
     await expect(indicator).toHaveAttribute('data-state', 'error');
     const name = (await indicator.getAttribute('aria-label')) ?? '';
-    expect(name).toMatch(/^Problems: \d+ errors?, 1 warning$/);
+    expect(name).toMatch(/^Problems: \d+ errors?, 1 warning\. Show Problems$/);
     const errors = /(\d+) error/.exec(name)![1]!;
     await expect(indicator).toHaveText(errors);
     // The drawer says the same, from the same count.
     await expect(window.getByTestId('problems-verdict')).toHaveText(
-      name.slice('Problems: '.length),
+      name.slice('Problems: '.length, -'. Show Problems'.length),
     );
 
     // Each half is its own button, with its own name.

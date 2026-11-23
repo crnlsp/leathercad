@@ -137,6 +137,8 @@
     "printTooltip": "Preview {{sheets}}, then print them at 1:1",
     "problems": "Problems: {{counts}}",
     "problemsNone": "Problems: nothing to fix",
+    "problemsShow": "Problems: {{counts}}. Show Problems",
+    "problemsShowNone": "Problems: nothing to fix. Show Problems",
     "problemsNoneTooltip": "Nothing to fix",
     "problemsTooltip": "{{counts}}. Show them in Problems",
     "saveTooltip": "Save the project",
