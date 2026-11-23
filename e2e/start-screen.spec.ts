@@ -70,3 +70,14 @@ test('a project opened from the start screen by the keys leaves the focus on its
     await expect(board).toBeFocused();
   });
 });
+
+test('the start screen keeps Settings in ☰ and Help in the corner', async () => {
+  await onStartScreen(async (window) => {
+    const status = window.getByTestId('status-bar');
+    await expect(status).toBeVisible();
+    await expect(status.getByTestId('app-version')).not.toBeEmpty();
+    await expect(status.getByTestId('help-menu')).toBeVisible();
+    await window.getByTestId('project-menu').click();
+    await expect(window.getByTestId('menu-settings')).toBeVisible();
+  });
+});

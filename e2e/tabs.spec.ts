@@ -438,20 +438,20 @@ test('a file changed outside the app is said over the board, and reloads on requ
   });
 });
 
-test('the start screen has Settings and Help, and F1 opens Help there (8.12)', async () => {
+test('the start screen has Settings in the menu and Help in the corner, and F1 opens Help there (8.12)', async () => {
   const app = await launchApp({ startScreen: true });
   try {
     const window = await app.firstWindow();
     await expect(window.getByTestId('start-screen')).toBeVisible();
-    const strip = window.getByTestId('tab-strip');
-    await expect(strip.getByTestId('settings')).toBeVisible();
+    await expect(window.getByTestId('tab-strip').getByTestId('help-menu')).toHaveCount(0);
+    await expect(window.getByTestId('status-bar').getByTestId('help-menu')).toBeVisible();
     await window.keyboard.press('F1');
     await expect(window.getByTestId('help-about')).toBeVisible();
     await window.keyboard.press('Escape');
-    // With a project open, they are the project bar's again, once.
+    // With a project open, the corner is the same one, once.
     await window.getByTestId('start-new').click();
-    await expect(window.getByTestId('settings')).toHaveCount(1);
-    await expect(window.getByTestId('project-bar').getByTestId('settings')).toBeVisible();
+    await expect(window.getByTestId('help-menu')).toHaveCount(1);
+    await expect(window.getByTestId('status-bar').getByTestId('help-menu')).toBeVisible();
   } finally {
     await closeApp(app);
   }

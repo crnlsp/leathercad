@@ -51,7 +51,7 @@ test('a strap too long for A4 portrait is printed whole by turning the paper, an
   try {
     const window = await app.firstWindow();
     await window.waitForLoadState('domcontentloaded');
-    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+    await expect(window.getByTestId('project-menu')).toBeVisible();
     await app.evaluate(
       ({ dialog, shell }, paths) => {
         // Called as (window, options): the PDF and the project go to their own files.

@@ -5,6 +5,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { resizeWindow } from './windowSize.js';
 import { closeApp } from './closeApp.js';
 import { expectNoViolations, openApp } from './launchApp.js';
+import { openSettings } from './openSettings.js';
 
 for (const size of [
   [1440, 900],
@@ -91,7 +92,7 @@ test('a pocket says whether its card goes in, with the maker’s own ease (9.14b
   const bifold = await launch('bifold-wallet');
   try {
     const { window } = bifold;
-    await window.getByTestId('settings').click();
+    await openSettings(window);
     await window.getByTestId('settings-tab-tools').click();
     const ease = window.getByTestId('setting-pocket-ease').getByRole('textbox');
     await ease.fill('4');

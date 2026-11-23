@@ -22,7 +22,7 @@ test('the sample wallet opens as a template, clean and untitled, and nowhere els
   try {
     const window = await app.firstWindow();
     await window.waitForLoadState('domcontentloaded');
-    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+    await expect(window.getByTestId('project-menu')).toBeVisible();
 
     // No offer of it in the empty Parts panel, nor in Help.
     await expect(window.getByTestId('parts-list')).not.toContainText('sample');
@@ -67,7 +67,7 @@ test('no feature name in Parts breaks inside a word, at any window width (Q5)', 
   try {
     const window = await app.firstWindow();
     await window.waitForLoadState('domcontentloaded');
-    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+    await expect(window.getByTestId('project-menu')).toBeVisible();
     await openSample(window);
     await expect(window.getByTestId('part-count')).toHaveText('3');
 

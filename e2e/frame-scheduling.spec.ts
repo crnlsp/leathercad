@@ -5,6 +5,7 @@ import { installFrameCounter } from './frameCount.js';
 import { openApp, openSample } from './launchApp.js';
 import { nextFrame } from './renderCount.js';
 import { resizeWindow } from './windowSize.js';
+import { openSettings } from './openSettings.js';
 
 test('Design and Sheets stop scheduling frames once the board is idle (PERF-014)', async () => {
   const { app, window } = await openApp({
@@ -95,7 +96,7 @@ test('Sheets row hover and language changes repaint without a board pointer or d
     const beforeHover = await counts.evaluate((c) => c.paints);
     await window.getByTestId('sheets-parts').locator('.sheets-piece').first().hover();
     await expect.poll(() => counts.evaluate((c) => c.paints)).toBeGreaterThan(beforeHover);
-    await window.getByTestId('settings').click();
+    await openSettings(window);
     await window.getByTestId('settings-tab-language').click();
     await nextFrame(window);
     const beforeLanguage = await counts.evaluate((c) => c.paints);

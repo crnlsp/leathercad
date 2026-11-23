@@ -108,7 +108,7 @@ test('the spacing line says when the spacing is the pitch, and by how much it is
   const app = await launchApp();
   try {
     const window = await app.firstWindow();
-    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+    await expect(window.getByTestId('project-menu')).toBeVisible();
     const panel = window.getByTestId('property-panel');
     const set = async (label: string, value: string): Promise<void> => {
       const input = panel.locator('label', { hasText: new RegExp(`^${label}`) }).locator('input');

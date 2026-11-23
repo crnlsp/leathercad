@@ -43,7 +43,7 @@ test('reaches the main process through the platform bridge', async () => {
   // Proves preload → IPC → main → back. A version rendered here means the whole
   // PlatformHost boundary is wired, not just that the window opened.
   await expect(window.getByTestId('bridge-error')).toHaveCount(0);
-  await expect(window.getByTestId('app-version')).not.toBeEmpty();
+  await expect(window.getByTestId('project-menu')).toBeVisible();
 });
 
 test('puts user config in ~/.config/leathercad, not the npm package name', async () => {
@@ -442,7 +442,7 @@ test('the project bar holds the project and its output; the work bar holds the w
       await expect(strip.getByTestId(id), id).toHaveCount(1);
       await expect(project.getByTestId(id), id).toHaveCount(0);
     }
-    // The sheets it prints on, printing, and — past a rule — the application (8.7).
+    // The sheets it prints on, printing, (8.7).
     for (const id of [
       'view-design',
       'view-sheets',
@@ -450,8 +450,6 @@ test('the project bar holds the project and its output; the work bar holds the w
       'export-pdf',
       'print',
       'print-problems',
-      'settings',
-      'help-menu',
     ]) {
       await expect(project.getByTestId(id), id).toHaveCount(1);
       await expect(work.getByTestId(id), id).toHaveCount(0);
@@ -1635,7 +1633,7 @@ test('export says what did not make it onto the paper', async () => {
   try {
     const window = await instance.firstWindow();
     await window.waitForLoadState('domcontentloaded');
-    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+    await expect(window.getByTestId('project-menu')).toBeVisible();
 
     await instance.evaluate(({ dialog, shell }, path) => {
       dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });

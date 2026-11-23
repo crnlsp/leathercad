@@ -8,6 +8,7 @@ import { closeApp } from './closeApp.js';
 import { readoutAt } from './cursorReadout.js';
 import { openApp, openSample } from './launchApp.js';
 import { nextFrame } from './renderCount.js';
+import { openSettings } from './openSettings.js';
 
 /**
  * U.17, R-14: the bar under the selected piece — how its stitching came out,
@@ -236,7 +237,7 @@ test('F6 goes from the board into the bar and back; Esc goes back too (U.17)', a
 
     // The shortcut list says what F6 does.
     await window.keyboard.press('Escape');
-    await window.getByTestId('settings').click();
+    await openSettings(window);
     await window.getByTestId('settings-tab-shortcuts').click();
     await expect(window.getByTestId('shortcut-keys-selectionBar').locator('kbd')).toHaveText('F6');
   } finally {
@@ -259,7 +260,7 @@ test('a rebound F6 follows: the new key goes to the bar, F6 does nothing (U.17)'
     await expect(window.getByTestId('editor-canvas')).toBeFocused();
     await window.keyboard.press('F8');
     await expect(step(window)).toBeFocused();
-    await window.getByTestId('settings').click();
+    await openSettings(window);
     await window.getByTestId('settings-tab-shortcuts').click();
     await expect(window.getByTestId('shortcut-keys-selectionBar').locator('kbd')).toHaveText('F8');
     await expect(window.getByTestId('shortcut-keys-nextProblem')).toHaveText('Not assigned');
@@ -296,7 +297,7 @@ test('off in Settings › Appearance means off, and stays off after a restart (U
     await pick(first.window, 'outer-holes');
     await expect(bar(first.window)).toBeVisible();
 
-    await first.window.getByTestId('settings').click();
+    await openSettings(first.window);
     await first.window.getByTestId('settings-tab-appearance').click();
     await first.window.getByTestId('setting-selection-bar').uncheck();
     await first.window.getByTestId('settings-close').click();
@@ -313,7 +314,7 @@ test('off in Settings › Appearance means off, and stays off after a restart (U
     // No key, nothing to focus.
     await second.window.keyboard.press('F6');
     await expect(second.window.getByTestId('editor-canvas')).toBeFocused();
-    await second.window.getByTestId('settings').click();
+    await openSettings(second.window);
     await second.window.getByTestId('settings-tab-appearance').click();
     await expect(second.window.getByTestId('setting-selection-bar')).not.toBeChecked();
   } finally {

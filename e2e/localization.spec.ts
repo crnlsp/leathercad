@@ -22,12 +22,13 @@ import {
 } from './launchApp.js';
 import { closeActiveTab } from './projectMenu.js';
 import { resizeWindow } from './windowSize.js';
+import { openSettings } from './openSettings.js';
 
 const CATALOGUES = { en, pl, de, ru, fr, es };
 const ENGLISH_SYSTEM = { LANGUAGE: 'en_GB', LC_ALL: 'en_GB.UTF-8', LANG: 'en_GB.UTF-8' };
 
 async function switchLanguage(window: Page, tag: keyof typeof CATALOGUES): Promise<void> {
-  await window.getByTestId('settings').click();
+  await openSettings(window);
   await window.getByTestId('settings-tab-language').click();
   const choice = window.getByTestId('setting-language');
   await choice.selectOption(tag);
@@ -92,8 +93,8 @@ test('production switches all registered languages and returns to English in the
     await expect(window.locator('html')).toHaveAttribute('lang', /^en/);
     for (const tag of ['pl', 'de', 'ru', 'fr', 'es', 'en'] as const) {
       await switchLanguage(window, tag);
-      await expect(window.getByTestId('settings')).toHaveAccessibleName(
-        CATALOGUES[tag].projectBar.settings,
+      await expect(window.getByTestId('project-menu')).toHaveAccessibleName(
+        CATALOGUES[tag].tabs.menu,
       );
       await app.evaluate(({ dialog }) => {
         dialog.showSaveDialog = async (_browser, options) => {
@@ -110,7 +111,7 @@ test('production switches all registered languages and returns to English in the
         .poll(() => app.evaluate(() => Reflect.get(globalThis, '__localizationSavePath')))
         .toBe(`${en.app.untitled}.lcp`);
     }
-    await window.getByTestId('settings').click();
+    await openSettings(window);
     await window.getByTestId('settings-tab-language').click();
     await expect(window.getByTestId('setting-language').locator('option')).toHaveCount(
       Object.keys(CATALOGUES).length + 1,
@@ -200,7 +201,7 @@ for (const tag of ['pl', 'de', 'ru', 'fr', 'es'] as const) {
     });
     try {
       await expect(second.window.locator('html')).toHaveAttribute('lang', new RegExp(`^${tag}`));
-      await second.window.getByTestId('settings').click();
+      await openSettings(second.window);
       await second.window.getByTestId('settings-tab-language').click();
       await expect(second.window.getByTestId('setting-language')).toHaveValue(tag);
       await second.window.getByTestId('setting-language').selectOption('system');
@@ -321,7 +322,7 @@ for (const tag of ['pl', 'de', 'ru', 'fr', 'es'] as const) {
           await modes.selectOption('outline');
         }
         await capture(window, `${tag}-design-${width}`);
-        await window.getByTestId('settings').click();
+        await openSettings(window);
         for (const section of [
           'general',
           'appearance',
@@ -393,7 +394,7 @@ for (const tag of ['pl', 'de', 'ru', 'fr', 'es'] as const) {
       }
       // A real edit asks the localized destructive-action question; cancel retains the work.
       await drawAPanel(window);
-      await window.getByTestId('settings').click();
+      await openSettings(window);
       await window.getByTestId('setting-keep-unsaved').uncheck();
       await window.getByTestId('settings-close').click();
       await window.keyboard.press('ControlOrMeta+w');

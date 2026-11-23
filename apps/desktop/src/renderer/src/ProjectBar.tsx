@@ -1,14 +1,14 @@
 import type { DocumentStore, Selection } from '@leathercad/document';
 import type { Project, SeverityCounts } from '@leathercad/domain';
 import { isScaleCheckOnly } from '@leathercad/export';
-import { useState, type RefObject } from 'react';
+import { useState } from 'react';
 
 import type { Translate } from '../../shared/i18n.js';
 import type { CanvasView } from './CanvasHost.js';
 import { useI18n } from './i18n.js';
 import { Icon } from './icons/Icon.js';
 import { MenuButton } from './Menu.js';
-import { exportMenu, helpMenu } from './menus.js';
+import { exportMenu } from './menus.js';
 import { pressOf, type Press } from './PanelFold.js';
 import type { Room } from './panelLayout.js';
 import { PaperButton } from './PaperButton.js';
@@ -30,8 +30,9 @@ import { ViewSwitch } from './ViewSwitch.js';
  * Design | Sheets. Right, where the workflow ends: the paper, *Export PDF* with
  * the menu of its other formats as its second half, and *Print* — the one
  * primary action, in the paper's colour — whose second half is the problems
- * indicator, so what is wrong is on the button that would print it. Past a
- * rule, the application: Settings and Help. Nothing here edits the pattern;
+ * indicator, so what is wrong is on the button that would print it. Settings and Help are
+ * not here: Settings is the Project menu's last item and Help the status
+ * bar's corner (MS.3). Nothing here edits the pattern;
  * that is the work bar's.
  */
 export function ProjectBar({
@@ -46,10 +47,6 @@ export function ProjectBar({
   counts,
   settled,
   onShowProblems,
-  helpRef,
-  onAbout,
-  onSettings,
-  updateAvailable,
   onExport,
   onExportSvg,
   onExportDxf,
@@ -72,12 +69,6 @@ export function ProjectBar({
   settled: boolean;
   /** Print's second half: open the Problems drawer. */
   onShowProblems: (press: Press) => void;
-  /** The Help menu's button, which F1 opens. */
-  helpRef: RefObject<HTMLButtonElement | null>;
-  onAbout: () => void;
-  onSettings: () => void;
-  /** A newer release exists (8.9): Settings carries a quiet mark. */
-  updateAvailable: boolean;
   onExport: () => void;
   /** *Export SVG…* and *Export DXF…* (6.2, 6.5), from the menu beside *Export PDF*. */
   onExportSvg: () => void;
@@ -193,16 +184,6 @@ export function ProjectBar({
           </div>
         </div>
 
-        {/* Past the rule is the application, not this project (8.7). */}
-        <div className="project-app" role="group" aria-label={t('projectBar.application')}>
-          <AppControls
-            helpRef={helpRef}
-            onAbout={onAbout}
-            onSettings={onSettings}
-            updateAvailable={updateAvailable}
-          />
-        </div>
-
         {/* Said politely, once per change (§2): the save state, the problems and
           the selection (X21).
           Text that does not change is not touched, so it is not said again;
@@ -241,54 +222,4 @@ function Settled({ value, settled }: { value: string; settled: boolean }) {
  */
 export function windowTitle(name: string, dirty: boolean, t: Translate): string {
   return t(dirty ? 'app.windowTitleUnsaved' : 'app.windowTitle', { name });
-}
-
-/**
- * The application's own controls (8.7): Settings — with 8.9's mark when a new
- * version is out — and the Help menu. Past the project bar's rule while a
- * project is open; at the tab strip's end on the start screen (8.12), where
- * there is no project bar, so F1 and the update mark are never out of reach.
- */
-export function AppControls({
-  helpRef,
-  onAbout,
-  onSettings,
-  updateAvailable,
-}: {
-  /** The Help menu's button, which F1 opens. */
-  helpRef: RefObject<HTMLButtonElement | null>;
-  onAbout: () => void;
-  onSettings: () => void;
-  /** A newer LeatherCAD is out (8.9): Settings is marked. */
-  updateAvailable: boolean;
-}) {
-  const { t } = useI18n();
-  return (
-    <>
-      <Tooltip text={t('projectBar.settingsTooltip')} keys="settings">
-        <button
-          type="button"
-          className="tool quiet icon-only settings-button"
-          data-testid="settings"
-          aria-label={t(updateAvailable ? 'projectBar.settingsUpdate' : 'projectBar.settings')}
-          onClick={onSettings}
-        >
-          <Icon of="settings" />
-          {updateAvailable && <span className="update-mark" data-testid="update-mark" />}
-        </button>
-      </Tooltip>
-      <MenuButton
-        label={t('projectBar.help')}
-        tooltip={t('projectBar.helpTooltip')}
-        keys="help"
-        testId="help-menu"
-        className="tool quiet icon-only"
-        align="end"
-        triggerRef={helpRef}
-        entries={helpMenu({ about: onAbout }, t)}
-      >
-        <Icon of="help" />
-      </MenuButton>
-    </>
-  );
 }

@@ -46,7 +46,6 @@ export function TabStrip({
   menu,
   history,
   add,
-  trailing,
   nudged,
   renaming,
   onRenamed,
@@ -64,8 +63,6 @@ export function TabStrip({
   history: ReactNode;
   /** *+*, after the tabs: a new project, or one the maker has. */
   add: ReactNode;
-  /** At the strip's far end: the application's own controls, on the start screen. */
-  trailing?: ReactNode;
   /** A tab to bounce: its project was opened again, and was open already. */
   nudged: { readonly id: string | null; readonly count: number };
   /** The active tab's name is a field. */
@@ -300,11 +297,6 @@ export function TabStrip({
       <span className="visually-hidden" aria-live="polite" data-testid="already-open">
         {alreadyOpen}
       </span>
-      {trailing !== undefined && trailing !== null && (
-        <div className="tab-strip-end" role="group" aria-label={t('projectBar.application')}>
-          {trailing}
-        </div>
-      )}
     </nav>
   );
 }

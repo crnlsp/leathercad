@@ -105,6 +105,8 @@ export function projectMenu(
     readonly saveAsTemplate: () => void;
     readonly rename: (how?: 'keyboard' | 'pointer') => void;
     readonly openRecent: (path: string) => void;
+    /** Settings (MS.3): the application's, last in this menu. */
+    readonly settings: () => void;
   },
   recent: readonly RecentFile[],
   t: Translate,
@@ -113,6 +115,8 @@ export function projectMenu(
    * start screen (8.12). Undefined while one is.
    */
   noProject?: string,
+  /** A newer LeatherCAD is out (8.9): Settings says so. */
+  updateAvailable = false,
 ): MenuEntry[] {
   return [
     {
@@ -187,6 +191,15 @@ export function projectMenu(
           onChoose: () => actions.openRecent(file.path),
         };
       }),
+    },
+    { kind: 'separator' },
+    {
+      kind: 'item',
+      id: 'menu-settings',
+      label: t('menu.settings'),
+      keys: 'settings',
+      onChoose: actions.settings,
+      ...(updateAvailable ? { note: t('menu.newVersion') } : {}),
     },
   ];
 }
@@ -382,18 +395,29 @@ export function exportMenu(
 }
 
 /**
- * The Help menu (8.7): help, and the application. Never configuration — that
- * is Settings'. The sample is here because it is the app's tutorial by design
- * (8.3): a finished pattern to take apart.
+ * The Help menu (8.7), the status bar's **?** since MS.3: help, and the
+ * application. Never configuration — that is Settings', at the Project menu's
+ * end.
  */
 export function helpMenu(
   actions: {
+    readonly shortcuts: () => void;
     readonly about: () => void;
   },
   t: Translate,
 ): MenuEntry[] {
   // The sample wallet is a template since 8.14: New project from template.
-  return [{ kind: 'item', id: 'help-about', label: t('menu.about'), onChoose: actions.about }];
+  return [
+    {
+      kind: 'item',
+      id: 'help-shortcuts',
+      label: t('menu.keyboardShortcuts'),
+      keys: 'keyboardShortcuts',
+      onChoose: actions.shortcuts,
+    },
+    { kind: 'separator' },
+    { kind: 'item', id: 'help-about', label: t('menu.about'), onChoose: actions.about },
+  ];
 }
 
 /**

@@ -9,6 +9,7 @@ import { ONE_PRINTER, fakeCups } from './fakeCups.js';
 import { caption } from './keyCaption.js';
 import { freshStateHome, launchApp, openApp, openSample, recoveryCopies } from './launchApp.js';
 import { resizeWindow } from './windowSize.js';
+import { openSettings } from './openSettings.js';
 
 /**
  * U.20: what Chromium and Electron still drew themselves in the dark window —
@@ -102,7 +103,7 @@ test('every tab stop rings in the accent, in the window and every dialog, and Ta
     }
     await resizeWindow(app, window, 1400, 600);
 
-    await window.getByTestId('settings').click();
+    await openSettings(window);
     for (const section of ['general', 'appearance', 'tools', 'language', 'shortcuts']) {
       await window.getByTestId(`settings-tab-${section}`).click();
       await expectRings(window, `Settings › ${section}`, DIALOG);
@@ -177,13 +178,16 @@ test('closing a dialog gives the keys back to what opened it (U.19)', async () =
     await window.keyboard.press('Escape');
     await expect(board).toBeFocused();
 
-    const settings = window.getByTestId('settings');
-    await settings.focus();
+    const menu = window.getByTestId('project-menu');
+    await menu.focus();
+    await window.keyboard.press('Enter');
+    await window.keyboard.press('End');
+    await expect(window.getByTestId('menu-settings')).toBeFocused();
     await window.keyboard.press('Enter');
     await expect(window.getByTestId('settings-dialog')).toBeVisible();
     await window.keyboard.press('Escape');
     await expect(window.getByTestId('settings-dialog')).toHaveCount(0);
-    await expect(settings).toBeFocused();
+    await expect(menu).toBeFocused();
   } finally {
     await closeApp(app);
   }
@@ -244,7 +248,7 @@ test('in forced colours the ring is still a solid line', async () => {
     await expect(window.getByTestId('toggle-parts')).toHaveCSS('outline-width', '2px');
 
     // A list's option at hand takes the system's highlight, not the window's colour.
-    await window.getByTestId('settings').click();
+    await openSettings(window);
     await window.getByTestId('settings-tab-language').click();
     const language = window.getByTestId('setting-language');
     await language.click();
@@ -279,7 +283,7 @@ test('the window is dark to Chromium: its scrollbars, lists and controls', async
     // A list's options are the app's to draw, and its keys are its own:
     // Escape closes the list and leaves Settings open; a letter finds an option
     // rather than choosing a tool.
-    await window.getByTestId('settings').click();
+    await openSettings(window);
     await window.getByTestId('settings-tab-language').click();
     const language = window.getByTestId('setting-language');
     await expect(language).toHaveCSS('appearance', 'base-select');
@@ -358,7 +362,7 @@ test('the spellchecker is off, and a fresh profile fetches no dictionary', async
   const app = await launchApp({ env: { XDG_CONFIG_HOME: config } });
   try {
     const window = await app.firstWindow();
-    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+    await expect(window.getByTestId('project-menu')).toBeVisible();
     const spelling = await app.evaluate(({ session }) => ({
       enabled: session.defaultSession.isSpellCheckerEnabled(),
       languages: session.defaultSession.getSpellCheckerLanguages(),
@@ -467,7 +471,7 @@ test('a recent project that is gone is said in the app’s own dialog', async ()
   const app = await launchApp({ env: { XDG_CONFIG_HOME: config } });
   try {
     const window = await app.firstWindow();
-    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+    await expect(window.getByTestId('project-menu')).toBeVisible();
     await window.getByTestId('project-menu').click();
     await window.getByTestId('recent-0').click();
 

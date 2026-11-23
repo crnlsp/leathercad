@@ -20,7 +20,7 @@ test('undo during a drag cancels it, and the moves after it make no history', as
   try {
     const window = await app.firstWindow();
     await window.waitForLoadState('domcontentloaded');
-    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+    await expect(window.getByTestId('project-menu')).toBeVisible();
     const box = (await window.getByTestId('editor-canvas').boundingBox())!;
 
     await window.getByTestId('tool-rectangle').click();

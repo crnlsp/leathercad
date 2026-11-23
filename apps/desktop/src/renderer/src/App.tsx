@@ -94,7 +94,7 @@ import {
   type DrawingFormat,
   type ExportReport,
 } from './useProjectFile.js';
-import { AppControls, ProjectBar, windowTitle } from './ProjectBar.js';
+import { ProjectBar, windowTitle } from './ProjectBar.js';
 import { OutsideChangeBar } from './OutsideChangeBar.js';
 import { UnsavedProjectsDialog } from './UnsavedProjectsDialog.js';
 import { MessageDialog } from './MessageDialog.js';
@@ -132,8 +132,8 @@ import { selectedParts } from './sheetContents.js';
 import { ToolOptions } from './ToolOptions.js';
 import { ToolPalette } from './ToolPalette.js';
 import { UnsavedChangesDialog, type DiscardingAction } from './UnsavedChangesDialog.js';
-import { VersionButton } from './VersionButton.js';
 import { WrittenNote } from './WrittenNote.js';
+import { HelpButton } from './HelpButton.js';
 import { I18nProvider } from './i18n.js';
 import { RecoveryDialog } from './RecoveryDialog.js';
 import type { MakerTools } from './irons.js';
@@ -1178,6 +1178,8 @@ export function App({
       .then(setUpdates)
       .catch(() => undefined);
   }, []);
+  // The mark is news about Updates, so the menu's Settings opens there while it shows.
+  const openSettings = () => setSettings(updates.state === 'available' ? 'updates' : 'general');
   const checkUpdates = useCallback(
     () =>
       getPlatformHost()
@@ -1747,6 +1749,8 @@ export function App({
               // The main process checks it is on the list, grants it, and
               // hands it back through onOpenFile, which opens it in a tab.
               onOpenRecent={(path) => getPlatformHost().openRecent(path)}
+              onSettings={openSettings}
+              updateAvailable={updates.state === 'available'}
             />
           }
           history={
@@ -1812,53 +1816,51 @@ export function App({
           onClose={(id) => void closeTab(id)}
           onTabMenu={(id, at) => setTabMenuAt({ id, ...at })}
           onMove={(id, index) => tabs.move(id, index)}
-          // On the start screen there is no project bar: Settings and Help
-          // stand at the strip's end, F1 and the update mark with them.
-          trailing={
-            hasProject ? null : (
-              <AppControls
-                helpRef={helpRef}
-                onAbout={() => setAboutOpen(true)}
-                onSettings={() =>
-                  setSettings(updates.state === 'available' ? 'updates' : 'general')
-                }
-                updateAvailable={updates.state === 'available'}
-              />
-            )
-          }
         />
         {/* Not before the start has opened the last session's tabs: the start
             screen would show for a moment before them. */}
         {active === null ? (
           !started ? null : (
-            <StartScreen
-              recent={recent}
-              templates={startChoices}
-              onRefresh={refreshStart}
-              error={startError === null ? null : fileErrorText(startError, t)}
-              onNew={newProject}
-              onUseTemplate={(id) => void file.newFromTemplate(id)}
-              onNewFromTemplate={showTemplates}
-              onOpen={() => void openProject()}
-              onOpenRecent={(path) =>
-                void getPlatformHost()
-                  .openRecent(path)
-                  .then(refreshRecent)
-                  .catch(() => undefined)
-              }
-              onPin={(path, pinned) =>
-                void getPlatformHost()
-                  .pinRecent(path, pinned)
-                  .then(refreshRecent)
-                  .catch(() => undefined)
-              }
-              onRemove={(path) =>
-                void getPlatformHost()
-                  .removeRecent(path)
-                  .then(refreshRecent)
-                  .catch(() => undefined)
-              }
-            />
+            <>
+              <StartScreen
+                recent={recent}
+                templates={startChoices}
+                onRefresh={refreshStart}
+                error={startError === null ? null : fileErrorText(startError, t)}
+                onNew={newProject}
+                onUseTemplate={(id) => void file.newFromTemplate(id)}
+                onNewFromTemplate={showTemplates}
+                onOpen={() => void openProject()}
+                onOpenRecent={(path) =>
+                  void getPlatformHost()
+                    .openRecent(path)
+                    .then(refreshRecent)
+                    .catch(() => undefined)
+                }
+                onPin={(path, pinned) =>
+                  void getPlatformHost()
+                    .pinRecent(path, pinned)
+                    .then(refreshRecent)
+                    .catch(() => undefined)
+                }
+                onRemove={(path) =>
+                  void getPlatformHost()
+                    .removeRecent(path)
+                    .then(refreshRecent)
+                    .catch(() => undefined)
+                }
+              />
+              <footer className="app-status" data-testid="status-bar">
+                <span className="status-left">
+                  v<span data-testid="app-version">{version ?? '…'}</span>
+                </span>
+                <HelpButton
+                  helpRef={helpRef}
+                  onShortcuts={() => setSettings('shortcuts')}
+                  onAbout={() => setAboutOpen(true)}
+                />
+              </footer>
+            </>
           )
         ) : (
           <>
@@ -1874,11 +1876,6 @@ export function App({
               counts={counts}
               settled={!store.inTransaction}
               onShowProblems={showProblems}
-              helpRef={helpRef}
-              onAbout={() => setAboutOpen(true)}
-              // The mark is news about Updates, so the button opens there while it shows.
-              onSettings={() => setSettings(updates.state === 'available' ? 'updates' : 'general')}
-              updateAvailable={updates.state === 'available'}
               onExport={() => void exportPdf()}
               onExportSvg={() => setExporting('svg')}
               onExportDxf={() => setExporting('dxf')}
@@ -2186,8 +2183,6 @@ export function App({
         */}
               <span className="status-left">
                 <span data-testid="status-counts">
-                  <VersionButton version={version} updates={updates} onCheck={checkUpdates} />
-                  <span className="sep">·</span>
                   <b data-testid="part-count">{storeState.document.project.parts.length}</b>{' '}
                   {t('status.partsCount', { count: storeState.document.project.parts.length })}
                   <span className="sep">·</span>
@@ -2289,6 +2284,11 @@ export function App({
                   <CursorReadout cursor={cursor} />
                 )}
               </span>
+              <HelpButton
+                helpRef={helpRef}
+                onShortcuts={() => setSettings('shortcuts')}
+                onAbout={() => setAboutOpen(true)}
+              />
             </footer>
           </>
         )}

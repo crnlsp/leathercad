@@ -3,6 +3,7 @@ import { rmSync } from 'node:fs';
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
+import { openSettings } from './openSettings.js';
 import {
   drawAPanel,
   expectNoViolations,
@@ -95,7 +96,7 @@ test('a dialog that fails closes with a notice, and leaves the project as it was
   const { app, window } = await launch(state);
   try {
     await drawAPanel(window, { parts: '1' });
-    await window.getByTestId('settings').click();
+    await openSettings(window);
     await failIn(window, 'settings');
 
     const notice = window.getByTestId('failure-settings');

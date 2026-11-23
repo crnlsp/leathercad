@@ -6,6 +6,7 @@ import { expect, test } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
 import { expectNoViolations, openApp, openSample } from './launchApp.js';
+import { openSettings } from './openSettings.js';
 
 /**
  * 9.26: a hole set knows its iron's tooth. The maker says in My tools that an
@@ -24,7 +25,7 @@ test('a round iron’s holes are cut as circles of its prong in a laser SVG (9.2
 
   try {
     // My tools: a round iron of my own, made the default.
-    await window.getByTestId('settings').click();
+    await openSettings(window);
     await window.getByTestId('settings-tab-tools').click();
     const pane = window.getByTestId('settings-pane-tools');
     await pane.getByTestId('add-iron').click();

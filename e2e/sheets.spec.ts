@@ -41,7 +41,7 @@ async function withPrintTest(body: (session: Session) => Promise<void>): Promise
   try {
     const window = await app.firstWindow();
     await window.waitForLoadState('domcontentloaded');
-    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+    await expect(window.getByTestId('project-menu')).toBeVisible();
     await app.evaluate(
       ({ dialog, shell, BrowserWindow }, paths) => {
         dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [paths.project] });

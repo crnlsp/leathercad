@@ -36,7 +36,7 @@ async function launch(): Promise<{
   });
   const window = await app.firstWindow();
   await window.waitForLoadState('domcontentloaded');
-  await expect(window.getByTestId('app-version')).not.toBeEmpty();
+  await expect(window.getByTestId('project-menu')).toBeVisible();
   return { app, window, before: await zoomOf(window) };
 }
 

@@ -49,7 +49,7 @@ test('a card pocket with a thumb scoop is drawn, stitched on three sides, and re
   try {
     const window = await app.firstWindow();
     await window.waitForLoadState('domcontentloaded');
-    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+    await expect(window.getByTestId('project-menu')).toBeVisible();
     await app.evaluate(({ dialog }, path) => {
       dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
       dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });

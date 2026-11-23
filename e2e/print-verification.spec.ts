@@ -37,7 +37,7 @@ test('the print test measures true on every sheet: gauge, dimension, holes and t
   try {
     const window = await app.firstWindow();
     await window.waitForLoadState('domcontentloaded');
-    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+    await expect(window.getByTestId('project-menu')).toBeVisible();
 
     await exportPrintTest(app, window, pdf);
     const measured = measurePrintTest(pdf);
@@ -65,7 +65,7 @@ test('the assembly print test measures true: a hole row, and a panel taped 2 x 2
   try {
     const window = await app.firstWindow();
     await window.waitForLoadState('domcontentloaded');
-    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+    await expect(window.getByTestId('project-menu')).toBeVisible();
 
     await exportPrintTestAssembly(app, window, pdf);
     const measured = measurePrintTestAssembly(pdf);

@@ -8,6 +8,7 @@ import { closeApp } from './closeApp.js';
 import { drawAPanel, openApp } from './launchApp.js';
 import { closeActiveTab, fromProjectMenu } from './projectMenu.js';
 import { resizeWindow } from './windowSize.js';
+import { openSettings } from './openSettings.js';
 
 /**
  * Slice 8.2: the app remembers how the maker likes it, and what they worked
@@ -165,7 +166,7 @@ test('Settings opens on General from the gear and Ctrl+, and on Keyboard shortcu
   try {
     const dialog = window.getByTestId('settings-dialog');
 
-    await window.getByTestId('settings').click();
+    await openSettings(window);
     await expect(window.getByTestId('settings-pane-general')).toBeVisible();
     await expect(window.getByTestId('settings-tab-general')).toBeFocused();
     await window.keyboard.press('ArrowDown');
@@ -213,7 +214,7 @@ test('a setting applies at once and is kept, and Clear list empties the recent p
   try {
     // The legend shows only once there is something drawn for it to explain.
     await drawAPanel(first.window);
-    await first.window.getByTestId('settings').click();
+    await openSettings(first.window);
     await first.window.getByTestId('settings-tab-appearance').click();
     // It opens by default (U.10); the setting folds it away at once.
     await first.window.getByTestId('setting-legend-open').uncheck();
@@ -234,7 +235,7 @@ test('a setting applies at once and is kept, and Clear list empties the recent p
 
   const second = await launch(configHome);
   try {
-    await second.window.getByTestId('settings').click();
+    await openSettings(second.window);
     await second.window.getByTestId('settings-tab-appearance').click();
     await expect(second.window.getByTestId('setting-legend-open')).not.toBeChecked();
 
@@ -258,7 +259,7 @@ test('Smart guides is on until the maker turns it off, and stays off (3.20)', as
 
   const first = await launch(configHome);
   try {
-    await first.window.getByTestId('settings').click();
+    await openSettings(first.window);
     const toggle = first.window.getByTestId('setting-smart-guides');
     await expect(toggle).toBeChecked();
     await toggle.uncheck();
@@ -273,7 +274,7 @@ test('Smart guides is on until the maker turns it off, and stays off (3.20)', as
 
   const second = await launch(configHome);
   try {
-    await second.window.getByTestId('settings').click();
+    await openSettings(second.window);
     await expect(second.window.getByTestId('setting-smart-guides')).not.toBeChecked();
   } finally {
     await closeApp(second.app);
@@ -316,7 +317,7 @@ test('the interface language follows the system, or keeps the one chosen, at onc
   const first = await launch(configHome, unavailable);
   try {
     const system = await first.app.evaluate(({ app }) => app.getPreferredSystemLanguages());
-    await first.window.getByTestId('settings').click();
+    await openSettings(first.window);
     await first.window.getByTestId('settings-tab-language').click();
     const choice = first.window.getByTestId('setting-language');
 
@@ -352,7 +353,7 @@ test('the interface language follows the system, or keeps the one chosen, at onc
 
   const second = await launch(configHome, unavailable);
   try {
-    await second.window.getByTestId('settings').click();
+    await openSettings(second.window);
     await second.window.getByTestId('settings-tab-language').click();
     await expect(second.window.getByTestId('setting-language')).toHaveValue('en');
   } finally {

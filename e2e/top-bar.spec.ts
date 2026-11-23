@@ -30,7 +30,9 @@ test('the Project menu opens by mouse and by keyboard, and gives focus back (8.7
     await window.keyboard.press('ArrowDown');
     await expect(window.getByTestId('open')).toBeFocused();
     await window.keyboard.press('End');
-    // An empty recent list: its line is the last thing focus reaches.
+    // Settings is the last thing focus reaches, after the empty recent list's line.
+    await expect(window.getByTestId('menu-settings')).toBeFocused();
+    await window.keyboard.press('ArrowUp');
     await expect(window.getByRole('menuitem', { name: /appear here/ })).toBeFocused();
     await window.keyboard.press('Home');
     await expect(window.getByTestId('new')).toBeFocused();
@@ -70,7 +72,7 @@ test('Save as… asks where, and saves there (8.7)', async () => {
 test('About says the version, and shows the log folder and the notices (8.7, 8.6b)', async () => {
   const { app, window } = await launch(fresh());
   try {
-    const version = (await window.getByTestId('app-version').textContent()) ?? '';
+    const version = await app.evaluate(({ app: electron }) => electron.getVersion());
     await window.getByTestId('help-menu').click();
     await window.getByTestId('help-about').click();
     const about = window.getByTestId('about-dialog');
@@ -130,8 +132,6 @@ const BAR = [
   'export-more',
   'print',
   'print-problems',
-  'settings',
-  'help-menu',
 ];
 
 test('the top bar fits every window, its words shortening with the room (8.7, R-06)', async () => {
@@ -251,6 +251,7 @@ test('Rename… in the Project menu renames the project, as one step, by keyboar
     await window.keyboard.press('Enter');
     // The last of the actions, above the recent projects' line.
     await window.keyboard.press('End');
+    await window.keyboard.press('ArrowUp');
     await window.keyboard.press('ArrowUp');
     await expect(window.getByTestId('rename')).toBeFocused();
     await window.keyboard.press('Enter');
@@ -452,7 +453,7 @@ test('F1 opens Help, and the keyboard gets its place back (U.7)', async () => {
     await expect(window.getByRole('tooltip', { name: /Help/ }).locator('kbd')).toHaveText('F1');
     await window.mouse.move(600, 500);
     await window.keyboard.press('F1');
-    await expect(window.getByTestId('help-about')).toBeFocused();
+    await expect(window.getByTestId('help-shortcuts')).toBeFocused();
     await window.keyboard.press('Escape');
     await expect(window.getByTestId('help-menu-items')).toHaveCount(0);
     await expect(window.getByTestId('help-menu')).toBeFocused();
@@ -520,6 +521,30 @@ test('the window’s edited flag follows unsaved work (§2)', async () => {
     await window.keyboard.press('Control+S');
     await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     await expect.poll(edited).toBe(false);
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('keys still reach Settings and Help after they leave the bar', async () => {
+  const { app, window } = await launch(fresh());
+  try {
+    await expect(window.getByTestId('project-bar').getByTestId('settings')).toHaveCount(0);
+    await expect(window.getByTestId('project-bar').getByTestId('help-menu')).toHaveCount(0);
+
+    await window.getByTestId('editor-canvas').focus();
+    await window.keyboard.press('Control+,');
+    await expect(window.getByTestId('settings-dialog')).toBeVisible();
+    await window.keyboard.press('Escape');
+    await expect(window.getByTestId('settings-dialog')).toHaveCount(0);
+    await expect(window.getByTestId('editor-canvas')).toBeFocused();
+
+    const help = window.getByTestId('status-bar').getByTestId('help-menu');
+    await window.keyboard.press('F1');
+    await expect(window.getByTestId('help-shortcuts')).toBeFocused();
+    await window.keyboard.press('Escape');
+    await expect(window.getByTestId('help-menu-items')).toHaveCount(0);
+    await expect(help).toBeFocused();
   } finally {
     await closeApp(app);
   }

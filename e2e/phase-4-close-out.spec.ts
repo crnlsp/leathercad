@@ -121,7 +121,7 @@ test('a card holder, from the first outline to the printed page', async () => {
     const window = await first.firstWindow();
     await window.waitForLoadState('domcontentloaded');
     await atDefaultSize(first);
-    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+    await expect(window.getByTestId('project-menu')).toBeVisible();
     await first.evaluate(({ dialog }, path) => {
       dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
     }, file);
@@ -316,7 +316,7 @@ test('a card holder, from the first outline to the printed page', async () => {
     const window = await second.firstWindow();
     await window.waitForLoadState('domcontentloaded');
     await atDefaultSize(second);
-    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+    await expect(window.getByTestId('project-menu')).toBeVisible();
     await second.evaluate(
       ({ dialog, shell }, paths) => {
         dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [paths.file] });

@@ -73,8 +73,8 @@ async function launch(
     await window.getByTestId('start-new').click();
   }
   await expect(
-    window.getByTestId(options.startScreen === true ? 'start-screen' : 'app-version'),
-  ).not.toBeEmpty();
+    window.getByTestId(options.startScreen === true ? 'start-screen' : 'project-menu'),
+  ).toBeVisible();
   await app.evaluate(({ BrowserWindow }, { width, height }) => {
     BrowserWindow.getAllWindows()[0]?.setContentSize(width, height);
   }, SIZE);

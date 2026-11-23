@@ -90,7 +90,7 @@ export async function launchApp(
     // the start screen leaves it an Untitled underneath, as before 8.12.
     const window = await app.firstWindow();
     const start = window.getByTestId('start-new');
-    await expect(start.or(window.getByTestId('app-version'))).toBeAttached({ timeout: 30_000 });
+    await expect(start.or(window.getByTestId('project-bar'))).toBeAttached({ timeout: 30_000 });
     if ((await start.count()) > 0) {
       await start.evaluate((button) => (button as HTMLButtonElement).click());
     }
@@ -136,7 +136,7 @@ export async function openApp(
   const window = await app.firstWindow();
   window.on('dialog', (dialog) => void dialog.dismiss().catch(() => undefined));
   await window.waitForLoadState('domcontentloaded');
-  await expect(window.getByTestId('app-version')).not.toBeEmpty();
+  await expect(window.getByTestId('project-menu')).toBeVisible();
   if (options.size !== undefined) {
     await app.evaluate(
       ({ BrowserWindow }, [width, height]) =>

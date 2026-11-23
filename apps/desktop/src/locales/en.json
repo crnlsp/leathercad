@@ -109,7 +109,6 @@
     "drag": "drag"
   },
   "projectBar": {
-    "application": "Application",
     "exportMore": "More ways to export",
     "exportMoreTooltip": "SVG or DXF, in millimetres, for laser cutters, CNC and vector editors",
     "exportPdf": "Export PDF",
@@ -141,10 +140,7 @@
     "problemsNoneTooltip": "Nothing to fix",
     "problemsTooltip": "{{counts}}. Show them in Problems",
     "saved": "Saved",
-    "settings": "Settings",
-    "settingsTooltip": "Settings",
-    "unsaved": "Unsaved changes",
-    "settingsUpdate": "Settings — a new version is available"
+    "unsaved": "Unsaved changes"
   },
   "menu": {
     "about": "About LeatherCAD",
@@ -168,7 +164,9 @@
     "importSvg": "Import SVG pattern…",
     "importSvgNote": "Inkscape or Illustrator drawings, at their true size",
     "insertPieces": "Insert pieces from template…",
-    "insertPiecesNote": "Your saved pieces, or any template's"
+    "insertPiecesNote": "Your saved pieces, or any template's",
+    "newVersion": "A new version is available",
+    "keyboardShortcuts": "Keyboard shortcuts"
   },
   "macMenu": {
     "edit": "Edit",
@@ -248,8 +246,6 @@
     "announcePieces_other": "{{count}} pieces selected: {{names}}",
     "announceFeatures_one": "{{count}} feature selected in {{names}}",
     "announceFeatures_other": "{{count}} features selected in {{names}}",
-    "checkForUpdates": "Check for updates",
-    "versionNext": "to {{version}}",
     "saved": "Saved {{name}}",
     "exported": "Exported {{name}}",
     "savedTemplate": "Saved as a template. Find it under All templates › Mine"
@@ -1792,9 +1788,7 @@
     "available": "LeatherCAD {{version}} is available.",
     "availableLink": "See what is new, and download it",
     "failed": "Could not check for a new version. Check your connection, or try again later.",
-    "checkedAt": "Checked at {{time}}",
-    "again_one": "You can check again in {{count}} minute.",
-    "again_other": "You can check again in {{count}} minutes."
+    "checkedAt": "Checked at {{time}}"
   },
   "templates": {
     "title": "New project from template",

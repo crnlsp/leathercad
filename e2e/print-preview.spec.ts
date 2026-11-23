@@ -288,7 +288,7 @@ test('a piece taped into a grid prints its map first, and the map is left out wi
   try {
     const window = await app.firstWindow();
     await window.waitForLoadState('domcontentloaded');
-    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+    await expect(window.getByTestId('project-menu')).toBeVisible();
 
     // A gusset, 400 × 300 mm: on A4 portrait, taped across a grid of 2 × 3.
     await window.getByTestId('tool-rectangle').click();

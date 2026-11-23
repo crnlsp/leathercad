@@ -8,6 +8,7 @@ import { closeApp } from './closeApp.js';
 import { caption } from './keyCaption.js';
 import { drawAPanel, openApp, openSample } from './launchApp.js';
 import { fromProjectMenu } from './projectMenu.js';
+import { openSettings } from './openSettings.js';
 
 /**
  * Changing a key in Settings › Keyboard shortcuts (U.12, §2 *Shortcuts*): the
@@ -24,7 +25,7 @@ const launch = (configHome: string) =>
   openApp({ env: { XDG_CONFIG_HOME: configHome }, size: [1400, 900] });
 
 async function openShortcuts(window: Page): Promise<Locator> {
-  await window.getByTestId('settings').click();
+  await openSettings(window);
   await window.getByTestId('settings-tab-shortcuts').click();
   return window.getByTestId('settings-pane-shortcuts');
 }

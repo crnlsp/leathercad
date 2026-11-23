@@ -109,7 +109,6 @@
     "drag": "перетащить"
   },
   "projectBar": {
-    "application": "Приложение",
     "exportMore": "Другие способы экспорта",
     "exportMoreTooltip": "Экспорт в SVG или DXF в миллиметрах для лазерной резки, ЧПУ и векторных редакторов",
     "exportPdf": "Экспорт в PDF",
@@ -143,10 +142,7 @@
     "problemsNoneTooltip": "Замечаний нет",
     "problemsTooltip": "{{counts}}. Показать на панели «Проблемы»",
     "saved": "Сохранено",
-    "settings": "Настройки",
-    "settingsTooltip": "Настройки",
-    "unsaved": "Несохранённые изменения",
-    "settingsUpdate": "Настройки — доступна новая версия"
+    "unsaved": "Несохранённые изменения"
   },
   "menu": {
     "about": "О программе LeatherCAD",
@@ -250,8 +246,6 @@
     "partsSelected_few": "детали выбраны",
     "partsSelected_many": "деталей выбрано",
     "partsSelected_other": "детали выбрано",
-    "checkForUpdates": "Проверить обновления",
-    "versionNext": "до {{version}}",
     "saved": "Сохранён {{name}}",
     "exported": "Экспортирован {{name}}"
   },
@@ -1540,11 +1534,7 @@
     "available": "Доступен LeatherCAD {{version}}.",
     "availableLink": "Посмотреть изменения и скачать",
     "failed": "Не удалось проверить обновления. Проверьте подключение или повторите попытку позже.",
-    "checkedAt": "Проверено в {{time}}",
-    "again_one": "Повторная проверка через {{count}} минуту.",
-    "again_few": "Повторная проверка через {{count}} минуты.",
-    "again_many": "Повторная проверка через {{count}} минут.",
-    "again_other": "Повторная проверка через {{count}} минуты."
+    "checkedAt": "Проверено в {{time}}"
   },
   "templates": {
     "title": "Новый проект из шаблона",

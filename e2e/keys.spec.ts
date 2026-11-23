@@ -5,6 +5,7 @@ import { caption } from './keyCaption.js';
 import { withSample } from './launchApp.js';
 import { renameProject } from './projectMenu.js';
 import { resizeWindow } from './windowSize.js';
+import { openSettings } from './openSettings.js';
 
 /**
  * Keys by where they are, shown as caps, and tooltips that fit (U.3, §2
@@ -111,7 +112,7 @@ test('every key shown is a cap from the keymap: tooltips, the rail, menus, the l
     await expect(window.getByTestId('save-as').locator('kbd')).toHaveText(caption('Ctrl+Shift+S'));
     await window.keyboard.press('Escape');
 
-    await window.getByTestId('settings').click();
+    await openSettings(window);
     await window.getByTestId('settings-tab-shortcuts').click();
     const zoomIn = window.locator('.shortcut-row', { hasText: 'Zoom in' });
     await expect(zoomIn.locator('kbd')).toHaveText([caption('Ctrl+=')]);
@@ -186,7 +187,7 @@ test('a key is shown as the maker’s keyboard prints it (U.3)', async () => {
       });
       window.dispatchEvent(new Event('focus'));
     });
-    await window.getByTestId('settings').click();
+    await openSettings(window);
     await window.getByTestId('settings-tab-shortcuts').click();
     const row = (text: string) => window.locator('.shortcut-row', { hasText: text }).locator('kbd');
     // Zoom as the + and − it prints; its − zooms, so the list is reached by ?.

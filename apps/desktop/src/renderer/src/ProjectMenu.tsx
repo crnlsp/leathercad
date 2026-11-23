@@ -28,6 +28,8 @@ export function ProjectMenu({
   onSaveAsTemplate,
   onRename,
   onOpenRecent,
+  onSettings,
+  updateAvailable,
 }: {
   /** A project is open: false on the start screen. */
   hasProject: boolean;
@@ -52,6 +54,10 @@ export function ProjectMenu({
   onRename: (how: Press) => void;
   /** One that is gone is taken off the list, and this menu says why (U.20). */
   onOpenRecent: (path: string) => Promise<RecentOutcome>;
+  /** *Settings…*, the menu's last item (MS.3). */
+  onSettings: () => void;
+  /** A newer LeatherCAD is out (8.9): the button wears the mark and the menu says so. */
+  updateAvailable: boolean;
 }) {
   const { t } = useI18n();
   // A recent project that is no longer there: said in the app's own dialog,
@@ -75,6 +81,7 @@ export function ProjectMenu({
             insertPieces: onInsertPieces,
             saveAs: onSaveAs,
             saveAsTemplate: onSaveAsTemplate,
+            settings: onSettings,
             // A keyboard's choice gives focus back to the menu once the name
             // is set; the pointer's leaves it with the page (U.4).
             rename: (how) => onRename(how ?? 'keyboard'),
@@ -88,10 +95,12 @@ export function ProjectMenu({
           recent,
           t,
           hasProject ? undefined : t('tabs.noProject'),
+          updateAvailable,
         )}
         onOpen={onMenuOpen}
       >
         <Icon of="menu" />
+        {updateAvailable && <span className="update-mark" data-testid="update-mark" />}
       </MenuButton>
       {gone !== null && <GoneDialog path={gone} onClose={() => setGone(null)} />}
     </>

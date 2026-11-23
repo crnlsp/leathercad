@@ -109,7 +109,6 @@
     "drag": "ziehen"
   },
   "projectBar": {
-    "application": "Anwendung",
     "exportMore": "Weitere Exportformate",
     "exportMoreTooltip": "Als SVG oder DXF in Millimetern exportieren, für Laserschneider, CNC und Vektorgrafikprogramme",
     "exportPdf": "PDF exportieren",
@@ -139,10 +138,7 @@
     "problemsNoneTooltip": "Nichts zu beheben",
     "problemsTooltip": "{{counts}}. Im Bereich Probleme anzeigen",
     "saved": "Gespeichert",
-    "settings": "Einstellungen",
-    "settingsTooltip": "Einstellungen",
-    "unsaved": "Ungespeicherte Änderungen",
-    "settingsUpdate": "Einstellungen — neue Version verfügbar"
+    "unsaved": "Ungespeicherte Änderungen"
   },
   "menu": {
     "about": "Über LeatherCAD",
@@ -238,8 +234,6 @@
     "sheetOf": "Bogen {{number}} von {{count}}",
     "partsSelected_one": "Teil ausgewählt",
     "partsSelected_other": "Teile ausgewählt",
-    "checkForUpdates": "Nach Updates suchen",
-    "versionNext": "auf {{version}}",
     "saved": "{{name}} gespeichert",
     "exported": "{{name}} exportiert"
   },
@@ -1434,9 +1428,7 @@
     "available": "LeatherCAD {{version}} ist verfügbar.",
     "availableLink": "Neuerungen ansehen und herunterladen",
     "failed": "Es konnte nicht nach einer neuen Version gesucht werden. Verbindung prüfen oder später erneut versuchen.",
-    "checkedAt": "Geprüft um {{time}}",
-    "again_one": "Sie können in {{count}} Minute erneut prüfen.",
-    "again_other": "Sie können in {{count}} Minuten erneut prüfen."
+    "checkedAt": "Geprüft um {{time}}"
   },
   "templates": {
     "title": "Neues Projekt aus Vorlage",

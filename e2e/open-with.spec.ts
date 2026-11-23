@@ -27,7 +27,7 @@ test('a project named on the command line opens, and saves back where it came fr
   try {
     const window = await app.firstWindow();
     await window.waitForLoadState('domcontentloaded');
-    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+    await expect(window.getByTestId('project-menu')).toBeVisible();
 
     await expect(window.getByTestId('part-count')).toHaveText('3');
     await expect(window.getByTestId('file-path')).toContainText('Wallet from Files');

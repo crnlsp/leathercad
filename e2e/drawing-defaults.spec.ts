@@ -6,6 +6,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
 import { openApp } from './launchApp.js';
+import { openSettings } from './openSettings.js';
 
 /**
  * U.18, R-16: while a Draw tool would make a new piece, Properties shows
@@ -23,7 +24,7 @@ const margin = (window: Page): Locator => section(window).getByLabel('Stitch lin
 const iron = (window: Page): Locator => section(window).getByLabel('Holes');
 
 async function myTools(window: Page): Promise<Locator> {
-  await window.getByTestId('settings').click();
+  await openSettings(window);
   await window.getByTestId('settings-tab-tools').click();
   return window.getByTestId('settings-pane-tools');
 }
