@@ -238,6 +238,9 @@ test('the project menu glyph starts 12 px in', async () => {
     expect(await left('project-menu')).toBeLessThanOrEqual(13);
     expect(await left('view-design')).toBeGreaterThanOrEqual(11);
     expect(await left('view-design')).toBeLessThanOrEqual(13);
+    await resizeWindow(app, window, 860, 600);
+    expect(await left('view-design')).toBeGreaterThanOrEqual(11);
+    expect(await left('view-design')).toBeLessThanOrEqual(13);
     // The rail's first icon measures 19 px today, not 12: it is the rail's own
     // slice that moves it, so it is not asserted here.
   } finally {
@@ -586,6 +589,15 @@ test('the paper reads as a field', async () => {
     const paper = window.getByTestId('paper-button');
     await expect(paper).toContainText(/^Paper\s*\d/);
     await expect(paper.locator('svg')).toHaveCount(1);
+    const fill = await window.evaluate(() => {
+      const probe = document.createElement('i');
+      probe.style.background = 'var(--shell-900)';
+      document.body.append(probe);
+      const colour = getComputedStyle(probe).backgroundColor;
+      probe.remove();
+      return colour;
+    });
+    expect(await paper.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(fill);
   } finally {
     await closeApp(app);
   }

@@ -1635,7 +1635,8 @@ body {
 }
 
 .view-switch.compact .view-tab {
-  padding: 0 8px;
+  /* The row's first glyph stays 12 px in, however cramped. */
+  padding: 0 8px 0 12px;
 }
 
 .view-tab:hover {
@@ -1669,7 +1670,7 @@ body {
 }
 
 /* The paper (MS.4): a field, not a button: "Paper", its value, a chevron. */
-.paper-button {
+.tool.paper-button {
   gap: 6px;
   border: 1px solid var(--shell-line);
   background: var(--shell-900);
