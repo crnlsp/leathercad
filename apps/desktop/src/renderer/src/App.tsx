@@ -1848,7 +1848,10 @@ export function App({
               />
               <footer className="app-status" data-testid="status-bar">
                 <span className="status-left">
-                  v<span data-testid="app-version">{version ?? '…'}</span>
+                  {/* One item, so the row's gap does not part the "v" from the number. */}
+                  <span>
+                    v<span data-testid="app-version">{version ?? '…'}</span>
+                  </span>
                 </span>
                 <HelpButton
                   helpRef={helpRef}

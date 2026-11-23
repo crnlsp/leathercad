@@ -2216,18 +2216,20 @@ body {
   text-overflow: ellipsis;
 }
 
-/* What the status bar has to say: a notice, the tool's hint. It is the part
-   allowed to shrink: a long notice should lose its tail, never push the panel
-   chips or the cursor readout off the bar. */
+/* What the status bar has to say before the panel chips: a notice, or the
+   version on the start screen. As wide as what it says, so with nothing to say
+   the chips lead the bar and the hint has the rest. It is the part allowed to
+   shrink: a long notice should lose its tail, never push the panel chips or
+   the cursor readout off the bar. */
 .status-left {
   display: flex;
-  flex: 1;
+  flex: 0 1 auto;
   gap: 16px;
   min-width: 0;
   overflow: hidden;
 }
 
-/* Parts [, Focus \, Properties ]: always there, by the cursor readout. */
+/* Parts [, Focus \, Properties ]: always there, at the bar's left. */
 .status-panels {
   display: flex;
   flex: none;
