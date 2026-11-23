@@ -19,7 +19,7 @@ numbers, check the sheets, print at 1:1. Each row now answers one question of th
 
 | Row | Height | Job | Holds, left to right |
 |---|---|---|---|
-| 1 | 36 px | The document | ☰ project menu · Undo · Redo · the project tabs · + |
+| 1 | 34 px | The document | ☰ project menu · Undo · Redo · the project tabs · + |
 | 2 | 40 px | What you look at, and where it goes | Design · Sheets (view tabs) ··· Paper · Export PDF ▾ · Print |
 | 3 | 36 px | The active tool | the rail's head cell (the tool) · Draw as: Cut · Stitch · Mark ··· ? all keys |
 
@@ -54,8 +54,8 @@ by lines; the only boxes are the Draw as groups and the field-style paper contro
   | State | Main half | Second half |
   |---|---|---|
   | Ready | `#4ADE80`, label in `on-primary` (10.4:1) | `#22C55E`, a check (7.9:1) |
-  | Warnings | `shell-600` (`#2A2E34`), label in `text` | `warning`, triangle and count |
-  | Errors | `shell-600`, label in `text` | `error`, dot and count |
+  | Warnings | `shell-600` (`#2A2E34`), label in `text` | `warning`, a hollow triangle and count |
+  | Errors | `shell-600`, label in `text` | `error`, a filled triangle and count |
 
   The second half never carries a chevron: it is a status, not a menu. It opens Problems, as
   today, and its name says both, for example "Problems: nothing to fix. Show Problems". Print still
@@ -96,18 +96,18 @@ by lines; the only boxes are the Draw as groups and the field-style paper contro
 ## Narrow windows
 
 What gives way, in order: the rail's names (below 1280, as today), Properties to its strip (below
-1280), the paper's orientation word ("2 × A4"), Parts to its strip (below 900), "? all keys" (the
-? corner still lists every key), the group names Cut, Stitch and Mark, and, only when the choices
-themselves do not fit, the Draw as choices become the select the app already has. The rail's head
-cell shows the tool's icon only while the rail is narrow.
+1280), the paper's orientation word ("2 × A4"), Parts out of its column (below 900, where both
+panels fold away to their chips in the status bar, which open them over the board), "? all keys"
+(the ? corner still lists every key), the group names Cut, Stitch and Mark, and, only when the
+choices themselves do not fit, the Draw as choices become the select the app already has. The
+rail's head cell shows the tool's icon only while the rail is narrow.
 
-**As built (MS.7).** The first three steps go at the window's widths, as the frame's rooms say
-(`panelLayout.ts`). Below 900 px Parts leaves its column as U.5 left it: both panels then open over
-the board from their chips in the status bar, rather than standing as strips. The paper's field
-keeps "2 × A4" there too, and "Paper" is no longer seen but still names it. Row 3's steps go by
-measure, not by width: `fitWorkRow` (`workRow.ts`) takes each part's width as drawn, in the
-language shown, and the room the row has. A step is taken only when the ones before it were not
-enough, and is never undone by the room it frees. Measured in the build, with the rail narrow:
+**As built (MS.7).** The panels and the paper give way at the window's widths, as the frame's rooms
+say (`panelLayout.ts`). Below 900 px the paper's field keeps "2 × A4", and "Paper" is no longer
+seen but still names it. Row 3's steps go by measure, not by width: `fitWorkRow` (`workRow.ts`)
+takes each part's width as drawn, in the language shown, and the room the row has. A step is taken
+only when the ones before it were not enough, and is never undone by the room it frees. Measured
+in the build, with the rail narrow:
 
 | Row 3 needs | English | German | French |
 |---|---|---|---|
