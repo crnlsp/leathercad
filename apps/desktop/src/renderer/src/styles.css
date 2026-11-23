@@ -1990,9 +1990,11 @@ body {
   gap: 4px;
 }
 
-/* Draw as, then its groups, 16 px apart (MS.5): space, not lines. */
+/* Draw as, then its groups, 16 px apart (MS.5): space, not lines. A word gives
+   way whole or not at all (MS.7), so none wraps. */
 .drawing-options {
   gap: var(--space-4);
+  white-space: nowrap;
 }
 
 .draw-group {
@@ -2040,23 +2042,27 @@ body {
   justify-content: flex-end;
 }
 
-/* Below 1024 px the grouped choices give way to a select: English keeps them at
-   1024 (MS.5). MS.7 fits the row by measure, in every language. */
+/* The choices give way to a select only when they themselves do not fit, which
+   `fitWorkRow` measures in every language (MS.7). */
 .draw-as-select {
-  display: none;
+  display: inline-flex;
   align-items: center;
   gap: var(--space-2);
 }
 
-@media (max-width: 1023px) {
-  .draw-as-select {
-    display: inline-flex;
-  }
+/* Draw as with nothing given way, for `useWorkRowFit` to measure: laid out at
+   its whole width inside a box with none, so it is never seen and never makes
+   the window scroll. */
+.draw-as-measure {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
 
-  .drawing-options > .draw-as-label,
-  .drawing-options > .draw-group {
-    display: none;
-  }
+.draw-as-copy {
+  width: max-content;
+  visibility: hidden;
 }
 
 .visually-hidden {

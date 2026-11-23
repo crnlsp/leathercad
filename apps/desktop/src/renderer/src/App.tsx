@@ -129,7 +129,7 @@ import { nextDiagnostic } from './problemNavigation.js';
 import { PropertyPanel } from './PropertyPanel.js';
 import { SheetsParts, SheetsProperties } from './SheetsPanels.js';
 import { selectedParts } from './sheetContents.js';
-import { ToolOptions, WorkHead } from './ToolOptions.js';
+import { ToolOptions, WorkHead, useWorkRowFit } from './ToolOptions.js';
 import { ToolPalette } from './ToolPalette.js';
 import { UnsavedChangesDialog, type DiscardingAction } from './UnsavedChangesDialog.js';
 import { WrittenNote } from './WrittenNote.js';
@@ -1692,6 +1692,8 @@ export function App({
         : t('zoom.nothingSelected');
 
   const activeTool = ALL_TOOLS.find((entry) => entry.id === toolId)?.id ?? 'select';
+  // What the tool row keeps as the window narrows, in the spec's order (MS.7).
+  const [workFit, workBar] = useWorkRowFit(view === 'design' && DRAWING_TOOL_IDS.has(toolId));
   // The tool's hints in the status bar (U.11, MS.5): the active tool's, for what is
   // selected and whether a shape is between its clicks.
   const toolHints = useMemo(
@@ -1880,6 +1882,7 @@ export function App({
           options, and the way to every key (MS.5). The project and its output
           are the bar above's; nothing here is about files. */}
             <div
+              ref={workBar}
               className={layout.railNames ? 'work-bar' : 'work-bar rail-collapsed'}
               data-testid="work-bar"
               role="region"
@@ -1895,13 +1898,14 @@ export function App({
                   onHardware={setHardware}
                   points={pointOptions}
                   onPoints={setPointOptions}
+                  fit={workFit}
                 />
               ) : (
                 /* The plan in words, for a screen reader: the sheet count, what is taped and
                   what is left off now sit in Parts and Properties. */
                 <SheetsSummary project={storeState.document.project} />
               )}
-              <OptionHints hints={ALL_KEYS} testId="all-keys" />
+              <OptionHints hints={ALL_KEYS} testId="all-keys" shown={workFit.allKeys} />
             </div>
 
             <div

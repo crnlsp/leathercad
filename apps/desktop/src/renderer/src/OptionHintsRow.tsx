@@ -16,7 +16,16 @@ import { fitHints, type Hint } from './optionHints.js';
  * short by the edge. The copy is hidden from assistive technology; the row is
  * the only one it reads.
  */
-export function OptionHints({ hints, testId }: { hints: readonly Hint[]; testId: string }) {
+export function OptionHints({
+  hints,
+  testId,
+  shown = true,
+}: {
+  hints: readonly Hint[];
+  testId: string;
+  /** False when the row gives these hints' room away first (`fitWorkRow`); the copy stays, measured. */
+  shown?: boolean;
+}) {
   const { t } = useI18n();
   const label = useKeyLabel();
   const slotRef = useRef<HTMLDivElement>(null);
@@ -60,7 +69,7 @@ export function OptionHints({ hints, testId }: { hints: readonly Hint[]; testId:
   return (
     <div className="work-hints" ref={slotRef}>
       <ul className="work-hints-row" data-testid={testId}>
-        {hints.filter((_, index) => kept?.[index] ?? true).map(item)}
+        {hints.filter((_, index) => shown && (kept?.[index] ?? true)).map(item)}
       </ul>
       <ul className="work-hints-row work-hints-copy" ref={copyRef} aria-hidden="true">
         {hints.map(item)}

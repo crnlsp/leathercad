@@ -22,6 +22,7 @@ import {
 } from './launchApp.js';
 import { closeActiveTab } from './projectMenu.js';
 import { resizeWindow } from './windowSize.js';
+import { expectWorkRowFits } from './workRow.js';
 import { openSettings } from './openSettings.js';
 import { expectPieces } from './counts.js';
 
@@ -123,45 +124,43 @@ test('production switches all registered languages and returns to English in the
   }
 });
 
-const DRAW_MODES = ['outline', 'cut-out', 'stitch', 'stitch-allowance', 'fold', 'marking'];
+const DRAW_MODES = ['outline', 'cut-out', 'stitch', 'stitch-allowance', 'fold', 'marking'] as const;
+
+test('fits Draw as in German at 1024 px', async () => {
+  const { app, window } = await openApp({ env: ENGLISH_SYSTEM });
+  try {
+    await switchLanguage(window, 'de');
+    await window.getByTestId('tool-line').click();
+    await resizeWindow(app, window, 1024, 768);
+    const row = await expectWorkRowFits(window, 'de at 1024 px');
+    expect(row.chips, 'de keeps its chips at 1024 px').toBe(true);
+  } finally {
+    await closeApp(app);
+  }
+});
 
 for (const tag of ['en', 'pl', 'de', 'ru', 'fr', 'es'] as const) {
-  test(`${tag} drawing controls fit on both sides of the 1024 px breakpoint`, async () => {
+  test(`${tag} drawing controls fit the tool row at every width`, async () => {
     const { app, window } = await openApp({ env: ENGLISH_SYSTEM });
     try {
       await switchLanguage(window, tag);
-      // French needs 1094 px for its grouped choices: from 1024 to 1093 its row is
-      // fitted by MS.7's measured fit, not by this breakpoint.
-      for (const width of tag === 'fr' ? [1023, 1280] : [1023, 1024, 1025, 1280]) {
+      // What gives way is measured, in this language, at this width (MS.7).
+      for (const width of [860, 1024, 1280, 1440]) {
         await resizeWindow(app, window, width, 840);
-        const modes = window.getByTestId('draw-as-select');
-        const marking = window.getByTestId('draw-as-marking');
-        if (width < 1024) {
-          await expect(modes).toBeVisible();
-          await expect(marking).toBeHidden();
+        const row = await expectWorkRowFits(window, `${tag} at ${width} px`);
+        if (row.select) {
+          const modes = window.getByTestId('draw-as-select');
           for (const mode of DRAW_MODES) {
             await modes.selectOption(mode);
             await expect(modes).toHaveValue(mode);
           }
         } else {
-          await expect(modes).toBeHidden();
           for (const mode of DRAW_MODES) {
             const chip = window.getByTestId(`draw-as-${mode}`);
             await expect(chip).toBeInViewport({ ratio: 1 });
             await chip.click();
             await expect(chip).toHaveAttribute('aria-pressed', 'true');
           }
-        }
-        const overflow = await window
-          .getByTestId('tool-options')
-          .evaluate((element) => element.scrollWidth > element.clientWidth);
-        expect(overflow, `${tag} drawing controls at ${width} px`).toBe(false);
-        // "? all keys" gives way whole rather than run past the window (MS.5).
-        const allKeys = window.getByTestId('all-keys').locator('.work-hint');
-        for (const box of await allKeys.evaluateAll((items) =>
-          items.map((item) => item.getBoundingClientRect().right),
-        )) {
-          expect(box, `${tag} "all keys" at ${width} px`).toBeLessThanOrEqual(width);
         }
         await noHorizontalOverflow(window);
         await expectNoViolations(window, `${tag} drawing controls at ${width} px`);
@@ -305,19 +304,20 @@ for (const tag of ['pl', 'de', 'ru', 'fr', 'es'] as const) {
         await resizeWindow(app, window, width, height);
         await noHorizontalOverflow(window);
         if (width === 860) {
+          // Chips or the select, as the row has room in this language (MS.7);
+          // the choices in the groups' order either way.
+          const order = DRAW_MODES.map((mode) => words.drawMode[mode]);
           const modes = window.getByTestId('draw-as-select');
-          await expect(modes).toBeVisible();
-          await expect(modes.locator('option')).toHaveText([
-            words.drawMode.outline,
-            words.drawMode['cut-out'],
-            words.drawMode.stitch,
-            words.drawMode['stitch-allowance'],
-            words.drawMode.fold,
-            words.drawMode.marking,
-          ]);
-          await modes.selectOption('marking');
-          await expect(modes).toHaveValue('marking');
-          await modes.selectOption('outline');
+          if ((await expectWorkRowFits(window, `${tag} design at 860 px`)).select) {
+            await expect(modes.locator('option')).toHaveText(order);
+            await modes.selectOption('marking');
+            await expect(modes).toHaveValue('marking');
+            await modes.selectOption('outline');
+          } else {
+            await expect(
+              window.getByTestId('tool-options').locator('button[data-testid^="draw-as-"]'),
+            ).toHaveText(order);
+          }
         }
         await capture(window, `${tag}-design-${width}`);
         await openSettings(window);

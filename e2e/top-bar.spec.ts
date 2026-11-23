@@ -151,7 +151,7 @@ test('the top bar fits every window, its words shortening with the room (8.7, R-
     for (const [width, paper] of [
       [1920, 'Paper 5 × A5 portrait'],
       [1024, 'Paper 5 × A5'],
-      [860, '5'],
+      [860, '5 × A5'],
     ] as const) {
       await resizeWindow(app, window, width, 600);
       const bar = (await window.getByTestId('project-bar').boundingBox())!;

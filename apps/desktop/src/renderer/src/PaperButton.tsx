@@ -38,9 +38,10 @@ function physicalFacts(plan: SheetPlan, t: Translate): string {
 const ORIENTATIONS: readonly Orientation[] = ['portrait', 'landscape'];
 
 /**
- * The paper, said as what it produces (7.4a, R-06): a quiet button reading
- * **"2 × A4 portrait"** — "2 × A4" in a narrow window, "2" in a cramped one —
- * that opens the page setup over the bar: the paper, which way up, what it
+ * The paper, said as what it produces (7.4a, R-06): a field reading
+ * **"Paper 2 × A4 portrait"** — its orientation word the first to give way, so
+ * "2 × A4" below 1280 px, and "Paper" seen no more below 900 (MS.7) — that
+ * opens the page setup over the bar: the paper, which way up, what it
  * comes to, and the way to the sheets.
  *
  * Every paper in the list says how many sheets it takes, and each way up says
@@ -101,12 +102,7 @@ export function PaperButton({
   const count = plan.sheets.length;
   const orientationWord = t(`sheets.orientation.${orientation}`);
   const long = t('projectBar.paperLong', { count, paper, orientation: orientationWord });
-  const face =
-    room === 'cramped'
-      ? String(count)
-      : room === 'narrow'
-        ? t('projectBar.paperShort', { count, paper })
-        : long;
+  const face = room === 'wide' ? long : t('projectBar.paperShort', { count, paper });
   // The name holds the longest face, so every face shown is in it, as speech
   // input needs (WCAG 2.5.3); the tooltip, its description, says the rest.
   const name = isScaleCheckOnly(plan) ? t('sheets.scaleCheckOnly', { sheets: long }) : long;

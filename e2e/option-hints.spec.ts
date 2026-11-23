@@ -148,7 +148,8 @@ test('as the bar narrows the lowest-ranked hints go first, whole (U.11)', async 
         for (const later of order.slice(droppedAt)) expect(kept).not.toContain(later);
       }
     }
-    await expect(window.getByTestId('draw-as-select')).toBeVisible();
+    // English keeps its Draw as chips at 860 px; only their group names went (MS.7).
+    await expect(window.getByTestId('draw-as-outline')).toBeVisible();
 
     // Wider again, they come back.
     await resizeWindow(app, window, 1920, 1080);

@@ -208,12 +208,9 @@ test('row 3 names the tool and groups Draw as (MS.5)', async () => {
     const rail = (await window.getByTestId('tool-rail').boundingBox())!;
     expect((await head.boundingBox())!.width).toBe(rail.width);
 
-    await expect(bar.locator('.draw-as-label, .draw-group-name')).toHaveText([
-      'Draw as',
-      'Cut',
-      'Stitch',
-      'Mark',
-    ]);
+    await expect(
+      bar.getByTestId('tool-options').locator('.draw-as-label, .draw-group-name'),
+    ).toHaveText(['Draw as', 'Cut', 'Stitch', 'Mark']);
     for (const group of ['Cut', 'Stitch', 'Mark']) {
       await expect(bar.getByRole('group', { name: group })).toBeVisible();
     }
