@@ -84,6 +84,11 @@ test('starts, and reports the packaged version through the bridge', async () => 
   await window.getByTestId('help-menu').click();
   await window.getByTestId('help-about').click();
   await expect(window.getByTestId('about-version')).toContainText(VERSION);
+  // Closed again: the tests after this one share the window, and About's
+  // backdrop would take their clicks.
+  const about = window.getByTestId('about-dialog');
+  await about.getByTestId('about-close').click();
+  await expect(about).toHaveCount(0);
 });
 
 test('loads from the app origin with the sandbox and CSP intact (R6)', async () => {
