@@ -14,6 +14,7 @@ import { Viewport } from '../packages/editor/src/index.js';
 import { saveProject } from '../packages/persist/src/index.js';
 import { freshStateHome, recoveryDir, withApp } from './launchApp.js';
 import { activeTab, closeActiveTab, fromProjectMenu } from './projectMenu.js';
+import { expectPieces, expectSelected } from './counts.js';
 
 /** Q41: the first click in an opened project selects, rather than starting a shape. */
 function panelFile(): string {
@@ -38,7 +39,7 @@ async function chooseFile(app: ElectronApplication, file: string): Promise<void>
 }
 
 async function expectFirstClickSelects(window: Page): Promise<void> {
-  await expect(window.getByTestId('part-count')).toHaveText('1');
+  await expectPieces(window, '1');
   await expect(window.getByTestId('tool-select')).toHaveClass(/\bactive\b/);
   // Fit centres this single panel; true size then gives a known point on its
   // left edge. Use the editor's camera for the conversion, as the app does.
@@ -53,7 +54,7 @@ async function expectFirstClickSelects(window: Page): Promise<void> {
   camera.zoomToPercent(100);
   const edge = camera.toScreen({ x: 0, y: 30 });
   await window.mouse.click(box.x + edge.x, box.y + edge.y);
-  await expect(window.getByTestId('selected-count')).toHaveText('1');
+  await expectSelected(window, '1');
   await expect(window.getByTestId('property-header')).toContainText('Panel');
   await expect(window.getByTestId('undo')).toBeDisabled();
 }
@@ -91,7 +92,7 @@ for (const route of ['project', 'tab', 'start', 'reopen'] as const) {
     await withApp(async (window, app) => {
       await chooseFile(app, panelFile());
       await fromProjectMenu(window, 'open');
-      await expect(window.getByTestId('part-count')).toHaveText('1');
+      await expectPieces(window, '1');
       await window.getByTestId('tool-circle').click();
       await closeActiveTab(window);
       await expect(window.getByTestId('start-recent-0')).toBeVisible();
@@ -148,7 +149,7 @@ test('a template starts in Select, including when opened from Sheets (Q41)', asy
   await withApp(async (window, app) => {
     await chooseFile(app, panelFile());
     await fromProjectMenu(window, 'open');
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
     await fromProjectMenu(window, 'save-template');
     await window.getByTestId('template-name').fill('Opening panel');
     await window.getByTestId('template-save').click();
@@ -171,7 +172,7 @@ for (const view of ['design', 'sheets'] as const) {
       async (window, app) => {
         await chooseFile(app, panelFile());
         await fromProjectMenu(window, 'open');
-        await expect(window.getByTestId('part-count')).toHaveText('1');
+        await expectPieces(window, '1');
         await window.getByTestId('tool-circle').click();
         if (view === 'sheets') await window.getByTestId('view-sheets').click();
         await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.close());
@@ -196,7 +197,7 @@ test('kept unsaved work starts in Select at the next launch (Q41)', async () => 
     async (window, app) => {
       await chooseFile(app, panelFile());
       await fromProjectMenu(window, 'open');
-      await expect(window.getByTestId('part-count')).toHaveText('1');
+      await expectPieces(window, '1');
       await window.keyboard.press('ControlOrMeta+Comma');
       await window.getByTestId('setting-keep-unsaved').check();
       await window.keyboard.press('Escape');
@@ -239,11 +240,11 @@ test('New resets Rectangle, while switching existing tabs keeps the chosen tool 
   await withApp(async (window, app) => {
     await chooseFile(app, panelFile());
     await fromProjectMenu(window, 'open');
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
     await window.getByTestId('tool-circle').click();
     await fromProjectMenu(window, 'new');
     await expect(window.getByTestId('tool-rectangle')).toHaveClass(/\bactive\b/);
-    await expect(window.getByTestId('part-count')).toHaveText('0');
+    await expectPieces(window, '0');
     await window.getByTestId('tool-circle').click();
     await window.getByTestId('tab-strip').getByRole('tab').first().click();
     await expect(window.getByTestId('tool-circle')).toHaveClass(/\bactive\b/);
@@ -269,7 +270,7 @@ test('a duplicated project starts in Select (Q41)', async () => {
   await withApp(async (window, app) => {
     await chooseFile(app, panelFile());
     await fromProjectMenu(window, 'open');
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
     await window.getByTestId('tool-circle').click();
     await activeTab(window).click({ button: 'right' });
     await window.getByTestId('tab-duplicate').click();
@@ -287,7 +288,7 @@ test('a failed Open keeps the chosen tool and the current project (Q41)', async 
     await fromProjectMenu(window, 'open');
     await expect(window.getByTestId('file-error')).toBeVisible();
     await expect(window.getByTestId('tool-circle')).toHaveClass(/\bactive\b/);
-    await expect(window.getByTestId('part-count')).toHaveText('0');
+    await expectPieces(window, '0');
     await expect(window.getByTestId('tab-strip').getByRole('tab')).toHaveCount(1);
   });
 });
@@ -296,7 +297,7 @@ test('cancelling Open or opening an existing tab keeps the chosen tool (Q41)', a
   await withApp(async (window, app) => {
     await chooseFile(app, panelFile());
     await fromProjectMenu(window, 'open');
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
     await window.getByTestId('tool-circle').click();
     await fromProjectMenu(window, 'open');
     await expect(activeTab(window)).toHaveClass(/\bnudged\b/);

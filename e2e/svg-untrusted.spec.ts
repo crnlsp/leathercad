@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { withApp } from './launchApp.js';
 import { chooseSvg, chooseSvgFile } from './svgPatterns.js';
+import { expectPieces } from './counts.js';
 
 /**
  * 9.20c: an SVG file is untrusted input (ADR 0023). The hostile-file corpus,
@@ -86,7 +87,7 @@ test('the hostile-file corpus is refused, and nothing changes (9.20c)', async ()
         await window.getByTestId('file-notice-close').click();
         await expect(notice).toHaveCount(0);
         await expect(window.getByTestId('svg-import-dialog')).toHaveCount(0);
-        await expect(window.getByTestId('part-count')).toHaveText('0');
+        await expectPieces(window, '0');
       });
     }
   });
@@ -110,7 +111,7 @@ test('a drawing too large for a project is refused in the preview, and the open 
     await chooseImport(window);
     const dialog = window.getByTestId('svg-import-dialog');
     await dialog.getByTestId('svg-import-open').click();
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
 
     // A thousand small squares: their names pass the characters a project holds.
     const squares = Array.from(
@@ -131,7 +132,7 @@ test('a drawing too large for a project is refused in the preview, and the open 
     await expect(dialog.getByTestId('svg-import-new')).toBeDisabled();
     await dialog.getByTestId('svg-import-cancel').click();
     await expect(dialog).toHaveCount(0);
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
     await expect(window.getByTestId('parts-list')).toContainText('cardHolder');
   });
 });
@@ -172,7 +173,7 @@ test('scripts, links and embedded content are listed as left out, never run or f
       await expect(leftOut).toContainText(line);
 
     await dialog.getByTestId('svg-import-open').click();
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
     expect(await window.evaluate(() => 'pwned' in window)).toBe(false);
     expect(requests.filter((url) => url.includes('hostile') || url.startsWith('file:'))).toEqual(
       [],

@@ -7,6 +7,7 @@ import { expect, test, type ElectronApplication } from '@playwright/test';
 import { closeApp } from './closeApp.js';
 import { drawAPanel, openApp } from './launchApp.js';
 import { fromProjectMenu, renameProject } from './projectMenu.js';
+import { expectPieces } from './counts.js';
 
 /**
  * Slice 5.3a: never lose work silently.
@@ -78,7 +79,7 @@ test('closing with unsaved work asks, and Cancel keeps the work', async () => {
 
     await dialog.getByTestId('unsaved-cancel').click();
     await expect(dialog).toHaveCount(0);
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
 
     // Escape is Cancel too — once the dialog has taken focus, which it does
     // just after it appears; a key pressed in between goes to the window.
@@ -86,7 +87,7 @@ test('closing with unsaved work asks, and Cancel keeps the work', async () => {
     await expect(dialog.getByTestId('unsaved-save')).toBeFocused();
     await window.keyboard.press('Escape');
     await expect(dialog).toHaveCount(0);
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
 
     // And the maker can still choose to throw it away.
     await requestClose(app);
@@ -109,7 +110,7 @@ test('New and Open start a tab of their own, and ask nothing (8.12)', async () =
     await window.keyboard.press('ControlOrMeta+n');
     await expect(dialog).toHaveCount(0);
     await expect(tabs).toHaveCount(2);
-    await expect(window.getByTestId('part-count')).toHaveText('0');
+    await expectPieces(window, '0');
     await expect(window.getByTestId('announce-save')).not.toHaveText('Unsaved changes');
     await expect(window.getByTestId('undo')).toBeDisabled();
 
@@ -128,7 +129,7 @@ test('New and Open start a tab of their own, and ask nothing (8.12)', async () =
     // Open already: its tab, never a second copy to save over the first.
     await expect(tabs).toHaveCount(2);
     await expect(tabs.first()).toHaveAttribute('aria-selected', 'true');
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
   } finally {
     await closeApp(app);
     rmSync(file, { force: true });
@@ -149,7 +150,7 @@ test('closing a tab with unsaved work asks, and a cancelled save keeps it (8.12)
     await window.keyboard.press('ControlOrMeta+w');
     await expect(dialog).toHaveCount(0);
     await expect(tabs).toHaveCount(1);
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
 
     // The maker backs out of the save dialog: the tab stays, unsaved.
     await app.evaluate(({ dialog: native }) => {
@@ -228,7 +229,7 @@ test('a reload asks as a close does', async () => {
     const dialog = window.getByTestId('unsaved-dialog');
     await expect(dialog).toBeVisible();
     await dialog.getByTestId('unsaved-cancel').click();
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
   } finally {
     await closeApp(app);
   }
@@ -240,7 +241,7 @@ test('undoing back to what was saved is not unsaved', async () => {
     await drawAPanel(window, { parts: '1' });
     await expect(window.getByTestId('announce-save')).toHaveText('Unsaved changes');
     await window.getByTestId('undo').click();
-    await expect(window.getByTestId('part-count')).toHaveText('0');
+    await expectPieces(window, '0');
     await expect(window.getByTestId('announce-save')).not.toHaveText('Unsaved changes');
 
     await requestClose(app);

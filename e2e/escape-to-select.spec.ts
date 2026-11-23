@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 import { drawAPanel, withApp } from './launchApp.js';
+import { expectPieces } from './counts.js';
 
 /**
  * QA U11: after drawing, Escape leaves the drawing tool for Select, so a click
@@ -22,7 +23,7 @@ test('Escape on an idle drawing tool returns to Select, and a click then draws n
     const box = (await window.getByTestId('editor-canvas').boundingBox())!;
     await window.mouse.click(box.x + 650, box.y + 450);
     await window.mouse.click(box.x + 700, box.y + 500);
-    await expect(window.getByTestId('part-count')).toHaveText('2');
+    await expectPieces(window, '2');
   });
 });
 
@@ -37,6 +38,6 @@ test('Escape halfway through a shape cancels it first, and leaves the tool on th
     await expect(window.getByTestId('tool-circle')).toHaveClass(/active/);
     await window.keyboard.press('Escape');
     await expect(window.getByTestId('tool-select')).toHaveClass(/active/);
-    await expect(window.getByTestId('part-count')).toHaveText('0');
+    await expectPieces(window, '0');
   });
 });

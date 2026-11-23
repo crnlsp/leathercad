@@ -6,6 +6,7 @@ import { join, resolve } from 'node:path';
 import { _electron as electron, expect, test } from '@playwright/test';
 
 import { closeApp } from '../closeApp.js';
+import { expectPieces } from '../counts.js';
 
 /**
  * The installed app, launched as the operating system launches it (R13): a
@@ -45,8 +46,11 @@ test('opens a project named on its command line, and a second launch beside it',
   });
   try {
     const window = await app.firstWindow();
-    await expect(window.getByTestId('file-path')).toContainText('Wallet from Files');
-    await expect(window.getByTestId('part-count')).toHaveText('3');
+    await expect(window.getByTestId('project-name').locator('..')).toHaveAttribute(
+      'title',
+      /Wallet from Files/,
+    );
+    await expectPieces(window, '3');
 
     // As a file manager starts it: hands its line to the running app, ends.
     const ended = await new Promise<{ code: number | null; output: string }>((done) => {
@@ -62,7 +66,10 @@ test('opens a project named on its command line, and a second launch beside it',
     });
     expect(ended.code, ended.output).toBe(0);
 
-    await expect(window.getByTestId('file-path')).toContainText('Coaster from Files');
+    await expect(window.getByTestId('project-name').locator('..')).toHaveAttribute(
+      'title',
+      /Coaster from Files/,
+    );
     await expect(window.getByTestId('tab-strip').getByRole('tab')).toHaveCount(2);
     expect(app.windows()).toHaveLength(1);
   } finally {

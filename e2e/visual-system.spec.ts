@@ -50,7 +50,7 @@ test('the board says what is selected, politely (X21)', async () => {
     await window.keyboard.press('ControlOrMeta+a');
     await expect(said).toHaveText(/^3 pieces selected: .+/);
     await expect(window.getByTestId('announcer')).toHaveAttribute('aria-live', 'polite');
-    await expect(window.getByTestId('status-counts')).toContainText('3 pieces');
+    await expect(window.getByTestId('parts-count')).toHaveText('3 pieces');
   });
 });
 

@@ -7,6 +7,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { withApp } from './launchApp.js';
 import { inkOn } from './printTest.js';
+import { expectPieces } from './counts.js';
 
 /**
  * PERF-002: the PDF is written in a worker, so a long pattern does not freeze
@@ -61,7 +62,7 @@ test('the window keeps painting while the long strap is exported', async () => {
   try {
     await withApp(
       async (window, app) => {
-        await expect(window.getByTestId('part-count')).toHaveText('1');
+        await expectPieces(window, '1');
         await app.evaluate(({ dialog, shell }, target) => {
           dialog.showSaveDialog = async () => ({ canceled: false, filePath: target });
           shell.openPath = async () => '';
@@ -116,7 +117,7 @@ test('the window keeps painting while the long strap is exported', async () => {
 test('closing the Print Preview mid-write ends the writer, and nothing is delivered', async () => {
   await withApp(
     async (window) => {
-      await expect(window.getByTestId('part-count')).toHaveText('1');
+      await expectPieces(window, '1');
       await watchWriters(window);
 
       await window.getByTestId('print').click();
@@ -139,7 +140,7 @@ test('closing the Print Preview mid-write ends the writer, and nothing is delive
 test('changing the paper mid-write ends that writer, and only the new plan is shown', async () => {
   await withApp(
     async (window) => {
-      await expect(window.getByTestId('part-count')).toHaveText('1');
+      await expectPieces(window, '1');
       await watchWriters(window);
 
       await window.getByTestId('print').click();
@@ -183,7 +184,7 @@ const thumbnailsDrawn = (window: Page) =>
 test('the sheet list draws only the sheets near its view, and the rest when scrolled to (PERF-013)', async () => {
   await withApp(
     async (window) => {
-      await expect(window.getByTestId('part-count')).toHaveText('1');
+      await expectPieces(window, '1');
       await window.getByTestId('print').click();
       const preview = window.getByTestId('print-preview');
       await expect(preview.getByTestId('print-thumb')).toHaveCount(33);
@@ -215,7 +216,7 @@ test('a writer that cannot start is reported, and no file is left behind', async
   try {
     await withApp(
       async (window, app) => {
-        await expect(window.getByTestId('part-count')).toHaveText('1');
+        await expectPieces(window, '1');
         await app.evaluate(({ dialog, shell }, target) => {
           dialog.showSaveDialog = async () => ({ canceled: false, filePath: target });
           shell.openPath = async () => '';

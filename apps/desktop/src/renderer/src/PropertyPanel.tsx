@@ -125,7 +125,7 @@ export function PropertyPanel({
         aria-label={t('properties.title')}
       >
         <header className="panel-header">
-          <h2 className="header-name">{t('properties.title')}</h2>
+          <h2 className="header-name panel-label">{t('properties.title')}</h2>
           {toggle}
         </header>
         {seamPanel}
@@ -209,6 +209,7 @@ export function PropertyPanel({
         many are cut, and the chain it follows.
       */}
       <header className="panel-header" data-testid="property-header">
+        <span className="panel-label">{t('properties.title')}</span>
         <MarkOf feature={feature} />
         <h2 className="header-name">{feature.name}</h2>
         {isMirrored(feature) && (
@@ -551,6 +552,7 @@ function PartProperties({
       aria-label={t('properties.title')}
     >
       <header className="panel-header" data-testid="property-header">
+        <span className="panel-label">{t('properties.title')}</span>
         <FeatureMark mark="piece" />
         <h2 className="header-name">{part.name}</h2>
         {toggle}

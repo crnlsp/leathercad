@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import { drawAPanel, expectNoViolations, withApp } from './launchApp.js';
+import { expectPieces } from './counts.js';
 
 /**
  * 3.15: Properties › Arrange says where the selection is — its box's left and
@@ -129,7 +130,7 @@ test('a shape is placed in one place, Left and Bottom, with no X or Y of its own
     await window.mouse.down();
     await window.mouse.move(box.x + 540, box.y + 300, { steps: 4 });
     await window.mouse.up();
-    await expect(window.getByTestId('part-count')).toHaveText('2');
+    await expectPieces(window, '2');
     await window.locator('[data-testid^="feature-row-"]').last().click();
     await expect(position(window)).toBeVisible();
     await expect(panel(window).getByRole('textbox', { name: /^[XY] mm$/ })).toHaveCount(0);

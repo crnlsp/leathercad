@@ -9,6 +9,7 @@ import { closeApp } from './closeApp.js';
 import { readoutAt } from './cursorReadout.js';
 import { launchApp, placeAt, positionField } from './launchApp.js';
 import { fromProjectMenu, renameProject } from './projectMenu.js';
+import { expectFeatures, expectPieces } from './counts.js';
 
 /**
  * Slice 4.13: one card holder, drafted the way a maker would, through every
@@ -128,7 +129,6 @@ test('a card holder, from the first outline to the printed page', async () => {
 
     const panel = window.getByTestId('property-panel');
     const problems = window.getByTestId('problems-panel');
-    const features = window.getByTestId('feature-count');
 
     await renameProject(window, 'Wizytownik łączony');
 
@@ -140,7 +140,7 @@ test('a card holder, from the first outline to the printed page', async () => {
       [box.x + 120, box.y + box.height * 0.3],
       [box.x + 340, box.y + box.height * 0.3 + 110],
     );
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
 
     // Keep it where it was drawn, on whole millimetres, so everything after
     // can be placed relative to it.
@@ -163,7 +163,7 @@ test('a card holder, from the first outline to the printed page', async () => {
     await panel.getByTestId('add-stitch-line').click();
     await expect(field(window, 'Edge margin')).toHaveValue('3.5');
     await panel.getByTestId('add-stitch-holes').click();
-    await expect(features).toHaveText('3');
+    await expectFeatures(window, '3');
 
     holes = (await panel.getByTestId('hole-count').textContent()) ?? '';
     spacing = (await panel.getByTestId('achieved-spacing').textContent()) ?? '';
@@ -177,19 +177,19 @@ test('a card holder, from the first outline to the printed page', async () => {
     let at = await viewOf(window);
     await window.mouse.click(...at(ox + 90, oy + 15));
     await window.mouse.click(...at(ox + 90, oy + 80));
-    await expect(features).toHaveText('4');
+    await expectFeatures(window, '4');
 
     // ── A card slot on the left half, mirrored across the fold (A2) ──────────
     await useTool(window, 'rectangle', 'cut-out');
     await drag(window, at(ox + 20, oy + 55), at(ox + 70, oy + 65));
-    await expect(features).toHaveText('5');
+    await expectFeatures(window, '5');
     await placeAt(window, 'Left', ox + 15);
     await placeAt(window, 'Bottom', oy + 60);
     await type(window, 'Width', 60);
     await type(window, 'Height', 3);
 
     await panel.getByTestId('mirror-across-fold').click();
-    await expect(features).toHaveText('6');
+    await expectFeatures(window, '6');
     await expect(panel.getByTestId('mirror-note')).toContainText(/Mirrors .* across/);
     await expect(problems).toContainText('Nothing to fix');
 
@@ -214,8 +214,8 @@ test('a card holder, from the first outline to the printed page', async () => {
     // typed to where it belongs, beside it: the typing is the precise part.
     await useTool(window, 'rectangle', 'stitch-allowance');
     await drag(window, at(ox + 10, oy - 60), at(ox + 60, oy - 25));
-    await expect(window.getByTestId('part-count')).toHaveText('2');
-    await expect(features).toHaveText('8');
+    await expectPieces(window, '2');
+    await expectFeatures(window, '8');
     await expect(panel).toContainText('Stitch line');
     await placeAt(window, 'Left', ox + 210);
     await placeAt(window, 'Bottom', oy);
@@ -243,7 +243,7 @@ test('a card holder, from the first outline to the printed page', async () => {
     at = await viewOf(window);
     await window.mouse.click(...at(ox + 300, oy));
     await window.mouse.click(...at(ox + 300, oy + 60));
-    await expect(features).toHaveText('9');
+    await expectFeatures(window, '9');
     await expect(panel).toContainText('Dimension');
     await expect(problems).toContainText('Nothing to fix');
 
@@ -253,13 +253,13 @@ test('a card holder, from the first outline to the printed page', async () => {
       .click();
     await type(window, 'Height', 65);
     await expect(problems).toContainText('Nothing to fix');
-    await expect(features).toHaveText('9');
+    await expectFeatures(window, '9');
 
     // ── A label on the shell ─────────────────────────────────────────────────
     await window.getByTestId('parts-list').getByText('Shell').click();
     await useTool(window, 'text');
     await window.mouse.click(...at(ox + 115, oy + 25));
-    await expect(features).toHaveText('10');
+    await expectFeatures(window, '10');
     await panel.getByTestId('label-text').fill('Zszyć przed klejeniem');
     await expect(window.getByTestId('parts-list')).toContainText('Zszyć przed klejeniem');
     await expect(problems).toContainText('Nothing to fix');
@@ -294,10 +294,10 @@ test('a card holder, from the first outline to the printed page', async () => {
     await expect(dialog).toContainText(/Cut-out/);
     await dialog.getByTestId('delete-freeze').click();
     await expect(dialog).toHaveCount(0);
-    await expect(features).toHaveText('9');
+    await expectFeatures(window, '9');
 
     await window.getByTestId('undo').click();
-    await expect(features).toHaveText('10');
+    await expectFeatures(window, '10');
     await counterpart.click();
     await expect(panel.getByTestId('mirror-note')).toContainText(/Mirrors .* across/);
     await expect(problems).toContainText('Nothing to fix');
@@ -330,8 +330,8 @@ test('a card holder, from the first outline to the printed page', async () => {
     const panel = window.getByTestId('property-panel');
     await fromProjectMenu(window, 'open');
 
-    await expect(window.getByTestId('part-count')).toHaveText('2');
-    await expect(window.getByTestId('feature-count')).toHaveText('10');
+    await expectPieces(window, '2');
+    await expectFeatures(window, '10');
     await expect(window.getByTestId('problems-panel')).toContainText('Nothing to fix');
     await expect(window.getByTestId('parts-list')).toContainText('Zszyć przed klejeniem');
 

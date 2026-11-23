@@ -3,6 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { closeApp } from './closeApp.js';
 import { launchApp } from './launchApp.js';
 import { countRenders, installRenderCounter, nextFrame } from './renderCount.js';
+import { expectPieces } from './counts.js';
 
 /**
  * PERF-007: a pointer moving over the board changes the cursor readout, the hover halo and the
@@ -24,7 +25,7 @@ const RENDERS = MOVES;
 async function openWallet(window: Page): Promise<void> {
   await window.getByTestId('start-template').click();
   await window.getByTestId('template-builtin:bifold-wallet').dblclick();
-  await expect(window.getByTestId('part-count')).toHaveText('3');
+  await expectPieces(window, '3');
   await window.getByTestId('tool-select').click();
 }
 

@@ -9,6 +9,7 @@ import { drawAPanel, openApp } from './launchApp.js';
 import { closeActiveTab, fromProjectMenu } from './projectMenu.js';
 import { resizeWindow } from './windowSize.js';
 import { openSettings } from './openSettings.js';
+import { expectFeatures, expectPieces, expectSelected } from './counts.js';
 
 /**
  * Slice 8.2: the app remembers how the maker likes it, and what they worked
@@ -134,7 +135,10 @@ test('a recent project reopens from the Project menu after a restart (8.7)', asy
     }, project);
     await drawAPanel(first.window);
     await first.window.keyboard.press('ControlOrMeta+s');
-    await expect(first.window.getByTestId('file-path')).toContainText('Wallet v1.2');
+    await expect(first.window.getByTestId('project-name').locator('..')).toHaveAttribute(
+      'title',
+      /Wallet v1\.2/,
+    );
     await expect.poll(() => recentNames(first.window)).toEqual(['Wallet v1.2']);
   } finally {
     await closeApp(first.app);
@@ -145,14 +149,20 @@ test('a recent project reopens from the Project menu after a restart (8.7)', asy
     // Its tab came back with the restart (8.12); closed, the project is
     // chosen from the menu, not a dialog: the main process grants the path
     // because it is on its own list.
-    await expect(second.window.getByTestId('file-path')).toContainText('Wallet v1.2');
+    await expect(second.window.getByTestId('project-name').locator('..')).toHaveAttribute(
+      'title',
+      /Wallet v1\.2/,
+    );
     await closeActiveTab(second.window);
     await expect(second.window.getByTestId('start-screen')).toBeVisible();
     await second.window.getByTestId('project-menu').click();
     await second.window.getByRole('menuitem', { name: /Wallet v1\.2/ }).click();
 
-    await expect(second.window.getByTestId('part-count')).toHaveText('1');
-    await expect(second.window.getByTestId('file-path')).toContainText('Wallet v1.2');
+    await expectPieces(second.window, '1');
+    await expect(second.window.getByTestId('project-name').locator('..')).toHaveAttribute(
+      'title',
+      /Wallet v1\.2/,
+    );
     // Saved back where it came from, without a dialog: the grant covers it.
     await second.window.keyboard.press('ControlOrMeta+s');
     await expect(second.window.getByTestId('file-error')).toHaveCount(0);
@@ -290,19 +300,19 @@ test('hiding a part lets go of what was selected in it (Q14)', async () => {
       .getByTestId('parts-list')
       .getByRole('treeitem', { name: /Outline/ })
       .click();
-    await expect(window.getByTestId('selected-count')).toHaveText('1');
+    await expectSelected(window, '1');
 
     await window
       .getByTestId('parts-list')
       .locator('[data-testid^="part-visible-"]')
       .first()
       .click();
-    await expect(window.getByTestId('selected-count')).toHaveText('0');
+    await expectSelected(window, '0');
 
     // Delete now has nothing to act on, so the hidden outline is still there.
     await window.getByTestId('editor-canvas').hover();
     await window.keyboard.press('Delete');
-    await expect(window.getByTestId('feature-count')).toHaveText('1');
+    await expectFeatures(window, '1');
   } finally {
     await closeApp(app);
   }

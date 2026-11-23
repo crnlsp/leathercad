@@ -6,6 +6,7 @@ import { openApp, openSample } from './launchApp.js';
 import { nextFrame } from './renderCount.js';
 import { resizeWindow } from './windowSize.js';
 import { openSettings } from './openSettings.js';
+import { expectPieces } from './counts.js';
 
 test('Design and Sheets stop scheduling frames once the board is idle (PERF-014)', async () => {
   const { app, window } = await openApp({
@@ -63,11 +64,11 @@ test('an idle board wakes for tools, pointers, typed drafts, history, camera and
     await expect(window.getByTestId('drawing-width')).toHaveText('40 mm');
     await height.fill('25');
     await repaints(() => height.press('Enter'));
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
     await repaints(() => window.keyboard.press('ControlOrMeta+z'));
-    await expect(window.getByTestId('part-count')).toHaveText('0');
+    await expectPieces(window, '0');
     await repaints(() => window.keyboard.press('ControlOrMeta+Shift+z'));
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
     await canvas.focus();
     await repaints(() => window.keyboard.press('ControlOrMeta+Equal'));
     await repaints(() => resizeWindow(app, window, 1440, 900));
@@ -78,7 +79,7 @@ test('an idle board wakes for tools, pointers, typed drafts, history, camera and
     await window.keyboard.type('10');
     await expect(window.getByTestId('value-chip-hint')).toBeVisible();
     await repaints(() => window.keyboard.press('Escape'));
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
   } finally {
     await closeApp(app);
   }

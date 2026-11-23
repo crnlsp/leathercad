@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 import { drawAPanel, expectNoViolations, withApp } from './launchApp.js';
+import { expectFeatures } from './counts.js';
 
 /**
  * 4.14: a row of holes along a line that is not a stitch line. A marking line
@@ -26,7 +27,7 @@ test('a marking line takes a row of holes, edited in Properties and undone a ste
     await expect(window.getByTestId('draw-as-marking')).toHaveAttribute('aria-pressed', 'true');
     await window.mouse.click(box.x + 170, box.y + 205);
     await window.mouse.click(box.x + 280, box.y + 205);
-    await expect(window.getByTestId('feature-count')).toHaveText('2');
+    await expectFeatures(window, '2');
     await expect(panel).toContainText('Marking line');
     const lengthMm = Number.parseFloat(
       (await panel.getByTestId('measured-length').textContent()) ?? '',
@@ -34,7 +35,7 @@ test('a marking line takes a row of holes, edited in Properties and undone a ste
     expect(lengthMm).toBeGreaterThan(0);
 
     await panel.getByTestId('add-hole-row').click();
-    await expect(window.getByTestId('feature-count')).toHaveText('3');
+    await expectFeatures(window, '3');
     await expect(panel.getByTestId('property-trail')).toHaveText(/› Row of holes$/);
 
     // Five holes at 25 mm and a 4 mm punch to start with: a hole on each end
@@ -58,8 +59,8 @@ test('a marking line takes a row of holes, edited in Properties and undone a ste
     await window.getByTestId('undo').click();
     await expect(field('Pitch')).toHaveValue('25');
     await window.getByTestId('undo').click();
-    await expect(window.getByTestId('feature-count')).toHaveText('2');
+    await expectFeatures(window, '2');
     await window.getByTestId('redo').click();
-    await expect(window.getByTestId('feature-count')).toHaveText('3');
+    await expectFeatures(window, '3');
   });
 });

@@ -4,6 +4,7 @@ import { closeApp } from './closeApp.js';
 import { readoutAt } from './cursorReadout.js';
 import { drawAPanel, openApp } from './launchApp.js';
 import { fromProjectMenu } from './projectMenu.js';
+import { expectPieces } from './counts.js';
 
 /**
  * Slice 8.7: Linux and Windows have no application menu — the project bar
@@ -52,7 +53,7 @@ test('Ctrl+Q asks about unsaved work before it quits (8.7)', async () => {
     await expect(dialog).toBeVisible();
     await expect(dialog.getByTestId('unsaved-save')).toBeFocused();
     await dialog.getByTestId('unsaved-cancel').click();
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
   } finally {
     await closeApp(app);
   }

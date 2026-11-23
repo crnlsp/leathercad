@@ -10,6 +10,7 @@ import { readoutAt } from './cursorReadout.js';
 import { launchApp, placeAt, positionField, readPosition, withApp } from './launchApp.js';
 import { closeActiveTab, fromProjectMenu, renameProject } from './projectMenu.js';
 import { resizeWindow } from './windowSize.js';
+import { expectFeatures, expectPieces, expectSelected } from './counts.js';
 
 let app: ElectronApplication;
 
@@ -127,8 +128,8 @@ test('draws a rectangle, moves it, and reverses both with undo', async () => {
 
     await window.getByTestId('tool-rectangle').click();
     await drag(140, 140, 340, 260);
-    await expect(window.getByTestId('part-count')).toHaveText('1');
-    await expect(window.getByTestId('selected-count')).toHaveText('1');
+    await expectPieces(window, '1');
+    await expectSelected(window, '1');
 
     await window.getByTestId('tool-select').click();
     await drag(140, 140, 220, 220);
@@ -136,13 +137,13 @@ test('draws a rectangle, moves it, and reverses both with undo', async () => {
 
     // One undo reverses the whole move, not each intermediate position.
     await window.getByTestId('undo').click();
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
 
     await window.getByTestId('undo').click();
-    await expect(window.getByTestId('part-count')).toHaveText('0');
+    await expectPieces(window, '0');
 
     await window.getByTestId('redo').click();
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
   });
 });
 
@@ -265,13 +266,13 @@ test('the parts list selects what the canvas cannot reach', async () => {
 
     await window.getByTestId('tool-select').click();
     await window.getByTestId('editor-canvas').click({ position: { x: 600, y: 450 } });
-    await expect(window.getByTestId('selected-count')).toHaveText('0');
+    await expectSelected(window, '0');
 
     await window
       .getByTestId('parts-list')
       .getByRole('treeitem', { name: /Outline/ })
       .click();
-    await expect(window.getByTestId('selected-count')).toHaveText('1');
+    await expectSelected(window, '1');
   });
 });
 
@@ -330,13 +331,13 @@ test('saves a project and reopens it with its parameters intact', async () => {
       .click();
     await window.keyboard.press('Delete');
     // The emptied part stays until it is removed on purpose (ADR 0009).
-    await expect(window.getByTestId('feature-count')).toHaveText('0');
+    await expectFeatures(window, '0');
 
     // The delete is unsaved work, so closing its tab asks first (5.3a, 8.12);
     // throwing it away is the point of this step. Then read from disk again.
     await closeActiveTab(window, { discard: true });
     await fromProjectMenu(window, 'open');
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
     await expect(window.getByTestId('parts-list')).toContainText('Card holder');
 
     // Reopened as parameters, so the geometry recomputes to the same numbers.
@@ -520,7 +521,7 @@ test('no panel is ever removed, and a locked feature stays reachable at 860 × 6
       .click();
     await window.getByTestId('tool-select').click();
     await window.mouse.click(box!.x + 40, box!.y + 40);
-    await expect(window.getByTestId('selected-count')).toHaveText('0');
+    await expectSelected(window, '0');
 
     await resizeWindow(instance, window, 860, 600);
     await expect(window.getByTestId('toggle-parts')).toBeVisible();
@@ -539,7 +540,7 @@ test('no panel is ever removed, and a locked feature stays reachable at 860 × 6
     // The way back to the locked outline: open Parts, pick it, read it.
     await window.getByTestId('toggle-parts').click();
     await window.getByTestId('parts-list').getByText('Outline').click();
-    await expect(window.getByTestId('selected-count')).toHaveText('1');
+    await expectSelected(window, '1');
     await window.getByTestId('toggle-properties').click();
     await expect(window.getByTestId('property-panel')).toBeVisible();
     await expect(window.getByTestId('locked-badge')).toBeVisible();
@@ -878,8 +879,8 @@ test('draws a circle from its centre and retypes the diameter', async () => {
     await window.mouse.move(box!.x + 380, box!.y + 300, { steps: 5 });
     await window.mouse.up();
 
-    await expect(window.getByTestId('part-count')).toHaveText('1');
-    await expect(window.getByTestId('selected-count')).toHaveText('1');
+    await expectPieces(window, '1');
+    await expectSelected(window, '1');
 
     const panel = window.getByTestId('property-panel');
     const diameter = panel.locator('label', { hasText: /^Diameter/ }).locator('input');
@@ -905,7 +906,7 @@ test('C selects the circle tool and a click alone draws nothing', async () => {
     await window.mouse.down();
     await window.mouse.up();
 
-    await expect(window.getByTestId('part-count')).toHaveText('0');
+    await expectPieces(window, '0');
   });
 });
 
@@ -921,7 +922,7 @@ test('draws an arc through three points and saves its parameters', async () => {
     await window.mouse.down();
     await window.mouse.move(box!.x + 560, box!.y + 460, { steps: 5 });
     await window.mouse.up();
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
 
     await window.getByTestId('tool-arc').click();
     await window.getByTestId('draw-as-marking').click();
@@ -934,8 +935,8 @@ test('draws an arc through three points and saves its parameters', async () => {
     await window.mouse.click(box!.x + 350, box!.y + 300);
 
     // On the panel, not in a part of its own.
-    await expect(window.getByTestId('part-count')).toHaveText('1');
-    await expect(window.getByTestId('feature-count')).toHaveText('2');
+    await expectPieces(window, '1');
+    await expectFeatures(window, '2');
 
     const panel = window.getByTestId('property-panel');
     await expect(panel).toContainText('Marking line');
@@ -947,9 +948,9 @@ test('draws an arc through three points and saves its parameters', async () => {
     await radius.press('Enter');
 
     await window.getByTestId('undo').click();
-    await expect(window.getByTestId('feature-count')).toHaveText('2');
+    await expectFeatures(window, '2');
     await window.getByTestId('undo').click();
-    await expect(window.getByTestId('feature-count')).toHaveText('1');
+    await expectFeatures(window, '1');
   });
 });
 
@@ -964,7 +965,7 @@ test('three points in a line make no arc', async () => {
 
     // An infinite radius is not an arc, and a zero-area part could never be
     // selected to delete.
-    await expect(window.getByTestId('part-count')).toHaveText('0');
+    await expectPieces(window, '0');
   });
 });
 
@@ -1127,7 +1128,7 @@ async function panelWithChain(window: Awaited<ReturnType<ElectronApplication['fi
   // A derived feature says what it follows, and it can be changed.
   await expect(panel.getByTestId('follows')).toContainText('Outline');
   await panel.getByTestId('add-stitch-holes').click();
-  await expect(window.getByTestId('feature-count')).toHaveText('3');
+  await expectFeatures(window, '3');
 
   await window.getByTestId('parts-list').getByText('Outline').click();
   return panel;
@@ -1148,16 +1149,16 @@ test('deleting an outline asks what to do with what follows it', async () => {
     // the sentence above it says can be kept frozen.
     await expect(dialog).toContainText('can be kept frozen');
     await expect(dialog.getByTestId('delete-freeze')).toHaveText('Keep 1 frozen');
-    await expect(window.getByTestId('feature-count')).toHaveText('3');
+    await expectFeatures(window, '3');
 
     await dialog.getByTestId('delete-all').click();
     await expect(dialog).toHaveCount(0);
 
     // All three go in one step; the part stays, empty, until removed on purpose.
-    await expect(window.getByTestId('feature-count')).toHaveText('0');
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectFeatures(window, '0');
+    await expectPieces(window, '1');
     await window.getByTestId('undo').click();
-    await expect(window.getByTestId('feature-count')).toHaveText('3');
+    await expectFeatures(window, '3');
   });
 });
 
@@ -1169,12 +1170,12 @@ test('keeping a stitch line frozen leaves it in place, still carrying its holes'
 
     // The outline goes; the stitch line stays as drawn geometry, and its holes
     // still follow it.
-    await expect(window.getByTestId('feature-count')).toHaveText('2');
+    await expectFeatures(window, '2');
     await window.getByTestId('parts-list').getByText('Stitch line').click();
     await expect(panel.getByTestId('frozen-note')).toContainText('Frozen from Outline');
 
     await window.getByTestId('undo').click();
-    await expect(window.getByTestId('feature-count')).toHaveText('3');
+    await expectFeatures(window, '3');
   });
 });
 
@@ -1188,7 +1189,7 @@ test('cancelling a delete changes nothing', async () => {
     await window.keyboard.press('Escape');
 
     await expect(window.getByTestId('delete-dialog')).toHaveCount(0);
-    await expect(window.getByTestId('feature-count')).toHaveText('3');
+    await expectFeatures(window, '3');
     await expect(window.getByTestId('parts-list')).toContainText('Outline');
   });
 });
@@ -1204,12 +1205,12 @@ test('an emptied part stays until it is removed on purpose', async () => {
 
     // Nothing depends on a lone outline, so it goes at once — but its part stays.
     await window.getByTestId('property-panel').getByTestId('delete-feature').click();
-    await expect(window.getByTestId('feature-count')).toHaveText('0');
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectFeatures(window, '0');
+    await expectPieces(window, '1');
     await expect(window.getByTestId('parts-list')).toContainText('Empty');
 
     await window.getByTestId('remove-empty-part').click();
-    await expect(window.getByTestId('part-count')).toHaveText('0');
+    await expectPieces(window, '0');
   });
 });
 
@@ -1238,7 +1239,7 @@ test("a second panel starts exactly on the first panel's corner", async () => {
     await window.getByTestId('tool-rectangle').click();
     await drag(137, 263, 250, 340);
 
-    await expect(window.getByTestId('part-count')).toHaveText('2');
+    await expectPieces(window, '2');
     expect(await readPosition(window, 'Left')).toBeCloseTo(firstX, 3);
   });
 });
@@ -1263,7 +1264,7 @@ test('a fold line joins the panel it is drawn on', async () => {
 
     await window.getByTestId('tool-rectangle').click();
     await drag(160, 160, 460, 340);
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
 
     // The panel is selected from having just been drawn, so the fold has a home.
     await window.getByTestId('tool-line').click();
@@ -1279,8 +1280,8 @@ test('a fold line joins the panel it is drawn on', async () => {
     await click(310, 161);
     await click(310, 339);
 
-    await expect(window.getByTestId('part-count')).toHaveText('1');
-    await expect(window.getByTestId('feature-count')).toHaveText('2');
+    await expectPieces(window, '1');
+    await expectFeatures(window, '2');
     await expect(window.getByTestId('parts-list')).toContainText('Fold (valley)');
 
     // The new fold is selected. Its thickness is not set, and the field says
@@ -1321,7 +1322,7 @@ test('drawing a fold line with nothing selected changes nothing, and says why', 
     // status bar — any notice used to replace the counts, which hid "0 parts"
     // at exactly the moment it was the point.
     await expect(window.getByTestId('tool-notice')).toContainText('Select a part');
-    await expect(window.getByTestId('part-count')).toHaveText('0');
+    await expectPieces(window, '0');
     await expect(window.getByTestId('parts-list')).toContainText('No parts yet');
 
     // And said beside the pointer, where the maker is looking — the status bar
@@ -1373,15 +1374,15 @@ test('every two-point tool takes a drag or two clicks (F.1)', async () => {
     await window.getByTestId('tool-rectangle').click();
     await expect(window.getByTestId('tool-how-to')).toContainText('click two corners');
     await click(150, 150);
-    await expect(window.getByTestId('part-count')).toHaveText('0');
+    await expectPieces(window, '0');
     await click(300, 260);
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
 
     await window.getByTestId('tool-circle').click();
     await expect(window.getByTestId('tool-how-to')).toContainText('then the rim');
     await click(500, 200);
     await click(540, 230);
-    await expect(window.getByTestId('part-count')).toHaveText('2');
+    await expectPieces(window, '2');
 
     // A fold on the selected circle, dragged rather than clicked.
     await window.getByTestId('tool-line').click();
@@ -1392,7 +1393,7 @@ test('every two-point tool takes a drag or two clicks (F.1)', async () => {
     await window.mouse.down();
     await window.mouse.move(box!.x + 510, box!.y + 215, { steps: 4 });
     await window.mouse.up();
-    await expect(window.getByTestId('feature-count')).toHaveText('3');
+    await expectFeatures(window, '3');
 
     // Polyline and Arc keep their click-by-click model, and say so.
     await window.getByTestId('tool-polyline').click();
@@ -1469,7 +1470,7 @@ test('the panel measures what a feature has, and reads a dimension (F.1)', async
     };
     await window.mouse.click(...(await px(105, 0)));
     await window.mouse.click(...(await px(105, 75)));
-    await expect(window.getByTestId('feature-count')).toHaveText('4');
+    await expectFeatures(window, '4');
 
     // At the dimension's own precision, one decimal by default — the same
     // characters the drawing shows.
@@ -1502,7 +1503,7 @@ test('places a rivet hole on the selected panel, named for what it is', async ()
     await window.mouse.down();
     await window.mouse.up();
 
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
     await expect(window.getByTestId('parts-list')).toContainText('Rivet 4 mm');
 
     // A 4 mm punch makes a 4 mm hole, and the panel says so in the units the
@@ -1536,13 +1537,13 @@ test('an inset too deep for its outline is listed, selectable and fixable', asyn
     await expect(rows.first()).toContainText('60 mm margin is too deep');
     await expect(rows.nth(1)).toHaveAttribute('data-code', 'SOURCE_FAILED');
     await expect(rows.nth(1)).toContainText('Stitch line, which this follows, couldn’t be built');
-    await expect(window.getByTestId('problem-count')).toHaveText('2');
+    await expect(window.getByTestId('print-problems')).toHaveText('2');
 
     // Clicking a problem selects what it is about, and the property panel
     // shows the same sentence from the same list.
     await window.getByTestId('parts-list').getByText('Outline').click();
     await rows.first().click();
-    await expect(window.getByTestId('selected-count')).toHaveText('1');
+    await expectSelected(window, '1');
     await expect(panel.getByTestId('feature-problems')).toContainText('too deep for this edge');
 
     // Fixing the cause clears it everywhere.
@@ -1550,7 +1551,7 @@ test('an inset too deep for its outline is listed, selectable and fixable', asyn
     await inset.press('Enter');
     await expect(rows).toHaveCount(0);
     await expect(problems).toContainText('Nothing to fix');
-    await expect(window.getByTestId('problem-count')).toHaveCount(0);
+    await expect(window.getByTestId('print-problems')).toHaveAttribute('data-state', 'clear');
   });
 });
 
@@ -1838,7 +1839,7 @@ test('a label is placed on a part, typed in the panel, and survives a save', asy
     await window.mouse.down();
     await window.mouse.up();
 
-    await expect(window.getByTestId('feature-count')).toHaveText('2');
+    await expectFeatures(window, '2');
     const panel = window.getByTestId('property-panel');
     const text = panel.getByTestId('label-text');
     await expect(text).toHaveValue('Text');
@@ -1854,13 +1855,13 @@ test('a label is placed on a part, typed in the panel, and survives a save', asy
     await window.getByTestId('tool-select').click();
     await window.getByTestId('parts-list').getByRole('treeitem', { name: /Zszyć/ }).click();
     await window.keyboard.press('Delete');
-    await expect(window.getByTestId('feature-count')).toHaveText('1');
+    await expectFeatures(window, '1');
 
     // Unsaved, so closing its tab asks first (5.3a, 8.12), and throwing it
     // away is the point. Then read from disk again.
     await closeActiveTab(window, { discard: true });
     await fromProjectMenu(window, 'open');
-    await expect(window.getByTestId('feature-count')).toHaveText('2');
+    await expectFeatures(window, '2');
     await expect(window.getByTestId('parts-list')).toContainText('Zszyć przed klejeniem');
 
     // Back as parameters: the panel can still retype it.
@@ -1887,8 +1888,8 @@ test('placing a label with no part selected changes nothing, and says why', asyn
     // A label belongs to a part, like a fold line does.
     await expect(window.getByTestId('tool-notice')).toContainText('Select a part');
     await expect(window.getByTestId('tool-notice')).toContainText('label');
-    await expect(window.getByTestId('feature-count')).toHaveText('0');
-    await expect(window.getByTestId('part-count')).toHaveText('0');
+    await expectFeatures(window, '0');
+    await expectPieces(window, '0');
   });
 });
 
@@ -1988,7 +1989,7 @@ test('a cut-out joins the selected part, and an open one is refused', async () =
     await window.mouse.down();
     await window.mouse.move(box!.x + 600, box!.y + 450, { steps: 5 });
     await window.mouse.up();
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
 
     // The outline is selected, so the cut-out knows which part it belongs to.
     await window.getByTestId('draw-as-cut-out').click();
@@ -1999,8 +2000,8 @@ test('a cut-out joins the selected part, and an open one is refused', async () =
     await window.mouse.up();
 
     // One part, two features: a hole belongs to the piece it is cut in.
-    await expect(window.getByTestId('part-count')).toHaveText('1');
-    await expect(window.getByTestId('feature-count')).toHaveText('2');
+    await expectPieces(window, '1');
+    await expectFeatures(window, '2');
     await expect(window.getByTestId('parts-list')).toContainText('Cut-out');
     // On the material, so nothing to report.
     await expect(window.getByTestId('problems-panel')).toContainText('Nothing to fix');
@@ -2017,7 +2018,7 @@ test('a cut-out joins the selected part, and an open one is refused', async () =
     await window.mouse.up();
 
     await expect(window.getByTestId('tool-notice')).toContainText('nothing to cut');
-    await expect(window.getByTestId('feature-count')).toHaveText('2');
+    await expectFeatures(window, '2');
   });
 });
 
@@ -2043,14 +2044,14 @@ test('a refused outline keeps its points, and closing it is the correction', asy
     await window.keyboard.press('Enter');
 
     await expect(window.getByTestId('tool-notice')).toContainText('nothing to cut');
-    await expect(window.getByTestId('part-count')).toHaveText('0');
+    await expectPieces(window, '0');
 
     // The points are still there: clicking back on the first one closes the
     // run that was refused, rather than starting a new one.
     await click(250, 200);
 
-    await expect(window.getByTestId('part-count')).toHaveText('1');
-    await expect(window.getByTestId('feature-count')).toHaveText('1');
+    await expectPieces(window, '1');
+    await expectFeatures(window, '1');
     // The notice element only exists while there is something to say.
     await expect(window.getByTestId('tool-notice')).toHaveCount(0);
     // A cut contour, which is what an outline is — not the marking line an
@@ -2075,7 +2076,7 @@ test('an arc drawn where it cannot be cut says so instead of vanishing', async (
     await window.mouse.click(box!.x + 350, box!.y + 300);
 
     await expect(window.getByTestId('tool-notice')).toContainText('nothing to cut');
-    await expect(window.getByTestId('part-count')).toHaveText('0');
+    await expectPieces(window, '0');
   });
 });
 
@@ -2093,7 +2094,7 @@ test('the parts panel shows what follows what, and locks it down', async () => {
 
     await window.getByTestId('add-stitch-line').click();
     await window.getByTestId('add-stitch-holes').click();
-    await expect(window.getByTestId('feature-count')).toHaveText('3');
+    await expectFeatures(window, '3');
 
     // Outline ▸ Stitch line ▸ Holes, each nested a step further in.
     const panel = window.getByTestId('parts-list');
@@ -2111,7 +2112,7 @@ test('the parts panel shows what follows what, and locks it down', async () => {
     await expect(outline).toHaveAccessibleName('Unlock');
 
     await panel.locator('[data-testid^="feature-row-"]').first().click();
-    await expect(window.getByTestId('selected-count')).toHaveText('1');
+    await expectSelected(window, '1');
 
     // Deleting it is not merely refused: the button says why, rather than
     // opening a dialog about a delete that was never going to happen.
@@ -2144,8 +2145,8 @@ test('a duplicated part gets its own stitching, beside the original', async () =
     await panel.locator('[data-testid^="part-menu-"]').first().click();
     await panel.locator('[data-testid^="duplicate-part-"]').first().click();
 
-    await expect(window.getByTestId('part-count')).toHaveText('2');
-    await expect(window.getByTestId('feature-count')).toHaveText('4');
+    await expectPieces(window, '2');
+    await expectFeatures(window, '4');
     await expect(panel).toContainText('Panel copy');
     // Nothing is off the material: the copy's stitch line follows the copy's
     // own outline, so it sits inside the copy rather than back on the original.
@@ -2193,7 +2194,7 @@ test('selecting a part heading makes it the target for a cut-out', async () => {
     // Drop the selection the way reopening a file would.
     await window.getByTestId('tool-select').click();
     await window.mouse.click(box!.x + 100, box!.y + 550);
-    await expect(window.getByTestId('selected-count')).toHaveText('0');
+    await expectSelected(window, '0');
 
     const heading = window.getByTestId('parts-list').locator('[data-testid^="part-heading-"]');
     await heading.first().click();
@@ -2206,8 +2207,8 @@ test('selecting a part heading makes it the target for a cut-out', async () => {
     await window.mouse.move(box!.x + 450, box!.y + 320, { steps: 5 });
     await window.mouse.up();
 
-    await expect(window.getByTestId('part-count')).toHaveText('1');
-    await expect(window.getByTestId('feature-count')).toHaveText('2');
+    await expectPieces(window, '1');
+    await expectFeatures(window, '2');
   });
 });
 
@@ -2222,7 +2223,7 @@ test('a mirrored counterpart stays matched to the piece it came from', async () 
     await window.mouse.down();
     await window.mouse.move(box!.x + 300, box!.y + 400, { steps: 5 });
     await window.mouse.up();
-    await expect(window.getByTestId('feature-count')).toHaveText('1');
+    await expectFeatures(window, '1');
 
     const panel = window.getByTestId('property-panel');
     await panel.getByTestId('mirror-horizontal').click();
@@ -2230,8 +2231,8 @@ test('a mirrored counterpart stays matched to the piece it came from', async () 
     // An outline is the piece itself, so its counterpart is a second piece — a
     // part of its own, since a piece of leather has one edge (Q8) — and it is
     // selected, because it is what you are now placing.
-    await expect(window.getByTestId('part-count')).toHaveText('2');
-    await expect(window.getByTestId('feature-count')).toHaveText('2');
+    await expectPieces(window, '2');
+    await expectFeatures(window, '2');
     await expect(window.getByTestId('parts-list')).toContainText('mirrored');
 
     // A selected counterpart never reads as an ordinary independent feature:
@@ -2263,7 +2264,7 @@ test('a mirrored counterpart stays matched to the piece it came from', async () 
 
     await window.mouse.up();
     // Refused means unchanged: the counterpart is still its original's size.
-    await expect(window.getByTestId('feature-count')).toHaveText('2');
+    await expectFeatures(window, '2');
   });
 });
 
@@ -2279,7 +2280,7 @@ test('a counterpart follows when its original is resized', async () => {
 
     const panel = window.getByTestId('property-panel');
     await panel.getByTestId('mirror-horizontal').click();
-    await expect(window.getByTestId('feature-count')).toHaveText('2');
+    await expectFeatures(window, '2');
 
     // Back to the original, and widen it.
     await window.getByTestId('tool-select').click();
@@ -2293,7 +2294,7 @@ test('a counterpart follows when its original is resized', async () => {
     // Nothing is broken by the change: the counterpart followed rather than
     // detaching or landing off the material.
     await expect(window.getByTestId('problems-panel')).toContainText('Nothing to fix');
-    await expect(window.getByTestId('feature-count')).toHaveText('2');
+    await expectFeatures(window, '2');
   });
 });
 
@@ -2311,7 +2312,7 @@ test('the wallet scenario: card slots mirrored across a fold that then moves', a
     await window.mouse.down();
     await window.mouse.move(box!.x + 650, box!.y + 420, { steps: 5 });
     await window.mouse.up();
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
 
     // A fold down the middle, drawn on the shell.
     await window.getByTestId('tool-line').click();
@@ -2321,7 +2322,7 @@ test('the wallet scenario: card slots mirrored across a fold that then moves', a
     // slice's to change.
     await window.mouse.click(box!.x + 450, box!.y + 210);
     await window.mouse.click(box!.x + 450, box!.y + 410);
-    await expect(window.getByTestId('feature-count')).toHaveText('2');
+    await expectFeatures(window, '2');
 
     // A card slot on the left half.
     await window.getByTestId('tool-rectangle').click();
@@ -2330,11 +2331,11 @@ test('the wallet scenario: card slots mirrored across a fold that then moves', a
     await window.mouse.down();
     await window.mouse.move(box!.x + 410, box!.y + 270, { steps: 5 });
     await window.mouse.up();
-    await expect(window.getByTestId('feature-count')).toHaveText('3');
+    await expectFeatures(window, '3');
 
     // Fold it across the crease.
     await panel.getByTestId('mirror-across-fold').click();
-    await expect(window.getByTestId('feature-count')).toHaveText('4');
+    await expectFeatures(window, '4');
     await expect(panel.getByTestId('mirror-note')).toContainText(/Mirrors .* across/);
     await expect(panel.getByTestId('mirrored-badge')).toBeVisible();
     await expect(window.getByTestId('problems-panel')).toContainText('Nothing to fix');
@@ -2347,7 +2348,7 @@ test('the wallet scenario: card slots mirrored across a fold that then moves', a
     await window.mouse.move(box!.x + 560, box!.y + 300, { steps: 5 });
     await window.mouse.up();
     // Nothing broke, and the drawing still validates.
-    await expect(window.getByTestId('feature-count')).toHaveText('4');
+    await expectFeatures(window, '4');
     await expect(window.getByTestId('problems-panel')).toContainText('Nothing to fix');
   });
 });
@@ -2402,8 +2403,8 @@ test('a pocket dimensioned from its opening, with the edge derived outward', asy
 
     // One part, two features: what was drawn is the stitch line, and the edge
     // follows it.
-    await expect(window.getByTestId('part-count')).toHaveText('1');
-    await expect(window.getByTestId('feature-count')).toHaveText('2');
+    await expectPieces(window, '1');
+    await expectFeatures(window, '2');
     await expect(window.getByTestId('problems-panel')).toContainText('Nothing to fix');
 
     // The stitch line is what is selected — it is what the maker dimensioned.
@@ -2414,7 +2415,7 @@ test('a pocket dimensioned from its opening, with the edge derived outward', asy
     await width.fill('95');
     await width.press('Enter');
     await expect(window.getByTestId('problems-panel')).toContainText('Nothing to fix');
-    await expect(window.getByTestId('feature-count')).toHaveText('2');
+    await expectFeatures(window, '2');
 
     // The edge is derived, so it has no shape of its own to edit.
     await window.getByTestId('parts-list').locator('[data-testid^="feature-row-"]').last().click();
@@ -2450,7 +2451,7 @@ test('a seam allowance can be added to a stitch line drawn earlier', async () =>
     await window.mouse.move(box!.x + 560, box!.y + 340, { steps: 5 });
     await window.mouse.up();
 
-    await expect(window.getByTestId('part-count')).toHaveText('2');
+    await expectPieces(window, '2');
     // It already has its edge, so the action is spent.
     await expect(panel.getByTestId('add-allowance')).toBeDisabled();
   });
@@ -2479,7 +2480,7 @@ test('a dimension reads the drawing, and keeps reading it', async () => {
     await window.mouse.click(...corner(600, 250));
     await window.mouse.click(...corner(600, 400));
 
-    await expect(window.getByTestId('feature-count')).toHaveText('2');
+    await expectFeatures(window, '2');
     await expect(panel).toContainText('Dimension');
     await expect(window.getByTestId('problems-panel')).toContainText('Nothing to fix');
 
@@ -2491,7 +2492,7 @@ test('a dimension reads the drawing, and keeps reading it', async () => {
     await height.fill('40');
     await height.press('Enter');
     await expect(window.getByTestId('problems-panel')).toContainText('Nothing to fix');
-    await expect(window.getByTestId('feature-count')).toHaveText('2');
+    await expectFeatures(window, '2');
 
     await window.getByTestId('tool-measure').click();
 
@@ -2499,7 +2500,7 @@ test('a dimension reads the drawing, and keeps reading it', async () => {
     // to a point that would quietly go stale.
     await window.mouse.click(...corner(560, 560));
     await expect(window.getByTestId('tool-notice')).toContainText(/corner/i);
-    await expect(window.getByTestId('feature-count')).toHaveText('2');
+    await expectFeatures(window, '2');
   });
 });
 
@@ -2519,7 +2520,7 @@ test('a dimension is listed when what it measures is deleted, and cannot be froz
 
     await window.mouse.click(...corner(600, 250));
     await window.mouse.click(...corner(600, 400));
-    await expect(window.getByTestId('feature-count')).toHaveText('2');
+    await expectFeatures(window, '2');
 
     // Delete the outline: the dimension depends on it, so the dialog asks.
     await window.getByTestId('tool-select').click();
@@ -2535,7 +2536,7 @@ test('a dimension is listed when what it measures is deleted, and cannot be froz
     await expect(dialog.getByTestId('delete-freeze')).toContainText('0');
 
     await dialog.getByTestId('delete-all').click();
-    await expect(window.getByTestId('feature-count')).toHaveText('0');
+    await expectFeatures(window, '0');
   });
 });
 
@@ -2555,7 +2556,7 @@ test('Edit Points moves, adds and removes the points of a drawn outline (3.9c)',
     await click(500, 200);
     await click(500, 400);
     await click(250, 200);
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
     await window.getByTestId('parts-list').getByText('Outline').click();
 
     const panel = window.getByTestId('property-panel');
@@ -2588,7 +2589,7 @@ test('Edit Points moves, adds and removes the points of a drawn outline (3.9c)',
     await window.keyboard.press('Delete');
     await expect(area).toHaveText(before!);
     // Delete took the point, not the outline.
-    await expect(window.getByTestId('feature-count')).toHaveText('1');
+    await expectFeatures(window, '1');
   });
 });
 
@@ -2600,7 +2601,7 @@ test('Edit Points says a rectangle is changed by its measurements (3.9c)', async
     await window.mouse.down();
     await window.mouse.move(box!.x + 400, box!.y + 320, { steps: 5 });
     await window.mouse.up();
-    await expect(window.getByTestId('selected-count')).toHaveText('1');
+    await expectSelected(window, '1');
 
     await window.getByTestId('tool-points').click();
     await window.mouse.move(box!.x + 300, box!.y + 250);
@@ -2625,7 +2626,7 @@ test('Edit Points rounds a corner to the radius in the work bar, and R again sha
     await click(500, 400);
     await click(250, 400);
     await click(250, 150);
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
     await window.getByTestId('parts-list').getByText('Outline').click();
 
     const area = window.getByTestId('property-panel').locator('.readout', { hasText: 'Area' });

@@ -6,6 +6,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
 import { launchApp, openSample } from './launchApp.js';
+import { expectPieces } from './counts.js';
 
 /**
  * A project that opens is shown whole. The camera used to stay where it was,
@@ -44,7 +45,7 @@ test('an opened project is framed: Fit then changes nothing', async () => {
   const { app, window, before } = await launch();
   try {
     await openSample(window);
-    await expect(window.getByTestId('part-count')).toHaveText('3');
+    await expectPieces(window, '3');
     // The sample is larger than the empty board's view: framing it zooms out.
     await expect(window.getByTestId('zoom-control')).not.toHaveText(before);
     await expectFitted(window);

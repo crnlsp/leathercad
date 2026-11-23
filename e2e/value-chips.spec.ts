@@ -7,6 +7,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { withSample, expectNoViolations } from './launchApp.js';
 import { resizeWindow } from './windowSize.js';
+import { expectPieces } from './counts.js';
 
 /**
  * U.14, R-12: a selected outline's sizes beside it on the board — width
@@ -292,7 +293,7 @@ test('Enter finishes a polyline before it opens the chips (U.14)', async () => {
     // Refused — an outline that does not close keeps its points — and the
     // run's all the same: the selected outline's sizes stay shut.
     await window.keyboard.press('Enter');
-    await expect(window.getByTestId('part-count')).toHaveText('3');
+    await expectPieces(window, '3');
     await expect(window.locator('.value-chip input:focus')).toHaveCount(0);
     await window.keyboard.press('Escape');
   });

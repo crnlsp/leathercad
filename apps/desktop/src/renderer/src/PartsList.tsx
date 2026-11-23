@@ -202,7 +202,7 @@ export function PartsList({
         data-testid="parts-list"
         aria-label={t('parts.title')}
       >
-        <PartsTitle toggle={toggle} count={null} />
+        <PartsTitle toggle={toggle} count={0} />
         <p className="panel-empty">{t('parts.empty', keys)}</p>
       </aside>
     );
@@ -424,16 +424,14 @@ export function PartsList({
 }
 
 /** "Parts", how many pieces, and the panel's fold at the row's end. */
-function PartsTitle({ toggle, count }: { toggle: ReactNode; count: number | null }) {
+function PartsTitle({ toggle, count }: { toggle: ReactNode; count: number }) {
   const { t } = useI18n();
   return (
     <header className="panel-title">
       <h2>{t('parts.title')}</h2>
-      {count !== null && (
-        <span className="panel-count" data-testid="parts-count">
-          {t('parts.count', { count })}
-        </span>
-      )}
+      <span className="panel-count" data-testid="parts-count">
+        {t('parts.count', { count })}
+      </span>
       {toggle}
     </header>
   );

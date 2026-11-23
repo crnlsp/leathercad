@@ -6,6 +6,7 @@ import { withSample } from './launchApp.js';
 import { renameProject } from './projectMenu.js';
 import { resizeWindow } from './windowSize.js';
 import { openSettings } from './openSettings.js';
+import { featureCount } from './counts.js';
 
 /**
  * Keys by where they are, shown as caps, and tooltips that fit (U.3, §2
@@ -137,14 +138,13 @@ test('on a German or French keyboard, every window key does what it does on a US
     await expect(window.getByTestId('view-design')).toHaveAttribute('aria-selected', 'true');
 
     // German QWERTZ: Z is where a US keyboard has Y, and Ctrl+Z still undoes.
-    const features = window.getByTestId('feature-count');
-    const before = await features.textContent();
+    const before = await featureCount(window);
     await window.getByTestId('tool-select').click();
     await window.getByTestId('parts-list').getByText('Stitch holes').first().click();
     await window.keyboard.press('Delete');
-    await expect(features).not.toHaveText(before ?? '');
+    await expect.poll(() => featureCount(window)).not.toBe(before);
     await press(window, { code: 'KeyY', key: 'z', command: true });
-    await expect(features).toHaveText(before ?? '');
+    await expect.poll(() => featureCount(window)).toBe(before);
 
     // Zoom from the keys printed + and −, as before U.3: German + right of Ü,
     // French − on its 6 key. The German − sits where a US keyboard has /: it

@@ -8,6 +8,7 @@ import { PathOps } from '../packages/geometry/src/index.js';
 import { saveProject } from '../packages/persist/src/index.js';
 import { closeApp } from './closeApp.js';
 import { expectNoViolations, openApp } from './launchApp.js';
+import { expectPieces } from './counts.js';
 
 /**
  * Smart Features in the app (docs/smart-features.md §6): only what needs the
@@ -43,7 +44,7 @@ test('SF-UI1 · shapes drawn with no purpose are asked for none and told nothing
       [80, 300, 260, 420],
       [320, 300, 500, 420],
     ]);
-    await expect(window.getByTestId('part-count')).toHaveText('4');
+    await expectPieces(window, '4');
     const panel = window.getByTestId('property-panel');
     const verdict = window.getByTestId('problems-verdict');
     await expect(verdict).toHaveText('Nothing to fix.');

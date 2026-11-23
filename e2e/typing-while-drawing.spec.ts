@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import { withApp } from './launchApp.js';
+import { expectPieces } from './counts.js';
 
 /**
  * U.16, R-13: typing the size while the rectangle is being drawn. `105` Tab
@@ -54,7 +55,7 @@ test('105 Tab 75 Tab 8 Enter makes a 105 × 75 outline with 8 mm corners, one un
     await expect(window.getByTestId('drawing-height')).toHaveText('75 mm');
 
     await window.keyboard.press('Enter');
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
     await expect(window.getByTestId('value-chip-hint')).toHaveCount(0);
 
     // The outline is selected, with its sizes as typed.
@@ -64,7 +65,7 @@ test('105 Tab 75 Tab 8 Enter makes a 105 × 75 outline with 8 mm corners, one un
     await expect(field(window, 'corner')).toHaveValue('8');
 
     await window.getByTestId('undo').click();
-    await expect(window.getByTestId('part-count')).toHaveText('0');
+    await expectPieces(window, '0');
     await expect(window.getByTestId('undo')).toBeDisabled();
   });
 });
@@ -82,7 +83,7 @@ test('typing before any click starts the rectangle at the pointer; Esc gives it 
     await window.keyboard.press('Tab');
     await window.keyboard.type('25');
     await window.keyboard.press('Enter');
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
     await expect(window.getByTestId('property-panel').getByLabel('Width')).toHaveValue('40');
 
     // Esc in a chip cancels the shape: no second part.
@@ -91,7 +92,7 @@ test('typing before any click starts the rectangle at the pointer; Esc gives it 
     await expect(window.getByTestId('value-chip-hint')).toBeVisible();
     await window.keyboard.press('Escape');
     await expect(window.getByTestId('value-chip-hint')).toHaveCount(0);
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
   });
 });
 
@@ -106,9 +107,9 @@ test('a corner the shape would not draw is refused, saying why, and Enter takes 
     await window.keyboard.press('Enter');
     // Still drawing: the chip stays open, with the reason.
     await expect(window.getByTestId('value-chip-note')).toContainText('half the height (10)');
-    await expect(window.getByTestId('part-count')).toHaveText('0');
+    await expectPieces(window, '0');
     await window.keyboard.press('Enter');
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
     await expect(field(window, 'corner')).toHaveValue('10');
   });
 });
@@ -132,33 +133,32 @@ async function cornerThenShrink(window: Page): Promise<{ x: number; y: number }>
 test('a typed corner the pointer has left no room for is refused, never made smaller unsaid (U.16)', async () => {
   await withApp(async (window) => {
     const note = window.getByTestId('value-chip-note');
-    const parts = window.getByTestId('part-count');
 
     // Enter on the board: refused, saying why, with the corner chip open on it.
     await cornerThenShrink(window);
     await window.keyboard.press('Enter');
     await expect(note).toContainText('Corner radius is more than half the');
-    await expect(parts).toHaveText('0');
+    await expectPieces(window, '0');
     await expect(field(window, 'corner')).toBeFocused();
     await expect(field(window, 'corner')).toHaveValue('8');
     // Only a second Enter, there, takes the corner that fits — one undo step.
     await window.keyboard.press('Enter');
-    await expect(parts).toHaveText('1');
+    await expectPieces(window, '1');
     const corner = () => field(window, 'corner').inputValue().then(Number);
     await expect.poll(corner).toBeLessThan(8);
     expect(await corner()).toBeGreaterThan(0);
     await window.getByTestId('undo').click();
-    await expect(parts).toHaveText('0');
+    await expectPieces(window, '0');
     await expect(window.getByTestId('undo')).toBeDisabled();
 
     // A click on the board: refused the same way, and never takes the smaller corner.
     const at = await cornerThenShrink(window);
     await window.mouse.click(at.x, at.y);
     await expect(note).toContainText('Corner radius is more than half the');
-    await expect(parts).toHaveText('0');
+    await expectPieces(window, '0');
     await expect(field(window, 'corner')).toBeFocused();
     await window.keyboard.press('Escape');
-    await expect(parts).toHaveText('0');
+    await expectPieces(window, '0');
     await expect(window.getByTestId('value-chip-hint')).toHaveCount(0);
 
     // Enter in the corner chip, opened on the shrunk shape: its own refusal.
@@ -166,9 +166,9 @@ test('a typed corner the pointer has left no room for is refused, never made sma
     await chip(window, 'corner').click();
     await window.keyboard.press('Enter');
     await expect(note).toContainText('Corner radius is more than half the');
-    await expect(parts).toHaveText('0');
+    await expectPieces(window, '0');
     await window.keyboard.press('Enter');
-    await expect(parts).toHaveText('1');
+    await expectPieces(window, '1');
     // The new outline's own corner, once its chip shows it rather than what was typed.
     await expect
       .poll(async () => Number(await field(window, 'corner').inputValue()))
@@ -185,7 +185,7 @@ test('a rectangle can still be dragged, and sized by the chips after (U.16)', as
     await window.mouse.down();
     await window.mouse.move(from.x + 150, from.y + 90, { steps: 5 });
     await window.mouse.up();
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
     await chip(window, 'width').click();
     await field(window, 'width').fill('50');
     await field(window, 'width').press('Enter');
@@ -209,7 +209,7 @@ test('with the keys alone — Tab to the board, R, 105 Tab 75 Enter — the rect
     await window.keyboard.press('Tab');
     await window.keyboard.type('75');
     await window.keyboard.press('Enter');
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
 
     const panel = window.getByTestId('property-panel');
     await expect(panel.getByLabel('Width')).toHaveValue('105');
@@ -245,7 +245,7 @@ test('a size typed by the board’s edge goes where Tab says, even when its chip
     await expect(field(window, 'height')).toBeFocused();
     await window.keyboard.type('75');
     await window.keyboard.press('Enter');
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
     await window.keyboard.press('BracketRight');
     const panel = window.getByTestId('property-panel');
     await expect(panel.getByLabel('Width')).toHaveValue('105');

@@ -6,6 +6,7 @@ import { join, resolve } from 'node:path';
 import { expect, type ElectronApplication, type Page } from '@playwright/test';
 
 import { fromProjectMenu } from './projectMenu.js';
+import { expectPieces } from './counts.js';
 
 /**
  * The automated half of 7.7: an exported print test, measured on the page.
@@ -136,7 +137,7 @@ export async function openPrintTest(
   // A drawing left from an earlier test keeps its own tab (8.12): the print
   // test opens in one of its own, or goes back to the one it is open in.
   await fromProjectMenu(window, 'open');
-  await expect(window.getByTestId('part-count')).toHaveText('3');
+  await expectPieces(window, '3');
 }
 
 /**

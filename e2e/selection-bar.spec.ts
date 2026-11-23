@@ -9,6 +9,7 @@ import { readoutAt } from './cursorReadout.js';
 import { openApp, openSample } from './launchApp.js';
 import { nextFrame } from './renderCount.js';
 import { openSettings } from './openSettings.js';
+import { expectFeatures, expectPieces } from './counts.js';
 
 /**
  * U.17, R-14: the bar under the selected piece — how its stitching came out,
@@ -170,9 +171,9 @@ test('a new outline offers its stitch line, then its holes, each one click and o
       'stretched',
     );
     await undo();
-    await expect(window.getByTestId('feature-count')).toHaveText('2');
+    await expectFeatures(window, '2');
     await undo();
-    await expect(window.getByTestId('feature-count')).toHaveText('1');
+    await expectFeatures(window, '1');
   } finally {
     await closeApp(app);
   }
@@ -416,7 +417,7 @@ test('a drag that starts on the bar draws on the board under it; only its button
     await window.mouse.down();
     await window.mouse.move(box.x + 120, box.y + 80, { steps: 4 });
     await window.mouse.up();
-    await expect(window.getByTestId('part-count')).toHaveText('4');
+    await expectPieces(window, '4');
   } finally {
     await closeApp(app);
   }

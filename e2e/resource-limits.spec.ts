@@ -9,6 +9,7 @@ import { saveProject } from '../packages/persist/src/index.js';
 import { closeApp } from './closeApp.js';
 import { drawAPanel, freshStateHome, recoveryDir, openApp } from './launchApp.js';
 import { fromProjectMenu, renameProject } from './projectMenu.js';
+import { expectPieces } from './counts.js';
 
 test('an excessive project is refused and the unsaved project and its undo history stay (PERF-012)', async () => {
   const directory = mkdtempSync(join(tmpdir(), 'lc-resource-'));
@@ -38,7 +39,7 @@ test('an excessive project is refused and the unsaved project and its undo histo
     await fromProjectMenu(window, 'open');
     await expect(window.getByTestId('file-error')).toContainText('Too many sheets');
     await expect(window.getByTestId('file-error')).toContainText('sheets');
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
     await expect(window.getByTestId('tab-strip').getByRole('tab')).toHaveCount(1);
     await expect(window.getByTestId('announce-save')).toHaveText('Unsaved changes');
     await expect(window.getByTestId('undo')).toBeEnabled();
@@ -70,11 +71,11 @@ test('an excessive size edit leaves the last accepted size and undo intact (PERF
     await expect(window.getByTestId('file-error')).toContainText('Too many sheets');
     await width.press('Escape');
     await expect(width).toHaveValue(original);
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
     await window.getByTestId('undo').click();
     await expect(height).not.toHaveValue('1000');
     await window.getByTestId('undo').click();
-    await expect(window.getByTestId('part-count')).toHaveText('0');
+    await expectPieces(window, '0');
     expect(errors).toEqual([]);
   } finally {
     await closeApp(app);

@@ -1674,8 +1674,6 @@ export function App({
   const badges = badgesOf(diagnostics);
   // And by severity, once, for Print's indicator and the drawer (U.7).
   const counts = countBySeverity(diagnostics);
-  // What the status bar counts: an accepted warning is quiet there too (9.16).
-  const problemCount = counts.error + counts.warning + counts.info;
 
   // Fit selection frames what the board draws of the selection, on Design: it
   // says why when it cannot (U.4). `evaluate` is memoised on the project.
@@ -1711,11 +1709,6 @@ export function App({
   const sheetsSelected = useMemo(
     () => selectedParts(storeState.document.project, storeState.selection),
     [storeState.document, storeState.selection],
-  );
-
-  const featureCount = storeState.document.project.parts.reduce(
-    (total, part) => total + part.features.length,
-    0,
   );
 
   // An area that failed to draw tries again after the maker's next step (QA2):
@@ -2168,54 +2161,7 @@ export function App({
             </div>
 
             <footer className="app-status" data-testid="status-bar">
-              {/*
-          The counts stay put whatever else is being said. A notice used to
-          replace them, which was harmless while every notice was a momentary
-          refusal — but "select a part first" stands for as long as it is true,
-          and hiding how many parts exist while telling the user to pick one is
-          the wrong way round.
-        */}
               <span className="status-left">
-                <span data-testid="status-counts">
-                  <b data-testid="part-count">{storeState.document.project.parts.length}</b>{' '}
-                  {t('status.partsCount', { count: storeState.document.project.parts.length })}
-                  <span className="sep">·</span>
-                  <b data-testid="feature-count">{featureCount}</b>{' '}
-                  {t('status.features', { count: featureCount })}
-                  <span className="sep">·</span>
-                  {/* A part picked by its heading is a selection too (Q29), and says so. */}
-                  {storeState.selection.features.size === 0 &&
-                  storeState.selection.parts.size > 0 ? (
-                    <>
-                      <b data-testid="selected-count">{storeState.selection.parts.size}</b>{' '}
-                      {t('status.partsSelected', { count: storeState.selection.parts.size })}
-                    </>
-                  ) : (
-                    <>
-                      <b data-testid="selected-count">
-                        {storeState.selection.guide === undefined
-                          ? storeState.selection.features.size
-                          : 1}
-                      </b>{' '}
-                      {t('status.selected')}
-                    </>
-                  )}
-                  {problemCount > 0 && (
-                    <>
-                      <span className="sep">·</span>
-                      <b className="status-error" data-testid="problem-count">
-                        {problemCount}
-                      </b>{' '}
-                      {t('status.problems', { count: problemCount })}
-                    </>
-                  )}
-                  {tab.file.path !== null && (
-                    <>
-                      <span className="sep">·</span>
-                      <span data-testid="file-path">{fileName(tab.file.path)}</span>
-                    </>
-                  )}
-                </span>
                 {storeState.resourceLimit !== null ? (
                   <span className="status-error" data-testid="file-error" role="alert">
                     {fileErrorText(storeState.resourceLimit, t)}

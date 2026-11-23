@@ -8,6 +8,7 @@ import en from '../apps/desktop/src/locales/en.json' with { type: 'json' };
 import { closeApp } from './closeApp.js';
 import { drawAPanel, launchApp } from './launchApp.js';
 import { fromProjectMenu } from './projectMenu.js';
+import { expectPieces } from './counts.js';
 
 /**
  * A file that is not a project is refused in the interface's words, never in
@@ -36,7 +37,7 @@ test('an unreadable file is refused in the app’s words, and the open project s
     await fromProjectMenu(window, 'open');
     await expect(window.getByTestId('file-error')).toHaveText(en.file.notArchive);
     await expect(window.getByTestId('tab-strip').getByRole('tab')).toHaveCount(1);
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
     await window.screenshot({ path: test.info().outputPath('unreadable-refusal.png') });
   } finally {
     await closeApp(app);

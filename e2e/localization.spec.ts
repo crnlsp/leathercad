@@ -23,6 +23,7 @@ import {
 import { closeActiveTab } from './projectMenu.js';
 import { resizeWindow } from './windowSize.js';
 import { openSettings } from './openSettings.js';
+import { expectPieces } from './counts.js';
 
 const CATALOGUES = { en, pl, de, ru, fr, es };
 const ENGLISH_SYSTEM = { LANGUAGE: 'en_GB', LC_ALL: 'en_GB.UTF-8', LANG: 'en_GB.UTF-8' };
@@ -290,7 +291,7 @@ for (const tag of ['pl', 'de', 'ru', 'fr', 'es'] as const) {
         dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
       }, project);
       await window.getByTestId('start-open').click();
-      await expect(window.getByTestId('part-count')).toHaveText('3');
+      await expectPieces(window, '3');
       await window.keyboard.press('ControlOrMeta+Shift+s');
       await expect(window.getByTestId('announce-save')).toContainText(words.projectBar.saved);
       expect(loadProject(readFileSync(project)).project).toEqual(loadProject(original).project);
@@ -487,7 +488,7 @@ for (const tag of ['pl', 'de', 'ru', 'fr', 'es'] as const) {
         await capture(second.window, `${tag}-recovery-${width}`);
       }
       await second.window.getByTestId('recovery-recover').click();
-      await expect(second.window.getByTestId('part-count')).toHaveText('1');
+      await expectPieces(second.window, '1');
     } finally {
       await closeApp(second.app);
     }

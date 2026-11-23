@@ -8,6 +8,7 @@ import { closeApp } from './closeApp.js';
 import { drawAPanel, openApp, openSample } from './launchApp.js';
 import { choosePaper, fromProjectMenu, renameProject } from './projectMenu.js';
 import { resizeWindow } from './windowSize.js';
+import { expectPieces, expectSelected } from './counts.js';
 
 /**
  * Slice 8.7: the project bar's Project menu, Help and About. Each launch has
@@ -62,7 +63,10 @@ test('Save as… asks where, and saves there (8.7)', async () => {
     }, project);
     await drawAPanel(window, { parts: '1' });
     await fromProjectMenu(window, 'save-as');
-    await expect(window.getByTestId('file-path')).toContainText('Card holder');
+    await expect(window.getByTestId('project-name').locator('..')).toHaveAttribute(
+      'title',
+      /Card holder/,
+    );
     await expect(window.getByTestId('announce-save')).not.toHaveText('Unsaved changes');
   } finally {
     await closeApp(app);
@@ -221,7 +225,7 @@ test('undo and redo keep their keys from the tab strip', async () => {
     await drawAPanel(window, { parts: '1' });
     await expect(window.getByTestId('parts-count')).toContainText('1');
     await window.keyboard.press('Control+Z');
-    await expect(window.getByTestId('parts-count')).toHaveCount(0);
+    await expect(window.getByTestId('parts-count')).toContainText('0');
     await window.keyboard.press('Control+Shift+Z');
     await expect(window.getByTestId('parts-count')).toContainText('1');
   } finally {
@@ -451,7 +455,7 @@ test('Print’s second half shows the problems, opens the drawer, and Print list
     // Choosing one goes to it, as the drawer does.
     await listed.getByTestId('problem-row').first().click();
     await expect(dialog).toHaveCount(0);
-    await expect(window.getByTestId('selected-count')).toHaveText('1');
+    await expectSelected(window, '1');
   } finally {
     await closeApp(app);
   }
@@ -504,7 +508,7 @@ test('the save state and the problems are said politely, once per change (§2)',
     await window.mouse.down();
     await window.mouse.move(box.x + 500, box.y + 260, { steps: 10 });
     await window.mouse.up();
-    await expect(window.getByTestId('part-count')).toHaveText('2');
+    await expectPieces(window, '2');
     await window.waitForTimeout(200);
     expect(await said()).toEqual({ save: 1, problems: 0 });
   } finally {

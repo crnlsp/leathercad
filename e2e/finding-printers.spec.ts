@@ -3,6 +3,7 @@ import { expect, test } from '@playwright/test';
 import { closeApp } from './closeApp.js';
 import { ONE_PRINTER, fakeCups } from './fakeCups.js';
 import { launchApp, openSample } from './launchApp.js';
+import { expectPieces } from './counts.js';
 
 test.skip(process.platform === 'win32', 'no CUPS on Windows: the preview saves a PDF instead');
 
@@ -18,7 +19,7 @@ test('the Print dialog says it is looking for printers until they are found', as
     const window = await app.firstWindow();
     await window.waitForLoadState('domcontentloaded');
     await openSample(window);
-    await expect(window.getByTestId('part-count')).toHaveText('3');
+    await expectPieces(window, '3');
 
     await window.getByTestId('print').click();
     const dialog = window.getByTestId('print-preview');

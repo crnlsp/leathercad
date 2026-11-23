@@ -9,6 +9,7 @@ import { ONE_PRINTER, fakeCups } from './fakeCups.js';
 import { launchApp, scanA11y, expectNoViolations } from './launchApp.js';
 import { openPrintTest } from './printTest.js';
 import { openSettings } from './openSettings.js';
+import { expectPieces } from './counts.js';
 
 /**
  * An automated accessibility scan of the running window.
@@ -200,7 +201,7 @@ test('what 1.5 added has no accessibility violations: a size being typed, the se
     await expect(window.getByTestId('drawing-defaults')).toBeVisible();
     await scan('a rectangle being typed, with After the outline');
     await window.keyboard.press('Enter');
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
 
     // The selection bar, its next step focused (U.17).
     await window.getByTestId('editor-canvas').focus();

@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 import { drawAPanel, expectNoViolations, withApp } from './launchApp.js';
+import { expectFeatures } from './counts.js';
 
 /**
  * Q15: a piece's overall size is something the maker asks for. A selected
@@ -22,7 +23,7 @@ test('an outline takes its overall size, read from the outline and undone in one
     await expectNoViolations(window, 'an outline offering its overall size');
 
     await panel.getByTestId('add-overall-size').click();
-    await expect(window.getByTestId('feature-count')).toHaveText('3');
+    await expectFeatures(window, '3');
 
     const dimensions = window.getByTestId('parts-list').getByText('Dimension');
     await dimensions.first().click();
@@ -31,6 +32,6 @@ test('an outline takes its overall size, read from the outline and undone in one
     await expect(panel.getByTestId('dimension-value')).toHaveText('67.0 mm');
 
     await window.getByTestId('undo').click();
-    await expect(window.getByTestId('feature-count')).toHaveText('1');
+    await expectFeatures(window, '1');
   });
 });

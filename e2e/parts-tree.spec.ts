@@ -3,6 +3,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import { closeApp } from './closeApp.js';
 import { openApp, openSample, withSample, expectNoViolations } from './launchApp.js';
 import { resizeWindow } from './windowSize.js';
+import { expectFeatures, expectPieces, expectSelected } from './counts.js';
 
 /**
  * U.8 (R-07, mockups 09 and 01): Parts as a tree of pieces. Pieces fold;
@@ -78,7 +79,7 @@ test('the tree reads as mockup 09: nested, counted, and quiet at rest', async ()
     await piece(window, 'lining').hover();
     await window.getByTestId('part-menu-lining').click();
     await window.getByTestId('duplicate-part-lining').click();
-    await expect(window.getByTestId('part-count')).toHaveText('4');
+    await expectPieces(window, '4');
   });
 });
 
@@ -305,7 +306,6 @@ test('a piece’s marks drop below its name only where its longest word leaves t
 
 test('Tab into the tree changes no selection; the arrows then select', async () => {
   await withSample(async (window) => {
-    const selected = window.getByTestId('selected-count');
     const tabInto = async (): Promise<void> => {
       await window.getByTestId('tool-select').focus();
       for (let i = 0; i < 20; i++) {
@@ -317,19 +317,19 @@ test('Tab into the tree changes no selection; the arrows then select', async () 
     };
 
     // Nothing selected: focus lands on the first row, and selects nothing.
-    await expect(selected).toHaveText('0');
+    await expectSelected(window, '0');
     await tabInto();
     await expect(piece(window, 'outer')).toBeFocused();
-    await expect(selected).toHaveText('0');
+    await expectSelected(window, '0');
 
     // Something else selected: focus lands on its row, and the selection stays.
     await row(window, 'pocket-stitch').click();
     await window.getByTestId('status-bar').click();
-    await expect(selected).toHaveText('1');
+    await expectSelected(window, '1');
     await tabInto();
     await expect(row(window, 'pocket-stitch')).toBeFocused();
     await expect(row(window, 'pocket-stitch')).toHaveAttribute('aria-selected', 'true');
-    await expect(selected).toHaveText('1');
+    await expectSelected(window, '1');
 
     // The arrows select, as decided.
     await window.keyboard.press('ArrowDown');
@@ -404,9 +404,9 @@ test('the tree’s keys move, fold, hide and rename — and the window’s keys 
     await window.locator('[role="treeitem"]').last().focus();
     await window.keyboard.press('ArrowUp');
     await window.keyboard.press('ArrowDown');
-    await expect(window.getByTestId('feature-count')).toHaveText('12');
+    await expectFeatures(window, '12');
     await window.keyboard.press('Delete');
-    await expect(window.getByTestId('feature-count')).toHaveText('11');
+    await expectFeatures(window, '11');
   });
 });
 
@@ -432,10 +432,10 @@ test('a rename ends with its row: undone away and redone, the row comes back as 
     await field.fill('Half-typed');
 
     await menu('undo');
-    await expect(window.getByTestId('feature-count')).toHaveText('0');
+    await expectFeatures(window, '0');
     await expect(field).toHaveCount(0);
     await menu('redo');
-    await expect(window.getByTestId('feature-count')).toHaveText('1');
+    await expectFeatures(window, '1');
     // Back as it was: no field reopened uninvited, nothing half-typed kept.
     await expect(outline).toHaveAccessibleName('Outline');
     await expect(field).toHaveCount(0);
@@ -459,7 +459,7 @@ test('a locked feature is reached from the tree by keyboard, and unlocked from i
     await piece(window, 'outer').focus();
     await window.keyboard.press('ArrowDown');
     await expect(window.getByTestId('feature-row-outer-outline')).toBeFocused();
-    await expect(window.getByTestId('selected-count')).toHaveText('1');
+    await expectSelected(window, '1');
     await window.keyboard.press('Shift+F10');
     await expect(window.getByTestId('context-lock')).toHaveText(/Unlock/);
     await window.getByTestId('context-lock').focus();
@@ -484,7 +484,7 @@ test('a selection on the board opens its piece and scrolls its row into view, le
       await window.getByTestId('add-stitch-line').click();
       await window.getByTestId('add-stitch-holes').click();
     }
-    await expect(window.getByTestId('part-count')).toHaveText('6');
+    await expectPieces(window, '6');
 
     // The first piece, closed, and the list scrolled to its end.
     const first = window.locator('[data-testid^="part-heading-"]').first();
@@ -586,10 +586,10 @@ test('a piece deleted and brought back by undo comes back folded (PERF-016)', as
     await piece(window, 'pocket').hover();
     await window.getByTestId('part-menu-pocket').click();
     await window.getByTestId('delete-part-pocket').click();
-    await expect(window.getByTestId('part-count')).toHaveText('2');
+    await expectPieces(window, '2');
     // The tab keeps the fold of a piece the project no longer has: undo can bring it back.
     await window.keyboard.press('ControlOrMeta+z');
-    await expect(window.getByTestId('part-count')).toHaveText('3');
+    await expectPieces(window, '3');
     await expect(piece(window, 'pocket')).toHaveAttribute('aria-expanded', 'false');
   });
 });

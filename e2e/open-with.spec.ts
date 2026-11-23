@@ -6,6 +6,7 @@ import { expect, test } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
 import { drawAPanel, launchApp } from './launchApp.js';
+import { expectPieces } from './counts.js';
 
 /**
  * Slice 8.5: a `.lcp` double-clicked in the file manager starts the app with
@@ -29,8 +30,11 @@ test('a project named on the command line opens, and saves back where it came fr
     await window.waitForLoadState('domcontentloaded');
     await expect(window.getByTestId('project-menu')).toBeVisible();
 
-    await expect(window.getByTestId('part-count')).toHaveText('3');
-    await expect(window.getByTestId('file-path')).toContainText('Wallet from Files');
+    await expectPieces(window, '3');
+    await expect(window.getByTestId('project-name').locator('..')).toHaveAttribute(
+      'title',
+      /Wallet from Files/,
+    );
 
     // An edit to save — not a rename, which renames the file too (8.12).
     await drawAPanel(window, { parts: '4' });

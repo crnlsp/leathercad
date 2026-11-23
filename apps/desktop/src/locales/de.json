@@ -220,20 +220,11 @@
     "undoTooltip": "Rückgängig: {{action}}"
   },
   "status": {
-    "features_one": "Element",
-    "features_other": "Elemente",
     "focus": "Fokus",
     "panels": "Bereiche",
     "parts": "Teile",
-    "partsCount_one": "Teil",
-    "partsCount_other": "Teile",
-    "problems_one": "Problem",
-    "problems_other": "Probleme",
     "properties": "Eigenschaften",
-    "selected": "ausgewählt",
     "sheetOf": "Bogen {{number}} von {{count}}",
-    "partsSelected_one": "Teil ausgewählt",
-    "partsSelected_other": "Teile ausgewählt",
     "saved": "{{name}} gespeichert",
     "exported": "{{name}} exportiert"
   },

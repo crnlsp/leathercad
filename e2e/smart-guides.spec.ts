@@ -8,6 +8,7 @@ import { loadProject } from '../packages/persist/src/index.js';
 import { boardMap } from './boardMap.js';
 import { drawAPanel, placeAt, withApp } from './launchApp.js';
 import { fromProjectMenu } from './projectMenu.js';
+import { expectPieces } from './counts.js';
 
 /**
  * 3.16: a piece dragged near another's edge lines up with it exactly
@@ -134,7 +135,7 @@ test('Escape while dragging puts the pocket back, and leaves nothing to undo (3.
 test('a third pocket dragged near the gap of the first two repeats it exactly, in one undo step (3.19)', async () => {
   await withApp(async (window) => {
     for (const at of [100, 300, 500]) await drawAPanel(window, { left: at });
-    await expect(window.getByTestId('part-count')).toHaveText('3');
+    await expectPieces(window, '3');
     await window.getByTestId('tool-select').click();
     // Three 40 × 30 pockets in a row: the first two 15 mm apart, the third away.
     const rows = window.locator('[data-testid^="feature-row-"]');

@@ -14,6 +14,7 @@ import {
   type Gray,
 } from './printTest.js';
 import { fromProjectMenu } from './projectMenu.js';
+import { expectPieces } from './counts.js';
 
 /**
  * R11's second print test, measured on the page the way `printTest.ts` measures
@@ -178,7 +179,7 @@ export async function exportPrintTestAssembly(
     { project: PRINT_TEST_ASSEMBLY, pdf },
   );
   await fromProjectMenu(window, 'open');
-  await expect(window.getByTestId('part-count')).toHaveText('2');
+  await expectPieces(window, '2');
   await window.getByTestId('export-pdf').click();
   await expect.poll(() => existsSync(pdf), { timeout: 10_000 }).toBe(true);
   await expect(window.getByTestId('file-error')).toHaveCount(0);

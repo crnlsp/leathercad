@@ -11,6 +11,7 @@ import {
   recoveryDir,
   recoveryEntries,
 } from './launchApp.js';
+import { expectPieces } from './counts.js';
 
 /**
  * Slice 5.3b: crash recovery.
@@ -58,7 +59,7 @@ test('a crash with unsaved work is offered back, untitled and unsaved, and its f
 
   // Unsaved work, then a copy of it, then the crash.
   await drawAPanel(first.window, 350);
-  await expect(first.window.getByTestId('part-count')).toHaveText('2');
+  await expectPieces(first.window, '2');
   await expect.poll(() => recoveryCopies(state).length).toBe(1);
   await crashApp(first.app);
 
@@ -71,7 +72,7 @@ test('a crash with unsaved work is offered back, untitled and unsaved, and its f
     await dialog.getByTestId('recovery-recover').click();
 
     // Back, as it was — and untitled and unsaved, not the file it came from.
-    await expect(second.window.getByTestId('part-count')).toHaveText('2');
+    await expectPieces(second.window, '2');
     await expect(second.window.getByTestId('announce-save')).toHaveText('Unsaved changes');
     await expect(second.window.getByTestId('status-bar')).not.toContainText(basename(project));
     expect(readFileSync(project).equals(saved)).toBe(true);
@@ -102,7 +103,7 @@ test('Not now keeps the copy until the next clean exit', async () => {
   const second = await launch(state);
   await second.window.getByTestId('recovery-decline').click();
   await expect(second.window.getByTestId('recovery-dialog')).toHaveCount(0);
-  await expect(second.window.getByTestId('part-count')).toHaveText('0');
+  await expectPieces(second.window, '0');
   // Declining is not deleting.
   expect(recoveryCopies(state)).toEqual(crashed);
 
@@ -140,7 +141,7 @@ test('a damaged copy is set aside, and startup carries on', async () => {
     await expect.poll(() => recoveryEntries(state)).toEqual(['999999-1.lcp.corrupt']);
     await expect(window.getByTestId('recovery-dialog')).toHaveCount(0);
     await drawAPanel(window, 150);
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
   } finally {
     await closeApp(app);
   }

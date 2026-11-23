@@ -9,6 +9,7 @@ import { _electron as electron, expect, test, type ElectronApplication } from '@
 import { closeApp } from '../closeApp.js';
 import { packagedExecutable } from '../packagedApp.js';
 import { expectAccurate, exportPrintTest, inkOn, measurePrintTest } from '../printTest.js';
+import { expectPieces } from '../counts.js';
 
 /**
  * The packaged app, not the development build.
@@ -238,7 +239,7 @@ test('draws a panel and writes it to a PDF', async () => {
     await window.mouse.down();
     await window.mouse.move(box!.x + 400, box!.y + 330, { steps: 5 });
     await window.mouse.up();
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
 
     await window.getByTestId('export-pdf').click();
     await expect.poll(() => existsSync(pdf), { timeout: 10_000 }).toBe(true);

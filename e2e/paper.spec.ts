@@ -8,6 +8,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { closeApp } from './closeApp.js';
 import { launchApp } from './launchApp.js';
 import { choosePaper, fromProjectMenu } from './projectMenu.js';
+import { expectPieces } from './counts.js';
 
 /**
  * Slice 6.4a: choose the paper.
@@ -171,7 +172,7 @@ test('a strap too long for A4 portrait is printed whole by turning the paper, an
     await on('1 × A4 portrait, scale check only');
 
     await fromProjectMenu(window, 'open');
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
     await on(/Letter landscape/);
     await expect(window.getByTestId('announce-save')).not.toHaveText('Unsaved changes');
   } finally {

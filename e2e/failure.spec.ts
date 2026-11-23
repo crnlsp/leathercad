@@ -11,6 +11,7 @@ import {
   openApp,
   recoveryCopies,
 } from './launchApp.js';
+import { expectPieces } from './counts.js';
 
 /**
  * QA2, F1: a part of the window that throws as it draws never takes the
@@ -60,7 +61,7 @@ test('a panel that fails says so in its place, and the window and the work go on
     await expect(window.getByTestId('editor-canvas')).toBeVisible();
     await expect(window.getByTestId('tab-strip')).toBeVisible();
     await expect(window.getByTestId('undo')).toBeEnabled();
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
     await expect(window.getByTestId('announce-save')).toHaveText('Unsaved changes');
     await expectNoViolations(window, 'a panel that failed');
 
@@ -86,7 +87,7 @@ test('a board that fails says so, and closing still asks about the unsaved work'
     const dialog = window.getByTestId('unsaved-dialog');
     await expect(dialog).toBeVisible();
     await dialog.getByTestId('unsaved-cancel').click();
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
   } finally {
     await closeApp(app);
   }
@@ -103,7 +104,7 @@ test('a dialog that fails closes with a notice, and leaves the project as it was
     await expect(notice).toBeVisible();
     await notice.getByTestId('failure-settings-close').click();
     await expect(notice).toHaveCount(0);
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
   } finally {
     await closeApp(app);
   }
@@ -134,7 +135,7 @@ test('a window that fails whole keeps its recovery copy through the quit, and th
     const dialog = second.window.getByTestId('recovery-dialog');
     await expect(dialog).toBeVisible();
     await dialog.getByTestId('recovery-recover').click();
-    await expect(second.window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(second.window, '1');
   } finally {
     await closeApp(second.app);
   }

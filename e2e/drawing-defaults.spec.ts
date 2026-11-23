@@ -8,6 +8,7 @@ import { closeApp } from './closeApp.js';
 import { openApp } from './launchApp.js';
 import { openSettings } from './openSettings.js';
 import { resizeWindow } from './windowSize.js';
+import { expectPieces } from './counts.js';
 
 /**
  * U.18, R-16: while a Draw tool would make a new piece, Properties shows
@@ -127,7 +128,7 @@ test('the margin typed mid-draw goes to the field, and the rectangle under way k
     // Enter is the field's: it stores the margin and does not make the shape.
     await window.keyboard.press('Enter');
     await expect(margin(window)).toHaveValue('4.5');
-    await expect(window.getByTestId('part-count')).toHaveText('0');
+    await expectPieces(window, '0');
 
     // The draft is as it was: its sizes in Properties, its chips on the board.
     await expect(window.getByTestId('drawing-sizes')).toHaveText(sizes!);
@@ -138,7 +139,7 @@ test('the margin typed mid-draw goes to the field, and the rectangle under way k
     // And it is still under way: the second click makes it, at that size.
     await window.mouse.move(other.x, other.y);
     await window.mouse.click(other.x, other.y);
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
     await expect(window.getByTestId('property-panel').getByLabel('Width')).toHaveValue(
       width.replace(/\.?0+$/, ''),
     );
@@ -168,7 +169,7 @@ test('Stitch + allowance and the next steps make things with the values set in P
     // Stitch + allowance: the edge grows by the margin set here.
     await window.getByTestId('draw-as-stitch-allowance').click();
     await drag([380, 160], [560, 300]);
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
     await window.getByTestId('parts-list').locator('[data-testid^="feature-row-"]').last().click();
     await expect(panel.getByTestId('follows')).toBeVisible();
     await expect(panel.locator('label', { hasText: /^Edge margin/ }).locator('input')).toHaveValue(

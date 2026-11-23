@@ -399,6 +399,21 @@ body {
   justify-content: space-between;
 }
 
+/* A panel's name steps back to label weight: the selection's name, below, is
+   the loudest text beside the drawing (MS.6). */
+.panel .panel-title h2,
+.panel h2.panel-label,
+.panel-label {
+  color: var(--text-dim);
+  font: var(--t-label);
+  letter-spacing: normal;
+}
+
+/* Above a selection's name, on a line of its own. */
+.panel-header .panel-label {
+  flex: 0 0 100%;
+}
+
 /* "3 pieces", beside "Parts" (R-07). */
 .panel-count {
   margin-right: auto;
@@ -2133,12 +2148,6 @@ body {
   }
 }
 
-/* Counts, not measurements: emphasised by colour, at body weight. */
-.app-status b {
-  color: var(--text);
-  font-weight: 400;
-}
-
 .app-status {
   display: flex;
   align-items: center;
@@ -2159,11 +2168,6 @@ body {
 .app-status code {
   font: inherit;
   color: var(--text-dim);
-}
-
-.app-status .sep {
-  margin: 0 6px;
-  opacity: 0.5;
 }
 
 .status-error {
@@ -2206,9 +2210,9 @@ body {
   text-overflow: ellipsis;
 }
 
-/* Counts first, then whatever the status bar has to say beside them. The
-   message is the part allowed to shrink: a long notice should lose its tail,
-   never push the counts or the cursor readout off the bar. */
+/* What the status bar has to say: a notice, the tool's hint. It is the part
+   allowed to shrink: a long notice should lose its tail, never push the panel
+   chips or the cursor readout off the bar. */
 .status-left {
   display: flex;
   flex: 1;

@@ -2,12 +2,13 @@ import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
+import { expect, test, type ElectronApplication, type Locator, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
 import { readoutAt } from './cursorReadout.js';
 import { openApp, withSample, expectNoViolations } from './launchApp.js';
 import { resizeWindow } from './windowSize.js';
+import { expectPieces, expectSelected } from './counts.js';
 
 /**
  * U.5 (R-04, the requirements' §5): Parts and Properties fold to 40 px strips
@@ -135,7 +136,7 @@ test('Esc gives up a drawing in progress, then the tool, before it leaves focus 
     await window.keyboard.press('Escape');
     await expect(window.getByTestId('toggle-focus')).toHaveAttribute('aria-pressed', 'false');
     // And the rectangle was given up, not drawn.
-    await expect(window.getByTestId('part-count')).toHaveText('3');
+    await expectPieces(window, '3');
   });
 });
 
@@ -154,7 +155,7 @@ test('a folded Parts strip selects any piece, a locked one too; Properties’ st
     );
 
     await window.getByTestId('strip-part-outer').click();
-    await expect(window.getByTestId('selected-count')).toHaveText('1');
+    await expectSelected(window, '1');
     await expect(window.getByTestId('strip-part-outer')).toHaveAttribute('aria-pressed', 'true');
     await expect(window.getByTestId('property-header')).toContainText('Outer');
 
@@ -255,7 +256,7 @@ test('three chips, always, and every panel reached by the keyboard at every size
     await expect(window.getByTestId('parts-list')).toBeFocused();
     await window.getByTestId('feature-row-outer-holes').focus();
     await window.keyboard.press('Enter');
-    await expect(window.getByTestId('selected-count')).toHaveText('1');
+    await expectSelected(window, '1');
   });
 });
 
@@ -429,5 +430,45 @@ test('both strips, an overlay and focus mode have no accessibility violations', 
     await window.keyboard.press('BracketLeft');
     await expect(window.getByTestId('parts-list')).toBeVisible();
     await scan('Parts over the board in focus mode');
+  });
+});
+
+const fontSize = (locator: Locator): Promise<string> =>
+  locator.evaluate((element) => getComputedStyle(element).fontSize);
+
+test('panel titles step back for the selection', async () => {
+  await withSample(async (window) => {
+    await expect.poll(() => fontSize(window.locator('.panel-title h2'))).toBe('12px');
+    await expect(window.getByTestId('property-panel').locator('h2')).toHaveText('Properties');
+    await expect
+      .poll(() => fontSize(window.getByTestId('property-panel').locator('h2')))
+      .toBe('12px');
+
+    await window.getByTestId('part-heading-outer').click();
+    const name = window.getByTestId('property-header').locator('h2');
+    await expect(name).toHaveText('Outer');
+    expect(await fontSize(name)).toBe('16px');
+    await expect(window.getByTestId('property-panel')).toContainText('Properties');
+  });
+});
+
+test('the piece count survives Parts folding', async () => {
+  await withSample(async (window, app) => {
+    await resize(app, window, 1920, 1080);
+    await expect(window.getByTestId('parts-count')).toHaveText('3 pieces');
+    await window.keyboard.press('Backslash');
+    await window.keyboard.press('Backslash');
+    await window.getByTestId('fold-parts').click();
+    await expect(window.getByTestId('parts-strip')).toHaveAccessibleName(/3 pieces/);
+  });
+});
+
+test('the status bar says what is happening now', async () => {
+  await withSample(async (window) => {
+    const bar = window.getByTestId('status-bar');
+    await expect(bar.getByTestId('tool-how-to')).toBeVisible();
+    await expect(bar.getByTestId('cursor-readout')).toBeVisible();
+    await expect(bar.getByTestId('part-count')).toHaveCount(0);
+    await expect(bar.getByTestId('status-counts')).toHaveCount(0);
   });
 });

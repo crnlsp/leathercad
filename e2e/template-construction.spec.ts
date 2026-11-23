@@ -24,7 +24,10 @@ for (const [id, name] of [
       await fromProjectMenu(window, 'new-template');
       await window.getByTestId('template-builtin:' + id).dblclick();
       await expect(window.getByTestId('project-name')).toHaveText(name);
-      await expect(window.getByTestId('file-path')).toHaveCount(0);
+      await expect(window.getByTestId('project-name').locator('..')).not.toHaveAttribute(
+        'title',
+        /\.lcp$/,
+      );
       expect(await window.title()).not.toContain('•');
       await expect(window.getByTestId('problems-panel')).toContainText('Nothing to fix');
       if (id === 'card-holder') {

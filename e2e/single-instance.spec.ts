@@ -8,6 +8,7 @@ import { expect, test } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
 import { drawAPanel, freshStateHome, openApp } from './launchApp.js';
+import { expectPieces } from './counts.js';
 
 /**
  * Slice 8.11: one LeatherCAD at a time.
@@ -81,8 +82,11 @@ test('a second launch opens its project in the running window, and ends', async 
     // It ended before its log's first line: nothing of it is left behind.
     expect(existsSync(join(state, 'leathercad', 'logs', 'main.log'))).toBe(false);
 
-    await expect(window.getByTestId('part-count')).toHaveText('3');
-    await expect(window.getByTestId('file-path')).toContainText('Wallet from Files');
+    await expectPieces(window, '3');
+    await expect(window.getByTestId('project-name').locator('..')).toHaveAttribute(
+      'title',
+      /Wallet from Files/,
+    );
     await expect(window.getByTestId('tool-select')).toHaveClass(/\bactive\b/);
     expect(app.windows()).toHaveLength(1);
   } finally {
@@ -98,13 +102,13 @@ test('a second launch opens beside unsaved work, in a tab of its own (8.12)', as
     expectEndedCleanly(await launchAgain([aProject()], config, freshStateHome()));
 
     // Nothing asked, nothing replaced: the drawing keeps its tab.
-    await expect(window.getByTestId('part-count')).toHaveText('3');
+    await expectPieces(window, '3');
     await expect(window.getByTestId('unsaved-dialog')).toHaveCount(0);
     await expect(window.getByTestId('tool-select')).toHaveClass(/\bactive\b/);
     const tabs = window.getByTestId('tab-strip').getByRole('tab');
     await expect(tabs).toHaveCount(2);
     await tabs.first().click();
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
   } finally {
     await closeApp(app);
   }
@@ -118,7 +122,7 @@ test('a second launch naming no project only ends', async () => {
     expectEndedCleanly(await launchAgain([], config, freshStateHome()));
     // Nothing was asked and nothing changed.
     await expect(window.getByTestId('unsaved-dialog')).toHaveCount(0);
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
     expect(app.windows()).toHaveLength(1);
   } finally {
     await closeApp(app);

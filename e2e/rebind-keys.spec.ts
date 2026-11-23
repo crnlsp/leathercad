@@ -9,6 +9,7 @@ import { caption } from './keyCaption.js';
 import { drawAPanel, openApp, openSample } from './launchApp.js';
 import { fromProjectMenu } from './projectMenu.js';
 import { openSettings } from './openSettings.js';
+import { pieceCount } from './counts.js';
 
 /**
  * Changing a key in Settings › Keyboard shortcuts (U.12, §2 *Shortcuts*): the
@@ -91,7 +92,10 @@ test('a key changed is heard at once, shown on every cap, and its old key is fre
     expect(await saveDialogs(app)).toBe(0);
     await expect(window.getByTestId('announce-save')).toHaveText('Unsaved changes');
     await window.keyboard.press('F5');
-    await expect(window.getByTestId('file-path')).toContainText('Card holder');
+    await expect(window.getByTestId('project-name').locator('..')).toHaveAttribute(
+      'title',
+      /Card holder/,
+    );
     expect(await saveDialogs(app)).toBe(1);
 
     // Saving a saved project is still acknowledged: the second save asks
@@ -179,7 +183,7 @@ test('a clash names the command, and Cancel leaves both while Swap exchanges the
     await window.keyboard.press('Escape');
     await drawAPanel(window, { parts: '1' });
     await window.keyboard.press('ControlOrMeta+Comma');
-    await expect(window.getByTestId('file-path')).toContainText('Swap');
+    await expect(window.getByTestId('project-name').locator('..')).toHaveAttribute('title', /Swap/);
     await expect(window.getByTestId('settings-dialog')).toHaveCount(0);
   } finally {
     await closeApp(app);
@@ -340,7 +344,7 @@ test('a key moved stays out of fields, and a drawing tool keeps its own', async 
   const { app, window } = await launch(fresh());
   try {
     await openSample(window);
-    await expect(window.getByTestId('part-count')).not.toHaveText('0');
+    await expect.poll(() => pieceCount(window)).toBeGreaterThan(0);
     const pane = await openShortcuts(window);
     // Focus mode takes A from the Arc tool, which gets \ in its place.
     await change(window, 'focusMode', 'KeyA');
@@ -412,7 +416,7 @@ test('Parts’ rename moved to F4 renames a focused row, and nothing on the boar
   const { app, window } = await launch(fresh());
   try {
     await openSample(window);
-    await expect(window.getByTestId('part-count')).not.toHaveText('0');
+    await expect.poll(() => pieceCount(window)).toBeGreaterThan(0);
     await openShortcuts(window);
     await change(window, 'rename', 'F4');
     await expect(keysOf(window, 'rename')).toHaveText(['F4']);

@@ -15,6 +15,7 @@ import { boardMap } from './boardMap.js';
 import { drawAPanel, expectNoViolations, withApp } from './launchApp.js';
 import { fromProjectMenu } from './projectMenu.js';
 import { nextFrame } from './renderCount.js';
+import { expectPieces } from './counts.js';
 
 /**
  * U.24d: Parts, Properties and the selection bar, refined — new pieces told
@@ -100,7 +101,7 @@ test('Fit leaves the open legend’s corner clear of the drawing (X32)', async (
         dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
       }, file);
       await fromProjectMenu(window, 'open');
-      await expect(window.getByTestId('part-count')).toHaveText('1');
+      await expectPieces(window, '1');
       await expect(window.getByTestId('canvas-legend-toggle')).toHaveAttribute(
         'aria-expanded',
         'true',

@@ -6,6 +6,7 @@ import { expect, test } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
 import { launchApp } from './launchApp.js';
+import { expectPieces } from './counts.js';
 
 /**
  * Undo pressed while a piece is still being dragged cancels the drag — and it
@@ -28,7 +29,7 @@ test('undo during a drag cancels it, and the moves after it make no history', as
     await window.mouse.down();
     await window.mouse.move(box.x + 300, box.y + 260, { steps: 5 });
     await window.mouse.up();
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
 
     await window.getByTestId('tool-select').click();
     await window.mouse.move(box.x + 150, box.y + 150);
@@ -40,7 +41,7 @@ test('undo during a drag cancels it, and the moves after it make no history', as
 
     // The only step of history is still the rectangle itself.
     await window.getByTestId('undo').click();
-    await expect(window.getByTestId('part-count')).toHaveText('0');
+    await expectPieces(window, '0');
     await expect(window.getByTestId('undo')).toBeDisabled();
   } finally {
     await closeApp(app);

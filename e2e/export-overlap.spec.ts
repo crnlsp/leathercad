@@ -10,6 +10,7 @@ import { saveProject } from '../packages/persist/src/index.js';
 import { closeApp } from './closeApp.js';
 import { openApp } from './launchApp.js';
 import { readDxf, readSvg } from './vectorFiles.js';
+import { expectPieces } from './counts.js';
 
 for (const format of ['svg', 'dxf'] as const) {
   test(`${format}: names overlapping pieces before exporting, with an explicit override (Q43)`, async () => {
@@ -37,7 +38,7 @@ for (const format of ['svg', 'dxf'] as const) {
     );
     const { app, window } = await openApp({ args: [file] });
     try {
-      await expect(window.getByTestId('part-count')).toHaveText('5');
+      await expectPieces(window, '5');
       await app.evaluate(({ dialog }, path) => {
         dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
       }, target);

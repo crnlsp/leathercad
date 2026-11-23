@@ -6,6 +6,7 @@ import { expect, test, type CDPSession, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
 import { drawAPanel, launchApp } from './launchApp.js';
+import { expectPieces } from './counts.js';
 
 /**
  * PERF-010: what the window derives from a project for the screen goes with
@@ -52,7 +53,7 @@ test('a project’s Sheets pages go with it once it is edited, reloaded or close
       dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
     }, file);
     await window.getByTestId('start-open').click();
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
     // On Design the board has the plan, for the tape joins, and no pages.
     const shown = await heapMiB(cdp);
     await visitSheets(window);
@@ -69,7 +70,7 @@ test('a project’s Sheets pages go with it once it is edited, reloaded or close
     await window.getByTestId('project-tab').first().click({ button: 'right' });
     await window.getByTestId('tab-reload').click();
     await window.getByTestId('unsaved-discard').click();
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
     const reloaded = (await heapMiB(cdp)) - shown;
     expect.soft(reloaded, 'over the project, after a reload').toBeLessThan(bound);
 

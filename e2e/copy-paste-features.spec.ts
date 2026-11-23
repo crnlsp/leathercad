@@ -1,15 +1,13 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import { openSample, withApp } from './launchApp.js';
+import { expectFeatures, expectPieces, expectSelected, featureCount } from './counts.js';
 
 /**
  * Slice 8.8b-4: features copied into a piece, and duplicated and stepped
  * inside one. On the sample bifold the lining has a 64 × 3 mm card slot, the
  * feature `lining-slot`, and its mirror across the lining's fold.
  */
-
-const featureCount = async (window: Page): Promise<number> =>
-  Number(await window.getByTestId('feature-count').textContent());
 
 const position = (window: Page) =>
   window.getByTestId('property-panel').getByTestId('position-fields');
@@ -43,8 +41,8 @@ test('three card slots stepped 15 mm down the lining: duplicate, move 15 mm, Ctr
 
     // Duplicated into the lining, on top of the slot, and selected.
     await boardKey(window, 'ControlOrMeta+D');
-    await expect(window.getByTestId('feature-count')).toHaveText(String(features + 1));
-    await expect(window.getByTestId('part-count')).toHaveText('3');
+    await expectFeatures(window, String(features + 1));
+    await expectPieces(window, '3');
     await expect.poll(() => bottom(window)).toBe(first);
 
     await type(window, 'Right', '0');
@@ -54,11 +52,11 @@ test('three card slots stepped 15 mm down the lining: duplicate, move 15 mm, Ctr
 
     // The third lands 15 mm further, and is one undo step.
     await boardKey(window, 'ControlOrMeta+D');
-    await expect(window.getByTestId('feature-count')).toHaveText(String(features + 2));
+    await expectFeatures(window, String(features + 2));
     await expect.poll(() => bottom(window)).toBe(first - 30);
     await expect(window.getByTestId('file-notice')).toHaveCount(0);
     await window.getByTestId('undo').click();
-    await expect(window.getByTestId('feature-count')).toHaveText(String(features + 1));
+    await expectFeatures(window, String(features + 1));
   });
 });
 
@@ -73,16 +71,16 @@ test('a slot copied from the lining pastes into the selected piece, and into no 
     // Into the card pocket, picked by its heading.
     await window.getByTestId('part-heading-pocket').click();
     await boardKey(window, 'ControlOrMeta+V');
-    await expect(window.getByTestId('feature-count')).toHaveText(String(features + 1));
-    await expect(window.getByTestId('part-count')).toHaveText('3');
-    await expect(window.getByTestId('selected-count')).toHaveText('1');
+    await expectFeatures(window, String(features + 1));
+    await expectPieces(window, '3');
+    await expectSelected(window, '1');
 
     // With nothing selected there is no piece to paste into: said, nothing pasted.
     await window.keyboard.press('Escape');
-    await expect(window.getByTestId('selected-count')).toHaveText('0');
+    await expectSelected(window, '0');
     await boardKey(window, 'ControlOrMeta+V');
     await expect(window.getByTestId('file-notice')).toContainText('Choose a piece to paste into');
-    await expect(window.getByTestId('feature-count')).toHaveText(String(features + 1));
+    await expectFeatures(window, String(features + 1));
   });
 });
 

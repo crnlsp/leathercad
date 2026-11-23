@@ -7,6 +7,7 @@ import {
   readPosition,
   withApp,
 } from './launchApp.js';
+import { expectPieces, expectSelected } from './counts.js';
 
 /**
  * 3.14: with the board focused, the arrow keys move what is selected — 1 mm,
@@ -36,7 +37,7 @@ async function pickOnBoard(window: Page): Promise<void> {
   const box = (await window.getByTestId('editor-canvas').boundingBox())!;
   await window.getByTestId('tool-select').click();
   await window.mouse.click(box.x + 225, box.y + 205);
-  await expect(window.getByTestId('selected-count')).toHaveText('1');
+  await expectSelected(window, '1');
   await expect(window.getByTestId('editor-canvas')).toBeFocused();
 }
 
@@ -123,7 +124,7 @@ test('in a field the arrows move the caret and the select-all key selects its te
     await field.press('Escape');
 
     // Nothing moved, and the piece's feature is still what is picked — not every piece.
-    await expect(window.getByTestId('selected-count')).toHaveText('1');
+    await expectSelected(window, '1');
     expect(await origin(window)).toEqual(start);
   });
 });
@@ -142,7 +143,7 @@ test('in the Parts tree the arrows move between rows, not the piece (3.14)', asy
     await expect(window.getByTestId('undo')).toBeEnabled();
     await window.getByTestId('undo').click();
     // The one step there was to undo was the panel being drawn.
-    await expect(window.getByTestId('part-count')).toHaveText('0');
+    await expectPieces(window, '0');
   });
 });
 
@@ -155,7 +156,7 @@ test('the command key with A on the board selects every piece, and one arrow mov
 
     await pickOnBoard(window);
     await window.keyboard.press(`${MOD}+a`);
-    await expect(window.getByTestId('status-counts')).toContainText('2 pieces selected');
+    await expect(window.getByTestId('announce-selection')).toContainText('2 pieces selected');
 
     await window.keyboard.press('Shift+ArrowRight');
     expect((await origin(window, 0)).x - first.x).toBeCloseTo(10, 4);

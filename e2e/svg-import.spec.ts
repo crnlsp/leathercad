@@ -3,6 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { closeApp } from './closeApp.js';
 import { expectNoViolations, launchApp, withApp } from './launchApp.js';
 import { chooseSvg } from './svgPatterns.js';
+import { expectFeatures, expectPieces } from './counts.js';
 
 /**
  * 9.20b: an SVG pattern imported through its preview — the pieces, their size
@@ -42,10 +43,10 @@ test('a card holder imports as one piece with its cut-out and a marking, its hol
 
     await dialog(window).getByTestId('svg-import-open').click();
     await expect(dialog(window)).toHaveCount(0);
-    await expect(window.getByTestId('part-count')).toHaveText('1');
-    await expect(window.getByTestId('feature-count')).toHaveText('3');
+    await expectPieces(window, '1');
+    await expectFeatures(window, '3');
     await expect(window.getByTestId('parts-list')).toContainText('cardHolder');
-    await expect(window.getByTestId('problem-count')).toHaveCount(0);
+    await expect(window.getByTestId('print-problems')).toHaveAttribute('data-state', 'clear');
     // Into an empty project it stays where the file drew it: its top-left
     // corner at the origin, so 60 mm tall below it, Y up.
     const position = window.getByTestId('property-panel').getByTestId('position-fields');
@@ -54,7 +55,7 @@ test('a card holder imports as one piece with its cut-out and a marking, its hol
     await expect(position.getByLabel('Bottom')).toHaveValue('−60');
 
     await window.getByTestId('undo').click();
-    await expect(window.getByTestId('part-count')).toHaveText('0');
+    await expectPieces(window, '0');
   });
 });
 
@@ -72,11 +73,11 @@ test('layers named fold and stitch decide over the shape rule, and Import can st
     await dialog(window).getByTestId('svg-import-new').click();
 
     await expect(tabs(window)).toHaveCount(1);
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
     await expect(window.getByTestId('parts-list')).toContainText('Stitch line');
     await expect(window.getByTestId('parts-list')).toContainText('Fold (valley)');
     await window.getByTestId('undo').click();
-    await expect(window.getByTestId('part-count')).toHaveText('0');
+    await expectPieces(window, '0');
   } finally {
     await closeApp(app);
   }
@@ -96,7 +97,7 @@ test('a drawing with no unit asks how many pixels to the inch, and imports nothi
 
     await window.keyboard.press('Escape');
     await expect(dialog(window)).toHaveCount(0);
-    await expect(window.getByTestId('part-count')).toHaveText('0');
+    await expectPieces(window, '0');
   });
 });
 
@@ -108,6 +109,6 @@ test('a file that is not an SVG drawing is refused, and nothing changes (9.20b)'
     await expect(window.getByTestId('file-notice')).toContainText(
       'This file could not be read as an SVG drawing.',
     );
-    await expect(window.getByTestId('part-count')).toHaveText('0');
+    await expectPieces(window, '0');
   });
 });
