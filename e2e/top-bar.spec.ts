@@ -247,12 +247,17 @@ test('the project menu glyph starts 12 px in', async () => {
     expect(await left('tool-select')).toBeLessThanOrEqual(13);
     // And the tool row's head, above them.
     expect(await left('work-head')).toBe(await left('tool-select'));
+    // And the status bar's first chip, below them (MS.7).
+    expect(await left('toggle-parts')).toBeGreaterThanOrEqual(11);
+    expect(await left('toggle-parts')).toBeLessThanOrEqual(13);
     await resizeWindow(app, window, 860, 600);
     expect(await left('view-design')).toBeGreaterThanOrEqual(11);
     expect(await left('view-design')).toBeLessThanOrEqual(13);
     expect(await left('tool-select')).toBeGreaterThanOrEqual(11);
     expect(await left('tool-select')).toBeLessThanOrEqual(13);
     expect(await left('work-head')).toBe(await left('tool-select'));
+    expect(await left('toggle-parts')).toBeGreaterThanOrEqual(11);
+    expect(await left('toggle-parts')).toBeLessThanOrEqual(13);
   } finally {
     await closeApp(app);
   }

@@ -2162,7 +2162,9 @@ body {
   /* A fixed height, as the work bar's: set by its content, the panels' 24 px
      chips made it a pixel taller, and the board a pixel shorter (U.5). */
   height: var(--status-bar-h);
-  padding: 0 14px;
+  /* 5 px at the left, so the first panel chip's glyph, after the chip's border
+     and 6 px padding, starts 12 px in, as every row's first glyph does (MS.7). */
+  padding: 0 14px 0 5px;
   background: var(--shell-700);
   border-top: 1px solid var(--shell-line);
   color: var(--text-dim);
@@ -2220,13 +2222,23 @@ body {
    version on the start screen. As wide as what it says, so with nothing to say
    the chips lead the bar and the hint has the rest. It is the part allowed to
    shrink: a long notice should lose its tail, never push the panel chips or
-   the cursor readout off the bar. */
+   the cursor readout off the bar. Its words start 12 px in, as the chips' glyph
+   does. */
 .status-left {
   display: flex;
   flex: 0 1 auto;
   gap: 16px;
   min-width: 0;
+  padding-left: 7px;
   overflow: hidden;
+}
+
+/* With nothing to say (no notice, the written note's live region empty) it
+   leaves the row, so no slot and no gap push the chips in. Out of the flow,
+   not display: none, so the live region stays in the accessibility tree and is
+   heard when it next speaks. */
+.status-left:not(:has(> :not(:empty))) {
+  position: absolute;
 }
 
 /* Parts [, Focus \, Properties ]: always there, at the bar's left. */
