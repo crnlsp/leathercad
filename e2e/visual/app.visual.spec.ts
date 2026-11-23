@@ -484,6 +484,8 @@ test('the start screen, blank first and the templates as cards (U.23)', async ()
       window.getByTestId('start-card-builtin:bifold-wallet').locator('img'),
     ).toBeVisible();
     await window.mouse.move(0, 0);
+    // The start screen's status bar says the version (MS.3).
+    await blankVersion(window);
     await expect(window).toHaveScreenshot('start-screen.png');
   } finally {
     await closeApp(app);
