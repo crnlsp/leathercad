@@ -258,7 +258,7 @@ test('Reset puts one command’s keys back, through a swap if it must; Reset all
     await window.getByTestId('settings-close').click();
     await window.getByTestId('tool-rectangle').click();
     await expect(hint(window, 'hints.backToSelect').locator('kbd')).toHaveText('B');
-    await expect(hint(window, 'hints.allKeys').locator('kbd')).toHaveText('F4');
+    await expect(window.getByTestId('all-keys').locator('kbd')).toHaveText('F4');
     await expect(window.getByTestId('tool-select').locator('kbd')).toHaveText('B');
 
     await openShortcuts(window);
@@ -267,7 +267,7 @@ test('Reset puts one command’s keys back, through a swap if it must; Reset all
     await expect(pane.getByTestId('shortcuts-reset-all')).toBeDisabled();
     await window.getByTestId('settings-close').click();
     await expect(hint(window, 'hints.backToSelect').locator('kbd')).toHaveText('V');
-    await expect(hint(window, 'hints.allKeys').locator('kbd')).toHaveText('?');
+    await expect(window.getByTestId('all-keys').locator('kbd')).toHaveText('?');
     await expect(window.getByTestId('tool-select').locator('kbd')).toHaveText('V');
   } finally {
     await closeApp(app);

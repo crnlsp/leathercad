@@ -129,7 +129,7 @@ import { nextDiagnostic } from './problemNavigation.js';
 import { PropertyPanel } from './PropertyPanel.js';
 import { SheetsParts, SheetsProperties } from './SheetsPanels.js';
 import { selectedParts } from './sheetContents.js';
-import { ToolOptions } from './ToolOptions.js';
+import { ToolOptions, WorkHead } from './ToolOptions.js';
 import { ToolPalette } from './ToolPalette.js';
 import { UnsavedChangesDialog, type DiscardingAction } from './UnsavedChangesDialog.js';
 import { WrittenNote } from './WrittenNote.js';
@@ -153,7 +153,7 @@ import { isTyping, pressesControl } from './shortcuts.js';
 import { useRecovery } from './useRecovery.js';
 import { getPlatformHost } from './platformBridge.js';
 import { OptionHints } from './OptionHintsRow.js';
-import { SHEETS_HINTS, hintsFor } from './optionHints.js';
+import { ALL_KEYS, SHEETS_HINTS, hintsFor } from './optionHints.js';
 import { chipSubject } from './outlineSizes.js';
 import { ALL_TOOLS, DRAWING_TOOL_IDS } from './tools.js';
 import { Tooltip } from './Tooltip.js';
@@ -1693,17 +1693,18 @@ export function App({
         ? undefined
         : t('zoom.nothingSelected');
 
-  // The work bar's hints (U.11): the active tool's, for what is selected and whether a
-  // shape is between its clicks.
+  const activeTool = ALL_TOOLS.find((entry) => entry.id === toolId)?.id ?? 'select';
+  // The tool's hints in the status bar (U.11, MS.5): the active tool's, for what is
+  // selected and whether a shape is between its clicks.
   const toolHints = useMemo(
     () =>
       hintsFor({
-        tool: ALL_TOOLS.find((entry) => entry.id === toolId)?.id ?? 'select',
+        tool: activeTool,
         selected: !isEmptySelection(storeState.selection),
         sizable: chipSubject(storeState.document.project, storeState.selection) !== null,
         underway: status?.underway ?? false,
       }),
-    [toolId, storeState.selection, storeState.document, status?.underway],
+    [activeTool, storeState.selection, storeState.document, status?.underway],
   );
 
   // The pieces the Sheets view's panels show as picked (U.9): the board's selection.
@@ -1882,39 +1883,32 @@ export function App({
               onPrint={() => setPrinting(true)}
             />
 
-            {/* The work bar (F.8): what the maker is doing right now — history, the
-          active tool's options and its hints (U.11). The project and
-          its output are the bar above's; nothing here is about files. */}
+            {/* The work bar (F.8): the active tool — its name above the rail, its
+          options, and the way to every key (MS.5). The project and its output
+          are the bar above's; nothing here is about files. */}
             <div
-              className="work-bar"
+              className={layout.railNames ? 'work-bar' : 'work-bar rail-collapsed'}
               data-testid="work-bar"
               role="region"
               aria-label={t('work.region')}
             >
+              <WorkHead toolId={activeTool} names={layout.railNames} />
               {view === 'design' ? (
-                <>
-                  <ToolOptions
-                    toolId={toolId}
-                    drawAs={drawAs}
-                    onDrawAs={setDrawAs}
-                    hardware={hardware}
-                    onHardware={setHardware}
-                    points={pointOptions}
-                    onPoints={setPointOptions}
-                  />
-                  {/* What the active tool does with a click, a drag and a key, true for that
-                tool and no other (F.1), and for the state it is in (U.11). The lowest
-                ranked give way as the bar narrows, whole; "all keys" never does. */}
-                  <OptionHints hints={toolHints} testId="tool-how-to" />
-                </>
+                <ToolOptions
+                  toolId={toolId}
+                  drawAs={drawAs}
+                  onDrawAs={setDrawAs}
+                  hardware={hardware}
+                  onHardware={setHardware}
+                  points={pointOptions}
+                  onPoints={setPointOptions}
+                />
               ) : (
-                <>
-                  <OptionHints hints={SHEETS_HINTS} testId="sheets-hint" />
-                  {/* The plan in words, for a screen reader: the sheet count, what is taped and
-                  what is left off now sit in Parts and Properties. */}
-                  <SheetsSummary project={storeState.document.project} />
-                </>
+                /* The plan in words, for a screen reader: the sheet count, what is taped and
+                  what is left off now sit in Parts and Properties. */
+                <SheetsSummary project={storeState.document.project} />
               )}
+              <OptionHints hints={ALL_KEYS} testId="all-keys" />
             </div>
 
             <div
@@ -2272,6 +2266,14 @@ export function App({
                 />
               </span>
 
+              {/* What the active tool does with a click, a drag and a key, true for that
+              tool and no other (F.1), and for the state it is in (U.11). The lowest
+              ranked give way as the bar narrows, whole. */}
+              {view === 'design' ? (
+                <OptionHints hints={toolHints} testId="tool-how-to" />
+              ) : (
+                <OptionHints hints={SHEETS_HINTS} testId="sheets-hint" />
+              )}
               <MoveStatus move={move} t={t} />
               <span className="status-right" data-testid="cursor-readout">
                 {view === 'sheets' ? (

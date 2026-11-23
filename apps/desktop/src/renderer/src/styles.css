@@ -217,8 +217,12 @@ body {
  * removed**: one that is not docked opens over the board, and the parts tree
  * is the only route to a locked feature.
  */
-.workspace {
+.workspace,
+.work-bar {
   --rail-w: var(--rail-w-expanded);
+}
+
+.workspace {
   --parts-w: var(--parts-width);
   --properties-w: var(--properties-width);
 
@@ -252,7 +256,8 @@ body {
   display: contents;
 }
 
-.workspace.rail-collapsed {
+.workspace.rail-collapsed,
+.work-bar.rail-collapsed {
   --rail-w: var(--rail-w-collapsed);
 }
 
@@ -414,7 +419,9 @@ body {
   /* It fits at every supported size and never needs this. Below them it
      scrolls rather than spilling over the status bar and the controls in it. */
   overflow-y: auto;
-  padding: 10px 8px;
+  /* 4 + the button's border and 7 px: every icon starts 12 px from the
+     window's edge, as every row's first glyph does (MS.5). */
+  padding: 10px 4px;
   border-right: 1px solid var(--shell-line);
   background: var(--shell-800);
 }
@@ -430,7 +437,7 @@ body {
 }
 
 .rail-heading {
-  margin: 0 0 2px;
+  margin: 0 0 2px 8px;
   color: var(--text-dim);
   font: var(--t-label);
 }
@@ -445,6 +452,7 @@ body {
 .rail .tool {
   justify-content: space-between;
   width: 100%;
+  padding: 0 7px;
 }
 
 .rail .tooltip-anchor {
@@ -453,19 +461,16 @@ body {
 
 /* Collapsed: the icon is the face, the shortcut a badge in its corner, and the
    tooltip carries the name and how it is used (decisions §4.3). */
-.rail.collapsed {
-  padding: 10px 6px;
-}
-
 .rail.collapsed .tool {
   position: relative;
-  justify-content: center;
+  /* At the shared 12 px edge rather than centred: the badge balances it. */
+  justify-content: flex-start;
   /* 28 px: room for the 20 px icon and its corner badge, and short enough for
      all thirteen tools to fit the rail at the smallest supported window,
      860 × 600 (§7.2). At 36 px the rail ran over the status bar there, and
      Edit Points (3.9c) took it 30 px over again at 30. */
   min-height: 28px;
-  padding: 0;
+  padding: 0 0 0 7px;
 }
 
 /* Collapsed, the groups are told apart by their rules; the space beside them
@@ -1935,16 +1940,32 @@ body {
 .work-bar {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-4);
   /* A fixed height, not its content's: the bar is reserved so the board never
      moves when the tool changes (§7.1), and chips and selects differ by a few
      pixels. */
   box-sizing: border-box;
   height: var(--work-bar-h);
-  padding: 0 14px;
+  padding: 0 14px 0 0;
   font: var(--t-label);
   background: var(--shell-700);
   border-bottom: 1px solid var(--shell-line);
+}
+
+/* The rail's head (MS.5): as wide as the rail, in its colour and over the bar's
+   bottom line, so the rail rises into the row; its glyph above the rail's. */
+.work-head {
+  display: flex;
+  flex: none;
+  align-self: stretch;
+  align-items: center;
+  justify-content: space-between;
+  width: var(--rail-w);
+  margin-bottom: -1px;
+  padding: 0 12px;
+  border-right: 1px solid var(--shell-line);
+  background: var(--shell-800);
+  color: var(--text);
 }
 
 .tool-options {
@@ -1954,20 +1975,71 @@ body {
   gap: 4px;
 }
 
-/* Full mode names remain available without widening or raising the fixed bar. */
+/* Draw as, then its groups, 16 px apart (MS.5): space, not lines. */
+.drawing-options {
+  gap: var(--space-4);
+}
+
+.draw-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.draw-group-name {
+  color: var(--text-dim);
+}
+
+/* The only boxes in the row: a group's choices, 24 px each, inside a hairline. */
+.draw-group-box {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px;
+  border: 1px solid var(--shell-line);
+  border-radius: var(--r-sm);
+}
+
+.draw-group-box .chip {
+  gap: 6px;
+  min-height: 24px;
+  padding: 0 8px 0 2px;
+  border-color: transparent;
+}
+
+.draw-group-box .chip.active {
+  border-color: var(--tan);
+}
+
+/* A choice's line on a scrap of the drafting ground, as the board draws it. */
+.line-sample {
+  display: flex;
+  flex: none;
+  padding: 2px;
+  border-radius: var(--r-sm);
+  background: var(--ground);
+}
+
+/* The way to every key keeps the row's right (MS.5). */
+.work-bar .work-hints-row {
+  justify-content: flex-end;
+}
+
+/* Below 1024 px the grouped choices give way to a select: English keeps them at
+   1024 (MS.5). MS.7 fits the row by measure, in every language. */
 .draw-as-select {
   display: none;
   align-items: center;
   gap: var(--space-2);
 }
 
-@media (max-width: 1199px) {
+@media (max-width: 1023px) {
   .draw-as-select {
     display: inline-flex;
   }
 
   .drawing-options > .draw-as-label,
-  .drawing-options > .chip {
+  .drawing-options > .draw-group {
     display: none;
   }
 }
@@ -2004,16 +2076,14 @@ body {
   outline-offset: -2px;
 }
 
-/* The hints (U.11) are the least important thing in the work bar, so they are
-   what gives when the window narrows: the lowest-ranked go, whole, and "all
-   keys" stays (`OptionHints`). The slot takes the room the tool's options leave;
-   the copy is the same row, laid out and never seen, so each hint's width is
-   known before it is shown. */
+/* The tool's hints (U.11), in the status bar since MS.5, give way as the window
+   narrows: the lowest-ranked go, whole (`OptionHints`). The slot takes the room
+   the bar's other contents leave; the copy is the same row, laid out and never
+   seen, so each hint's width is known before it is shown. */
 .work-hints {
   position: relative;
   flex: 1 1 0;
   min-width: 0;
-  margin-left: var(--space-2);
   overflow: hidden;
 }
 
@@ -2389,6 +2459,7 @@ body {
 /* One key cap for every key named beside an action: the start screen's
    New project card wears the one Open existing project has (QA7). */
 .tool kbd,
+.work-head kbd,
 .menu-item kbd,
 .start-card-name kbd {
   padding: 0 4px;
@@ -4161,7 +4232,7 @@ button.problem-row[aria-current='true'] {
 
 .rail-note {
   margin: var(--space-3) 0 0;
-  padding: 0 4px;
+  padding: 0 var(--space-2);
   color: var(--text-dim);
   font: var(--t-label);
 }

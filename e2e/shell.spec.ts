@@ -454,11 +454,12 @@ test('the project bar holds the project and its output; the work bar holds the w
       await expect(project.getByTestId(id), id).toHaveCount(1);
       await expect(work.getByTestId(id), id).toHaveCount(0);
     }
-    // The active tool's options and its guidance.
-    for (const id of ['tool-options', 'tool-how-to']) {
+    // The active tool and its options; its guidance is the status bar's (MS.5).
+    for (const id of ['work-head', 'tool-options', 'all-keys']) {
       await expect(work.getByTestId(id), id).toHaveCount(1);
       await expect(project.getByTestId(id), id).toHaveCount(0);
     }
+    await expect(window.getByTestId('status-bar').getByTestId('tool-how-to')).toHaveCount(1);
 
     // Print is the one primary action in the window (7.6, R-06); Export PDF is not.
     await expect(window.locator('.primary')).toHaveCount(1);

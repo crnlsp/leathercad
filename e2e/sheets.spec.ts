@@ -238,11 +238,11 @@ test('the Sheets view has its own rail, hint and Properties, and the paper is ed
     await expect(window.getByTestId('rail-note')).toHaveText(
       `Drawing tools are in Design · ${caption('Ctrl+1')}`,
     );
-    // The options row says what a click does here, with the key from the keymap.
-    const hint = window.getByTestId('sheets-hint');
+    // The status bar says what a click does here; the tool row, the way to every key.
+    const hint = window.getByTestId('status-bar').getByTestId('sheets-hint');
     await expect(hint).toContainText('Click a piece to see where it prints');
-    await expect(hint.locator('kbd').last()).toHaveText('?');
-    await expect(hint).toContainText('all keys');
+    await expect(window.getByTestId('work-head')).toContainText('Select');
+    await expect(window.getByTestId('all-keys').locator('kbd')).toHaveText('?');
 
     // Properties: the paper and what it comes to, then the reminder.
     const props = window.getByTestId('sheets-properties');

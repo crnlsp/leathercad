@@ -1,31 +1,30 @@
 import { formatEditable } from '@leathercad/core';
 import type { DrawMode, EditPointsOptions, HardwareOptions } from '@leathercad/editor';
+import { useId } from 'react';
 
+import { DRAW_GROUPS } from './drawModes.js';
 import { useI18n } from './i18n.js';
+import { KeyCap } from './keyCaps.js';
 import { NumberField } from './NumberField.js';
 
 import { PUNCH_SIZES_MM } from './punches.js';
 import { FeatureMark } from './icons/marks.js';
 import type { Mark } from './icons/markFor.js';
-import { DRAWING_TOOL_IDS } from './tools.js';
+import { ToolIcon } from './icons/ToolIcon.js';
+import { DRAWING_TOOL_IDS, type ToolId } from './tools.js';
+import { Tooltip } from './Tooltip.js';
 
-/**
- * One fixed result each (X4). *Outline* and *Stitch + allowance* each make a
- * new part and never read the selection; the rest join the selected one.
- *
- * *Stitch + allowance* dimensions the part from its **opening**: what is drawn
- * is the stitch line, and the cut edge is derived outward from it — the
- * direction a maker wants when the inside measurement is the one that matters
- * (§3.4).
- */
-const DRAW_MODES: readonly { readonly id: DrawMode; readonly mark: Mark }[] = [
-  { id: 'outline', mark: 'cut-edge' },
-  { id: 'stitch-allowance', mark: 'seam-allowance' },
-  { id: 'cut-out', mark: 'cut-out' },
-  { id: 'stitch', mark: 'stitch-line' },
-  { id: 'fold', mark: 'fold-valley' },
-  { id: 'marking', mark: 'marking' },
-];
+/** The line each choice makes, as the board draws it (decisions §4.1). */
+const MARK_OF: Readonly<Record<DrawMode, Mark>> = {
+  outline: 'cut-edge',
+  'cut-out': 'cut-out',
+  stitch: 'stitch-line',
+  'stitch-allowance': 'seam-allowance',
+  fold: 'fold-valley',
+  marking: 'marking',
+};
+
+const DRAW_MODES: readonly DrawMode[] = DRAW_GROUPS.flatMap((entry) => entry.modes);
 
 const HARDWARE_TYPES: readonly HardwareOptions['hardwareType'][] = [
   'rivet',
@@ -44,8 +43,8 @@ const HARDWARE_TYPES: readonly HardwareOptions['hardwareType'][] = [
  * what a click *does*, it changes what the drawn line is *called*, and for
  * Select, Rotate or Scale that is a setting with no effect. A fold line can be
  * drawn with any of the five drawing tools, so a tool per combination would be
- * fifteen buttons for three ideas. Hardware asks its own question here. Every
- * other tool leaves the space to its hints, which follow (U.11).
+ * fifteen buttons for three ideas. Its choices come in the workshop's groups,
+ * Cut · Stitch · Mark (MS.5). Hardware asks its own question here.
  */
 export function ToolOptions({
   toolId,
@@ -65,6 +64,7 @@ export function ToolOptions({
   onPoints: (next: EditPointsOptions) => void;
 }) {
   const { t } = useI18n();
+  const groupId = useId();
   // The radius R rounds a picked corner to (3.9d). Asked here rather than
   // after the key, so rounding stays one keystroke, like the punch size.
   if (toolId === 'points') {
@@ -93,31 +93,48 @@ export function ToolOptions({
             data-testid="draw-as-select"
             value={drawAs}
             onChange={(event) => {
-              const choice = DRAW_MODES.find((choice) => choice.id === event.target.value);
-              if (choice !== undefined) onDrawAs(choice.id);
+              const choice = DRAW_MODES.find((mode) => mode === event.target.value);
+              if (choice !== undefined) onDrawAs(choice);
             }}
           >
-            {DRAW_MODES.map((choice) => (
-              <option key={choice.id} value={choice.id}>
-                {t(`drawMode.${choice.id}`)}
+            {DRAW_MODES.map((mode) => (
+              <option key={mode} value={mode}>
+                {t(`drawMode.${mode}`)}
               </option>
             ))}
           </select>
         </label>
         <span className="draw-as-label">{t('toolOptions.drawAs')}</span>
-        {DRAW_MODES.map((choice) => (
-          <button
-            key={choice.id}
-            type="button"
-            className={choice.id === drawAs ? 'chip active' : 'chip'}
-            data-testid={`draw-as-${choice.id}`}
-            aria-pressed={choice.id === drawAs}
-            onClick={() => onDrawAs(choice.id)}
+        {DRAW_GROUPS.map(({ group, modes }) => (
+          <div
+            key={group}
+            className="draw-group"
+            role="group"
+            aria-labelledby={`${groupId}-${group}`}
           >
-            {/* Each chip shows the line it makes (decisions §4.1). */}
-            <FeatureMark mark={choice.mark} />
-            {t(`drawMode.${choice.id}`)}
-          </button>
+            <span className="draw-group-name" id={`${groupId}-${group}`}>
+              {t(`drawGroup.${group}`)}
+            </span>
+            <div className="draw-group-box">
+              {modes.map((mode) => (
+                <Tooltip key={mode} text={t(`drawModeTip.${mode}`)}>
+                  <button
+                    type="button"
+                    className={mode === drawAs ? 'chip active' : 'chip'}
+                    data-testid={`draw-as-${mode}`}
+                    aria-pressed={mode === drawAs}
+                    onClick={() => onDrawAs(mode)}
+                  >
+                    {/* The line it makes, in its colour and dash on the board. */}
+                    <span className="line-sample">
+                      <FeatureMark mark={MARK_OF[mode]} plane="ground" />
+                    </span>
+                    {t(`drawMode.${mode}`)}
+                  </button>
+                </Tooltip>
+              ))}
+            </div>
+          </div>
         ))}
       </div>
     );
@@ -158,6 +175,25 @@ export function ToolOptions({
           ))}
         </select>
       </label>
+    </div>
+  );
+}
+
+/**
+ * The tool row's first cell (MS.5): as wide as the rail and above it, so the
+ * rail rises into the row and the options that follow are plainly this tool's.
+ * Its icon, name and key while the rail shows names; the icon alone while it is
+ * narrow, the name kept for a screen reader.
+ */
+export function WorkHead({ toolId, names }: { toolId: ToolId; names: boolean }) {
+  const { t } = useI18n();
+  return (
+    <div className="work-head" data-testid="work-head">
+      <span className="tool-face">
+        <ToolIcon toolId={toolId} size={names ? 16 : 20} />
+        <span className={names ? undefined : 'visually-hidden'}>{t(`tools.${toolId}.name`)}</span>
+      </span>
+      {names && <KeyCap command={`tool.${toolId}`} />}
     </div>
   );
 }

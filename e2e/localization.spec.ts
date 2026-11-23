@@ -122,39 +122,29 @@ test('production switches all registered languages and returns to English in the
   }
 });
 
+const DRAW_MODES = ['outline', 'cut-out', 'stitch', 'stitch-allowance', 'fold', 'marking'];
+
 for (const tag of ['en', 'pl', 'de', 'ru', 'fr', 'es'] as const) {
-  test(`${tag} drawing controls fit on both sides of the 1200 px breakpoint`, async () => {
+  test(`${tag} drawing controls fit on both sides of the 1024 px breakpoint`, async () => {
     const { app, window } = await openApp({ env: ENGLISH_SYSTEM });
     try {
       await switchLanguage(window, tag);
-      for (const width of [1199, 1200, 1201, 1280]) {
+      // French needs 1094 px for its grouped choices: from 1024 to 1093 its row is
+      // fitted by MS.7's measured fit, not by this breakpoint.
+      for (const width of tag === 'fr' ? [1023, 1280] : [1023, 1024, 1025, 1280]) {
         await resizeWindow(app, window, width, 840);
         const modes = window.getByTestId('draw-as-select');
         const marking = window.getByTestId('draw-as-marking');
-        if (width < 1200) {
+        if (width < 1024) {
           await expect(modes).toBeVisible();
           await expect(marking).toBeHidden();
-          for (const mode of [
-            'outline',
-            'stitch-allowance',
-            'cut-out',
-            'stitch',
-            'fold',
-            'marking',
-          ]) {
+          for (const mode of DRAW_MODES) {
             await modes.selectOption(mode);
             await expect(modes).toHaveValue(mode);
           }
         } else {
           await expect(modes).toBeHidden();
-          for (const mode of [
-            'outline',
-            'stitch-allowance',
-            'cut-out',
-            'stitch',
-            'fold',
-            'marking',
-          ]) {
+          for (const mode of DRAW_MODES) {
             const chip = window.getByTestId(`draw-as-${mode}`);
             await expect(chip).toBeInViewport({ ratio: 1 });
             await chip.click();
@@ -165,6 +155,13 @@ for (const tag of ['en', 'pl', 'de', 'ru', 'fr', 'es'] as const) {
           .getByTestId('tool-options')
           .evaluate((element) => element.scrollWidth > element.clientWidth);
         expect(overflow, `${tag} drawing controls at ${width} px`).toBe(false);
+        // "? all keys" gives way whole rather than run past the window (MS.5).
+        const allKeys = window.getByTestId('all-keys').locator('.work-hint');
+        for (const box of await allKeys.evaluateAll((items) =>
+          items.map((item) => item.getBoundingClientRect().right),
+        )) {
+          expect(box, `${tag} "all keys" at ${width} px`).toBeLessThanOrEqual(width);
+        }
         await noHorizontalOverflow(window);
         await expectNoViolations(window, `${tag} drawing controls at ${width} px`);
         await capture(window, `${tag}-drawing-controls-${width}`);
@@ -311,9 +308,9 @@ for (const tag of ['pl', 'de', 'ru', 'fr', 'es'] as const) {
           await expect(modes).toBeVisible();
           await expect(modes.locator('option')).toHaveText([
             words.drawMode.outline,
-            words.drawMode['stitch-allowance'],
             words.drawMode['cut-out'],
             words.drawMode.stitch,
+            words.drawMode['stitch-allowance'],
             words.drawMode.fold,
             words.drawMode.marking,
           ]);

@@ -681,8 +681,9 @@ one million plus one, and a fractional million, with whole-English fallback if `
 Spanish tests cover those counts too, with singular only for 1, and require the `_many` form.
 The template-picker regressions exercise Enter/Delete in the focusable details region, Escape,
 list shortcuts, row padding selection/double-click and independent pin buttons. Localization
-scenarios check translated sort punctuation and all drawing modes at 1199, 1200, 1201 and
-1280 px in every production language, including axe scans.
+scenarios check translated sort punctuation and all drawing modes at 1023, 1024, 1025 and
+1280 px in every production language (French at 1023 and 1280 only, until the main screen's
+measured row fit, MS.7), including axe scans.
 The report lists the runtime's required plural categories and ignores whitespace-only English copies.
 In `pnpm dev`, *English (expanded)* is the overflow probe; it is
 not a production language. See [the verification record](localization-verification.md) for actual

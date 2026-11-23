@@ -351,6 +351,19 @@
     "stitch": "Stitch line",
     "stitch-allowance": "Stitch line + allowance"
   },
+  "drawGroup": {
+    "cut": "Cut",
+    "mark": "Mark",
+    "stitch": "Stitch"
+  },
+  "drawModeTip": {
+    "cut-out": "A hole in the selected piece",
+    "fold": "Where the selected piece folds",
+    "marking": "A reference line, never cut",
+    "outline": "A new piece's cut edge",
+    "stitch": "Holes along a line on the selected piece",
+    "stitch-allowance": "A new piece, from its stitch line"
+  },
   "shortcuts": {
     "or": "or",
     "group": {

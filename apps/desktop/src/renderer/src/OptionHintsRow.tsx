@@ -5,14 +5,14 @@ import { useKeyLabel } from './keyCaps.js';
 import { fitHints, type Hint } from './optionHints.js';
 
 /**
- * The work bar's hints (U.11, R-11): a key as a cap and a few words each, as many as
- * the bar has room for, the lowest-ranked going first as it narrows and "?
- * all keys" never.
+ * Hints (U.11, R-11): a key as a cap and a few words each, as many as the row has
+ * room for, the lowest-ranked going first as it narrows — the tool's in the
+ * status bar, and "? all keys" at the tool row's right (MS.5).
  *
  * Which fit is `fitHints`'s, from the width each hint takes as it is drawn —
  * measured in a copy that is never seen, since a hint that is not shown has no
  * width to read — and the room the row has, which the window's width and the
- * tool's own options decide. So a hint is whole or not there: nothing is cut
+ * row's other contents decide. So a hint is whole or not there: nothing is cut
  * short by the edge. The copy is hidden from assistive technology; the row is
  * the only one it reads.
  */

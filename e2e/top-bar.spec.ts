@@ -238,11 +238,17 @@ test('the project menu glyph starts 12 px in', async () => {
     expect(await left('project-menu')).toBeLessThanOrEqual(13);
     expect(await left('view-design')).toBeGreaterThanOrEqual(11);
     expect(await left('view-design')).toBeLessThanOrEqual(13);
+    // The rail's icons share the edge, with its names and without (MS.5).
+    expect(await left('tool-select')).toBeGreaterThanOrEqual(11);
+    expect(await left('tool-select')).toBeLessThanOrEqual(13);
+    // And the tool row's head, above them.
+    expect(await left('work-head')).toBe(await left('tool-select'));
     await resizeWindow(app, window, 860, 600);
     expect(await left('view-design')).toBeGreaterThanOrEqual(11);
     expect(await left('view-design')).toBeLessThanOrEqual(13);
-    // The rail's first icon measures 19 px today, not 12: it is the rail's own
-    // slice that moves it, so it is not asserted here.
+    expect(await left('tool-select')).toBeGreaterThanOrEqual(11);
+    expect(await left('tool-select')).toBeLessThanOrEqual(13);
+    expect(await left('work-head')).toBe(await left('tool-select'));
   } finally {
     await closeApp(app);
   }
