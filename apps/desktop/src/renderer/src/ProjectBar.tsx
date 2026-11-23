@@ -14,6 +14,7 @@ import type { Room } from './panelLayout.js';
 import { PaperButton } from './PaperButton.js';
 import { describeCounts, indicatorOf } from './problemsIndicator.js';
 import { SeverityGlyph } from './SeverityGlyph.js';
+import { selectedCount } from './propertyFacts.js';
 import { selectionAnnouncement } from './selectionWords.js';
 import { describeSheets } from './sheetWords.js';
 import { sheetPlanFor } from './sheets.js';
@@ -78,6 +79,7 @@ export function ProjectBar({
   const i18n = useI18n();
   const { t } = i18n;
   const plan = sheetPlanFor(project);
+  const picked = selectedCount(project, selection.features, selection.parts);
 
   const saveWords = dirty ? t('projectBar.unsaved') : saved ? t('projectBar.saved') : '';
   const problems = describeCounts(counts, i18n);
@@ -200,7 +202,12 @@ export function ProjectBar({
               settled={settled}
             />
           </span>{' '}
-          <span data-testid="announce-selection">
+          <span
+            data-testid="announce-selection"
+            // What the words count, for a test that reads no language.
+            data-of={picked.of}
+            data-count={picked.count}
+          >
             <Settled value={selectionAnnouncement(project, selection, i18n)} settled={settled} />
           </span>
         </div>

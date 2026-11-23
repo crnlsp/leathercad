@@ -9,7 +9,7 @@ import { drawAPanel, openApp } from './launchApp.js';
 import { closeActiveTab, fromProjectMenu } from './projectMenu.js';
 import { resizeWindow } from './windowSize.js';
 import { openSettings } from './openSettings.js';
-import { expectFeatures, expectPieces, expectSelected } from './counts.js';
+import { expectFeatures, expectPieces, expectSelected, expectNothingSelected } from './counts.js';
 
 /**
  * Slice 8.2: the app remembers how the maker likes it, and what they worked
@@ -300,14 +300,14 @@ test('hiding a part lets go of what was selected in it (Q14)', async () => {
       .getByTestId('parts-list')
       .getByRole('treeitem', { name: /Outline/ })
       .click();
-    await expectSelected(window, '1');
+    await expectSelected(window, '1', 'pieces');
 
     await window
       .getByTestId('parts-list')
       .locator('[data-testid^="part-visible-"]')
       .first()
       .click();
-    await expectSelected(window, '0');
+    await expectNothingSelected(window);
 
     // Delete now has nothing to act on, so the hidden outline is still there.
     await window.getByTestId('editor-canvas').hover();

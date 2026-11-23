@@ -1,7 +1,13 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import { openSample, withApp } from './launchApp.js';
-import { expectFeatures, expectPieces, expectSelected, featureCount } from './counts.js';
+import {
+  expectFeatures,
+  expectPieces,
+  expectSelected,
+  featureCount,
+  expectNothingSelected,
+} from './counts.js';
 
 /**
  * Slice 8.8b-4: features copied into a piece, and duplicated and stepped
@@ -73,11 +79,11 @@ test('a slot copied from the lining pastes into the selected piece, and into no 
     await boardKey(window, 'ControlOrMeta+V');
     await expectFeatures(window, String(features + 1));
     await expectPieces(window, '3');
-    await expectSelected(window, '1');
+    await expectSelected(window, '1', 'features');
 
     // With nothing selected there is no piece to paste into: said, nothing pasted.
     await window.keyboard.press('Escape');
-    await expectSelected(window, '0');
+    await expectNothingSelected(window);
     await boardKey(window, 'ControlOrMeta+V');
     await expect(window.getByTestId('file-notice')).toContainText('Choose a piece to paste into');
     await expectFeatures(window, String(features + 1));

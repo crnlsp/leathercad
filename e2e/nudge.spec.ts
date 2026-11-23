@@ -37,7 +37,7 @@ async function pickOnBoard(window: Page): Promise<void> {
   const box = (await window.getByTestId('editor-canvas').boundingBox())!;
   await window.getByTestId('tool-select').click();
   await window.mouse.click(box.x + 225, box.y + 205);
-  await expectSelected(window, '1');
+  await expectSelected(window, '1', 'pieces');
   await expect(window.getByTestId('editor-canvas')).toBeFocused();
 }
 
@@ -124,7 +124,7 @@ test('in a field the arrows move the caret and the select-all key selects its te
     await field.press('Escape');
 
     // Nothing moved, and the piece's feature is still what is picked — not every piece.
-    await expectSelected(window, '1');
+    await expectSelected(window, '1', 'pieces');
     expect(await origin(window)).toEqual(start);
   });
 });

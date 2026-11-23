@@ -261,7 +261,7 @@ test('the Sheets view has its own rail, hint and Properties, and the paper is ed
     await expect(props.getByTestId('sheets-piece-placement')).toHaveText('PlacementAs drawn');
     await expect(props.getByTestId('sheets-piece-fit')).toHaveText('Fits one sheet, no tape');
     await window.getByTestId('view-design').click();
-    await expectSelected(window, '1');
+    await expectSelected(window, '1', 'pieces');
     await window.getByTestId('view-sheets').click();
 
     // The paper is changed here, as in the paper button: one undo step, and
@@ -416,7 +416,7 @@ test('the maker’s journey: design, paper, sheets, and a PDF that is what was s
     // Its outline is selected, as a click on the board would select it, Parts
     // lights its row, and Properties says where it prints (U.9).
     await expect(strapRow).toHaveClass(/selected/);
-    await expectSelected(window, '1');
+    await expectSelected(window, '1', 'pieces');
     const strapOnPaper = window.getByTestId('sheets-piece');
     await expect(strapOnPaper).toContainText('Strap');
     await expect(window.getByTestId('sheets-piece-sheet')).toHaveText('Sheets2–3 of 3');
@@ -440,7 +440,7 @@ test('the maker’s journey: design, paper, sheets, and a PDF that is what was s
       hasText: 'Outline',
     });
     await expect(strapOutline).toHaveClass(/selected/);
-    await expectSelected(window, '1');
+    await expectSelected(window, '1', 'pieces');
 
     // 4. Moving the strap on the board moves nothing on paper.
     await window.getByTestId('tool-select').click();
@@ -529,7 +529,7 @@ test('a sheet panned into view is drawn, and its piece is found under the pointe
     }
     expect(found, 'the strap on sheet 3 lights its Parts row').toBe(true);
     await expect(strapRow).toHaveClass(/selected/);
-    await expectSelected(window, '1');
+    await expectSelected(window, '1', 'pieces');
   });
 });
 

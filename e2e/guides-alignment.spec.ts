@@ -7,7 +7,7 @@ import { parseNumber } from '../packages/core/src/index.js';
 
 import { drawAPanel, expectNoViolations, readPosition, withApp } from './launchApp.js';
 import { resizeWindow } from './windowSize.js';
-import { expectPieces, expectSelected } from './counts.js';
+import { expectPieces, expectSelected, expectNothingSelected } from './counts.js';
 
 async function number(window: Page, label: string, value: number): Promise<void> {
   const field = window.getByTestId('property-panel').getByLabel(label);
@@ -119,7 +119,7 @@ test('a drag from the rulers’ corner square is the tool’s, never a guide (U.
     await drawAPanel(window, { parts: '1' });
     await window.getByTestId('tool-select').click();
     await window.keyboard.press('Escape');
-    await expectSelected(window, '0');
+    await expectNothingSelected(window);
     const box = await window.getByTestId('editor-canvas').boundingBox();
     if (box === null) throw new Error('canvas is missing');
     // Pressed where the two rulers meet and dragged past the panel: a box
@@ -129,7 +129,7 @@ test('a drag from the rulers’ corner square is the tool’s, never a guide (U.
     await window.mouse.move(box.x + 420, box.y + 320, { steps: 8 });
     await window.mouse.up();
     await expect(window.getByTestId('guide-editor')).toHaveCount(0);
-    await expectSelected(window, '1');
+    await expectSelected(window, '1', 'pieces');
   });
 });
 

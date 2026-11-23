@@ -38,7 +38,7 @@ test("the wallet's card pocket, saved as a piece, inserts into a new project as 
     await expect(dialog).toHaveCount(0);
     await expectPieces(window, '1');
     await expectFeatures(window, '4');
-    await expectSelected(window, '1');
+    await expectSelected(window, '1', 'pieces');
     await expect(window.getByTestId('parts-list')).toContainText('Card pocket');
     await expect(window.getByTestId('print-problems')).toHaveAttribute('data-state', 'clear');
 
@@ -63,7 +63,7 @@ test("a built-in template's pieces insert too, only the ones ticked (9.7)", asyn
     );
     await dialog.getByTestId('template-use').click();
     await expectPieces(window, String(3 + count - 1));
-    await expectSelected(window, String(count - 1));
+    await expectSelected(window, String(count - 1), 'pieces');
 
     // Nothing ticked, nothing to insert.
     await fromProjectMenu(window, 'insert-pieces');

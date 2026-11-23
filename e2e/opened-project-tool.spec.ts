@@ -54,7 +54,7 @@ async function expectFirstClickSelects(window: Page): Promise<void> {
   camera.zoomToPercent(100);
   const edge = camera.toScreen({ x: 0, y: 30 });
   await window.mouse.click(box.x + edge.x, box.y + edge.y);
-  await expectSelected(window, '1');
+  await expectSelected(window, '1', 'pieces');
   await expect(window.getByTestId('property-header')).toContainText('Panel');
   await expect(window.getByTestId('undo')).toBeDisabled();
 }

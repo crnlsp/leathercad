@@ -18,7 +18,7 @@ import { drawAPanel, freshStateHome } from '../launchApp.js';
 import { oneErrorFile } from '../oneErrorFile.js';
 import { openPrintTest } from '../printTest.js';
 import { chooseSvg } from '../svgPatterns.js';
-import { expectFeatures, expectPieces, expectSelected } from '../counts.js';
+import { expectFeatures, expectPieces, expectSelected, expectNothingSelected } from '../counts.js';
 
 /**
  * What the app looks like, pixel for pixel. See docs/testing.md §5.2.
@@ -193,7 +193,7 @@ test('a stitched panel on the canvas', async () => {
     // control its bottom-right (U.4).
     await window.getByTestId('tool-select').click();
     await window.mouse.click(box!.x + 60, box!.y + 60);
-    await expectSelected(window, '0');
+    await expectNothingSelected(window);
     await pointerAway(window);
 
     await expect(canvas).toHaveScreenshot('stitched-panel.png');
@@ -246,7 +246,7 @@ test('a hole set’s holes as each style of iron cuts them, close up (9.26)', as
       await window.getByTestId('tool-select').click();
       await canvas.focus();
       await window.keyboard.press('Escape');
-      await expectSelected(window, '0');
+      await expectNothingSelected(window);
       await pointerAway(window);
       await expect(canvas).toHaveScreenshot(name);
     }
@@ -373,14 +373,14 @@ test('a piece hovered, selected, being edited and locked, each its own (U.22)', 
 
     // Hovered: the broad, light band, the piece left pale.
     await window.mouse.click(empty.x, empty.y);
-    await expectSelected(window, '0');
+    await expectNothingSelected(window);
     await window.mouse.move(body.x, body.y);
     await expect(window.locator('[data-board-hover]')).toHaveCount(1);
     expect(await board()).toMatchSnapshot('state-hover.png');
 
     // Selected: the narrow, dense band and the warmer piece.
     await window.mouse.click(body.x, body.y);
-    await expectSelected(window, '1');
+    await expectSelected(window, '1', 'pieces');
     await pointerAway(window);
     await expect(canvas).toHaveScreenshot('state-selected.png');
 
@@ -396,7 +396,7 @@ test('a piece hovered, selected, being edited and locked, each its own (U.22)', 
     await outline.hover();
     await outline.locator('[data-testid^="feature-locked-"]').click();
     await window.mouse.click(empty.x, empty.y);
-    await expectSelected(window, '0');
+    await expectNothingSelected(window);
     await window.mouse.move(body.x, body.y);
     await expect(window.locator('[data-board-hover]')).toHaveCount(1);
     expect(await board()).toMatchSnapshot('state-locked.png');

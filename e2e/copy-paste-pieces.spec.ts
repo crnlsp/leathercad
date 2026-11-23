@@ -34,7 +34,7 @@ test('the card pocket copied from the wallet pastes into a new project, one undo
 
     await expectPieces(window, '1');
     await expectFeatures(window, '4');
-    await expectSelected(window, '1');
+    await expectSelected(window, '1', 'pieces');
     await expect(window.getByTestId('parts-list')).toContainText('Card pocket');
     await expect(window.getByTestId('print-problems')).toHaveAttribute('data-state', 'clear');
 

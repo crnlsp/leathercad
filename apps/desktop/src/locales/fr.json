@@ -794,7 +794,6 @@
     "featureIn": "{{feature}} · {{part}}",
     "hideParts": "Masquer Pièces",
     "hideProperties": "Masquer Propriétés",
-    "partsFolded": "Pièces, réduit",
     "propertiesFolded": "Propriétés, réduit",
     "showParts": "Afficher Pièces",
     "showProperties": "Afficher Propriétés"

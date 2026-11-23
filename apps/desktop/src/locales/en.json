@@ -869,7 +869,8 @@
     "help": "About this",
     "hideParts": "Hide Parts",
     "hideProperties": "Hide Properties",
-    "partsFolded": "Parts, folded",
+    "partsFoldedCount_one": "Parts, folded, {{count}} piece",
+    "partsFoldedCount_other": "Parts, folded, {{count}} pieces",
     "propertiesFolded": "Properties, folded",
     "showParts": "Show Parts",
     "showProperties": "Show Properties"

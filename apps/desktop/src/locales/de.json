@@ -769,7 +769,6 @@
     "featureIn": "{{feature}} · {{part}}",
     "hideParts": "Teile ausblenden",
     "hideProperties": "Eigenschaften ausblenden",
-    "partsFolded": "Teile, eingeklappt",
     "propertiesFolded": "Eigenschaften, eingeklappt",
     "showParts": "Teile einblenden",
     "showProperties": "Eigenschaften einblenden"

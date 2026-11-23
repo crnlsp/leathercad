@@ -10,7 +10,7 @@ import { readoutAt } from './cursorReadout.js';
 import { launchApp, placeAt, positionField, readPosition, withApp } from './launchApp.js';
 import { closeActiveTab, fromProjectMenu, renameProject } from './projectMenu.js';
 import { resizeWindow } from './windowSize.js';
-import { expectFeatures, expectPieces, expectSelected } from './counts.js';
+import { expectFeatures, expectPieces, expectSelected, expectNothingSelected } from './counts.js';
 
 let app: ElectronApplication;
 
@@ -129,7 +129,7 @@ test('draws a rectangle, moves it, and reverses both with undo', async () => {
     await window.getByTestId('tool-rectangle').click();
     await drag(140, 140, 340, 260);
     await expectPieces(window, '1');
-    await expectSelected(window, '1');
+    await expectSelected(window, '1', 'pieces');
 
     await window.getByTestId('tool-select').click();
     await drag(140, 140, 220, 220);
@@ -266,13 +266,13 @@ test('the parts list selects what the canvas cannot reach', async () => {
 
     await window.getByTestId('tool-select').click();
     await window.getByTestId('editor-canvas').click({ position: { x: 600, y: 450 } });
-    await expectSelected(window, '0');
+    await expectNothingSelected(window);
 
     await window
       .getByTestId('parts-list')
       .getByRole('treeitem', { name: /Outline/ })
       .click();
-    await expectSelected(window, '1');
+    await expectSelected(window, '1', 'pieces');
   });
 });
 
@@ -521,7 +521,7 @@ test('no panel is ever removed, and a locked feature stays reachable at 860 × 6
       .click();
     await window.getByTestId('tool-select').click();
     await window.mouse.click(box!.x + 40, box!.y + 40);
-    await expectSelected(window, '0');
+    await expectNothingSelected(window);
 
     await resizeWindow(instance, window, 860, 600);
     await expect(window.getByTestId('toggle-parts')).toBeVisible();
@@ -540,7 +540,7 @@ test('no panel is ever removed, and a locked feature stays reachable at 860 × 6
     // The way back to the locked outline: open Parts, pick it, read it.
     await window.getByTestId('toggle-parts').click();
     await window.getByTestId('parts-list').getByText('Outline').click();
-    await expectSelected(window, '1');
+    await expectSelected(window, '1', 'pieces');
     await window.getByTestId('toggle-properties').click();
     await expect(window.getByTestId('property-panel')).toBeVisible();
     await expect(window.getByTestId('locked-badge')).toBeVisible();
@@ -880,7 +880,7 @@ test('draws a circle from its centre and retypes the diameter', async () => {
     await window.mouse.up();
 
     await expectPieces(window, '1');
-    await expectSelected(window, '1');
+    await expectSelected(window, '1', 'pieces');
 
     const panel = window.getByTestId('property-panel');
     const diameter = panel.locator('label', { hasText: /^Diameter/ }).locator('input');
@@ -1543,7 +1543,7 @@ test('an inset too deep for its outline is listed, selectable and fixable', asyn
     // shows the same sentence from the same list.
     await window.getByTestId('parts-list').getByText('Outline').click();
     await rows.first().click();
-    await expectSelected(window, '1');
+    await expectSelected(window, '1', 'features');
     await expect(panel.getByTestId('feature-problems')).toContainText('too deep for this edge');
 
     // Fixing the cause clears it everywhere.
@@ -2112,7 +2112,7 @@ test('the parts panel shows what follows what, and locks it down', async () => {
     await expect(outline).toHaveAccessibleName('Unlock');
 
     await panel.locator('[data-testid^="feature-row-"]').first().click();
-    await expectSelected(window, '1');
+    await expectSelected(window, '1', 'pieces');
 
     // Deleting it is not merely refused: the button says why, rather than
     // opening a dialog about a delete that was never going to happen.
@@ -2194,7 +2194,7 @@ test('selecting a part heading makes it the target for a cut-out', async () => {
     // Drop the selection the way reopening a file would.
     await window.getByTestId('tool-select').click();
     await window.mouse.click(box!.x + 100, box!.y + 550);
-    await expectSelected(window, '0');
+    await expectNothingSelected(window);
 
     const heading = window.getByTestId('parts-list').locator('[data-testid^="part-heading-"]');
     await heading.first().click();
@@ -2601,7 +2601,7 @@ test('Edit Points says a rectangle is changed by its measurements (3.9c)', async
     await window.mouse.down();
     await window.mouse.move(box!.x + 400, box!.y + 320, { steps: 5 });
     await window.mouse.up();
-    await expectSelected(window, '1');
+    await expectSelected(window, '1', 'pieces');
 
     await window.getByTestId('tool-points').click();
     await window.mouse.move(box!.x + 300, box!.y + 250);

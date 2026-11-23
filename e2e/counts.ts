@@ -30,18 +30,32 @@ export async function expectFeatures(window: Page, count: number | string): Prom
   await expect(window.locator('[data-testid^="feature-row-"]')).toHaveCount(Number(count));
 }
 
-/**
- * How many things the selection holds, from the announcer: "3 pieces selected",
- * "2 features selected in", a lone "Outer selected"; nothing is nothing.
- */
-export async function selectedCount(window: Page): Promise<number> {
-  const said = ((await window.getByTestId('announce-selection').textContent()) ?? '').trim();
-  const many = /^(\d+) (?:pieces|features?) selected/.exec(said);
-  if (many !== null) return Number(many[1]);
-  return said === '' ? 0 : 1;
+/** What the selection holds, as the announcer counts it: pieces, or features. */
+export type SelectedOf = 'pieces' | 'features';
+
+/** The announcer's count and kind, read from the attributes it sets: no words, so no language. */
+export async function selectedCount(window: Page): Promise<{ of: SelectedOf; count: number }> {
+  const said = window.getByTestId('announce-selection');
+  const of = (await said.getAttribute('data-of')) === 'features' ? 'features' : 'pieces';
+  return { of, count: Number(await said.getAttribute('data-count')) };
 }
 
-/** Waits for the selection to hold `count` things. */
-export async function expectSelected(window: Page, count: number | string): Promise<void> {
-  await expect.poll(() => selectedCount(window), { message: 'selected' }).toBe(Number(count));
+/** Waits for the selection to hold nothing. */
+export async function expectNothingSelected(window: Page): Promise<void> {
+  await expect
+    .poll(() => selectedCount(window), { message: 'selected' })
+    .toMatchObject({
+      count: 0,
+    });
+}
+
+/** Waits for the selection to hold `count` pieces or features, which it must say it holds. */
+export async function expectSelected(
+  window: Page,
+  count: number | string,
+  of: SelectedOf,
+): Promise<void> {
+  await expect
+    .poll(() => selectedCount(window), { message: 'selected' })
+    .toEqual({ of, count: Number(count) });
 }

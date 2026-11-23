@@ -3,7 +3,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import { closeApp } from './closeApp.js';
 import { openApp, openSample, withSample, expectNoViolations } from './launchApp.js';
 import { resizeWindow } from './windowSize.js';
-import { expectFeatures, expectPieces, expectSelected } from './counts.js';
+import { expectFeatures, expectPieces, expectSelected, expectNothingSelected } from './counts.js';
 
 /**
  * U.8 (R-07, mockups 09 and 01): Parts as a tree of pieces. Pieces fold;
@@ -317,19 +317,19 @@ test('Tab into the tree changes no selection; the arrows then select', async () 
     };
 
     // Nothing selected: focus lands on the first row, and selects nothing.
-    await expectSelected(window, '0');
+    await expectNothingSelected(window);
     await tabInto();
     await expect(piece(window, 'outer')).toBeFocused();
-    await expectSelected(window, '0');
+    await expectNothingSelected(window);
 
     // Something else selected: focus lands on its row, and the selection stays.
     await row(window, 'pocket-stitch').click();
     await window.getByTestId('status-bar').click();
-    await expectSelected(window, '1');
+    await expectSelected(window, '1', 'features');
     await tabInto();
     await expect(row(window, 'pocket-stitch')).toBeFocused();
     await expect(row(window, 'pocket-stitch')).toHaveAttribute('aria-selected', 'true');
-    await expectSelected(window, '1');
+    await expectSelected(window, '1', 'features');
 
     // The arrows select, as decided.
     await window.keyboard.press('ArrowDown');
@@ -459,7 +459,7 @@ test('a locked feature is reached from the tree by keyboard, and unlocked from i
     await piece(window, 'outer').focus();
     await window.keyboard.press('ArrowDown');
     await expect(window.getByTestId('feature-row-outer-outline')).toBeFocused();
-    await expectSelected(window, '1');
+    await expectSelected(window, '1', 'pieces');
     await window.keyboard.press('Shift+F10');
     await expect(window.getByTestId('context-lock')).toHaveText(/Unlock/);
     await window.getByTestId('context-lock').focus();

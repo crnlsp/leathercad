@@ -22,7 +22,7 @@ test('a right-click selects what is under it and offers what it can take (8.8)',
 
     await rightClick(window, 150, 200);
     await expect(menu(window)).toBeVisible();
-    await expectSelected(window, '1');
+    await expectSelected(window, '1', 'pieces');
     await expect(window.getByTestId('context-duplicate-part')).toBeFocused();
 
     await window.getByTestId('context-duplicate-part').click();
@@ -44,10 +44,10 @@ test('a right-click inside a selection keeps all of it, and one undo takes the a
     await window.keyboard.down('Shift');
     await window.mouse.click(box.x + 350, box.y + 200);
     await window.keyboard.up('Shift');
-    await expectSelected(window, '2');
+    await expectSelected(window, '2', 'pieces');
 
     await rightClick(window, 350, 200);
-    await expectSelected(window, '2');
+    await expectSelected(window, '2', 'pieces');
     await window.getByTestId('context-lock').click();
 
     const locks = window.locator('[data-testid^="feature-locked-"]');
@@ -164,7 +164,7 @@ test('Shift+F10 opens the menu about what is selected on the board, wherever foc
     const box = (await window.getByTestId('editor-canvas').boundingBox())!;
     await window.getByTestId('tool-select').click();
     await window.mouse.click(box.x + 150, box.y + 200);
-    await expectSelected(window, '1');
+    await expectSelected(window, '1', 'pieces');
 
     // Focus is still on the tool just chosen: the canvas cannot take it.
     await window.getByTestId('tool-select').focus();
@@ -238,7 +238,7 @@ test('the menu opens from the keyboard on a Parts row, and Escape gives focus ba
     await expect(menu(window)).toBeHidden();
     await expect(row).toBeFocused();
     // Escape closed the menu; it did not also clear the selection.
-    await expectSelected(window, '1');
+    await expectSelected(window, '1', 'pieces');
   } finally {
     await closeApp(app);
   }

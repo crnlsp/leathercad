@@ -455,7 +455,7 @@ test('Print’s second half shows the problems, opens the drawer, and Print list
     // Choosing one goes to it, as the drawer does.
     await listed.getByTestId('problem-row').first().click();
     await expect(dialog).toHaveCount(0);
-    await expectSelected(window, '1');
+    await expectSelected(window, '1', 'features');
   } finally {
     await closeApp(app);
   }

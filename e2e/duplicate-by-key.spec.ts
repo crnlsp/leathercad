@@ -18,7 +18,7 @@ test('the platform modifier and D duplicate the selected piece, one undo step (8
     await window.keyboard.press('ControlOrMeta+D');
 
     await expectPieces(window, String(before + 1));
-    await expectSelected(window, '1');
+    await expectSelected(window, '1', 'pieces');
     await expect(window.getByTestId('print-problems')).toHaveAttribute('data-state', 'clear');
 
     await window.getByTestId('undo').click();
@@ -35,12 +35,12 @@ test('with every piece selected it duplicates them all, one undo step (8.8b)', a
     const canvas = window.getByTestId('editor-canvas');
     await canvas.focus();
     await window.keyboard.press('ControlOrMeta+A');
-    await expectSelected(window, String(before));
+    await expectSelected(window, String(before), 'pieces');
 
     await window.keyboard.press('ControlOrMeta+D');
 
     await expectPieces(window, String(before * 2));
-    await expectSelected(window, String(before));
+    await expectSelected(window, String(before), 'pieces');
     await expect(window.getByTestId('print-problems')).toHaveAttribute('data-state', 'clear');
 
     await window.getByTestId('undo').click();

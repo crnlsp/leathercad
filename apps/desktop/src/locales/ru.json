@@ -819,7 +819,6 @@
     "featureIn": "{{feature}} · {{part}}",
     "hideParts": "Скрыть панель «Детали»",
     "hideProperties": "Скрыть панель «Свойства»",
-    "partsFolded": "Детали, свёрнуто",
     "propertiesFolded": "Свойства, свёрнуто",
     "showParts": "Показать панель «Детали»",
     "showProperties": "Показать панель «Свойства»"

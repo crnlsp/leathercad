@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { boardMap } from './boardMap.js';
 import { openSample, readPosition, withApp } from './launchApp.js';
-import { expectSelected } from './counts.js';
+import { expectSelected, expectNothingSelected } from './counts.js';
 
 /**
  * 3.13: a click on a piece's body selects the piece (smart-guides spec §3). On
@@ -30,7 +30,7 @@ test('on the bifold, a click mid-panel selects the outer, on the fold the fold, 
     // On the fold: the fold.
     const fold = board({ x: 100, y: 47.5 });
     await window.mouse.click(fold.x, fold.y);
-    await expectSelected(window, '1');
+    await expectSelected(window, '1', 'features');
     await expect(header(window)).toContainText('Fold');
 
     // In a card slot of the lining, close enough that its edges are farther
@@ -49,7 +49,7 @@ test('on the bifold, a click mid-panel selects the outer, on the fold the fold, 
     board = await boardMap(window);
     const inSlot = board({ x: 50, y: -43.5 });
     await window.mouse.click(inSlot.x, inSlot.y);
-    await expectSelected(window, '0');
+    await expectNothingSelected(window);
 
     // Just below it, on the lining's leather: the lining.
     const below = board({ x: 50, y: -46.5 });

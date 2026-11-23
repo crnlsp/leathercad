@@ -155,7 +155,7 @@ test('a folded Parts strip selects any piece, a locked one too; Properties’ st
     );
 
     await window.getByTestId('strip-part-outer').click();
-    await expectSelected(window, '1');
+    await expectSelected(window, '1', 'pieces');
     await expect(window.getByTestId('strip-part-outer')).toHaveAttribute('aria-pressed', 'true');
     await expect(window.getByTestId('property-header')).toContainText('Outer');
 
@@ -256,7 +256,7 @@ test('three chips, always, and every panel reached by the keyboard at every size
     await expect(window.getByTestId('parts-list')).toBeFocused();
     await window.getByTestId('feature-row-outer-holes').focus();
     await window.keyboard.press('Enter');
-    await expectSelected(window, '1');
+    await expectSelected(window, '1', 'features');
   });
 });
 
@@ -459,7 +459,7 @@ test('the piece count survives Parts folding', async () => {
     await window.keyboard.press('Backslash');
     await window.keyboard.press('Backslash');
     await window.getByTestId('fold-parts').click();
-    await expect(window.getByTestId('parts-strip')).toHaveAccessibleName(/3 pieces/);
+    await expect(window.getByTestId('parts-strip')).toHaveAccessibleName('Parts, folded, 3 pieces');
   });
 });
 
@@ -470,5 +470,17 @@ test('the status bar says what is happening now', async () => {
     await expect(bar.getByTestId('cursor-readout')).toBeVisible();
     await expect(bar.getByTestId('part-count')).toHaveCount(0);
     await expect(bar.getByTestId('status-counts')).toHaveCount(0);
+  });
+});
+
+test('the selection announcer says how many, and of what, in any language', async () => {
+  await withSample(async (window) => {
+    const said = window.getByTestId('announce-selection');
+    await window.getByTestId('part-heading-outer').click();
+    await expect(said).toHaveAttribute('data-of', 'pieces');
+    await expect(said).toHaveAttribute('data-count', '1');
+    await window.getByTestId('feature-row-pocket-stitch').click();
+    await expect(said).toHaveAttribute('data-of', 'features');
+    await expect(said).toHaveAttribute('data-count', '1');
   });
 });
