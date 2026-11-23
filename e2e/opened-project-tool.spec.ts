@@ -214,7 +214,7 @@ test('kept unsaved work starts in Select at the next launch (Q41)', async () => 
   );
   await withApp(
     async (window) => {
-      await expect(window.getByTestId('save-state')).toHaveText('Unsaved changes');
+      await expect(window.getByTestId('announce-save')).toHaveText('Unsaved changes');
       await expectFirstClickSelects(window);
     },
     { env: { XDG_CONFIG_HOME: config } },

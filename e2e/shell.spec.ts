@@ -317,9 +317,9 @@ test('saves a project and reopens it with its parameters intact', async () => {
     await window.getByTestId('part-name').fill('Card holder');
 
     // The dot marks unsaved changes.
-    await expect(window.getByTestId('save-state')).toHaveText('Unsaved changes');
-    await window.getByTestId('save').click();
-    await expect(window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
+    await expect(window.getByTestId('announce-save')).toHaveText('Unsaved changes');
+    await window.keyboard.press('Control+S');
+    await expect(window.getByTestId('announce-save')).not.toHaveText('Unsaved changes');
     expect(existsSync(target)).toBe(true);
 
     // Throw the work away, then get it back from disk.
@@ -421,14 +421,13 @@ test('the tool palette holds modes and nothing else', async () => {
 
     // Undo is an action: it belongs to the document, not the rail.
     await expect(rail.getByTestId('undo')).toHaveCount(0);
-    await expect(rail.getByTestId('save')).toHaveCount(0);
   });
 });
 
-test('history sits apart from the file actions', async () => {
+test('history sits with the project tabs, and there is no Save button', async () => {
   await withApp(async (window) => {
     await expect(window.getByTestId('history-group').getByTestId('undo')).toBeVisible();
-    await expect(window.getByTestId('history-group').getByTestId('save')).toHaveCount(0);
+    await expect(window.getByTestId('save')).toHaveCount(0);
   });
 });
 
@@ -443,11 +442,8 @@ test('the project bar holds the project and its output; the work bar holds the w
       await expect(strip.getByTestId(id), id).toHaveCount(1);
       await expect(project.getByTestId(id), id).toHaveCount(0);
     }
-    // Whether it is saved, the sheets it prints on, printing, and — past a
-    // rule — the application (8.7).
+    // The sheets it prints on, printing, and — past a rule — the application (8.7).
     for (const id of [
-      'save-state',
-      'save',
       'view-design',
       'view-sheets',
       'paper-button',
@@ -460,8 +456,8 @@ test('the project bar holds the project and its output; the work bar holds the w
       await expect(project.getByTestId(id), id).toHaveCount(1);
       await expect(work.getByTestId(id), id).toHaveCount(0);
     }
-    // History, the active tool's options and its guidance.
-    for (const id of ['undo', 'redo', 'tool-options', 'tool-how-to']) {
+    // The active tool's options and its guidance.
+    for (const id of ['tool-options', 'tool-how-to']) {
       await expect(work.getByTestId(id), id).toHaveCount(1);
       await expect(project.getByTestId(id), id).toHaveCount(0);
     }
@@ -492,17 +488,17 @@ test('Draw as is offered only while a drawing tool is active (F.8)', async () =>
 test('the window and the project bar say which project it is, and whether it is saved (F.8)', async () => {
   await withApp(async (window) => {
     await expect(window).toHaveTitle('Untitled — LeatherCAD');
-    await expect(window.getByTestId('save-state')).toHaveText('');
+    await expect(window.getByTestId('announce-save')).toHaveText('');
 
     await renameProject(window, 'Card holder');
     await expect(window).toHaveTitle('• Card holder — LeatherCAD');
-    await expect(window.getByTestId('save-state')).toHaveText('Unsaved changes');
+    await expect(window.getByTestId('announce-save')).toHaveText('Unsaved changes');
 
     // Undone back to where it started — one step for the whole name (U.7):
     // clean again, and untitled.
     await window.getByTestId('undo').click();
     await expect(window).toHaveTitle('Untitled — LeatherCAD');
-    await expect(window.getByTestId('save-state')).toHaveText('');
+    await expect(window.getByTestId('announce-save')).toHaveText('');
   });
 });
 
@@ -1751,8 +1747,8 @@ test('a label is placed on a part, typed in the panel, and survives a save', asy
     // The parts list follows the words, so the label is findable by what it says.
     await expect(window.getByTestId('parts-list')).toContainText('Zszyć przed klejeniem');
 
-    await window.getByTestId('save').click();
-    await expect(window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
+    await window.keyboard.press('Control+S');
+    await expect(window.getByTestId('announce-save')).not.toHaveText('Unsaved changes');
 
     // Throw it away and get it back from disk, at format version 5.
     await window.getByTestId('tool-select').click();

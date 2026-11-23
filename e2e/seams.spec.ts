@@ -52,8 +52,8 @@ test('sew two hole sets inline, cancel, commit, edit and unsew in single undo st
     await expect(row).toContainText('Outer');
     await row.click();
     await window.getByTestId('problems-toggle').click();
-    await window.getByTestId('save').click();
-    await expect(window.getByTestId('save-state')).toHaveText('Saved');
+    await window.keyboard.press('Control+S');
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     const p = loadProject(readFileSync(saved)).project;
     expect(p.seams).toHaveLength(1);
     expect(p.seams?.[0]).toMatchObject({
@@ -128,8 +128,8 @@ test('Sew together from one hole set starts its second side on another piece (QA
     await sides.nth(1).getByLabel('Direction', { exact: true }).selectOption('previous');
     await expect(panel.getByTestId('seam-verdict')).toHaveText(/11 = 11 holes/);
     await panel.getByTestId('seam-commit').click();
-    await window.getByTestId('save').click();
-    await expect(window.getByTestId('save-state')).toHaveText('Saved');
+    await window.keyboard.press('Control+S');
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     expect(loadProject(readFileSync(saved)).project.seams).toMatchObject([
       { a: { holeSetId: 'pocket-holes' }, b: { holeSetId: 'outer-holes' } },
     ]);

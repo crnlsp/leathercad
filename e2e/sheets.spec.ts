@@ -290,7 +290,7 @@ test('Design and Sheets each keep their camera, and switching changes nothing (7
     await window.getByTestId('view-design').click();
     await expect(canvas).toHaveAttribute('data-view', 'design');
     await expect.poll(() => canvasImage(canvas)).toBe(design);
-    await expect(window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
+    await expect(window.getByTestId('announce-save')).not.toHaveText('Unsaved changes');
 
     // And by the switch to the sheets.
     await window.getByTestId('view-sheets').click();

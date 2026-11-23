@@ -58,9 +58,9 @@ test('a panel that fails says so in its place, and the window and the work go on
     // Everything else is still there, and still works.
     await expect(window.getByTestId('editor-canvas')).toBeVisible();
     await expect(window.getByTestId('tab-strip')).toBeVisible();
-    await expect(window.getByTestId('save')).toBeEnabled();
+    await expect(window.getByTestId('undo')).toBeEnabled();
     await expect(window.getByTestId('part-count')).toHaveText('1');
-    await expect(window.getByTestId('save-state')).toHaveText('Unsaved changes');
+    await expect(window.getByTestId('announce-save')).toHaveText('Unsaved changes');
     await expectNoViolations(window, 'a panel that failed');
 
     // The maker's next step brings the panel back.
@@ -79,7 +79,7 @@ test('a board that fails says so, and closing still asks about the unsaved work'
     await failIn(window, 'board');
 
     await expect(window.getByTestId('failure-board')).toBeVisible();
-    await expect(window.getByTestId('save')).toBeEnabled();
+    await expect(window.getByTestId('undo')).toBeEnabled();
 
     await requestClose(app);
     const dialog = window.getByTestId('unsaved-dialog');

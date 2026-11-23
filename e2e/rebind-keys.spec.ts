@@ -83,22 +83,12 @@ test('a key changed is heard at once, shown on every cap, and its old key is fre
     await window.keyboard.press('Escape');
     await expect(window.getByTestId('settings-dialog')).toHaveCount(0);
 
-    // The bar's cap and its tooltip.
-    await expect(window.getByTestId('save').locator('kbd')).toHaveText('F5');
-    await window.getByTestId('save').hover();
-    // Save's own: Esc gave the keys back to the gear (U.19), whose tooltip
-    // shows at once for the keyboard, as R-10 has it.
-    await expect(
-      window.getByRole('tooltip', { name: /^Save the project/ }).locator('kbd'),
-    ).toHaveText('F5');
-    await window.mouse.move(5, 400);
-
     // The old key does nothing; the new one saves.
     await window.getByTestId('editor-canvas').focus();
     await window.keyboard.press('ControlOrMeta+s');
     await window.waitForTimeout(300);
     expect(await saveDialogs(app)).toBe(0);
-    await expect(window.getByTestId('save-state')).toHaveText('Unsaved changes');
+    await expect(window.getByTestId('announce-save')).toHaveText('Unsaved changes');
     await window.keyboard.press('F5');
     await expect(window.getByTestId('file-path')).toContainText('Card holder');
     expect(await saveDialogs(app)).toBe(1);

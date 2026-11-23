@@ -35,8 +35,8 @@ test('a project named on the command line opens, and saves back where it came fr
     // An edit to save — not a rename, which renames the file too (8.12).
     await drawAPanel(window, { parts: '4' });
     // The button, not Ctrl+S: a key typed in a text field stays in it.
-    await window.getByTestId('save').click();
-    await expect(window.getByTestId('save-state')).toHaveText('Saved');
+    await window.keyboard.press('Control+S');
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     await expect(window.getByTestId('file-error')).toHaveCount(0);
     expect(statSync(project).mtimeMs).toBeGreaterThan(before);
   } finally {

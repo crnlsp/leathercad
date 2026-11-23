@@ -51,7 +51,7 @@ for (const [id, name] of [
         dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
       }, project);
       await fromProjectMenu(window, 'save-as');
-      await expect(window.getByTestId('save-state')).toHaveText('Saved');
+      await expect(window.getByTestId('announce-save')).toHaveText('Saved');
       expect(diagnose(loadProject(readFileSync(project)).project)).toEqual([]);
       await app.evaluate(({ dialog, shell }, path) => {
         dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });

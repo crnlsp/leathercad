@@ -76,8 +76,8 @@ test('a drifting seam offers its fix: previewed while pointed at, one undo step 
     await expect(verdict).toHaveText(/drift 0 mm/);
 
     // What is saved: the pocket's stitching ends 0.61 mm lower; nothing cut moved.
-    await window.getByTestId('save').click();
-    await expect(window.getByTestId('save-state')).toHaveText('Saved');
+    await window.keyboard.press('Control+S');
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     const saved = loadProject(readFileSync(file)).project;
     const pocket = saved.parts.find((part) => part.id === 'pocket')!;
     const line = pocket.features.find((f) => f.id === 'pocket-stitch')!;

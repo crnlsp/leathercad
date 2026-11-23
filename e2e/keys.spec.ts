@@ -75,28 +75,28 @@ test('near the window’s foot, a tooltip opens above its control (R-10)', async
 
 test('a tooltip waits 500 ms for the pointer, comes at once for the keyboard, and Escape hides it (R-10)', async () => {
   await withSample(async (window) => {
-    // Something to save: with nothing, Save says so and shows no key (R-06).
+    // Something to undo: with nothing, Undo has no tooltip.
     await renameProject(window, 'Bifold wallet, lined');
-    const save = window.getByTestId('save');
-    const tip = window.getByRole('tooltip', { name: /Save the project/ });
-    await save.hover();
+    const undo = window.getByTestId('undo');
+    const tip = window.getByRole('tooltip', { name: /^Undo/ });
+    await undo.hover();
     await window.waitForTimeout(300);
     await expect(tip).toHaveCount(0);
     await expect(tip).toBeVisible();
-    await expect(tip.locator('kbd')).toHaveText(caption('Ctrl+S'));
+    await expect(tip.locator('kbd')).toHaveText(caption('Ctrl+Z'));
     // Escape dismisses it where it stands, without moving the pointer.
     await window.keyboard.press('Escape');
     await expect(tip).toHaveCount(0);
 
     await window.mouse.move(600, 500);
-    // The stop before Save is the tab strip's + (8.12).
-    await window.getByTestId('new-tab').focus();
+    // The stop before Undo is the Project menu's, at the tab strip's left.
+    await window.getByTestId('project-menu').focus();
     await window.keyboard.press('Tab');
-    await expect(save).toBeFocused();
+    await expect(undo).toBeFocused();
     await expect(tip).toBeVisible({ timeout: 200 });
     await window.keyboard.press('Escape');
     await expect(tip).toHaveCount(0);
-    await expect(save).toBeFocused();
+    await expect(undo).toBeFocused();
   });
 });
 

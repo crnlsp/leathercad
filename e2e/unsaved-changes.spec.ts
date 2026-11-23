@@ -52,7 +52,7 @@ async function closed(app: ElectronApplication): Promise<boolean> {
 test('an untouched project is not unsaved, and closes without asking', async () => {
   const { app, window } = await openApp();
   try {
-    await expect(window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
+    await expect(window.getByTestId('announce-save')).not.toHaveText('Unsaved changes');
     await expect(window.getByTestId('status-bar')).not.toContainText('unsaved');
 
     await requestClose(app);
@@ -66,7 +66,7 @@ test('closing with unsaved work asks, and Cancel keeps the work', async () => {
   const { app, window } = await openApp();
   try {
     await drawAPanel(window, { parts: '1' });
-    await expect(window.getByTestId('save-state')).toHaveText('Unsaved changes');
+    await expect(window.getByTestId('announce-save')).toHaveText('Unsaved changes');
 
     await requestClose(app);
     const dialog = window.getByTestId('unsaved-dialog');
@@ -110,7 +110,7 @@ test('New and Open start a tab of their own, and ask nothing (8.12)', async () =
     await expect(dialog).toHaveCount(0);
     await expect(tabs).toHaveCount(2);
     await expect(window.getByTestId('part-count')).toHaveText('0');
-    await expect(window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
+    await expect(window.getByTestId('announce-save')).not.toHaveText('Unsaved changes');
     await expect(window.getByTestId('undo')).toBeDisabled();
 
     // Saved, then asked for again from the untouched Untitled.
@@ -118,8 +118,8 @@ test('New and Open start a tab of their own, and ask nothing (8.12)', async () =
       native.showSaveDialog = async () => ({ canceled: false, filePath: path });
     }, file);
     await tabs.first().click();
-    await window.getByTestId('save').click();
-    await expect(window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
+    await window.keyboard.press('Control+S');
+    await expect(window.getByTestId('announce-save')).not.toHaveText('Unsaved changes');
     await tabs.nth(1).click();
     await app.evaluate(({ dialog: native }, path) => {
       native.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
@@ -160,7 +160,7 @@ test('closing a tab with unsaved work asks, and a cancelled save keeps it (8.12)
     await dialog.getByTestId('unsaved-save').click();
     await expect(dialog).toHaveCount(0);
     await expect(tabs).toHaveCount(1);
-    await expect(window.getByTestId('save-state')).toHaveText('Unsaved changes');
+    await expect(window.getByTestId('announce-save')).toHaveText('Unsaved changes');
 
     // Saved where they choose, and only then is the tab closed: the last one
     // leaves the app open, on its start screen.
@@ -238,10 +238,10 @@ test('undoing back to what was saved is not unsaved', async () => {
   const { app, window } = await openApp();
   try {
     await drawAPanel(window, { parts: '1' });
-    await expect(window.getByTestId('save-state')).toHaveText('Unsaved changes');
+    await expect(window.getByTestId('announce-save')).toHaveText('Unsaved changes');
     await window.getByTestId('undo').click();
     await expect(window.getByTestId('part-count')).toHaveText('0');
-    await expect(window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
+    await expect(window.getByTestId('announce-save')).not.toHaveText('Unsaved changes');
 
     await requestClose(app);
     expect(await closed(app)).toBe(true);

@@ -82,6 +82,7 @@ import { svgTree } from './svgTree.js';
 import { DeleteDialog } from './DeleteDialog.js';
 import { ContextMenu } from './Menu.js';
 import { TextFieldMenu } from './TextFieldMenu.js';
+import { Icon } from './icons/Icon.js';
 import { ExportDialog } from './ExportDialog.js';
 import { ExportNotice } from './ExportNotice.js';
 import { PrintPreview } from './PrintPreview.js';
@@ -1312,7 +1313,10 @@ export function App({
     };
     const onKey = (event: KeyboardEvent): void => {
       // A field's keys are its own, and so is a focused button's Space (U.12).
-      if (isTyping(event.target) || pressesControl(event)) return;
+      // Save is the exception to a field's keys: there is no Save button to
+      // reach for, and a name typed is unsaved work (MS.2).
+      const savesFromField = isTyping(event.target) && commandFor(event, IS_MAC) === 'save';
+      if ((isTyping(event.target) && !savesFromField) || pressesControl(event)) return;
       // Esc, once nothing before it claimed it — a menu, a field, a dialog,
       // the overlay it was pressed in, or a tool giving something up: an
       // overlay closes, then focus mode ends.
@@ -1730,6 +1734,52 @@ export function App({
               onOpenRecent={(path) => getPlatformHost().openRecent(path)}
             />
           }
+          history={
+            hasProject ? (
+              <div className="toolbar history" data-testid="history-group">
+                {/* Names what it will undo. Disabled needs no reason beyond its own
+              label: there is nothing to undo. */}
+                <Tooltip
+                  text={
+                    storeState.undoLabel === null
+                      ? null
+                      : t('work.undoTooltip', { action: historyText(storeState.undoLabel, t) })
+                  }
+                  keys="undo"
+                >
+                  <button
+                    type="button"
+                    className="tool quiet icon-only"
+                    data-testid="undo"
+                    aria-label={t('work.undo')}
+                    disabled={!storeState.canUndo}
+                    onClick={() => store.undo()}
+                  >
+                    <Icon of="undo" />
+                  </button>
+                </Tooltip>
+                <Tooltip
+                  text={
+                    storeState.redoLabel === null
+                      ? null
+                      : t('work.redoTooltip', { action: historyText(storeState.redoLabel, t) })
+                  }
+                  keys="redo"
+                >
+                  <button
+                    type="button"
+                    className="tool quiet icon-only"
+                    data-testid="redo"
+                    aria-label={t('work.redo')}
+                    disabled={!storeState.canRedo}
+                    onClick={() => store.redo()}
+                  >
+                    <Icon of="redo" />
+                  </button>
+                </Tooltip>
+              </div>
+            ) : null
+          }
           add={
             <NewTabMenu
               recent={recent}
@@ -1814,7 +1864,6 @@ export function App({
               // The mark is news about Updates, so the button opens there while it shows.
               onSettings={() => setSettings(updates.state === 'available' ? 'updates' : 'general')}
               updateAvailable={updates.state === 'available'}
-              onSave={() => void file.save(tab)}
               onExport={() => void exportPdf()}
               onExportSvg={() => setExporting('svg')}
               onExportDxf={() => setExporting('dxf')}
@@ -1830,46 +1879,6 @@ export function App({
               role="region"
               aria-label={t('work.region')}
             >
-              <div className="toolbar history" data-testid="history-group">
-                {/* Names what it will undo. Disabled needs no reason beyond its own
-              label: there is nothing to undo. */}
-                <Tooltip
-                  text={
-                    storeState.undoLabel === null
-                      ? null
-                      : t('work.undoTooltip', { action: historyText(storeState.undoLabel, t) })
-                  }
-                  keys="undo"
-                >
-                  <button
-                    type="button"
-                    className="tool"
-                    data-testid="undo"
-                    disabled={!storeState.canUndo}
-                    onClick={() => store.undo()}
-                  >
-                    {t('work.undo')}
-                  </button>
-                </Tooltip>
-                <Tooltip
-                  text={
-                    storeState.redoLabel === null
-                      ? null
-                      : t('work.redoTooltip', { action: historyText(storeState.redoLabel, t) })
-                  }
-                  keys="redo"
-                >
-                  <button
-                    type="button"
-                    className="tool"
-                    data-testid="redo"
-                    disabled={!storeState.canRedo}
-                    onClick={() => store.redo()}
-                  >
-                    {t('work.redo')}
-                  </button>
-                </Tooltip>
-              </div>
               {view === 'design' ? (
                 <>
                   <ToolOptions

@@ -117,7 +117,6 @@
     "help": "Справка",
     "helpTooltip": "Справка",
     "name": "Название проекта",
-    "nothingToSave": "Нет изменений для сохранения",
     "output": "Вывод",
     "paper": "Бумага: {{sheets}}",
     "paperLong": "{{count}} × {{paper}} {{orientation}}",
@@ -143,12 +142,10 @@
     "problemsNone": "Проблемы: замечаний нет",
     "problemsNoneTooltip": "Замечаний нет",
     "problemsTooltip": "{{counts}}. Показать на панели «Проблемы»",
-    "saveTooltip": "Сохранить проект",
     "saved": "Сохранено",
     "settings": "Настройки",
     "settingsTooltip": "Настройки",
     "unsaved": "Несохранённые изменения",
-    "unsavedShort": "Не сохранено",
     "settingsUpdate": "Настройки — доступна новая версия"
   },
   "menu": {

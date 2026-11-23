@@ -5,7 +5,6 @@ import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
-import { caption } from './keyCaption.js';
 import { drawAPanel, openApp, openSample } from './launchApp.js';
 import { choosePaper, fromProjectMenu, renameProject } from './projectMenu.js';
 import { resizeWindow } from './windowSize.js';
@@ -62,7 +61,7 @@ test('Save as… asks where, and saves there (8.7)', async () => {
     await drawAPanel(window, { parts: '1' });
     await fromProjectMenu(window, 'save-as');
     await expect(window.getByTestId('file-path')).toContainText('Card holder');
-    await expect(window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
+    await expect(window.getByTestId('announce-save')).not.toHaveText('Unsaved changes');
   } finally {
     await closeApp(app);
   }
@@ -124,8 +123,6 @@ const shown = (window: Page, id: string): Promise<string> =>
 
 // The Project menu is the tab strip's since 8.12, at its left.
 const BAR = [
-  'save-state',
-  'save',
   'view-design',
   'view-sheets',
   'paper-button',
@@ -145,12 +142,12 @@ test('the top bar fits every window, its words shortening with the room (8.7, R-
     await openSample(window);
     await choosePaper(window, 'A5', 'portrait');
     await renameProject(window, 'Bifold wallet, lined, with a card pocket each side');
-    await expect(window.getByTestId('save-state')).toHaveText('Unsaved changes');
+    await expect(window.getByTestId('announce-save')).toHaveText('Unsaved changes');
 
-    for (const [width, paper, saveWords] of [
-      [1920, '5 × A5 portrait', 'Unsaved changes'],
-      [1024, '5 × A5', 'Unsaved'],
-      [860, '5', ''],
+    for (const [width, paper] of [
+      [1920, '5 × A5 portrait'],
+      [1024, '5 × A5'],
+      [860, '5'],
     ] as const) {
       await resizeWindow(app, window, width, 600);
       const bar = (await window.getByTestId('project-bar').boundingBox())!;
@@ -165,7 +162,6 @@ test('the top bar fits every window, its words shortening with the room (8.7, R-
         );
       }
       expect(await shown(window, 'paper-button')).toBe(paper);
-      expect(await shown(window, 'save-state')).toBe(saveWords);
       // Both split buttons keep their labels at every width.
       expect(await shown(window, 'export-pdf')).toBe('Export PDF');
       expect(await shown(window, 'print')).toBe('Print');
@@ -184,30 +180,64 @@ test('the top bar fits every window, its words shortening with the room (8.7, R-
   }
 });
 
-test('the save state says saved or not, and Save says when there is nothing to save (R-06)', async () => {
+test('the save state is heard, not shown, and Ctrl+S saves (MS.2)', async () => {
   const project = join(mkdtempSync(join(tmpdir(), 'leathercad-e2e-')), 'Wallet.lcp');
   const { app, window } = await launch(fresh());
   try {
     await app.evaluate(({ dialog }, path) => {
       dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
     }, project);
-    const save = window.getByTestId('save');
-    // Nothing yet: no state, and Save says why it does nothing, with no key.
-    await expect(window.getByTestId('save-state')).toHaveText('');
-    await expect(save).toHaveAttribute('aria-disabled', 'true');
-    await save.hover();
-    await expect(window.getByRole('tooltip', { name: 'Nothing to save' })).toBeVisible();
-    await expect(window.getByRole('tooltip').locator('kbd')).toHaveCount(0);
+    await expect(window.getByTestId('save')).toHaveCount(0);
+    await expect(window.getByTestId('announce-save')).toHaveText('');
 
     await drawAPanel(window, { parts: '1' });
-    await expect(window.getByTestId('save-state')).toHaveText('Unsaved changes');
-    await expect(window.getByTestId('save-state').locator('.icon')).toHaveCount(1);
-    await expect(save).not.toHaveAttribute('aria-disabled');
-    await expect(save.locator('kbd')).toHaveText(caption('Ctrl+S'));
+    await expect(window.getByTestId('announce-save')).toHaveText('Unsaved changes');
+    await expect(window.getByTestId('project-tab')).toHaveClass(/unsaved/);
 
-    await save.click();
-    await expect(window.getByTestId('save-state')).toHaveText('Saved');
-    await expect(save).toHaveAttribute('aria-disabled', 'true');
+    await window.keyboard.press('Control+S');
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
+    await expect(window.getByTestId('project-tab')).not.toHaveClass(/unsaved/);
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('undo and redo sit in the tab strip', async () => {
+  const { app, window } = await launch(fresh());
+  try {
+    const strip = window.getByTestId('tab-strip');
+    await expect(strip.getByTestId('undo')).toBeVisible();
+    await expect(strip.getByTestId('redo')).toBeVisible();
+    await expect(window.getByTestId('work-bar').getByTestId('undo')).toHaveCount(0);
+    await expect(window.getByTestId('work-bar').getByTestId('redo')).toHaveCount(0);
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('undo and redo keep their keys from the tab strip', async () => {
+  const { app, window } = await launch(fresh());
+  try {
+    await drawAPanel(window, { parts: '1' });
+    await expect(window.getByTestId('parts-count')).toContainText('1');
+    await window.keyboard.press('Control+Z');
+    await expect(window.getByTestId('parts-count')).toHaveCount(0);
+    await window.keyboard.press('Control+Shift+Z');
+    await expect(window.getByTestId('parts-count')).toContainText('1');
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('the project menu glyph starts 12 px in', async () => {
+  const { app, window } = await launch(fresh());
+  try {
+    const left = async (id: string): Promise<number> =>
+      (await window.getByTestId(id).locator('svg').first().boundingBox())!.x;
+    expect(await left('project-menu')).toBeGreaterThanOrEqual(11);
+    expect(await left('project-menu')).toBeLessThanOrEqual(13);
+    // The rail's first icon measures 19 px today, not 12: it is the rail's own
+    // slice that moves it, so it is not asserted here.
   } finally {
     await closeApp(app);
   }
@@ -487,8 +517,8 @@ test('the window’s edited flag follows unsaved work (§2)', async () => {
 
     await drawAPanel(window, { parts: '1' });
     await expect.poll(edited).toBe(true);
-    await window.getByTestId('save').click();
-    await expect(window.getByTestId('save-state')).toHaveText('Saved');
+    await window.keyboard.press('Control+S');
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     await expect.poll(edited).toBe(false);
   } finally {
     await closeApp(app);

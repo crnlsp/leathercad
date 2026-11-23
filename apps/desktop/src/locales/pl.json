@@ -117,7 +117,6 @@
     "help": "Pomoc",
     "helpTooltip": "Pomoc",
     "name": "Nazwa projektu",
-    "nothingToSave": "Brak zmian do zapisania",
     "output": "Wynik",
     "paper": "Papier: {{sheets}}",
     "paperLong": "{{count}} × {{paper}} {{orientation}}",
@@ -143,12 +142,10 @@
     "problemsNone": "Problemy: brak uwag",
     "problemsNoneTooltip": "Brak uwag",
     "problemsTooltip": "{{counts}}. Pokaż w panelu Problemy",
-    "saveTooltip": "Zapisz projekt",
     "saved": "Zapisano",
     "settings": "Ustawienia",
     "settingsTooltip": "Ustawienia",
     "unsaved": "Niezapisane zmiany",
-    "unsavedShort": "Niezapisane",
     "settingsUpdate": "Ustawienia — dostępna nowa wersja"
   },
   "menu": {

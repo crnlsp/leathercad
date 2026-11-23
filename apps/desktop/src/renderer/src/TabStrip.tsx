@@ -44,6 +44,7 @@ export function TabStrip({
   tabs,
   active,
   menu,
+  history,
   add,
   trailing,
   nudged,
@@ -59,6 +60,8 @@ export function TabStrip({
   active: ProjectTab | null;
   /** The Project menu's button, at the strip's left. */
   menu: ReactNode;
+  /** Undo and Redo, after the menu: the document's history sits with the document. */
+  history: ReactNode;
   /** *+*, after the tabs: a new project, or one the maker has. */
   add: ReactNode;
   /** At the strip's far end: the application's own controls, on the start screen. */
@@ -140,6 +143,7 @@ export function TabStrip({
     // to more of them.
     <nav className="tab-strip" aria-label={t('tabs.strip')} data-testid="tab-strip">
       {menu}
+      {history}
       <div
         ref={list}
         className="tab-list"

@@ -79,12 +79,12 @@ test('small text can be saved and reopened with its warning recomputed (Q34)', a
     const size = window.getByTestId('property-panel').getByLabel('Size');
     await size.fill('1');
     await size.press('Enter');
-    await window.getByTestId('save').click();
-    await expect(window.getByTestId('save-state')).toHaveText('Saved');
+    await window.keyboard.press('Control+S');
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     await closeActiveTab(window);
     await fromProjectMenu(window, 'open');
     await expect(window.getByTestId('feature-count')).toHaveText('2');
-    await expect(window.getByTestId('save-state')).toHaveText('Saved');
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     await window.getByTestId('problems-toggle').click();
     const row = window.getByTestId('problems-panel').locator(warning);
     await expect(row).toHaveCount(1);

@@ -240,7 +240,7 @@ test('the top bar’s "Saved" has no accessibility violations with a project ope
     const window = await instance.firstWindow();
     await expect(window.getByTestId('app-version')).not.toBeEmpty();
     await openPrintTest(instance, window, join(tmpdir(), 'leathercad-e2e-a11y.pdf'));
-    await expect(window.getByTestId('save-state')).toContainText('Saved');
+    await expect(window.getByTestId('announce-save')).toContainText('Saved');
     await expectNoViolations(window, 'the top bar with a saved project open');
   } finally {
     await closeApp(instance);

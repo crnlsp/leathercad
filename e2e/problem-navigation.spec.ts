@@ -162,7 +162,7 @@ test('F8 walks every problem, including two on one feature, without editing the 
       [],
     );
     await expect(window.getByTestId('undo')).toBeDisabled();
-    await expect(window.getByTestId('save-state')).toHaveText('Saved');
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     expect(readFileSync(file)).toEqual(before);
   } finally {
     await closeApp(app);
@@ -242,7 +242,7 @@ test('problem shortcuts rebind, leave fields and dialogs alone, and do not carry
       dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
     }, second);
     await fromProjectMenu(window, 'open');
-    await expect(window.getByTestId('save-state')).toHaveText('Saved');
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     await expect(current).toHaveCount(0);
     await window.getByTestId('editor-canvas').focus();
     await window.keyboard.press('Shift+F8');

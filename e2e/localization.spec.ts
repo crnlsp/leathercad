@@ -294,7 +294,7 @@ for (const tag of ['pl', 'de', 'ru', 'fr', 'es'] as const) {
       await window.getByTestId('start-open').click();
       await expect(window.getByTestId('part-count')).toHaveText('3');
       await window.keyboard.press('ControlOrMeta+Shift+s');
-      await expect(window.getByTestId('save-state')).toContainText(words.projectBar.saved);
+      await expect(window.getByTestId('announce-save')).toContainText(words.projectBar.saved);
       expect(loadProject(readFileSync(project)).project).toEqual(loadProject(original).project);
 
       // Open starts in Select (Q41); inspect drawing controls with a drawing tool.

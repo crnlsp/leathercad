@@ -518,7 +518,7 @@ body {
   align-items: flex-end;
   gap: var(--space-1);
   min-width: 0;
-  padding: var(--space-1) var(--space-2) 0;
+  padding: var(--space-1) var(--space-2) 0 6px;
   background: var(--shell-800);
 }
 
@@ -532,7 +532,7 @@ body {
 
 /*
  * The tabs are drawing sheets (8.12), filed as drafting software files them:
- * square, side by side, a hairline between two that are not open. The open
+ * square, side by side, a short hairline ending each one that is not open. The open
  * one is a sheet laid on top — lines on three sides, open into the project
  * bar below, which is its. No rounding and no colour bar: the chrome of a
  * drawing tool, not of a browser. A folded corner was tried and dropped: it
@@ -558,12 +558,12 @@ body {
   margin-left: -1px;
 }
 
-.tab:not(.active) + .tab:not(.active)::before {
+.tab:not(.active)::after {
   content: '';
   position: absolute;
   top: var(--space-2);
   bottom: var(--space-2);
-  left: -1px;
+  right: 0;
   width: 1px;
   background: var(--shell-line);
 }
@@ -1579,21 +1579,11 @@ body {
   gap: var(--space-3);
 }
 
-.project-identity,
 .project-output {
   display: flex;
   gap: var(--space-2);
   align-items: center;
   min-width: 0;
-}
-
-/* When the window narrows, the name gives way before anything else does. */
-.project-identity {
-  flex: 0 1 auto;
-}
-
-.project-identity > * {
-  flex: none;
 }
 
 /* The Project menu (8.7), at the tab strip's left since 8.12: an icon. */
@@ -1626,38 +1616,6 @@ body {
   color: var(--text);
   font: var(--t-label);
   outline: none;
-}
-
-/* Said once, beside the project it is about: a check and "Saved", or an open
-   dot and "Unsaved changes". */
-.save-state {
-  display: inline-flex;
-  gap: 6px;
-  align-items: center;
-  /* text-mute is under 4.5 : 1 on the bar; text-dim is AA there (theme.test.ts). */
-  color: var(--text-dim);
-  font: var(--t-label);
-  font-weight: 400;
-  white-space: nowrap;
-}
-
-.save-state.unsaved .icon {
-  color: var(--tan);
-}
-
-/*
- * Nothing to save: the button looks as it does with work to save — it does
- * not come and go, nor its key — but does nothing when pressed, and its
- * pointer and hover say so. It stays focusable, and its tooltip says why
- * (R-06).
- */
-.save-button[aria-disabled='true'] {
-  cursor: not-allowed;
-}
-
-.save-button[aria-disabled='true']:hover {
-  color: var(--text-dim);
-  border-color: var(--shell-line);
 }
 
 /* Design | Sheets (R-06): a pill switch on a dark track, in the middle of the
@@ -2394,12 +2352,9 @@ body {
   align-items: center;
 }
 
-/* Undo and redo lead the work bar; the rule sets them apart from the tool's
-   own options. */
+/* Undo and redo follow the Project menu in the tab strip (MS.2), level with it. */
 .toolbar.history {
-  margin-right: 6px;
-  padding-right: 12px;
-  border-right: 1px solid var(--shell-line);
+  margin-bottom: 2px;
 }
 
 /* The Print Preview's last step: the primary action, in the paper's colour

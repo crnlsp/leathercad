@@ -121,8 +121,8 @@ test('a card pocket with a thumb scoop is drawn, stitched on three sides, and re
     const verdict = (await window.getByTestId('problems-toggle').textContent()) ?? '';
 
     // ── Saved, and the same pocket when it is opened again ──────────────────
-    await window.getByTestId('save').click();
-    await expect(window.getByTestId('save')).toHaveAttribute('aria-disabled', 'true');
+    await window.keyboard.press('Control+S');
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     // Its tab closed, so opening reads the file again rather than going back
     // to the tab (8.12).
     await closeActiveTab(window);

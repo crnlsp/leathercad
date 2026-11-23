@@ -49,8 +49,8 @@ test('a crash with unsaved work is offered back, untitled and unsaved, and its f
     dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
   }, project);
   await drawAPanel(first.window, 150);
-  await first.window.getByTestId('save').click();
-  await expect(first.window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
+  await first.window.keyboard.press('Control+S');
+  await expect(first.window.getByTestId('announce-save')).not.toHaveText('Unsaved changes');
   const saved = readFileSync(project);
   // Saved, so its copy goes; until it has, the copy waited for below could
   // be this one, of the work before the save.
@@ -72,7 +72,7 @@ test('a crash with unsaved work is offered back, untitled and unsaved, and its f
 
     // Back, as it was — and untitled and unsaved, not the file it came from.
     await expect(second.window.getByTestId('part-count')).toHaveText('2');
-    await expect(second.window.getByTestId('save-state')).toHaveText('Unsaved changes');
+    await expect(second.window.getByTestId('announce-save')).toHaveText('Unsaved changes');
     await expect(second.window.getByTestId('status-bar')).not.toContainText(basename(project));
     expect(readFileSync(project).equals(saved)).toBe(true);
 
@@ -81,8 +81,8 @@ test('a crash with unsaved work is offered back, untitled and unsaved, and its f
     await second.app.evaluate(({ dialog: native }, path) => {
       native.showSaveDialog = async () => ({ canceled: false, filePath: path });
     }, elsewhere);
-    await second.window.getByTestId('save').click();
-    await expect(second.window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
+    await second.window.keyboard.press('Control+S');
+    await expect(second.window.getByTestId('announce-save')).not.toHaveText('Unsaved changes');
     expect(existsSync(elsewhere)).toBe(true);
     expect(readFileSync(project).equals(saved)).toBe(true);
   } finally {
@@ -121,7 +121,7 @@ test('a copy is kept only while there is unsaved work', async () => {
     await app.evaluate(({ dialog }, path) => {
       dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
     }, project);
-    await window.getByTestId('save').click();
+    await window.keyboard.press('Control+S');
     await expect.poll(() => recoveryCopies(state)).toEqual([]);
   } finally {
     await closeApp(app);

@@ -117,7 +117,6 @@
     "help": "Aide",
     "helpTooltip": "Aide",
     "name": "Nom du projet",
-    "nothingToSave": "Rien à enregistrer",
     "output": "Sortie",
     "paper": "Papier : {{sheets}}",
     "paperLong": "{{count}} × {{paper}} {{orientation}}",
@@ -141,12 +140,10 @@
     "problemsNone": "Problèmes : rien à corriger",
     "problemsNoneTooltip": "Rien à corriger",
     "problemsTooltip": "{{counts}}. Afficher dans Problèmes",
-    "saveTooltip": "Enregistrer le projet",
     "saved": "Enregistré",
     "settings": "Paramètres",
     "settingsTooltip": "Paramètres",
     "unsaved": "Modifications non enregistrées",
-    "unsavedShort": "Non enregistré",
     "settingsUpdate": "Paramètres — une nouvelle version est disponible"
   },
   "menu": {

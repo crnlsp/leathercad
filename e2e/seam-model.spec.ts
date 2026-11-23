@@ -85,13 +85,13 @@ test('a loaded seam is listed before deleting its holes, removed on consent and 
     await window.getByTestId('delete-feature').click();
     await dialog.getByTestId('delete-all').click();
     await expect(window.getByTestId('feature-count')).toHaveText('3');
-    await window.getByTestId('save').click();
-    await expect(window.getByTestId('save-state')).toHaveText('Saved');
+    await window.keyboard.press('Control+S');
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     expect(loadProject(readFileSync(path)).project.seams).toEqual([]);
     await window.getByTestId('undo').click();
     await expect(window.getByTestId('feature-count')).toHaveText('4');
-    await window.getByTestId('save').click();
-    await expect(window.getByTestId('save-state')).toHaveText('Saved');
+    await window.keyboard.press('Control+S');
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     expect(loadProject(readFileSync(path)).project.seams).toEqual(document.project.seams);
   } finally {
     await closeApp(app);

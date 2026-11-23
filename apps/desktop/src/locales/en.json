@@ -117,7 +117,6 @@
     "help": "Help",
     "helpTooltip": "Help",
     "name": "Project name",
-    "nothingToSave": "Nothing to save",
     "output": "Output",
     "paper": "Paper: {{sheets}}",
     "paperLong": "{{count}} × {{paper}} {{orientation}}",
@@ -141,12 +140,10 @@
     "problemsShowNone": "Problems: nothing to fix. Show Problems",
     "problemsNoneTooltip": "Nothing to fix",
     "problemsTooltip": "{{counts}}. Show them in Problems",
-    "saveTooltip": "Save the project",
     "saved": "Saved",
     "settings": "Settings",
     "settingsTooltip": "Settings",
     "unsaved": "Unsaved changes",
-    "unsavedShort": "Unsaved",
     "settingsUpdate": "Settings — a new version is available"
   },
   "menu": {

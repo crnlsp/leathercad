@@ -127,7 +127,7 @@ test('a strap too long for A4 portrait is printed whole by turning the paper, an
     await choosePaper(window, 'A4', 'landscape');
     await on('1 × A4 landscape');
     await expect(paper).toHaveAttribute('data-sheets', '1');
-    await expect(window.getByTestId('save-state')).toHaveText('Unsaved changes');
+    await expect(window.getByTestId('announce-save')).toHaveText('Unsaved changes');
 
     // …one undoable step…
     await window.getByTestId('undo').click();
@@ -165,15 +165,15 @@ test('a strap too long for A4 portrait is printed whole by turning the paper, an
     await on(/Letter landscape/);
 
     // Saved with the project, and back when it is opened again.
-    await window.getByTestId('save').click();
-    await expect(window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
+    await window.keyboard.press('Control+S');
+    await expect(window.getByTestId('announce-save')).not.toHaveText('Unsaved changes');
     await fromProjectMenu(window, 'new');
     await on('1 × A4 portrait, scale check only');
 
     await fromProjectMenu(window, 'open');
     await expect(window.getByTestId('part-count')).toHaveText('1');
     await on(/Letter landscape/);
-    await expect(window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
+    await expect(window.getByTestId('announce-save')).not.toHaveText('Unsaved changes');
   } finally {
     await closeApp(app);
     rmSync(pdf, { force: true });

@@ -81,7 +81,7 @@ test("dragging the pocket near the outer's left edge lines it up exactly, in one
       dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
     }, file);
     await fromProjectMenu(window, 'save-as');
-    await expect(window.getByTestId('save-state')).toHaveText('Saved');
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     const origin = (id: string): unknown => {
       const feature = loadProject(readFileSync(file))
         .project.parts.flatMap((part) => part.features)

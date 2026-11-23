@@ -7,7 +7,6 @@ import type { Translate } from '../../shared/i18n.js';
 import type { CanvasView } from './CanvasHost.js';
 import { useI18n } from './i18n.js';
 import { Icon } from './icons/Icon.js';
-import { KeyCap } from './keyCaps.js';
 import { MenuButton } from './Menu.js';
 import { exportMenu, helpMenu } from './menus.js';
 import { pressOf, type Press } from './PanelFold.js';
@@ -26,8 +25,8 @@ import { ViewSwitch } from './ViewSwitch.js';
  * a glance: **is my work saved, am I designing or checking the sheets, and is
  * the pattern ready to print.**
  *
- * Left, the project: whether it is saved, and Save — its name and its menu are
- * the tab strip's above since 8.12, the menu at the strip's left. Centre,
+ * Left, nothing: the project's name, menu, history and saved state are the tab
+ * strip's above (8.12, MS.2); Ctrl+S saves. Centre,
  * Design | Sheets. Right, where the workflow ends: the paper, *Export PDF* with
  * the menu of its other formats as its second half, and *Print* — the one
  * primary action, in the paper's colour — whose second half is the problems
@@ -51,7 +50,6 @@ export function ProjectBar({
   onAbout,
   onSettings,
   updateAvailable,
-  onSave,
   onExport,
   onExportSvg,
   onExportDxf,
@@ -80,7 +78,6 @@ export function ProjectBar({
   onSettings: () => void;
   /** A newer release exists (8.9): Settings carries a quiet mark. */
   updateAvailable: boolean;
-  onSave: () => void;
   onExport: () => void;
   /** *Export SVG…* and *Export DXF…* (6.2, 6.5), from the menu beside *Export PDF*. */
   onExportSvg: () => void;
@@ -104,30 +101,6 @@ export function ProjectBar({
         {/* The product's name is the window title's and the icon's to carry;
           the document outline still starts with it. */}
         <h1 className="visually-hidden">LeatherCAD</h1>
-        <div className="project-identity">
-          <SaveState dirty={dirty} saved={saved} room={room} />
-          <Tooltip
-            text={dirty ? t('projectBar.saveTooltip') : t('projectBar.nothingToSave')}
-            {...(dirty ? { keys: 'save' as const } : {})}
-          >
-            <button
-              type="button"
-              className="tool save-button"
-              data-testid="save"
-              // Not `disabled`: a disabled button shows no tooltip, and this one
-              // says why it has nothing to do (R-06).
-              aria-disabled={!dirty || undefined}
-              onClick={() => {
-                if (dirty) onSave();
-              }}
-            >
-              {t('actions.save')}
-              {/* The same button either way, its key too: only whether it acts changes. */}
-              {room === 'wide' && <KeyCap command="save" />}
-            </button>
-          </Tooltip>
-        </div>
-
         <ViewSwitch
           view={view}
           onView={onView}
@@ -260,27 +233,6 @@ function Settled({ value, settled }: { value: string; settled: boolean }) {
   const [shown, setShown] = useState(value);
   if (settled && shown !== value) setShown(value);
   return <>{settled ? value : shown}</>;
-}
-
-/**
- * Saved: a check and "Saved". Unsaved: an open dot and "Unsaved changes" —
- * "Unsaved" in a narrow window, the dot alone in a cramped one. Nothing for a
- * new project that has nothing in it yet.
- */
-function SaveState({ dirty, saved, room }: { dirty: boolean; saved: boolean; room: Room }) {
-  const { t } = useI18n();
-  if (!dirty && !saved) return <span className="save-state" data-testid="save-state" />;
-  const words = dirty
-    ? room === 'wide'
-      ? t('projectBar.unsaved')
-      : t('projectBar.unsavedShort')
-    : t('projectBar.saved');
-  return (
-    <span className={dirty ? 'save-state unsaved' : 'save-state'} data-testid="save-state">
-      <Icon of={dirty ? 'unsaved' : 'check'} size={dirty ? 8 : 12} />
-      <span className={room === 'cramped' ? 'visually-hidden' : undefined}>{words}</span>
-    </span>
-  );
 }
 
 /**

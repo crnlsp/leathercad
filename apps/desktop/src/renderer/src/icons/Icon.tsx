@@ -425,6 +425,18 @@ const GLYPHS = {
     </>
   ),
   menu: <path d="M2.5 4h11M2.5 8h11M2.5 12h11" />,
+  undo: (
+    <>
+      <path d="M5.5 3 2.5 6l3 3" />
+      <path d="M2.5 6H9a4.5 4.5 0 0 1 0 9H6.5" />
+    </>
+  ),
+  redo: (
+    <>
+      <path d="M10.5 3l3 3-3 3" />
+      <path d="M13.5 6H7a4.5 4.5 0 0 0 0 9h2.5" />
+    </>
+  ),
   'changed-outside': (
     <>
       {sheet}

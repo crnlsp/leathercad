@@ -40,7 +40,7 @@ test('an excessive project is refused and the unsaved project and its undo histo
     await expect(window.getByTestId('file-error')).toContainText('sheets');
     await expect(window.getByTestId('part-count')).toHaveText('1');
     await expect(window.getByTestId('tab-strip').getByRole('tab')).toHaveCount(1);
-    await expect(window.getByTestId('save-state')).toHaveText('Unsaved changes');
+    await expect(window.getByTestId('announce-save')).toHaveText('Unsaved changes');
     await expect(window.getByTestId('undo')).toBeEnabled();
     await window.screenshot({ path: test.info().outputPath('resource-refusal.png') });
     await window.getByTestId('undo').click();
