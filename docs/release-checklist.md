@@ -25,7 +25,7 @@ the Flatpak among the release's files, and R10 left unverified for 1.5. First wr
   pull request. A release never ships part of its section. A hotfix ships none of it: its scope is
   its own `fix` commits (`CONTRIBUTING.md`, *Changelog and releases*).
 - **The build.** The installer or AppImage from `pnpm package` (or the release workflow) at the
-  commit under test. Note the version shown in the status bar. On Arch, once `leathercad-bin` is
+  commit under test. Note the version shown in Help › *About LeatherCAD*. On Arch, once `leathercad-bin` is
   on the AUR, test that package instead of the AppImage: the print check then measures the file
   makers install. On Ubuntu, install the `.deb` with `sudo apt install ./LeatherCAD-*.deb`.
   CI's packaged smoke test (`installers.yml`) never ran these bytes: it drives a sibling build of
@@ -107,11 +107,12 @@ ones (`gh issue list --label known-issue`).
 ### 1. Start-up
 
 1. The window title reads **Untitled — LeatherCAD**.
-2. The top bar has three zones: the project menu, whose button is the name, and its save state and
-   *Save*; *Design | Sheets* in the middle; the paper button, *Export PDF* and *Print* — the only
-   primary button, in the paper's colour, its second half a check — then Settings and Help.
-3. The second bar holds the work: *Undo*, *Redo* and *Draw as*.
-4. The paper button reads **1 × A4 portrait**, and the Sheets tab **1**.
+2. The window has three rows. The first is the tab strip: **☰** (with *Settings…* last), the
+   project's tab, *Undo* and *Redo*. The second holds the *Design | Sheets* tabs, then the paper
+   field, *Export PDF* and *Print* — green only while nothing needs fixing, its second half a
+   check. The third is the tool row: the active tool and *Draw as*. Help is the **?** at the
+   status bar's right, and the panel chips *Parts*, *Focus*, *Properties* lead its left.
+3. The paper field reads **Paper 1 × A4 portrait**, and the Sheets tab **1**.
 
 ### 2. An empty project
 

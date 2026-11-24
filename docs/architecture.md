@@ -559,7 +559,7 @@ features belong to — and selection only ever chooses *where* something goes, n
 ([Phase 4 reconciliation](superpowers/specs/2026-09-15-phase-4-reconciliation-design.md) §3.8).
 
 **A picked part is a real selection everywhere** (Q29). It stands for every feature in it
-(`selectedFeatureIds`): the board highlights them, the status bar counts "1 part selected",
+(`selectedFeatureIds`): the board highlights them, Parts counts it,
 Properties shows the part — its outline's size, its problems, its name and Cut, *Arrange*'s Flip and
 *Delete part* — and the Delete key deletes the part whole. Rotate, Scale, Flip and the right-click
 menu take it as the piece, Scale keeping what in it is made to a size its size (Q31); Shift-click and

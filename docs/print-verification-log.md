@@ -64,7 +64,7 @@ them with `UPDATE_FIXTURES=1 pnpm test`): `paper-check-print-test.lcp` for A–H
 already cut as a mirrored pair.
 
 1. **Open** `fixtures/projects/print-test.lcp` in the LeatherCAD build under test. Note the version
-   in the status bar. The project is on A4 portrait, and the paper button beside *Export PDF* says
+   in Help › *About LeatherCAD*. The project is on A4 portrait, and the paper button beside *Export PDF* says
    *3 × A4 portrait* (before 1.5, the paper list said *3 sheets of A4, portrait (Strap taped)*).
    If the printer holds Letter, choose *Letter* in its popover first — the layout changes, the
    measurements do not.
@@ -136,7 +136,7 @@ printer.
 **The procedure**, about an hour with the calibration, with the steel rule of the procedure above:
 
 1. **Open** `fixtures/projects/paper-check-assembly.lcp` in the build under test, on A4 portrait.
-   Note the version in the status bar. *Sheets* shows six sheets: *Hole row* on sheet 1, the
+   Note the version in Help › *About LeatherCAD*. *Sheets* shows six sheets: *Hole row* on sheet 1, the
    assembly map of sheets 3–6 on sheet 2, and *Panel* taped 2 × 2 across sheets 3–6.
    Each piece carries short labels naming the check and its expected value (`I = 4.0 hole
    diameter`, `J = 300.0 edge to edge after taping`), so the paper explains itself.
@@ -200,7 +200,7 @@ plan, the PDF, the SVG and the DXF. None of that is the printer.
 **The procedure**, about five minutes, with the steel rule of the procedure above:
 
 1. **Open** `fixtures/projects/card-holder-marks.lcp` in the build under test: the shipped card
-   holder, its left and right seams marked every 6th pair. Note the version in the status bar.
+   holder, its left and right seams marked every 6th pair. Note the version in Help › *About LeatherCAD*.
 2. **Sheets** shows one A4 portrait sheet: *Outer* and *Pocket — cut 2*, each with four short grey
    ticks just inside its left and right stitching, square to it.
 3. **Print** as step 3 above (on Windows, *Save PDF…* and print at *Actual size*). Never scaled.
@@ -240,7 +240,7 @@ and holes are byte for byte the same. None of that is the printer.
 
 1. **Open** `fixtures/projects/card-holder.lcp` in the build under test, pick *Pocket* in Parts
    and tick *Cut as a mirrored pair* in Properties. Parts now reads *Pocket 1 + 1 mirrored*. Note
-   the version in the status bar.
+   the version in Help › *About LeatherCAD*.
 2. **Sheets** shows one A4 portrait sheet: *Outer*, and *Pocket* captioned *Pocket — cut 2, turn
    the template over for the second*.
 3. **Print** as step 3 above (on Windows, *Save PDF…* and print at *Actual size*). Never scaled.
@@ -280,7 +280,7 @@ the iron.
 the procedure above:
 
 1. **Build** the card holder in the build under test, from a blank *New project*, as the journey
-   does. Note the version in the status bar.
+   does. Note the version in Help › *About LeatherCAD*.
    1. Draw a rectangle. In Properties: *Width* 105, *Height* 70, each corner radius 4, the piece
       named `Outer`. In the selection bar, *Stitch line*; *Edge margin* 3; then *Stitch holes*.
       Parts says 86 holes.
