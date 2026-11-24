@@ -138,7 +138,7 @@ test('a project saved without a name is named after its file', async () => {
       dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
     }, file);
     await drawAPanel(window, { parts: '1' });
-    await window.keyboard.press('Control+S');
+    await window.keyboard.press('ControlOrMeta+S');
     await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     await expect(window.getByTestId('project-name')).toHaveText('Portfel');
     await expect.poll(() => window.title()).toBe('Portfel — LeatherCAD');
@@ -160,7 +160,7 @@ test('+ offers a new project, Open… and the recent projects', async () => {
       dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
     }, file);
     await drawAPanel(window, { parts: '1' });
-    await window.keyboard.press('Control+S');
+    await window.keyboard.press('ControlOrMeta+S');
     await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     await closeActiveTab(window);
 
@@ -225,7 +225,7 @@ test('the open tabs come back at the next start, the one in front in front', asy
           join(folder, `${name}.lcp`),
         );
         await drawAPanel(window, { parts });
-        await window.keyboard.press('Control+S');
+        await window.keyboard.press('ControlOrMeta+S');
         await expect(window.getByTestId('announce-save')).toHaveText('Saved');
         await expect(window.getByTestId('project-name')).toHaveText(name);
         await window.keyboard.press('ControlOrMeta+n');
@@ -272,7 +272,7 @@ test('opening a project that is open already goes to its tab, which bounces', as
       dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
     }, file);
     await drawAPanel(window, { parts: '1' });
-    await window.keyboard.press('Control+S');
+    await window.keyboard.press('ControlOrMeta+S');
     await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     await window.keyboard.press('ControlOrMeta+n');
 
@@ -295,7 +295,7 @@ test('renaming a saved project renames its file, never over another', async () =
       join(folder, 'Belt.lcp'),
     );
     await drawAPanel(window, { parts: '1' });
-    await window.keyboard.press('Control+S');
+    await window.keyboard.press('ControlOrMeta+S');
     await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     await expect(window.getByTestId('project-name')).toHaveText('Belt');
     writeFileSync(join(folder, 'Wallet.lcp'), 'another project');
@@ -331,7 +331,7 @@ test('a tab’s own menu: reload from disk, duplicate, close others, move to the
       dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
     }, file);
     await drawAPanel(window, { parts: '1' });
-    await window.keyboard.press('Control+S');
+    await window.keyboard.press('ControlOrMeta+S');
     await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     await expect(window.getByTestId('project-name')).toHaveText('Belt');
     const tabs = window.getByTestId('tab-strip').getByRole('tab');
@@ -398,7 +398,7 @@ test('undoing a rename gives the file its name back, as the project gets its own
       join(folder, 'Belt.lcp'),
     );
     await drawAPanel(window, { parts: '1' });
-    await window.keyboard.press('Control+S');
+    await window.keyboard.press('ControlOrMeta+S');
     await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     await renameProject(window, 'Watch strap');
     // The window, not the disk: the new name is linked before the old one
@@ -428,7 +428,7 @@ test('a file changed outside the app is said over the board, and reloads on requ
       dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
     }, file);
     await drawAPanel(window, { parts: '1' });
-    await window.keyboard.press('Control+S');
+    await window.keyboard.press('ControlOrMeta+S');
     await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     // The app's own save is not news.
     await window.waitForTimeout(800);
@@ -547,7 +547,7 @@ test('Ctrl+Shift+T opens the project last closed again (8.12)', async () => {
       dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
     }, file);
     await drawAPanel(window, { parts: '1' });
-    await window.keyboard.press('Control+S');
+    await window.keyboard.press('ControlOrMeta+S');
     await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     await window.keyboard.press('ControlOrMeta+w');
     await expect(window.getByTestId('start-screen')).toBeVisible();
@@ -571,7 +571,7 @@ test('a recent project is pinned to the top of the start screen, or taken off it
         );
         await window.keyboard.press('ControlOrMeta+n');
         await drawAPanel(window, { parts: '1' });
-        await window.keyboard.press('Control+S');
+        await window.keyboard.press('ControlOrMeta+S');
         await expect(window.getByTestId('announce-save')).toHaveText('Saved');
         await expect(window.getByTestId('project-name')).toHaveText(name);
       }
@@ -610,7 +610,7 @@ test('the next start finds each tab on its view and zoom, and kept unsaved work 
         dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
       }, file);
       await drawAPanel(window, { parts: '1' });
-      await window.keyboard.press('Control+S');
+      await window.keyboard.press('ControlOrMeta+S');
       await expect(window.getByTestId('announce-save')).toHaveText('Saved');
       // Read once it has moved: straight after the click it still says the old zoom.
       const before = await window.getByTestId('zoom-level').textContent();
@@ -749,7 +749,7 @@ test('a polyline half drawn is given up when its tab reloads from disk (Q39)', a
       dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
     }, file);
     await drawAPanel(window, { parts: '1' });
-    await window.keyboard.press('Control+S');
+    await window.keyboard.press('ControlOrMeta+S');
     await expect(window.getByTestId('announce-save')).toHaveText('Saved');
 
     await startPolyline(window);

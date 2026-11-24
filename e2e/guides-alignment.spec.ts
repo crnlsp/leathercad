@@ -67,7 +67,7 @@ test('guides can be placed, edited diagonally, undone, saved and reopened (3.10)
       await app.evaluate(({ dialog }, path) => {
         dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
       }, file);
-      await window.keyboard.press('Control+S');
+      await window.keyboard.press('ControlOrMeta+S');
       await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     });
     await withApp(

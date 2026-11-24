@@ -319,7 +319,7 @@ test('saves a project and reopens it with its parameters intact', async () => {
 
     // The dot marks unsaved changes.
     await expect(window.getByTestId('announce-save')).toHaveText('Unsaved changes');
-    await window.keyboard.press('Control+S');
+    await window.keyboard.press('ControlOrMeta+S');
     await expect(window.getByTestId('announce-save')).not.toHaveText('Unsaved changes');
     expect(existsSync(target)).toBe(true);
 
@@ -1732,7 +1732,7 @@ test('Ctrl+S from a field saves what was typed in it, without Enter (never lose 
       .locator('input');
     await width.fill('87');
     await expect(width).toBeFocused();
-    await window.keyboard.press('Control+S');
+    await window.keyboard.press('ControlOrMeta+S');
     await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     await expect(width).toHaveValue('87');
     // The maker's place is still the field they typed in.
@@ -1766,7 +1766,7 @@ test('Ctrl+S from the tab name field saves the name typed, without Enter', async
 
     await fromProjectMenu(window, 'rename');
     await window.getByTestId('project-name-input').fill('Pending name');
-    await window.keyboard.press('Control+S');
+    await window.keyboard.press('ControlOrMeta+S');
     await expect(window.getByTestId('announce-save')).toHaveText('Saved');
 
     await closeActiveTab(window);
@@ -1790,13 +1790,13 @@ test('Ctrl+S from the tab name field of a saved project waits for the file renam
       dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
     }, target);
 
-    await window.keyboard.press('Control+S');
+    await window.keyboard.press('ControlOrMeta+S');
     await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     expect(readdirSync(folder)).toEqual(['Old name.lcp']);
 
     await fromProjectMenu(window, 'rename');
     await window.getByTestId('project-name-input').fill('New name');
-    await window.keyboard.press('Control+S');
+    await window.keyboard.press('ControlOrMeta+S');
 
     await expect(window.getByTestId('project-tab')).toContainText('New name');
     await expect(window.getByTestId('announce-save')).toHaveText('Saved');
@@ -1850,7 +1850,7 @@ test('a label is placed on a part, typed in the panel, and survives a save', asy
     // The parts list follows the words, so the label is findable by what it says.
     await expect(window.getByTestId('parts-list')).toContainText('Zszyć przed klejeniem');
 
-    await window.keyboard.press('Control+S');
+    await window.keyboard.press('ControlOrMeta+S');
     await expect(window.getByTestId('announce-save')).not.toHaveText('Unsaved changes');
 
     // Throw it away and get it back from disk, at format version 5.

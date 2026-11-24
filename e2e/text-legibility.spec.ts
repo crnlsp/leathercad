@@ -80,7 +80,7 @@ test('small text can be saved and reopened with its warning recomputed (Q34)', a
     const size = window.getByTestId('property-panel').getByLabel('Size');
     await size.fill('1');
     await size.press('Enter');
-    await window.keyboard.press('Control+S');
+    await window.keyboard.press('ControlOrMeta+S');
     await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     await closeActiveTab(window);
     await fromProjectMenu(window, 'open');

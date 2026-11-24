@@ -119,7 +119,7 @@ test('New and Open start a tab of their own, and ask nothing (8.12)', async () =
       native.showSaveDialog = async () => ({ canceled: false, filePath: path });
     }, file);
     await tabs.first().click();
-    await window.keyboard.press('Control+S');
+    await window.keyboard.press('ControlOrMeta+S');
     await expect(window.getByTestId('announce-save')).not.toHaveText('Unsaved changes');
     await tabs.nth(1).click();
     await app.evaluate(({ dialog: native }, path) => {

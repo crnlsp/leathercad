@@ -198,7 +198,7 @@ test('the save state is heard, not shown, and Ctrl+S saves (MS.2)', async () => 
     await expect(window.getByTestId('announce-save')).toHaveText('Unsaved changes');
     await expect(window.getByTestId('project-tab')).toHaveClass(/unsaved/);
 
-    await window.keyboard.press('Control+S');
+    await window.keyboard.press('ControlOrMeta+S');
     await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     await expect(window.getByTestId('project-tab')).not.toHaveClass(/unsaved/);
   } finally {
@@ -224,7 +224,7 @@ test('the Project menu’s Save writes the file, and a notice never moves the pa
     expect(existsSync(project)).toBe(true);
 
     // "Saved Wallet.lcp" shows for a few seconds, after the chips, not before.
-    await window.keyboard.press('Control+S');
+    await window.keyboard.press('ControlOrMeta+S');
     await expect(window.getByTestId('status-bar')).toContainText('Wallet.lcp');
     expect(await chipX()).toBe(before);
   } finally {
@@ -250,9 +250,9 @@ test('undo and redo keep their keys from the tab strip', async () => {
   try {
     await drawAPanel(window, { parts: '1' });
     await expect(window.getByTestId('parts-count')).toContainText('1');
-    await window.keyboard.press('Control+Z');
+    await window.keyboard.press('ControlOrMeta+Z');
     await expect(window.getByTestId('parts-count')).toContainText('0');
-    await window.keyboard.press('Control+Shift+Z');
+    await window.keyboard.press('ControlOrMeta+Shift+Z');
     await expect(window.getByTestId('parts-count')).toContainText('1');
   } finally {
     await closeApp(app);
@@ -564,7 +564,7 @@ test('the window’s edited flag follows unsaved work (§2)', async () => {
 
     await drawAPanel(window, { parts: '1' });
     await expect.poll(edited).toBe(true);
-    await window.keyboard.press('Control+S');
+    await window.keyboard.press('ControlOrMeta+S');
     await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     await expect.poll(edited).toBe(false);
   } finally {
@@ -579,7 +579,7 @@ test('keys still reach Settings and Help after they leave the bar', async () => 
     await expect(window.getByTestId('project-bar').getByTestId('help-menu')).toHaveCount(0);
 
     await window.getByTestId('editor-canvas').focus();
-    await window.keyboard.press('Control+,');
+    await window.keyboard.press('ControlOrMeta+Comma');
     await expect(window.getByTestId('settings-dialog')).toBeVisible();
     await window.keyboard.press('Escape');
     await expect(window.getByTestId('settings-dialog')).toHaveCount(0);

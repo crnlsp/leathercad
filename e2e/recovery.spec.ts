@@ -50,7 +50,7 @@ test('a crash with unsaved work is offered back, untitled and unsaved, and its f
     dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
   }, project);
   await drawAPanel(first.window, 150);
-  await first.window.keyboard.press('Control+S');
+  await first.window.keyboard.press('ControlOrMeta+S');
   await expect(first.window.getByTestId('announce-save')).not.toHaveText('Unsaved changes');
   const saved = readFileSync(project);
   // Saved, so its copy goes; until it has, the copy waited for below could
@@ -82,7 +82,7 @@ test('a crash with unsaved work is offered back, untitled and unsaved, and its f
     await second.app.evaluate(({ dialog: native }, path) => {
       native.showSaveDialog = async () => ({ canceled: false, filePath: path });
     }, elsewhere);
-    await second.window.keyboard.press('Control+S');
+    await second.window.keyboard.press('ControlOrMeta+S');
     await expect(second.window.getByTestId('announce-save')).not.toHaveText('Unsaved changes');
     expect(existsSync(elsewhere)).toBe(true);
     expect(readFileSync(project).equals(saved)).toBe(true);
@@ -122,7 +122,7 @@ test('a copy is kept only while there is unsaved work', async () => {
     await app.evaluate(({ dialog }, path) => {
       dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
     }, project);
-    await window.keyboard.press('Control+S');
+    await window.keyboard.press('ControlOrMeta+S');
     await expect.poll(() => recoveryCopies(state)).toEqual([]);
   } finally {
     await closeApp(app);

@@ -166,7 +166,7 @@ test('a strap too long for A4 portrait is printed whole by turning the paper, an
     await on(/Letter landscape/);
 
     // Saved with the project, and back when it is opened again.
-    await window.keyboard.press('Control+S');
+    await window.keyboard.press('ControlOrMeta+S');
     await expect(window.getByTestId('announce-save')).not.toHaveText('Unsaved changes');
     await fromProjectMenu(window, 'new');
     await on('1 × A4 portrait, scale check only');

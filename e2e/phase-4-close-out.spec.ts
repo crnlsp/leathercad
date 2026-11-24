@@ -303,7 +303,7 @@ test('a card holder, from the first outline to the printed page', async () => {
     await expect(problems).toContainText('Nothing to fix');
 
     // ── Saved ────────────────────────────────────────────────────────────────
-    await window.keyboard.press('Control+S');
+    await window.keyboard.press('ControlOrMeta+S');
     await expect(window.getByTestId('announce-save')).not.toHaveText('Unsaved changes');
     expect(existsSync(file)).toBe(true);
   } finally {

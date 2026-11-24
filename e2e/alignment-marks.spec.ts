@@ -36,7 +36,7 @@ test('mark a seam every 6th pair from Properties, in one undo step, and save it 
     await window.getByTestId('redo').click();
     await expect(left.getByTestId('seam-marked')).toHaveText('Marked every 6 pairs');
 
-    await window.keyboard.press('Control+S');
+    await window.keyboard.press('ControlOrMeta+S');
     await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     const bytes = readFileSync(saved);
     // Saved in a format that holds marks: 13, or any later one.
