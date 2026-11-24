@@ -70,7 +70,7 @@ simplification, reduced precision, scaled-to-fit output or reduced undo depth as
 | ✅ | [PERF-015](#perf-015) | P3 | Low | Avoid repeated deep dependency walks | Confirmed on stress fixture | Medium | High | `perf/015-dependency-walks` |
 | ✅ | [PERF-016](#perf-016) | P3 | Low | Prune obsolete collapsed-part IDs | Strong evidence | Small | Low | `claude/perf-016-folds` |
 | ✅ | [PERF-017](#perf-017) | P2 | Medium | Make benchmarks representative and interpretable | Confirmed | Small | Low | `perf/017-benchmarks` |
-| ◐ | [PERF-018](#17-baseline-perf-018) | P0 (1.7) | — | Packaged startup, idle and soak baselines, and 1.7's workloads | Measured | Medium | Low | `claude/xenodochial-boyd-082c07` |
+| ✅ | [PERF-018](#17-baseline-perf-018) | P0 (1.7) | — | Packaged startup, idle and soak baselines, and 1.7's workloads | Measured | Medium | Low | [#303](https://github.com/crnlsp/leathercad/pull/303), `perf/perf-018-soak` |
 
 ## Recommended implementation order
 
@@ -230,7 +230,7 @@ a maker starts: the AppImage mounts its squashfs before Electron runs, and the N
 dmg are not timed.
 
 **1.7's workloads, bundled** (`tools/perf-compute.mjs`, the median of three runs' medians, each 20
-samples after 3 warm-ups, ms). The two-hour soak below ran beside them, on one of the 12 threads;
+samples after 3 warm-ups, ms). A soak ran beside them, on one of the 12 threads (not the one below);
 the wallet and `bag-50` are here to compare with the PERF-017 table.
 
 | Workload | Fresh evaluation | Fresh diagnosis | Diagnosis after a rename | Snap-index build |
@@ -247,15 +247,41 @@ slots: 300 shapes) imports through the packaged app's dialog as 60 pieces with 2
 problem; its timing was not recorded.
 
 **Two-hour soak** (`tools/perf-soak.mjs`, `bag-50`, a cycle: open, draw, undo, redo, save,
-Sheets, Design, Print Preview, close, New with a panel, close unsaved). Running from 21:29 at
-`cd0e1b6`; the result follows in this pull request. An earlier run at `aeec619`, under load 8–11
-from four other sessions, reached minute 20 before the machine restarted:
+Sheets, Design, Print Preview, close, New with a panel, close unsaved). The run started beside the
+workloads at `cd0e1b6` left no recorded result. This one ran on develop at `43d1bd6` (QA12, after
+Stage 7's fixes), packaged by `pnpm package:e2e`, under `pnpm hidden-screen`, 2026-11-22 from
+17:34 to 19:34, the full 120 minutes, exit 0, on the same machine (now Linux 7.3.5-2-cachyos).
+Each sample is taken at the start screen with everything closed:
 
-| Minute | Cycles | Post-GC heap, MiB | DOM nodes | JS listeners | RSS, all processes, MiB |
-|---:|---:|---:|---:|---:|---:|
-| 0 | 0 | 8.72 | 96 | 181 | 566 |
-| 10 | 320 | 23.90 | 730 | 258 | 923 |
-| 20 | 616 | 24.16 | 730 | 258 | 816 |
+| Minute | Cycles | Post-GC heap, MiB | DOM nodes | JS listeners | Renderer RSS, MiB | RSS, all processes, MiB | Median cycle, ms | Load |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 0 | 0 | 9.70 | 234 | 195 | 187 | 684 | — | 1.2 |
+| 10 | 397 | 25.09 | 862 | 271 | 350 | 997 | 1,502 | 1.2 |
+| 20 | 784 | 25.37 | 862 | 271 | 352 | 953 | 1,551 | 2.1 |
+| 30 | 1,175 | 25.54 | 862 | 271 | 357 | 916 | 1,532 | 2.5 |
+| 40 | 1,554 | 25.55 | 862 | 271 | 357 | 1,010 | 1,534 | 2.9 |
+| 50 | 1,918 | 25.74 | 862 | 271 | 352 | 929 | 1,566 | 9.8 |
+| 60 | 2,276 | 25.90 | 862 | 271 | 359 | 990 | 1,601 | 2.9 |
+| 70 | 2,591 | 26.00 | 862 | 271 | 360 | 993 | 1,736 | 13.9 |
+| 80 | 2,963 | 26.05 | 862 | 271 | 363 | 921 | 1,602 | 2.7 |
+| 90 | 3,307 | 26.09 | 862 | 271 | 359 | 950 | 1,616 | 2.6 |
+| 100 | 3,676 | 26.14 | 862 | 271 | 364 | 1,040 | 1,599 | 4.3 |
+| 110 | 4,072 | 26.14 | 862 | 271 | 366 | 997 | 1,516 | 1.6 |
+| 120 | 4,467 | 26.30 | 862 | 271 | 368 | 1,183 | 1,516 | 2.2 |
+
+**What it shows.** After the first ten minutes' warm-up, the DOM nodes, listeners and documents do
+not move over 4,070 more cycles: nothing the window builds is kept. The post-GC heap creeps up
+1.21 MiB in those cycles, about 0.3 KiB a cycle, in every sample but one. The renderer's resident
+memory grows 18.5 MiB. Neither was traced to what retains it: no heap snapshots were compared, so
+it may be a slow leak or V8's own caches settling. It is small enough that a working day of
+sessions would not be noticed, and the candidate's re-run ([the 1.7 plan, §7](superpowers/plans/2026-11-03-release-1.7.md#7-qa-and-release-acceptance)) is where to tell. The browser
+process swings between 253 and 513 MiB from sample to sample, with no trend until the last sample.
+The cycle does not slow: its median is 1,502 ms at minute 10 and 1,516 ms at minute 120. The
+slower medians at minutes 50 and 70 match load spikes to 9.8 and 13.9 from other work on the
+machine.
+
+An earlier run at `aeec619`, under load 8–11 from four other sessions, reached minute 20 before the
+machine restarted: heap 8.72, 23.90 and 24.16 MiB; DOM nodes 96, 730 and 730.
 
 **Windows and macOS** were run only on GitHub's shared runners, by `.github/workflows/perf.yml`
 before it was made dispatch-only (run 44569079884, 4 vCPU each, a 3-minute soak): warm first paint
@@ -1595,8 +1621,10 @@ sheets. Separate fresh evaluation, warm reuse, rendering and end-to-end interact
 
 ### Remaining profiling checklist
 
-- [ ] Two-hour production/packaged soak: edit, undo/redo, save, switch views, preview and open/New;
+- [x] Two-hour production/packaged soak: edit, undo/redo, save, switch views, preview and open/New;
   sample process memory and compare post-cleanup retaining paths at fixed cycle counts.
+  Linux, packaged: [1.7 baseline](#17-baseline-perf-018). Retaining paths were not compared; the
+  heap's 0.3 KiB a cycle is the place to start.
 - [ ] Physical mixed-DPI monitor transitions without CSS resizing; check backing sizes, pointers,
   rulers and preview canvases.
 - [x] Cold and warm packaged startup on supported platforms, with OS cache state documented.
