@@ -15,7 +15,8 @@
     "add": "New tab",
     "addTooltip": "Start or open a project in a new tab",
     "menu": "Project menu",
-    "menuTooltip": "New, open, save as, rename, and recent projects",
+    "menuUpdate": "Project menu — a new version is available",
+    "menuTooltip": "New, open, save, save as, rename, and recent projects",
     "noProject": "No project is open",
     "alreadyOpen": "{{name}} is open already",
     "all": "All tabs",
@@ -155,6 +156,7 @@
     "recentEmpty": "Projects you open or save appear here.",
     "rename": "Rename…",
     "renameNote": "Also names the file and the PDF footer",
+    "save": "Save",
     "saveAs": "Save as…",
     "settings": "Settings…",
     "recentGone": "That project is no longer there",
@@ -350,7 +352,7 @@
   "drawModeTip": {
     "cut-out": "A hole in the selected piece",
     "fold": "Where the selected piece folds",
-    "marking": "A reference line, never cut",
+    "marking": "A reference line on the selected piece, never cut",
     "outline": "A new piece's cut edge",
     "stitch": "Holes along a line on the selected piece",
     "stitch-allowance": "A new piece, from its stitch line"

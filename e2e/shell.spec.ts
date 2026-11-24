@@ -1735,6 +1735,8 @@ test('Ctrl+S from a field saves what was typed in it, without Enter (never lose 
     await window.keyboard.press('Control+S');
     await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     await expect(width).toHaveValue('87');
+    // The maker's place is still the field they typed in.
+    await expect(width).toBeFocused();
 
     // Read back from disk: the typed width is in the file.
     await closeActiveTab(window);

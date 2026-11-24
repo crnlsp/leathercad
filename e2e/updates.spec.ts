@@ -83,6 +83,8 @@ test('a newer release marks Settings, which opens on Updates, and About links to
 
         // The quiet mark on ☰, and the menu says why.
         await expect(window.getByTestId('update-mark')).toBeVisible();
+        // A screen reader hears it too, as Settings' own button once said it.
+        await expect(menu).toHaveAccessibleName('Project menu — a new version is available');
         await menu.click();
         await expect(window.getByTestId('menu-settings')).toContainText(
           'A new version is available',

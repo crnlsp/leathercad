@@ -230,9 +230,8 @@ describe('the four planes (F.5)', () => {
   });
 
   it('gives Print fills its words read on, standing out on the shell (U.7)', () => {
-    // R-06's on-primary: AA on Print's main half, hovered or not, on its
-    // narrow half, and on the indicator's warning and error.
-    for (const fill of [ACTION.primary, ACTION.primaryHover, ACTION.primarySide]) {
+    // R-06's on-primary: AA on Print's main half, hovered or not, and on the indicator's warning and error.
+    for (const fill of [ACTION.primary, ACTION.primaryHover]) {
       expect(contrast(ACTION.onPrimary, fill)).toBeGreaterThanOrEqual(4.5);
     }
     for (const severity of ['warning', 'error'] as const) {

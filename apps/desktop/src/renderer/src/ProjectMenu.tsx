@@ -12,7 +12,7 @@ import type { Press } from './PanelFold.js';
  * The Project menu (8.7) — new, open, save as, rename, the recent projects —
  * at the left of the tab strip since 8.12: an icon that opens it, beside the
  * tabs it acts on, where it was the project's name in the bar below. It stays
- * on the start screen, with *Save as* and *Rename* refused.
+ * on the start screen, with *Save*, *Save as* and *Rename* refused.
  */
 export function ProjectMenu({
   hasProject,
@@ -24,6 +24,7 @@ export function ProjectMenu({
   onOpen,
   onImportSvg,
   onInsertPieces,
+  onSave,
   onSaveAs,
   onSaveAsTemplate,
   onRename,
@@ -47,6 +48,8 @@ export function ProjectMenu({
   onImportSvg: () => void;
   /** *Insert pieces from template…* (9.7). */
   onInsertPieces: () => void;
+  /** *Save*: what Ctrl+S runs. */
+  onSave: () => void;
   onSaveAs: () => void;
   /** *Save as template…* (8.12). */
   onSaveAsTemplate: () => void;
@@ -67,7 +70,7 @@ export function ProjectMenu({
   return (
     <>
       <MenuButton
-        label={t('tabs.menu')}
+        label={updateAvailable ? t('tabs.menuUpdate') : t('tabs.menu')}
         tooltip={t('tabs.menuTooltip')}
         testId="project-menu"
         className="tool quiet icon-only project-menu-button"
@@ -79,6 +82,7 @@ export function ProjectMenu({
             open: onOpen,
             importSvg: onImportSvg,
             insertPieces: onInsertPieces,
+            save: onSave,
             saveAs: onSaveAs,
             saveAsTemplate: onSaveAsTemplate,
             settings: onSettings,

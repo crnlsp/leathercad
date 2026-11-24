@@ -85,8 +85,7 @@ export function focusAfter(key: string, current: number, count: number): number 
 /**
  * The Project menu (8.7): the project and its files. The actions come first
  * and the recent projects after — the list grows and shrinks, and the actions
- * stay under the pointer. Save and Export PDF are buttons on the bar, so they
- * are not repeated here; clearing the list is in Settings, so this menu holds
+ * stay under the pointer. Save is here and on Ctrl+S; clearing the list is in Settings, so this menu holds
  * nothing destructive. *Rename…* (U.7) is here because the name is this
  * menu's button: it turns the name into the field it was before.
  */
@@ -100,6 +99,8 @@ export function projectMenu(
     readonly importSvg: () => void;
     /** A template's pieces into this project (9.7): the picker, choosing pieces. */
     readonly insertPieces: () => void;
+    /** The save Ctrl+S runs, field blur and pending rename included. */
+    readonly save: () => void;
     readonly saveAs: () => void;
     /** Saves the project as one of the maker's templates (8.12). */
     readonly saveAsTemplate: () => void;
@@ -111,7 +112,7 @@ export function projectMenu(
   recent: readonly RecentFile[],
   t: Translate,
   /**
-   * Why *Save as* and *Rename* cannot be chosen: no project is open, on the
+   * Why *Save*, *Save as* and *Rename* cannot be chosen: no project is open, on the
    * start screen (8.12). Undefined while one is.
    */
   noProject?: string,
@@ -152,6 +153,14 @@ export function projectMenu(
       label: t('menu.insertPieces'),
       note: t('menu.insertPiecesNote'),
       onChoose: actions.insertPieces,
+      refusal: noProject,
+    },
+    {
+      kind: 'item',
+      id: 'menu-save',
+      label: t('menu.save'),
+      keys: 'save',
+      onChoose: actions.save,
       refusal: noProject,
     },
     {

@@ -65,6 +65,7 @@ describe('the Project and Help menus (8.7)', () => {
     open: noop,
     importSvg: noop,
     insertPieces: noop,
+    save: noop,
     saveAs: noop,
     saveAsTemplate: noop,
     rename: noop,
@@ -85,6 +86,7 @@ describe('the Project and Help menus (8.7)', () => {
       'open',
       'import-svg',
       'insert-pieces',
+      'menu-save',
       'save-as',
       'save-template',
       'rename',
@@ -97,6 +99,18 @@ describe('the Project and Help menus (8.7)', () => {
     expect(group.kind === 'group' && group.items.map((item) => [item.label, item.note])).toEqual([
       ['Wallet', '/p'],
     ]);
+  });
+
+  it('puts Save right before Save as, keyed Ctrl+S, refused with no project', () => {
+    const at = (noProject?: string) =>
+      projectMenu(actions, [], t, noProject).filter((entry) => entry.kind === 'item');
+    const save = at().find((entry) => entry.id === 'menu-save')!;
+    expect(save).toMatchObject({ label: 'Save', keys: 'save', refusal: undefined });
+    const ids = at().map((entry) => entry.id);
+    expect(ids.indexOf('menu-save')).toBe(ids.indexOf('save-as') - 1);
+    expect(at('No project is open').find((entry) => entry.id === 'menu-save')!.refusal).toBe(
+      'No project is open',
+    );
   });
 
   it('opens a recent project by its whole path, not the one shown', () => {

@@ -905,6 +905,13 @@ export function App({
   // A rename of a saved project's file under way, resolving to whether the name
   // took. Ctrl+S from the rename field waits for it, then saves to the renamed file.
   const pendingRename = useRef<Promise<boolean> | null>(null);
+  // Runs `action` once a rename under way has finished, and not at all if it
+  // was refused (its own message stays): what Ctrl+S and ☰ › Save both do.
+  const afterPendingRename = useCallback((action: () => void) => {
+    const rename = pendingRename.current;
+    if (rename === null) action();
+    else void rename.then((took) => (took ? action() : undefined));
+  }, []);
   const renamed = useCallback(
     (next: string | null) => {
       const named = tabs.active;
@@ -1179,7 +1186,10 @@ export function App({
       .catch(() => undefined);
   }, []);
   // The mark is news about Updates, so the menu's Settings opens there while it shows.
-  const openSettings = () => setSettings(updates.state === 'available' ? 'updates' : 'general');
+  const openSettings = useCallback(
+    () => setSettings(updates.state === 'available' ? 'updates' : 'general'),
+    [updates.state],
+  );
   const checkUpdates = useCallback(
     () =>
       getPlatformHost()
@@ -1303,7 +1313,7 @@ export function App({
       sheets: () => showView('sheets'),
       // The shortcut map (8.2), where many apps keep it: in Settings (8.7).
       keyboardShortcuts: () => setSettings('shortcuts'),
-      settings: () => setSettings('general'),
+      settings: openSettings,
       help: () => helpRef.current?.click(),
       // The view (8.4b, U.4): zoom in and out, fit, and true size.
       zoomIn: () => runZoom('zoomIn'),
@@ -1357,18 +1367,23 @@ export function App({
       event.preventDefault();
       // Leaving the field first commits what is pending in it (a number
       // typed, a name), synchronously, so the file holds it.
-      if (savesFromField && event.target instanceof HTMLElement) event.target.blur();
+      const field = savesFromField && event.target instanceof HTMLElement ? event.target : null;
+      field?.blur();
       // A rename the blur started (a saved project's file moves) finishes
       // first, and a refused one saves nothing: its own message stays.
-      const rename = pendingRename.current;
-      if (rename === null) action();
-      else void rename.then((took) => (took ? action() : undefined));
+      afterPendingRename(() => {
+        action();
+        // The save has started: the maker's place is the field they typed in.
+        if (field?.isConnected) field.focus();
+      });
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [
     file,
     tabs,
+    afterPendingRename,
+    openSettings,
     closeTab,
     moveActiveTab,
     reopenTab,
@@ -1395,9 +1410,9 @@ export function App({
         if (action === 'undo') store.undo();
         else if (action === 'redo') store.redo();
         else if (action === 'about') setAboutOpen(true);
-        else setSettings('general');
+        else openSettings();
       }),
-    [store],
+    [store, openSettings],
   );
 
   const handleStatus = useCallback((next: CanvasStatus) => setStatus(next), []);
@@ -1733,6 +1748,9 @@ export function App({
               onNewFromTemplate={showTemplates}
               onOpen={() => void openProject()}
               onImportSvg={() => void importSvg()}
+              onSave={() =>
+                afterPendingRename(() => (active === null ? undefined : void file.save(active)))
+              }
               onSaveAs={() => (active === null ? undefined : void file.save(active, true))}
               onInsertPieces={() => {
                 setInsertingPieces(true);
@@ -2168,25 +2186,6 @@ export function App({
             </div>
 
             <footer className="app-status" data-testid="status-bar">
-              <span className="status-left">
-                {storeState.resourceLimit !== null ? (
-                  <span className="status-error" data-testid="file-error" role="alert">
-                    {fileErrorText(storeState.resourceLimit, t)}
-                  </span>
-                ) : status?.notice !== null && status?.notice !== undefined ? (
-                  <span className="status-error" data-testid="tool-notice">
-                    {describeProblem(status.notice, t)}
-                  </span>
-                ) : bridgeError !== null || tab.file.error !== null ? (
-                  <span className="status-error" data-testid="file-error">
-                    {fileErrorText(bridgeError === null ? tab.file.error : bridgeError.error, t)}
-                  </span>
-                ) : null}
-                {tab.file.error === null && storeState.resourceLimit === null && (
-                  <WrittenNote written={file.written} />
-                )}
-              </span>
-
               {/* Always all three (R-04): whatever shape a panel is in, its chip
               reaches it, so nothing is ever out of reach. */}
               <span className="status-panels" role="group" aria-label={t('status.panels')}>
@@ -2217,6 +2216,25 @@ export function App({
                   hiding={layout.properties !== 'docked' && open !== 'properties'}
                   onPress={(press) => togglePanel('properties', press)}
                 />
+              </span>
+
+              <span className="status-left">
+                {storeState.resourceLimit !== null ? (
+                  <span className="status-error" data-testid="file-error" role="alert">
+                    {fileErrorText(storeState.resourceLimit, t)}
+                  </span>
+                ) : status?.notice !== null && status?.notice !== undefined ? (
+                  <span className="status-error" data-testid="tool-notice">
+                    {describeProblem(status.notice, t)}
+                  </span>
+                ) : bridgeError !== null || tab.file.error !== null ? (
+                  <span className="status-error" data-testid="file-error">
+                    {fileErrorText(bridgeError === null ? tab.file.error : bridgeError.error, t)}
+                  </span>
+                ) : null}
+                {tab.file.error === null && storeState.resourceLimit === null && (
+                  <WrittenNote written={file.written} />
+                )}
               </span>
 
               {/* What the active tool does with a click, a drag and a key, true for that

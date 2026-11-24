@@ -30,7 +30,7 @@ import { ViewSwitch } from './ViewSwitch.js';
  * strip's above (8.12, MS.2); Ctrl+S saves. Centre,
  * Design | Sheets. Right, where the workflow ends: the paper, *Export PDF* with
  * the menu of its other formats as its second half, and *Print* — the one
- * primary action, in the paper's colour — whose second half is the problems
+ * primary action — whose second half is the problems
  * indicator, so what is wrong is on the button that would print it. Settings and Help are
  * not here: Settings is the Project menu's last item and Help the status
  * bar's corner (MS.3). Nothing here edits the pattern;

@@ -2218,12 +2218,12 @@ body {
   text-overflow: ellipsis;
 }
 
-/* What the status bar has to say before the panel chips: a notice, or the
-   version on the start screen. As wide as what it says, so with nothing to say
-   the chips lead the bar and the hint has the rest. It is the part allowed to
-   shrink: a long notice should lose its tail, never push the panel chips or
-   the cursor readout off the bar. Its words start 12 px in, as the chips' glyph
-   does. */
+/* What the status bar says after the panel chips: a notice, or the version on
+   the start screen, where it leads. The chips come first on a project, so a
+   notice appearing never moves them. As wide as what it says, and the part
+   allowed to shrink: a long notice loses its tail, never pushes the chips or
+   the cursor readout off the bar. On the start screen its words start 12 px
+   in, as the chips' glyph does. */
 .status-left {
   display: flex;
   flex: 0 1 auto;
@@ -2231,14 +2231,6 @@ body {
   min-width: 0;
   padding-left: 7px;
   overflow: hidden;
-}
-
-/* With nothing to say (no notice, the written note's live region empty) it
-   leaves the row, so no slot and no gap push the chips in. Out of the flow,
-   not display: none, so the live region stays in the accessibility tree and is
-   heard when it next speaks. */
-.status-left:not(:has(> :not(:empty))) {
-  position: absolute;
 }
 
 /* Parts [, Focus \, Properties ]: always there, at the bar's left. */
@@ -2286,11 +2278,11 @@ body {
   align-items: center;
 }
 
-/* Smaller than a control: the bar's height is fixed, and a button taller than
-   it moved the board by a pixel when a drawer opened. */
+/* The design system's 24 px target, which the bar's content area holds: a
+   taller button moved the board by a pixel when a drawer opened. */
 .status-help .tool {
   min-height: 0;
-  height: 20px;
+  height: 24px;
 }
 
 /* What the check found, in Settings › Updates (8.9): the status bar's glyph in

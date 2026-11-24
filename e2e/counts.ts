@@ -27,6 +27,8 @@ export function featureCount(window: Page): Promise<number> {
 
 /** Waits for Parts to list `count` features, across every piece (its rows must be open). */
 export async function expectFeatures(window: Page, count: number | string): Promise<void> {
+  // A folded Parts or a collapsed piece shows no rows: 0 would pass for nothing.
+  await expect(window.getByTestId('parts-list')).toBeVisible();
   await expect(window.locator('[data-testid^="feature-row-"]')).toHaveCount(Number(count));
 }
 

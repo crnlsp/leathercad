@@ -1,4 +1,4 @@
-import { mkdtempSync } from 'node:fs';
+import { existsSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -201,6 +201,32 @@ test('the save state is heard, not shown, and Ctrl+S saves (MS.2)', async () => 
     await window.keyboard.press('Control+S');
     await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     await expect(window.getByTestId('project-tab')).not.toHaveClass(/unsaved/);
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('the Project menu’s Save writes the file, and a notice never moves the panel chips (MS.7)', async () => {
+  const project = join(mkdtempSync(join(tmpdir(), 'leathercad-e2e-')), 'Wallet.lcp');
+  const { app, window } = await launch(fresh());
+  try {
+    await app.evaluate(({ dialog }, path) => {
+      dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
+    }, project);
+    await drawAPanel(window, { parts: '1' });
+    const chipX = async (): Promise<number> =>
+      (await window.getByTestId('toggle-parts').boundingBox())!.x;
+    const before = await chipX();
+
+    await window.getByTestId('project-menu').click();
+    await window.getByTestId('menu-save').click();
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
+    expect(existsSync(project)).toBe(true);
+
+    // "Saved Wallet.lcp" shows for a few seconds, after the chips, not before.
+    await window.keyboard.press('Control+S');
+    await expect(window.getByTestId('status-bar')).toContainText('Wallet.lcp');
+    expect(await chipX()).toBe(before);
   } finally {
     await closeApp(app);
   }

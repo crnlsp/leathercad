@@ -52,7 +52,6 @@ export function cssVariables(density: Density): Record<string, string> {
   variables['--on-tan'] = ACCENT.onTan;
   variables['--primary'] = ACTION.primary;
   variables['--primary-hover'] = ACTION.primaryHover;
-  variables['--primary-side'] = ACTION.primarySide;
   variables['--ready'] = ACTION.ready;
   variables['--ready-hover'] = ACTION.readyHover;
   variables['--ready-side'] = ACTION.readySide;

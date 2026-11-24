@@ -75,13 +75,12 @@ export const ACTION = {
   primary: GROUND.ground,
   /** Print's main half under the pointer: lighter still. */
   primaryHover: GROUND.pieceFill,
-  primarySide: GROUND.major,
   /** Print's halves while nothing needs fixing. */
   ready: '#4ade80',
   readyHover: '#86efac',
   readySide: '#22c55e',
   secondarySide: '#3a3f47',
-  /** Words and glyphs on `primary`, `primarySide`, `ready`, `readySide`, and the shell's warning and error. */
+  /** Words and glyphs on `primary`, `ready`, `readySide`, and the shell's warning and error. */
   onPrimary: SHELL[900],
 } as const;
 
