@@ -8,6 +8,8 @@ import { closeApp } from './closeApp.js';
 import { ONE_PRINTER, fakeCups } from './fakeCups.js';
 import { launchApp, scanA11y, expectNoViolations } from './launchApp.js';
 import { openPrintTest } from './printTest.js';
+import { openSettings } from './openSettings.js';
+import { expectPieces } from './counts.js';
 
 /**
  * An automated accessibility scan of the running window.
@@ -48,7 +50,7 @@ test('the main window has no accessibility violations beyond those recorded', as
   await window.waitForLoadState('domcontentloaded');
   // The version arrives through an effect, so it proves React has mounted
   // and the panels are on screen to be scanned. See shell.spec.ts.
-  await expect(window.getByTestId('app-version')).not.toBeEmpty();
+  await expect(window.getByTestId('project-menu')).toBeVisible();
 
   const found = (await scanA11y(window)).map((violation) => ({
     rule: violation.id,
@@ -73,7 +75,7 @@ test('the F.2 layout at work has no accessibility violations either', async () =
   const instance = await launchApp();
   try {
     const window = await instance.firstWindow();
-    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+    await expect(window.getByTestId('project-menu')).toBeVisible();
 
     const box = (await window.getByTestId('editor-canvas').boundingBox())!;
     await window.getByTestId('tool-rectangle').click();
@@ -119,7 +121,7 @@ test('the top bar’s menus, Settings, About and the Print Preview have no acces
   );
   try {
     const window = await instance.firstWindow();
-    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+    await expect(window.getByTestId('project-menu')).toBeVisible();
     const scan = (what: string): Promise<void> => expectNoViolations(window, what);
 
     await window.getByTestId('project-menu').click();
@@ -129,7 +131,7 @@ test('the top bar’s menus, Settings, About and the Print Preview have no acces
     await scan('the Help menu');
     await window.keyboard.press('Escape');
 
-    await window.getByTestId('settings').click();
+    await openSettings(window);
     for (const section of ['general', 'appearance', 'tools', 'shortcuts']) {
       await window.getByTestId(`settings-tab-${section}`).click();
       await scan(`Settings › ${section}`);
@@ -182,7 +184,7 @@ test('what 1.5 added has no accessibility violations: a size being typed, the se
   });
   try {
     const window = await instance.firstWindow();
-    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+    await expect(window.getByTestId('project-menu')).toBeVisible();
     await instance.evaluate(({ BrowserWindow }) => {
       BrowserWindow.getAllWindows()[0]?.setContentSize(1440, 900);
     });
@@ -199,7 +201,7 @@ test('what 1.5 added has no accessibility violations: a size being typed, the se
     await expect(window.getByTestId('drawing-defaults')).toBeVisible();
     await scan('a rectangle being typed, with After the outline');
     await window.keyboard.press('Enter');
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
 
     // The selection bar, its next step focused (U.17).
     await window.getByTestId('editor-canvas').focus();
@@ -219,7 +221,7 @@ test('what 1.5 added has no accessibility violations: a size being typed, the se
     await window.keyboard.press('Escape');
 
     // A key being changed, and the clash it makes (U.12).
-    await window.getByTestId('settings').click();
+    await openSettings(window);
     await window.getByTestId('settings-tab-shortcuts').click();
     await window.getByTestId('change-settings').click();
     await window.keyboard.press('ControlOrMeta+s');
@@ -238,9 +240,9 @@ test('the top bar’s "Saved" has no accessibility violations with a project ope
   });
   try {
     const window = await instance.firstWindow();
-    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+    await expect(window.getByTestId('project-menu')).toBeVisible();
     await openPrintTest(instance, window, join(tmpdir(), 'leathercad-e2e-a11y.pdf'));
-    await expect(window.getByTestId('save-state')).toContainText('Saved');
+    await expect(window.getByTestId('announce-save')).toContainText('Saved');
     await expectNoViolations(window, 'the top bar with a saved project open');
   } finally {
     await closeApp(instance);

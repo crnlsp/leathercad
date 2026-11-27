@@ -3,6 +3,7 @@ import { expect, test } from '@playwright/test';
 import { boardMap } from './boardMap.js';
 import { withSample } from './launchApp.js';
 import { resizeWindow } from './windowSize.js';
+import { openSettings } from './openSettings.js';
 
 /**
  * U.25: the window's rules that hold across every surface — a dialog keeps
@@ -15,7 +16,7 @@ test('a dialog whose focus fell to the page keeps the window’s keys, and Escap
   await withSample(async (window) => {
     const tabs = window.getByTestId('tab-strip').getByRole('tab');
     const before = await tabs.count();
-    await window.getByTestId('settings').click();
+    await openSettings(window);
     const dialog = window.getByTestId('settings-dialog');
     await expect(dialog).toBeVisible();
     // As a button disabled under the focus leaves it: on the page itself.
@@ -49,7 +50,7 @@ test('the board says what is selected, politely (X21)', async () => {
     await window.keyboard.press('ControlOrMeta+a');
     await expect(said).toHaveText(/^3 pieces selected: .+/);
     await expect(window.getByTestId('announcer')).toHaveAttribute('aria-live', 'polite');
-    await expect(window.getByTestId('status-counts')).toContainText('3 pieces');
+    await expect(window.getByTestId('parts-count')).toHaveText('3 pieces');
   });
 });
 
@@ -81,13 +82,13 @@ test('shrinking the window keeps the selected piece in view (X34)', async () => 
 test('Settings is taller where the window allows (X37)', async () => {
   await withSample(
     async (window, app) => {
-      await window.getByTestId('settings').click();
+      await openSettings(window);
       const dialog = window.getByTestId('settings-dialog');
       expect((await dialog.boundingBox())?.height).toBe(720);
       await window.getByTestId('settings-close').click();
 
       await resizeWindow(app, window, 860, 600);
-      await window.getByTestId('settings').click();
+      await openSettings(window);
       expect((await dialog.boundingBox())?.height).toBe(600 - 64);
     },
     { size: [1440, 900] },

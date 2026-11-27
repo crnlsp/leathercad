@@ -8,6 +8,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { closeApp } from './closeApp.js';
 import { launchApp } from './launchApp.js';
 import { choosePaper, fromProjectMenu } from './projectMenu.js';
+import { expectPieces } from './counts.js';
 
 /**
  * Slice 6.4a: choose the paper.
@@ -51,7 +52,7 @@ test('a strap too long for A4 portrait is printed whole by turning the paper, an
   try {
     const window = await app.firstWindow();
     await window.waitForLoadState('domcontentloaded');
-    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+    await expect(window.getByTestId('project-menu')).toBeVisible();
     await app.evaluate(
       ({ dialog, shell }, paths) => {
         // Called as (window, options): the PDF and the project go to their own files.
@@ -79,7 +80,7 @@ test('a strap too long for A4 portrait is printed whole by turning the paper, an
     // portrait. With nothing drawn, the PDF is one sheet with the scale check,
     // and the paper button says exactly that (7.4a).
     await on('1 × A4 portrait, scale check only');
-    await expect(paper).toHaveText('1 × A4 portrait');
+    await expect(paper).toHaveText('Paper 1 × A4 portrait');
 
     // A strap, 275 × 100 mm: longer than A4 portrait prints either way —
     // across, or turned down its 268.5 mm.
@@ -127,7 +128,7 @@ test('a strap too long for A4 portrait is printed whole by turning the paper, an
     await choosePaper(window, 'A4', 'landscape');
     await on('1 × A4 landscape');
     await expect(paper).toHaveAttribute('data-sheets', '1');
-    await expect(window.getByTestId('save-state')).toHaveText('Unsaved changes');
+    await expect(window.getByTestId('announce-save')).toHaveText('Unsaved changes');
 
     // …one undoable step…
     await window.getByTestId('undo').click();
@@ -165,15 +166,15 @@ test('a strap too long for A4 portrait is printed whole by turning the paper, an
     await on(/Letter landscape/);
 
     // Saved with the project, and back when it is opened again.
-    await window.getByTestId('save').click();
-    await expect(window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
+    await window.keyboard.press('ControlOrMeta+S');
+    await expect(window.getByTestId('announce-save')).not.toHaveText('Unsaved changes');
     await fromProjectMenu(window, 'new');
     await on('1 × A4 portrait, scale check only');
 
     await fromProjectMenu(window, 'open');
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
     await on(/Letter landscape/);
-    await expect(window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
+    await expect(window.getByTestId('announce-save')).not.toHaveText('Unsaved changes');
   } finally {
     await closeApp(app);
     rmSync(pdf, { force: true });

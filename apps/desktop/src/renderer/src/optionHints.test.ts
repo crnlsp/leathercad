@@ -3,21 +3,14 @@ import { describe, expect, it } from 'vitest';
 
 import en from '../../locales/en.json';
 import { flatten } from '../../shared/i18n.js';
-import {
-  ALL_KEYS,
-  fitHints,
-  hintsFor,
-  SHEETS_HINTS,
-  type Hint,
-  type HintSituation,
-} from './optionHints.js';
+import { fitHints, hintsFor, SHEETS_HINTS, type Hint, type HintSituation } from './optionHints.js';
 import { KEYMAP } from './keymap.js';
 import { ALL_TOOLS } from './tools.js';
 
 /**
- * The work bar's hints (U.11, R-11): three to five per tool and state, each a
- * key and a few words, ranked; as the row narrows the lowest-ranked go first
- * and "? all keys" never does.
+ * The tool's hints (U.11, R-11): two to four per tool and state, each a key and
+ * a few words, ranked; as the row narrows the lowest-ranked go first. "? all
+ * keys" is the tool row's, apart from them (MS.5).
  */
 
 const catalogue = flatten(en);
@@ -32,23 +25,18 @@ const SITUATIONS: readonly HintSituation[] = ALL_TOOLS.flatMap((tool) =>
 );
 
 describe('the hints of each tool and state', () => {
-  it('are three to five, the last always "all keys"', () => {
-    for (const situation of SITUATIONS) {
-      const hints = hintsFor(situation);
-      expect(hints.length, JSON.stringify(situation)).toBeGreaterThanOrEqual(3);
-      expect(hints.length, JSON.stringify(situation)).toBeLessThanOrEqual(5);
-      expect(hints.at(-1)).toBe(ALL_KEYS);
+  it('are two to four, and none is "all keys", which the tool row keeps', () => {
+    for (const hints of [...SITUATIONS.map(hintsFor), SHEETS_HINTS]) {
+      expect(hints.length, JSON.stringify(hints)).toBeGreaterThanOrEqual(2);
+      expect(hints.length, JSON.stringify(hints)).toBeLessThanOrEqual(4);
+      expect(hints.some((hint) => hint.words === 'hints.allKeys')).toBe(false);
     }
-    expect(SHEETS_HINTS.length).toBeGreaterThanOrEqual(3);
-    expect(SHEETS_HINTS.at(-1)).toBe(ALL_KEYS);
   });
 
-  it('rank each hint apart: 1 is kept longest, and only "all keys" is 0', () => {
+  it('rank each hint apart: 1 is kept longest, then 2, and so on', () => {
     for (const hints of [...SITUATIONS.map(hintsFor), SHEETS_HINTS]) {
-      const ranks = hints.filter((hint) => hint !== ALL_KEYS).map((hint) => hint.rank);
-      expect(new Set(ranks).size).toBe(ranks.length);
-      expect(Math.min(...ranks)).toBe(1);
-      expect(ALL_KEYS.rank).toBe(0);
+      const ranks = hints.map((hint) => hint.rank).sort((a, b) => a - b);
+      expect(ranks).toEqual(ranks.map((_, i) => i + 1));
     }
   });
 
@@ -110,35 +98,29 @@ describe('the hints of each tool and state', () => {
 describe('which hints fit', () => {
   const sizes = (...entries: readonly (readonly [number, number])[]) =>
     entries.map(([width, rank]) => ({ width, rank }));
-  // Display order: A (rank 2), B (rank 1), C (rank 3), then "all keys" (0). All 100 wide, gap 10.
-  const row = sizes([100, 2], [100, 1], [100, 3], [100, 0]);
+  // Display order: A (rank 2), B (rank 1), C (rank 3). All 100 wide, gap 10.
+  const row = sizes([100, 2], [100, 1], [100, 3]);
 
   it('keeps everything when there is room', () => {
-    expect(fitHints(row, 430, 10)).toEqual([true, true, true, true]);
-    expect(fitHints(row, 5000, 10)).toEqual([true, true, true, true]);
+    expect(fitHints(row, 320, 10)).toEqual([true, true, true]);
+    expect(fitHints(row, 5000, 10)).toEqual([true, true, true]);
   });
 
   it('drops the lowest-ranked first, wherever it stands', () => {
-    expect(fitHints(row, 429, 10)).toEqual([true, true, false, true]);
-    expect(fitHints(row, 319, 10)).toEqual([false, true, false, true]);
-    expect(fitHints(row, 209, 10)).toEqual([false, false, false, true]);
+    expect(fitHints(row, 319, 10)).toEqual([true, true, false]);
+    expect(fitHints(row, 209, 10)).toEqual([false, true, false]);
+    expect(fitHints(row, 99, 10)).toEqual([false, false, false]);
   });
 
   it('holds on the widths at each boundary: the edge itself is room enough', () => {
-    expect(fitHints(row, 320, 10)).toEqual([true, true, false, true]);
-    expect(fitHints(row, 210, 10)).toEqual([false, true, false, true]);
-    expect(fitHints(row, 100, 10)).toEqual([false, false, false, true]);
-  });
-
-  it('never drops "all keys", even when nothing fits', () => {
-    expect(fitHints(row, 0, 10)).toEqual([false, false, false, true]);
-    expect(fitHints(row, 50, 10)).toEqual([false, false, false, true]);
+    expect(fitHints(row, 210, 10)).toEqual([true, true, false]);
+    expect(fitHints(row, 100, 10)).toEqual([false, true, false]);
   });
 
   it('does not skip a wide hint to keep a narrower, lower one', () => {
-    // B (rank 1) is wide; the narrow C (rank 2) would fit beside "all keys", but a
-    // higher rank is never dropped for a lower one.
-    expect(fitHints(sizes([300, 1], [20, 2], [50, 0]), 100, 10)).toEqual([false, false, true]);
+    // B (rank 1) is wide; the narrow C (rank 2) would fit, but a higher rank is
+    // never dropped for a lower one.
+    expect(fitHints(sizes([300, 1], [20, 2]), 100, 10)).toEqual([false, false]);
   });
 
   it('keeps every hint whole or drops it: the result has one answer per hint', () => {
@@ -147,31 +129,15 @@ describe('which hints fit', () => {
 
   const widths = fc.array(fc.integer({ min: 1, max: 400 }), { minLength: 1, maxLength: 6 });
 
-  /** Hints with distinct ranks 1…n in a shuffled order, then "all keys". */
+  /** Hints with distinct ranks 1…n in a shuffled order. */
   const rows = widths.chain((list) =>
     fc
       .shuffledSubarray(
         list.map((_, i) => i + 1),
         { minLength: list.length, maxLength: list.length },
       )
-      .map((ranks) => [
-        ...list.map((width, i) => ({ width, rank: ranks[i]! })),
-        { width: 70, rank: 0 },
-      ]),
+      .map((ranks) => list.map((width, i) => ({ width, rank: ranks[i]! }))),
   );
-
-  it('property: "all keys" is always kept, at any width', () => {
-    fc.assert(
-      fc.property(
-        rows,
-        fc.integer({ min: -50, max: 2500 }),
-        fc.integer({ min: 0, max: 24 }),
-        (list, room, gap) => {
-          expect(fitHints(list, room, gap).at(-1)).toBe(true);
-        },
-      ),
-    );
-  });
 
   it('property: more room never drops a hint that fitted in less', () => {
     fc.assert(
@@ -207,7 +173,7 @@ describe('which hints fit', () => {
     );
   });
 
-  it('property: whatever is kept fits, unless "all keys" alone was already too wide', () => {
+  it('property: whatever is kept fits', () => {
     fc.assert(
       fc.property(
         rows,
@@ -217,7 +183,7 @@ describe('which hints fit', () => {
           const kept = fitHints(list, room, gap);
           const used = list.filter((_, i) => kept[i]);
           const total = used.reduce((sum, hint) => sum + hint.width, 0) + gap * (used.length - 1);
-          if (used.length > 1) expect(total).toBeLessThanOrEqual(room);
+          if (used.length > 0) expect(total).toBeLessThanOrEqual(room);
         },
       ),
     );

@@ -8,6 +8,7 @@ import { _electron as electron, expect, test, type Locator, type Page } from '@p
 import { closeApp } from '../closeApp.js';
 import { positionField } from '../launchApp.js';
 import { renameProject } from '../projectMenu.js';
+import { expectFeatures, expectPieces } from '../counts.js';
 
 /**
  * The README's pictures, taken from the real app: `pnpm docs:media`.
@@ -165,7 +166,7 @@ test('README media', async () => {
     await window.waitForLoadState('domcontentloaded');
     // The app starts on its start screen (8.12); the pictures are of a project.
     await window.getByTestId('start-new').click();
-    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+    await expect(window.getByTestId('project-menu')).toBeVisible();
     await app.evaluate(({ BrowserWindow }, size) => {
       BrowserWindow.getAllWindows()[0]!.setContentSize(size.width, size.height);
     }, SIZE);
@@ -190,7 +191,7 @@ test('README media', async () => {
     await drag(window, at(0, 0), at(120, 60));
     await legend.click();
     await expect(legend).toHaveAttribute('aria-expanded', 'false');
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
     await window.getByTestId('part-name').fill('Outer');
     await place(window, 'Left', 0);
     await place(window, 'Bottom', 0);
@@ -220,7 +221,7 @@ test('README media', async () => {
     await row(window, 'Outer', 'Outline').click();
     await useTool(window, 'line', 'fold');
     await drag(window, at(100, 8), at(100, 87));
-    await expect(window.getByTestId('feature-count')).toHaveText('4');
+    await expectFeatures(window, '4');
     await window.keyboard.press('Escape');
     await pause(window);
 
@@ -245,7 +246,7 @@ test('README media', async () => {
     await useTool(window, 'line', 'fold');
     await drag(window, at(100, -104), at(100, -25));
     await window.keyboard.press('Escape');
-    await expect(window.getByTestId('feature-count')).toHaveText('6');
+    await expectFeatures(window, '6');
     await pause(window);
 
     // ── A card pocket with a thumb scoop, stitched on three sides ───────────
@@ -273,7 +274,7 @@ test('README media', async () => {
     await window.keyboard.press('l');
     await click(0, 60);
     await click(0, 0);
-    await expect(window.getByTestId('feature-count')).toHaveText('7');
+    await expectFeatures(window, '7');
     await pause(window, 400);
 
     // Close in on the pocket, so the stitch line's points land where they are

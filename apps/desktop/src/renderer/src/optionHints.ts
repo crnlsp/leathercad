@@ -3,9 +3,10 @@ import type { Binding, CommandId } from './keymap.js';
 import type { ToolId } from './tools.js';
 
 /**
- * The work bar's hints (U.11, R-11): a key as a cap and a few words, per tool
- * and per state, so the keys are learned while they are wanted — in place of
- * one long sentence that was cut off at most widths.
+ * The tool's hints (U.11, R-11), in the status bar since MS.5: a key as a cap and
+ * a few words, per tool and per state, so the keys are learned while they are
+ * wanted — in place of one long sentence that was cut off at most widths. "?
+ * all keys" is not one of them: it stays at the tool row's right (`ALL_KEYS`).
  *
  * A hint names its key by the keymap's command, never by a letter, so a hint
  * follows the layout and the platform (U.3) and, once keys can be changed
@@ -16,10 +17,7 @@ export interface Hint {
   /** The cap before the words; absent for a pointer gesture, which has none. */
   readonly key?: CommandId | Binding;
   readonly words: MessageKey;
-  /**
-   * 1 is the last to go as the row narrows, 2 the next, and so on, each once in
-   * a set. 0 is "all keys", which never goes.
-   */
+  /** 1 is the last to go as the row narrows, 2 the next, and so on, each once in a set. */
   readonly rank: number;
 }
 
@@ -36,12 +34,6 @@ export interface HintSituation {
 
 /** Shift, held: a modifier on its own, which no command binds. */
 const SHIFT: Binding = { code: 'Shift' };
-
-/**
- * The one hint that never drops: the way to every other key — `?` by
- * default, the keymap's first for the list, so it follows a change (U.12).
- */
-export const ALL_KEYS: Hint = { key: 'keyboardShortcuts', words: 'hints.allKeys', rank: 0 };
 
 const gesture = (words: MessageKey, rank: number): Hint => ({ words, rank });
 const press = (key: CommandId | Binding, words: MessageKey, rank: number): Hint => ({
@@ -175,12 +167,8 @@ const BY_TOOL: Readonly<Record<Exclude<ToolId, 'select'>, ToolHints>> = {
   },
 };
 
-/** The hints for a tool in a state, in the order they are shown, "all keys" last. */
-export function hintsFor(situation: HintSituation): readonly Hint[] {
-  return [...contentFor(situation), ALL_KEYS];
-}
-
-function contentFor({ tool, selected, sizable, underway }: HintSituation): readonly Hint[] {
+/** The hints for a tool in a state, in the order they are shown. */
+export function hintsFor({ tool, selected, sizable, underway }: HintSituation): readonly Hint[] {
   if (tool === 'select') return !selected ? SELECT.none : sizable ? SELECT.outline : SELECT.some;
   const hints = BY_TOOL[tool];
   if (underway && hints.underway !== undefined) return hints.underway;
@@ -188,12 +176,19 @@ function contentFor({ tool, selected, sizable, underway }: HintSituation): reado
   return hints.idle;
 }
 
+/**
+ * "? all keys", at the tool row's right (MS.5): the way to every other key — `?`
+ * by default, the keymap's first for the list, so it follows a change (U.12).
+ * Fitted as the hints are, so a row with no room for it lets it go whole
+ * rather than past the window; the ? corner still lists every key.
+ */
+export const ALL_KEYS: readonly Hint[] = [press('keyboardShortcuts', 'hints.allKeys', 1)];
+
 /** The Sheets view: what a click does on paper, and the keys that are about paper. */
 export const SHEETS_HINTS: readonly Hint[] = [
   gesture('hints.sheetsClick', 1),
   press('print', 'hints.sheetsPrint', 2),
   press('exportPdf', 'hints.sheetsExport', 3),
-  ALL_KEYS,
 ];
 
 /**
@@ -202,9 +197,8 @@ export const SHEETS_HINTS: readonly Hint[] = [
  * The lowest-ranked drops first, and nothing is dropped out of turn: a hint is
  * never kept because it is narrower than the one above it that did not fit,
  * so what the maker sees at a width is always the top of the ranking and a
- * hint reappears only for the room it ranks. A rank of 0 is never dropped, even
- * when there is no room for it — a whole hint overflowing is better than the way
- * to every key gone. A hint is whole or absent: its width is measured, never cut.
+ * hint reappears only for the room it ranks. A hint is whole or absent: its
+ * width is measured, never cut.
  *
  * @param sizes each hint's width in CSS pixels, and its rank
  * @param room the width the hints may take
@@ -215,25 +209,14 @@ export function fitHints(
   room: number,
   gap: number,
 ): readonly boolean[] {
-  const kept = sizes.map((hint) => hint.rank === 0);
-  // The pinned hints are paid for first; then the rest, best-ranked first.
+  const kept = sizes.map(() => false);
+  const byRank = sizes.map((size, index) => ({ ...size, index })).sort((a, b) => a.rank - b.rank);
   let used = 0;
-  let count = 0;
-  const take = (index: number): void => {
-    used += sizes[index]!.width + (count === 0 ? 0 : gap);
-    count += 1;
-  };
-  sizes.forEach((_, index) => {
-    if (kept[index]) take(index);
-  });
-  const byRank = sizes
-    .map((_, index) => index)
-    .filter((index) => !kept[index])
-    .sort((a, b) => sizes[a]!.rank - sizes[b]!.rank);
-  for (const index of byRank) {
-    if (used + (count === 0 ? 0 : gap) + sizes[index]!.width > room) break;
-    kept[index] = true;
-    take(index);
+  for (const [taken, hint] of byRank.entries()) {
+    const width = hint.width + (taken === 0 ? 0 : gap);
+    if (used + width > room) break;
+    kept[hint.index] = true;
+    used += width;
   }
   return kept;
 }

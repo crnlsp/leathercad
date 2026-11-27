@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 
 import { expectNoViolations, openSample, withApp } from './launchApp.js';
 import { fromProjectMenu } from './projectMenu.js';
+import { expectFeatures, expectPieces, expectSelected } from './counts.js';
 
 /** Slice 9.7: a piece saved as a template, and inserted into any project. */
 
@@ -17,7 +18,7 @@ test("the wallet's card pocket, saved as a piece, inserts into a new project as 
     await expect(window.getByTestId('file-notice')).toHaveCount(0);
 
     await window.keyboard.press('ControlOrMeta+N');
-    await expect(window.getByTestId('part-count')).toHaveText('0');
+    await expectPieces(window, '0');
     await fromProjectMenu(window, 'insert-pieces');
     const dialog = window.getByTestId('template-dialog');
     await expect(dialog.getByRole('heading', { level: 2 })).toHaveText(
@@ -35,21 +36,21 @@ test("the wallet's card pocket, saved as a piece, inserts into a new project as 
 
     await dialog.getByTestId('template-use').click();
     await expect(dialog).toHaveCount(0);
-    await expect(window.getByTestId('part-count')).toHaveText('1');
-    await expect(window.getByTestId('feature-count')).toHaveText('4');
-    await expect(window.getByTestId('selected-count')).toHaveText('1');
+    await expectPieces(window, '1');
+    await expectFeatures(window, '4');
+    await expectSelected(window, '1', 'pieces');
     await expect(window.getByTestId('parts-list')).toContainText('Card pocket');
-    await expect(window.getByTestId('problem-count')).toHaveCount(0);
+    await expect(window.getByTestId('print-problems')).toHaveAttribute('data-state', 'clear');
 
     await window.getByTestId('undo').click();
-    await expect(window.getByTestId('part-count')).toHaveText('0');
+    await expectPieces(window, '0');
   });
 });
 
 test("a built-in template's pieces insert too, only the ones ticked (9.7)", async () => {
   await withApp(async (window) => {
     await openSample(window);
-    await expect(window.getByTestId('part-count')).toHaveText('3');
+    await expectPieces(window, '3');
     await fromProjectMenu(window, 'insert-pieces');
     const dialog = window.getByTestId('template-dialog');
     await dialog.getByTestId('template-builtin:card-holder').click();
@@ -61,8 +62,8 @@ test("a built-in template's pieces insert too, only the ones ticked (9.7)", asyn
       count - 1 === 1 ? 'Insert piece' : `Insert ${String(count - 1)} pieces`,
     );
     await dialog.getByTestId('template-use').click();
-    await expect(window.getByTestId('part-count')).toHaveText(String(3 + count - 1));
-    await expect(window.getByTestId('selected-count')).toHaveText(String(count - 1));
+    await expectPieces(window, String(3 + count - 1));
+    await expectSelected(window, String(count - 1), 'pieces');
 
     // Nothing ticked, nothing to insert.
     await fromProjectMenu(window, 'insert-pieces');

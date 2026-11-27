@@ -201,7 +201,7 @@ body {
 
 /* Every project closed (8.12): the tab strip, and the start screen under it. */
 .app.no-project {
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto 1fr auto;
 }
 
 /*
@@ -217,8 +217,12 @@ body {
  * removed**: one that is not docked opens over the board, and the parts tree
  * is the only route to a locked feature.
  */
-.workspace {
+.workspace,
+.work-bar {
   --rail-w: var(--rail-w-expanded);
+}
+
+.workspace {
   --parts-w: var(--parts-width);
   --properties-w: var(--properties-width);
 
@@ -252,7 +256,8 @@ body {
   display: contents;
 }
 
-.workspace.rail-collapsed {
+.workspace.rail-collapsed,
+.work-bar.rail-collapsed {
   --rail-w: var(--rail-w-collapsed);
 }
 
@@ -394,6 +399,21 @@ body {
   justify-content: space-between;
 }
 
+/* A panel's name steps back to label weight: the selection's name, below, is
+   the loudest text beside the drawing (MS.6). */
+.panel .panel-title h2,
+.panel h2.panel-label,
+.panel-label {
+  color: var(--text-dim);
+  font: var(--t-label);
+  letter-spacing: normal;
+}
+
+/* Above a selection's name, on a line of its own. */
+.panel-header .panel-label {
+  flex: 0 0 100%;
+}
+
 /* "3 pieces", beside "Parts" (R-07). */
 .panel-count {
   margin-right: auto;
@@ -414,7 +434,9 @@ body {
   /* It fits at every supported size and never needs this. Below them it
      scrolls rather than spilling over the status bar and the controls in it. */
   overflow-y: auto;
-  padding: 10px 8px;
+  /* 4 + the button's border and 7 px: every icon starts 12 px from the
+     window's edge, as every row's first glyph does (MS.5). */
+  padding: 10px 4px;
   border-right: 1px solid var(--shell-line);
   background: var(--shell-800);
 }
@@ -430,7 +452,7 @@ body {
 }
 
 .rail-heading {
-  margin: 0 0 2px;
+  margin: 0 0 2px 8px;
   color: var(--text-dim);
   font: var(--t-label);
 }
@@ -445,6 +467,7 @@ body {
 .rail .tool {
   justify-content: space-between;
   width: 100%;
+  padding: 0 7px;
 }
 
 .rail .tooltip-anchor {
@@ -453,19 +476,16 @@ body {
 
 /* Collapsed: the icon is the face, the shortcut a badge in its corner, and the
    tooltip carries the name and how it is used (decisions §4.3). */
-.rail.collapsed {
-  padding: 10px 6px;
-}
-
 .rail.collapsed .tool {
   position: relative;
-  justify-content: center;
+  /* At the shared 12 px edge rather than centred: the badge balances it. */
+  justify-content: flex-start;
   /* 28 px: room for the 20 px icon and its corner badge, and short enough for
      all thirteen tools to fit the rail at the smallest supported window,
      860 × 600 (§7.2). At 36 px the rail ran over the status bar there, and
      Edit Points (3.9c) took it 30 px over again at 30. */
   min-height: 28px;
-  padding: 0;
+  padding: 0 0 0 7px;
 }
 
 /* Collapsed, the groups are told apart by their rules; the space beside them
@@ -518,7 +538,7 @@ body {
   align-items: flex-end;
   gap: var(--space-1);
   min-width: 0;
-  padding: var(--space-1) var(--space-2) 0;
+  padding: var(--space-1) var(--space-2) 0 6px;
   background: var(--shell-800);
 }
 
@@ -532,7 +552,7 @@ body {
 
 /*
  * The tabs are drawing sheets (8.12), filed as drafting software files them:
- * square, side by side, a hairline between two that are not open. The open
+ * square, side by side, a short hairline ending each one that is not open. The open
  * one is a sheet laid on top — lines on three sides, open into the project
  * bar below, which is its. No rounding and no colour bar: the chrome of a
  * drawing tool, not of a browser. A folded corner was tried and dropped: it
@@ -558,12 +578,12 @@ body {
   margin-left: -1px;
 }
 
-.tab:not(.active) + .tab:not(.active)::before {
+.tab:not(.active)::after {
   content: '';
   position: absolute;
   top: var(--space-2);
   bottom: var(--space-2);
-  left: -1px;
+  right: 0;
   width: 1px;
   background: var(--shell-line);
 }
@@ -698,15 +718,6 @@ body {
 .tab-new {
   flex: none;
   margin-bottom: 2px;
-}
-
-/* The application's controls at the strip's end, on the start screen (8.12). */
-.tab-strip-end {
-  display: flex;
-  gap: var(--space-1);
-  align-items: center;
-  align-self: center;
-  margin-left: auto;
 }
 
 .tab-all {
@@ -1569,7 +1580,8 @@ body {
   display: flex;
   align-items: center;
   gap: var(--space-4);
-  padding: 4px 14px;
+  min-height: 40px;
+  padding: 0 14px 0 0;
   background: var(--shell-900);
   border-bottom: 1px solid var(--shell-line);
 }
@@ -1579,7 +1591,6 @@ body {
   gap: var(--space-3);
 }
 
-.project-identity,
 .project-output {
   display: flex;
   gap: var(--space-2);
@@ -1587,17 +1598,9 @@ body {
   min-width: 0;
 }
 
-/* When the window narrows, the name gives way before anything else does. */
-.project-identity {
-  flex: 0 1 auto;
-}
-
-.project-identity > * {
-  flex: none;
-}
-
 /* The Project menu (8.7), at the tab strip's left since 8.12: an icon. */
 .project-menu-button {
+  position: relative;
   margin-bottom: 2px;
 }
 
@@ -1628,69 +1631,32 @@ body {
   outline: none;
 }
 
-/* Said once, beside the project it is about: a check and "Saved", or an open
-   dot and "Unsaved changes". */
-.save-state {
-  display: inline-flex;
-  gap: 6px;
-  align-items: center;
-  /* text-mute is under 4.5 : 1 on the bar; text-dim is AA there (theme.test.ts). */
-  color: var(--text-dim);
-  font: var(--t-label);
-  font-weight: 400;
-  white-space: nowrap;
-}
-
-.save-state.unsaved .icon {
-  color: var(--tan);
-}
-
-/*
- * Nothing to save: the button looks as it does with work to save — it does
- * not come and go, nor its key — but does nothing when pressed, and its
- * pointer and hover say so. It stays focusable, and its tooltip says why
- * (R-06).
- */
-.save-button[aria-disabled='true'] {
-  cursor: not-allowed;
-}
-
-.save-button[aria-disabled='true']:hover {
-  color: var(--text-dim);
-  border-color: var(--shell-line);
-}
-
-/* Design | Sheets (R-06): a pill switch on a dark track, in the middle of the
-   bar. The tab shown is raised, with an accent outline and an accent icon. */
+/* Design | Sheets (MS.4): tabs at the row's left, full height. The selected
+   one is semibold with an accent underline on the row's bottom edge. */
 .view-switch {
   display: flex;
   flex: none;
-  gap: 2px;
-  margin: 0 auto;
-  padding: 2px;
-  border: 1px solid var(--shell-line);
-  border-radius: var(--r-pill);
-  background: var(--shell-900);
+  align-self: stretch;
 }
 
 .view-tab {
   display: inline-flex;
   gap: 6px;
   align-items: center;
-  min-height: 24px;
   padding: 0 12px;
-  border: 1px solid transparent;
-  border-radius: var(--r-pill);
+  border: 0;
   background: transparent;
   color: var(--text-dim);
   font: var(--t-label);
+  font-size: 14px;
   white-space: nowrap;
   cursor: pointer;
   transition: color var(--motion);
 }
 
 .view-switch.compact .view-tab {
-  padding: 0 8px;
+  /* The row's first glyph stays 12 px in, however cramped. */
+  padding: 0 8px 0 12px;
 }
 
 .view-tab:hover {
@@ -1698,18 +1664,14 @@ body {
 }
 
 .view-tab.active {
-  border-color: var(--tan);
-  background: var(--shell-600);
+  box-shadow: inset 0 -2px 0 var(--tan);
   color: var(--text);
-}
-
-.view-tab.active .icon {
-  color: var(--tan);
+  font-weight: 600;
 }
 
 .view-tab:focus-visible {
   outline: 2px solid var(--tan);
-  outline-offset: 1px;
+  outline-offset: -2px;
 }
 
 /* The sheet count, the same number as the paper button's. */
@@ -1721,14 +1683,21 @@ body {
   font: var(--t-num-micro);
 }
 
-/* The output and the application sit at the right. */
+/* The output sits at the right. */
 .project-output {
   flex: none;
+  margin-left: auto;
 }
 
-/* The paper (7.4a, R-06): quiet, its count first. */
-.paper-button {
+/* The paper (MS.4): a field, not a button: "Paper", its value, a chevron. */
+.tool.paper-button {
   gap: 6px;
+  border: 1px solid var(--shell-line);
+  background: var(--shell-900);
+  color: var(--text);
+}
+
+.paper-word {
   color: var(--text-dim);
 }
 
@@ -1890,24 +1859,35 @@ body {
   background: var(--shell-line);
 }
 
-/* Print, the one primary action: the paper's colour. */
+/* Print, the one primary action: green while nothing needs fixing, on the
+   shell like Export while something does (MS.1). */
 .split.primary .split-main {
-  background: var(--primary);
-  color: var(--on-primary);
+  background: var(--shell-600);
+  color: var(--text);
   font-weight: 600;
 }
 
 .split.primary .split-main:hover,
 .split.primary .split-main:focus-visible {
-  background: var(--primary-hover);
+  background: var(--shell-line);
 }
 
-/* Print's second half is the problems indicator: a check on the paper's
-   shade, the warning's triangle and count on its orange, the error's on its
-   red. What is only to note shows its dot, as the drawer does. */
+.split.primary[data-state='clear'] .split-main {
+  background: var(--ready);
+  color: var(--on-primary);
+}
+
+.split.primary[data-state='clear'] .split-main:hover,
+.split.primary[data-state='clear'] .split-main:focus-visible {
+  background: var(--ready-hover);
+}
+
+/* Print's second half is the problems indicator: a check on the ready green,
+   the warning's triangle and count on its orange, the error's on its red.
+   What is only to note shows its dot, as the drawer does. */
 .problems-indicator {
   gap: 3px;
-  background: var(--primary-side);
+  background: var(--ready-side);
   color: var(--on-primary);
   font: var(--t-num-micro);
   font-weight: 600;
@@ -1926,9 +1906,9 @@ body {
   color: inherit;
 }
 
-.problems-indicator:hover,
-.problems-indicator:focus-visible {
-  background: var(--primary-hover);
+.problems-indicator.clear:hover,
+.problems-indicator.clear:focus-visible {
+  background: var(--ready);
 }
 
 .problems-indicator.warning:hover,
@@ -1943,13 +1923,14 @@ body {
 @media (forced-colors: active) {
   .split-main,
   .split-side,
-  .view-switch,
-  .view-tab,
   .segment {
     border: 1px solid ButtonText;
   }
 
-  .view-tab.active,
+  .view-tab.active {
+    text-decoration: underline;
+  }
+
   .segment.active {
     border-color: Highlight;
   }
@@ -1959,22 +1940,8 @@ body {
   }
 }
 
-/* The application (8.7): past a hairline, because none of it is this project. */
-.project-app {
-  display: flex;
-  flex: none;
-  gap: var(--space-1);
-  align-items: center;
-  padding-left: var(--space-3);
-  border-left: 1px solid var(--shell-line);
-}
-
-/* A new version exists (8.9): a quiet tan dot in the Settings button's corner,
-   and the button's name says it. Nothing moves and nothing asks. */
-.settings-button {
-  position: relative;
-}
-
+/* A new version exists (8.9): a quiet tan dot in the Project menu's corner;
+   the menu's last item says it. Nothing moves and nothing asks. */
 .update-mark {
   position: absolute;
   top: 4px;
@@ -1988,16 +1955,32 @@ body {
 .work-bar {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-4);
   /* A fixed height, not its content's: the bar is reserved so the board never
      moves when the tool changes (§7.1), and chips and selects differ by a few
      pixels. */
   box-sizing: border-box;
   height: var(--work-bar-h);
-  padding: 0 14px;
+  padding: 0 14px 0 0;
   font: var(--t-label);
   background: var(--shell-700);
   border-bottom: 1px solid var(--shell-line);
+}
+
+/* The rail's head (MS.5): as wide as the rail, in its colour and over the bar's
+   bottom line, so the rail rises into the row; its glyph above the rail's. */
+.work-head {
+  display: flex;
+  flex: none;
+  align-self: stretch;
+  align-items: center;
+  justify-content: space-between;
+  width: var(--rail-w);
+  margin-bottom: -1px;
+  padding: 0 12px;
+  border-right: 1px solid var(--shell-line);
+  background: var(--shell-800);
+  color: var(--text);
 }
 
 .tool-options {
@@ -2007,22 +1990,79 @@ body {
   gap: 4px;
 }
 
-/* Full mode names remain available without widening or raising the fixed bar. */
-.draw-as-select {
-  display: none;
+/* Draw as, then its groups, 16 px apart (MS.5): space, not lines. A word gives
+   way whole or not at all (MS.7), so none wraps. */
+.drawing-options {
+  gap: var(--space-4);
+  white-space: nowrap;
+}
+
+.draw-group {
+  display: flex;
   align-items: center;
   gap: var(--space-2);
 }
 
-@media (max-width: 1199px) {
-  .draw-as-select {
-    display: inline-flex;
-  }
+.draw-group-name {
+  color: var(--text-dim);
+}
 
-  .drawing-options > .draw-as-label,
-  .drawing-options > .chip {
-    display: none;
-  }
+/* The only boxes in the row: a group's choices, 24 px each, inside a hairline. */
+.draw-group-box {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px;
+  border: 1px solid var(--shell-line);
+  border-radius: var(--r-sm);
+}
+
+.draw-group-box .chip {
+  gap: 6px;
+  min-height: 24px;
+  padding: 0 8px 0 2px;
+  border-color: transparent;
+}
+
+.draw-group-box .chip.active {
+  border-color: var(--tan);
+}
+
+/* A choice's line on a scrap of the drafting ground, as the board draws it. */
+.line-sample {
+  display: flex;
+  flex: none;
+  padding: 2px;
+  border-radius: var(--r-sm);
+  background: var(--ground);
+}
+
+/* The way to every key keeps the row's right (MS.5). */
+.work-bar .work-hints-row {
+  justify-content: flex-end;
+}
+
+/* The choices give way to a select only when they themselves do not fit, which
+   `fitWorkRow` measures in every language (MS.7). */
+.draw-as-select {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Draw as with nothing given way, for `useWorkRowFit` to measure: laid out at
+   its whole width inside a box with none, so it is never seen and never makes
+   the window scroll. */
+.draw-as-measure {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.draw-as-copy {
+  width: max-content;
+  visibility: hidden;
 }
 
 .visually-hidden {
@@ -2057,16 +2097,14 @@ body {
   outline-offset: -2px;
 }
 
-/* The hints (U.11) are the least important thing in the work bar, so they are
-   what gives when the window narrows: the lowest-ranked go, whole, and "all
-   keys" stays (`OptionHints`). The slot takes the room the tool's options leave;
-   the copy is the same row, laid out and never seen, so each hint's width is
-   known before it is shown. */
+/* The tool's hints (U.11), in the status bar since MS.5, give way as the window
+   narrows: the lowest-ranked go, whole (`OptionHints`). The slot takes the room
+   the bar's other contents leave; the copy is the same row, laid out and never
+   seen, so each hint's width is known before it is shown. */
 .work-hints {
   position: relative;
   flex: 1 1 0;
   min-width: 0;
-  margin-left: var(--space-2);
   overflow: hidden;
 }
 
@@ -2116,12 +2154,6 @@ body {
   }
 }
 
-/* Counts, not measurements: emphasised by colour, at body weight. */
-.app-status b {
-  color: var(--text);
-  font-weight: 400;
-}
-
 .app-status {
   display: flex;
   align-items: center;
@@ -2130,7 +2162,9 @@ body {
   /* A fixed height, as the work bar's: set by its content, the panels' 24 px
      chips made it a pixel taller, and the board a pixel shorter (U.5). */
   height: var(--status-bar-h);
-  padding: 0 14px;
+  /* 5 px at the left, so the first panel chip's glyph, after the chip's border
+     and 6 px padding, starts 12 px in, as every row's first glyph does (MS.7). */
+  padding: 0 14px 0 5px;
   background: var(--shell-700);
   border-top: 1px solid var(--shell-line);
   color: var(--text-dim);
@@ -2142,11 +2176,6 @@ body {
 .app-status code {
   font: inherit;
   color: var(--text-dim);
-}
-
-.app-status .sep {
-  margin: 0 6px;
-  opacity: 0.5;
 }
 
 .status-error {
@@ -2189,18 +2218,22 @@ body {
   text-overflow: ellipsis;
 }
 
-/* Counts first, then whatever the status bar has to say beside them. The
-   message is the part allowed to shrink: a long notice should lose its tail,
-   never push the counts or the cursor readout off the bar. */
+/* What the status bar says after the panel chips: a notice, or the version on
+   the start screen, where it leads. The chips come first on a project, so a
+   notice appearing never moves them. As wide as what it says, and the part
+   allowed to shrink: a long notice loses its tail, never pushes the chips or
+   the cursor readout off the bar. On the start screen its words start 12 px
+   in, as the chips' glyph does. */
 .status-left {
   display: flex;
-  flex: 1;
+  flex: 0 1 auto;
   gap: 16px;
   min-width: 0;
+  padding-left: 7px;
   overflow: hidden;
 }
 
-/* Parts [, Focus \, Properties ]: always there, by the cursor readout. */
+/* Parts [, Focus \, Properties ]: always there, at the bar's left. */
 .status-panels {
   display: flex;
   flex: none;
@@ -2239,66 +2272,17 @@ body {
   }
 }
 
-/* The version (8.9): reads as the bar's text, and pressed checks for a new
-   one. Underlined under the pointer, so it shows it can be pressed. Its pill
-   is drawn only once a check has answered. No negative margin to line the
-   number up with the bar's edge: .status-left hides what overflows it, and
-   would cut the pill's left side off. */
-.status-version {
+/* Help (MS.3): the corner's button. */
+.status-help {
   display: inline-flex;
-  gap: 4px;
   align-items: center;
-  height: 18px;
-  padding: 0 6px;
-  border: 1px solid transparent;
-  border-radius: var(--r-pill);
-  background: none;
-  color: inherit;
-  font: inherit;
-  vertical-align: middle;
-  cursor: pointer;
 }
 
-.status-version:not([aria-disabled='true']):hover {
-  text-decoration: underline;
-}
-
-/* Answered, it waits five minutes before it asks again: not a button meanwhile. */
-.status-version[aria-disabled='true'] {
-  cursor: default;
-}
-
-/* The latest: a sage pill and tick. Newer: a tan pill, the arrow and the
-   number. Failed: an orange triangle — the warning's colour and glyph. */
-.status-version[data-state='current'] {
-  border-color: color-mix(in srgb, var(--ok) 45%, var(--shell-line));
-  color: var(--text);
-}
-
-.status-version[data-state='current'] .icon {
-  color: var(--ok);
-}
-
-.status-version[data-state='available'] {
-  border-color: color-mix(in srgb, var(--tan) 60%, var(--shell-line));
-  background: color-mix(in srgb, var(--tan) 16%, var(--shell-700));
-  color: var(--text);
-}
-
-.status-version[data-state='available'] .icon {
-  color: var(--tan);
-}
-
-.status-version-next {
-  color: var(--text-dim);
-}
-
-.status-version[data-state='failed'] {
-  border-color: color-mix(in srgb, var(--warning) 55%, var(--shell-line));
-}
-
-.status-version[data-state='failed'] .icon {
-  color: var(--warning);
+/* The design system's 24 px target, which the bar's content area holds: a
+   taller button moved the board by a pixel when a drawer opened. */
+.status-help .tool {
+  min-height: 0;
+  height: 24px;
 }
 
 /* What the check found, in Settings › Updates (8.9): the status bar's glyph in
@@ -2383,12 +2367,9 @@ body {
   align-items: center;
 }
 
-/* Undo and redo lead the work bar; the rule sets them apart from the tool's
-   own options. */
+/* Undo and redo follow the Project menu in the tab strip (MS.2), level with it. */
 .toolbar.history {
-  margin-right: 6px;
-  padding-right: 12px;
-  border-right: 1px solid var(--shell-line);
+  margin-bottom: 2px;
 }
 
 /* The Print Preview's last step: the primary action, in the paper's colour
@@ -2494,6 +2475,7 @@ body {
 /* One key cap for every key named beside an action: the start screen's
    New project card wears the one Open existing project has (QA7). */
 .tool kbd,
+.work-head kbd,
 .menu-item kbd,
 .start-card-name kbd {
   padding: 0 4px;
@@ -4266,7 +4248,7 @@ button.problem-row[aria-current='true'] {
 
 .rail-note {
   margin: var(--space-3) 0 0;
-  padding: 0 4px;
+  padding: 0 var(--space-2);
   color: var(--text-dim);
   font: var(--t-label);
 }

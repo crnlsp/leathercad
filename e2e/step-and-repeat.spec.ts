@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import { drawAPanel, withApp } from './launchApp.js';
+import { expectPieces } from './counts.js';
 
 /**
  * Slice 8.8b-3: Ctrl+D right after a duplicate that was then moved repeats
@@ -44,21 +45,21 @@ test('duplicate, move 15 mm down, Ctrl+D: the third piece is 15 mm below the sec
     const first = await bottomOf(window);
 
     await duplicate(window);
-    await expect(window.getByTestId('part-count')).toHaveText('2');
+    await expectPieces(window, '2');
     await moveDown(window);
     const second = await bottomOf(window);
     expect(second).toBeCloseTo(first - 15, 9);
 
     await duplicate(window);
-    await expect(window.getByTestId('part-count')).toHaveText('3');
+    await expectPieces(window, '3');
     await expect(field(window, 'Bottom')).toHaveValue(String(second - 15));
 
     // Again: each is 15 mm further, and one undo step.
     await duplicate(window);
-    await expect(window.getByTestId('part-count')).toHaveText('4');
+    await expectPieces(window, '4');
     await expect(field(window, 'Bottom')).toHaveValue(String(second - 30));
     await window.getByTestId('undo').click();
-    await expect(window.getByTestId('part-count')).toHaveText('3');
+    await expectPieces(window, '3');
   });
 });
 
@@ -68,7 +69,7 @@ test('an undo in between makes Ctrl+D an ordinary duplicate again (8.8b)', async
     await window.locator('[data-testid^="feature-row-"]').first().click();
 
     await duplicate(window);
-    await expect(window.getByTestId('part-count')).toHaveText('2');
+    await expectPieces(window, '2');
     await moveDown(window);
     const moved = await bottomOf(window);
 
@@ -76,7 +77,7 @@ test('an undo in between makes Ctrl+D an ordinary duplicate again (8.8b)', async
     await window.getByTestId('redo').click();
     await expect(field(window, 'Bottom')).toHaveValue(String(moved));
     await duplicate(window);
-    await expect(window.getByTestId('part-count')).toHaveText('3');
+    await expectPieces(window, '3');
     // Placed clear of the drawing as ever, in line with the piece it copies.
     await expect(field(window, 'Bottom')).toHaveValue(String(moved));
   });

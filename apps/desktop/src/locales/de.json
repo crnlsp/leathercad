@@ -109,7 +109,6 @@
     "drag": "ziehen"
   },
   "projectBar": {
-    "application": "Anwendung",
     "exportMore": "Weitere Exportformate",
     "exportMoreTooltip": "Als SVG oder DXF in Millimetern exportieren, für Laserschneider, CNC und Vektorgrafikprogramme",
     "exportPdf": "PDF exportieren",
@@ -117,7 +116,6 @@
     "help": "Hilfe",
     "helpTooltip": "Hilfe",
     "name": "Projektname",
-    "nothingToSave": "Nichts zu speichern",
     "output": "Ausgabe",
     "paper": "Papier: {{sheets}}",
     "paperLong": "{{count}} × {{paper}} {{orientation}}",
@@ -139,13 +137,8 @@
     "problemsNone": "Probleme: nichts zu beheben",
     "problemsNoneTooltip": "Nichts zu beheben",
     "problemsTooltip": "{{counts}}. Im Bereich Probleme anzeigen",
-    "saveTooltip": "Projekt speichern",
     "saved": "Gespeichert",
-    "settings": "Einstellungen",
-    "settingsTooltip": "Einstellungen",
-    "unsaved": "Ungespeicherte Änderungen",
-    "unsavedShort": "Ungespeichert",
-    "settingsUpdate": "Einstellungen — neue Version verfügbar"
+    "unsaved": "Ungespeicherte Änderungen"
   },
   "menu": {
     "about": "Über LeatherCAD",
@@ -227,22 +220,11 @@
     "undoTooltip": "Rückgängig: {{action}}"
   },
   "status": {
-    "features_one": "Element",
-    "features_other": "Elemente",
     "focus": "Fokus",
     "panels": "Bereiche",
     "parts": "Teile",
-    "partsCount_one": "Teil",
-    "partsCount_other": "Teile",
-    "problems_one": "Problem",
-    "problems_other": "Probleme",
     "properties": "Eigenschaften",
-    "selected": "ausgewählt",
     "sheetOf": "Bogen {{number}} von {{count}}",
-    "partsSelected_one": "Teil ausgewählt",
-    "partsSelected_other": "Teile ausgewählt",
-    "checkForUpdates": "Nach Updates suchen",
-    "versionNext": "auf {{version}}",
     "saved": "{{name}} gespeichert",
     "exported": "{{name}} exportiert"
   },
@@ -787,7 +769,6 @@
     "featureIn": "{{feature}} · {{part}}",
     "hideParts": "Teile ausblenden",
     "hideProperties": "Eigenschaften ausblenden",
-    "partsFolded": "Teile, eingeklappt",
     "propertiesFolded": "Eigenschaften, eingeklappt",
     "showParts": "Teile einblenden",
     "showProperties": "Eigenschaften einblenden"
@@ -1437,9 +1418,7 @@
     "available": "LeatherCAD {{version}} ist verfügbar.",
     "availableLink": "Neuerungen ansehen und herunterladen",
     "failed": "Es konnte nicht nach einer neuen Version gesucht werden. Verbindung prüfen oder später erneut versuchen.",
-    "checkedAt": "Geprüft um {{time}}",
-    "again_one": "Sie können in {{count}} Minute erneut prüfen.",
-    "again_other": "Sie können in {{count}} Minuten erneut prüfen."
+    "checkedAt": "Geprüft um {{time}}"
   },
   "templates": {
     "title": "Neues Projekt aus Vorlage",

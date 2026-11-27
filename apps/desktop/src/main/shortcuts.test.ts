@@ -38,15 +38,17 @@ describe('the keyboard shortcut map', () => {
           open: noop,
           importSvg: noop,
           insertPieces: noop,
+          save: noop,
           saveAs: noop,
           saveAsTemplate: noop,
           rename: noop,
           openRecent: noop,
+          settings: noop,
         },
         [],
         t,
       ),
-      ...helpMenu({ about: noop }, t),
+      ...helpMenu({ shortcuts: noop, about: noop }, t),
     ].flatMap((entry) => (entry.kind === 'item' && entry.keys !== undefined ? [entry.keys] : []));
     expect(shown.length).toBeGreaterThan(0);
     for (const command of shown) {

@@ -6,6 +6,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { drawAPanel, expectNoViolations, withApp } from './launchApp.js';
 import { closeActiveTab, fromProjectMenu } from './projectMenu.js';
+import { expectFeatures } from './counts.js';
 
 const warning = '[data-code="TEXT_TOO_SMALL_TO_PRINT"]';
 
@@ -17,7 +18,7 @@ async function placeLabel(window: Page): Promise<void> {
   if (board === null) throw new Error('The board is not visible');
   await window.mouse.click(board.x + 180, board.y + 210);
   await window.getByTestId('label-text').fill('Fold');
-  await expect(window.getByTestId('feature-count')).toHaveText('2');
+  await expectFeatures(window, '2');
 }
 
 test('small text warns in Properties and Problems, and changing Size clears it undoably (Q34)', async () => {
@@ -79,12 +80,12 @@ test('small text can be saved and reopened with its warning recomputed (Q34)', a
     const size = window.getByTestId('property-panel').getByLabel('Size');
     await size.fill('1');
     await size.press('Enter');
-    await window.getByTestId('save').click();
-    await expect(window.getByTestId('save-state')).toHaveText('Saved');
+    await window.keyboard.press('ControlOrMeta+S');
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     await closeActiveTab(window);
     await fromProjectMenu(window, 'open');
-    await expect(window.getByTestId('feature-count')).toHaveText('2');
-    await expect(window.getByTestId('save-state')).toHaveText('Saved');
+    await expectFeatures(window, '2');
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     await window.getByTestId('problems-toggle').click();
     const row = window.getByTestId('problems-panel').locator(warning);
     await expect(row).toHaveCount(1);

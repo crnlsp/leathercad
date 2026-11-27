@@ -62,6 +62,8 @@ export const ICON_NAMES = [
   'export',
   'search',
   'menu',
+  'undo',
+  'redo',
   'changed-outside',
   'scissors',
   'holes',

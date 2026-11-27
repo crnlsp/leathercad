@@ -3,6 +3,7 @@ import { rmSync } from 'node:fs';
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
+import { openSettings } from './openSettings.js';
 import {
   drawAPanel,
   expectNoViolations,
@@ -10,6 +11,7 @@ import {
   openApp,
   recoveryCopies,
 } from './launchApp.js';
+import { expectPieces } from './counts.js';
 
 /**
  * QA2, F1: a part of the window that throws as it draws never takes the
@@ -58,9 +60,9 @@ test('a panel that fails says so in its place, and the window and the work go on
     // Everything else is still there, and still works.
     await expect(window.getByTestId('editor-canvas')).toBeVisible();
     await expect(window.getByTestId('tab-strip')).toBeVisible();
-    await expect(window.getByTestId('save')).toBeEnabled();
-    await expect(window.getByTestId('part-count')).toHaveText('1');
-    await expect(window.getByTestId('save-state')).toHaveText('Unsaved changes');
+    await expect(window.getByTestId('undo')).toBeEnabled();
+    await expectPieces(window, '1');
+    await expect(window.getByTestId('announce-save')).toHaveText('Unsaved changes');
     await expectNoViolations(window, 'a panel that failed');
 
     // The maker's next step brings the panel back.
@@ -79,13 +81,13 @@ test('a board that fails says so, and closing still asks about the unsaved work'
     await failIn(window, 'board');
 
     await expect(window.getByTestId('failure-board')).toBeVisible();
-    await expect(window.getByTestId('save')).toBeEnabled();
+    await expect(window.getByTestId('undo')).toBeEnabled();
 
     await requestClose(app);
     const dialog = window.getByTestId('unsaved-dialog');
     await expect(dialog).toBeVisible();
     await dialog.getByTestId('unsaved-cancel').click();
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
   } finally {
     await closeApp(app);
   }
@@ -95,14 +97,14 @@ test('a dialog that fails closes with a notice, and leaves the project as it was
   const { app, window } = await launch(state);
   try {
     await drawAPanel(window, { parts: '1' });
-    await window.getByTestId('settings').click();
+    await openSettings(window);
     await failIn(window, 'settings');
 
     const notice = window.getByTestId('failure-settings');
     await expect(notice).toBeVisible();
     await notice.getByTestId('failure-settings-close').click();
     await expect(notice).toHaveCount(0);
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
   } finally {
     await closeApp(app);
   }
@@ -133,7 +135,7 @@ test('a window that fails whole keeps its recovery copy through the quit, and th
     const dialog = second.window.getByTestId('recovery-dialog');
     await expect(dialog).toBeVisible();
     await dialog.getByTestId('recovery-recover').click();
-    await expect(second.window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(second.window, '1');
   } finally {
     await closeApp(second.app);
   }

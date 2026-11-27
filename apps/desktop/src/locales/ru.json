@@ -109,7 +109,6 @@
     "drag": "перетащить"
   },
   "projectBar": {
-    "application": "Приложение",
     "exportMore": "Другие способы экспорта",
     "exportMoreTooltip": "Экспорт в SVG или DXF в миллиметрах для лазерной резки, ЧПУ и векторных редакторов",
     "exportPdf": "Экспорт в PDF",
@@ -117,7 +116,6 @@
     "help": "Справка",
     "helpTooltip": "Справка",
     "name": "Название проекта",
-    "nothingToSave": "Нет изменений для сохранения",
     "output": "Вывод",
     "paper": "Бумага: {{sheets}}",
     "paperLong": "{{count}} × {{paper}} {{orientation}}",
@@ -143,13 +141,8 @@
     "problemsNone": "Проблемы: замечаний нет",
     "problemsNoneTooltip": "Замечаний нет",
     "problemsTooltip": "{{counts}}. Показать на панели «Проблемы»",
-    "saveTooltip": "Сохранить проект",
     "saved": "Сохранено",
-    "settings": "Настройки",
-    "settingsTooltip": "Настройки",
-    "unsaved": "Несохранённые изменения",
-    "unsavedShort": "Не сохранено",
-    "settingsUpdate": "Настройки — доступна новая версия"
+    "unsaved": "Несохранённые изменения"
   },
   "menu": {
     "about": "О программе LeatherCAD",
@@ -231,30 +224,11 @@
     "undoTooltip": "Отменить: {{action}}"
   },
   "status": {
-    "features_one": "элемент",
-    "features_few": "элемента",
-    "features_many": "элементов",
-    "features_other": "элемента",
     "focus": "Фокус",
     "panels": "Панели",
     "parts": "Детали",
-    "partsCount_one": "деталь",
-    "partsCount_few": "детали",
-    "partsCount_many": "деталей",
-    "partsCount_other": "детали",
-    "problems_one": "проблема",
-    "problems_few": "проблемы",
-    "problems_many": "проблем",
-    "problems_other": "проблемы",
     "properties": "Свойства",
-    "selected": "выбрано",
     "sheetOf": "Лист {{number}} из {{count}}",
-    "partsSelected_one": "деталь выбрана",
-    "partsSelected_few": "детали выбраны",
-    "partsSelected_many": "деталей выбрано",
-    "partsSelected_other": "детали выбрано",
-    "checkForUpdates": "Проверить обновления",
-    "versionNext": "до {{version}}",
     "saved": "Сохранён {{name}}",
     "exported": "Экспортирован {{name}}"
   },
@@ -845,7 +819,6 @@
     "featureIn": "{{feature}} · {{part}}",
     "hideParts": "Скрыть панель «Детали»",
     "hideProperties": "Скрыть панель «Свойства»",
-    "partsFolded": "Детали, свёрнуто",
     "propertiesFolded": "Свойства, свёрнуто",
     "showParts": "Показать панель «Детали»",
     "showProperties": "Показать панель «Свойства»"
@@ -1543,11 +1516,7 @@
     "available": "Доступен LeatherCAD {{version}}.",
     "availableLink": "Посмотреть изменения и скачать",
     "failed": "Не удалось проверить обновления. Проверьте подключение или повторите попытку позже.",
-    "checkedAt": "Проверено в {{time}}",
-    "again_one": "Повторная проверка через {{count}} минуту.",
-    "again_few": "Повторная проверка через {{count}} минуты.",
-    "again_many": "Повторная проверка через {{count}} минут.",
-    "again_other": "Повторная проверка через {{count}} минуты."
+    "checkedAt": "Проверено в {{time}}"
   },
   "templates": {
     "title": "Новый проект из шаблона",

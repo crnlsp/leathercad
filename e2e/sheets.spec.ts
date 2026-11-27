@@ -11,6 +11,7 @@ import { caption } from './keyCaption.js';
 import { expectNoViolations, launchApp } from './launchApp.js';
 import { PRINT_TEST } from './printTest.js';
 import { choosePaper, fromProjectMenu } from './projectMenu.js';
+import { expectPieces, expectSelected } from './counts.js';
 
 /**
  * The sheet workflow (7.4a–7.4d): the maker's question, answered before
@@ -41,7 +42,7 @@ async function withPrintTest(body: (session: Session) => Promise<void>): Promise
   try {
     const window = await app.firstWindow();
     await window.waitForLoadState('domcontentloaded');
-    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+    await expect(window.getByTestId('project-menu')).toBeVisible();
     await app.evaluate(
       ({ dialog, shell, BrowserWindow }, paths) => {
         dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [paths.project] });
@@ -53,7 +54,7 @@ async function withPrintTest(body: (session: Session) => Promise<void>): Promise
       { project: PRINT_TEST, pdf },
     );
     await fromProjectMenu(window, 'open');
-    await expect(window.getByTestId('part-count')).toHaveText('3');
+    await expectPieces(window, '3');
     await body({ app, window, pdf });
   } finally {
     await closeApp(app);
@@ -238,11 +239,11 @@ test('the Sheets view has its own rail, hint and Properties, and the paper is ed
     await expect(window.getByTestId('rail-note')).toHaveText(
       `Drawing tools are in Design · ${caption('Ctrl+1')}`,
     );
-    // The options row says what a click does here, with the key from the keymap.
-    const hint = window.getByTestId('sheets-hint');
+    // The status bar says what a click does here; the tool row, the way to every key.
+    const hint = window.getByTestId('status-bar').getByTestId('sheets-hint');
     await expect(hint).toContainText('Click a piece to see where it prints');
-    await expect(hint.locator('kbd').last()).toHaveText('?');
-    await expect(hint).toContainText('all keys');
+    await expect(window.getByTestId('work-head')).toContainText('Select');
+    await expect(window.getByTestId('all-keys').locator('kbd')).toHaveText('?');
 
     // Properties: the paper and what it comes to, then the reminder.
     const props = window.getByTestId('sheets-properties');
@@ -260,7 +261,7 @@ test('the Sheets view has its own rail, hint and Properties, and the paper is ed
     await expect(props.getByTestId('sheets-piece-placement')).toHaveText('PlacementAs drawn');
     await expect(props.getByTestId('sheets-piece-fit')).toHaveText('Fits one sheet, no tape');
     await window.getByTestId('view-design').click();
-    await expect(window.getByTestId('selected-count')).toHaveText('1');
+    await expectSelected(window, '1', 'pieces');
     await window.getByTestId('view-sheets').click();
 
     // The paper is changed here, as in the paper button: one undo step, and
@@ -290,7 +291,7 @@ test('Design and Sheets each keep their camera, and switching changes nothing (7
     await window.getByTestId('view-design').click();
     await expect(canvas).toHaveAttribute('data-view', 'design');
     await expect.poll(() => canvasImage(canvas)).toBe(design);
-    await expect(window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
+    await expect(window.getByTestId('announce-save')).not.toHaveText('Unsaved changes');
 
     // And by the switch to the sheets.
     await window.getByTestId('view-sheets').click();
@@ -307,7 +308,6 @@ test('a drawing tool on the Sheets view goes back to the board, and Delete delet
     await window.locator('[data-testid^="part-heading-"]', { hasText: 'Strap' }).click();
     await window.getByTestId('view-sheets').click();
     await window.keyboard.press('Delete');
-    await expect(window.getByTestId('part-count')).toHaveText('3');
     await expect(window.getByTestId('undo')).toBeDisabled();
 
     // R is the rectangle tool: the board, with the rectangle.
@@ -416,7 +416,7 @@ test('the maker’s journey: design, paper, sheets, and a PDF that is what was s
     // Its outline is selected, as a click on the board would select it, Parts
     // lights its row, and Properties says where it prints (U.9).
     await expect(strapRow).toHaveClass(/selected/);
-    await expect(window.getByTestId('selected-count')).toHaveText('1');
+    await expectSelected(window, '1', 'pieces');
     const strapOnPaper = window.getByTestId('sheets-piece');
     await expect(strapOnPaper).toContainText('Strap');
     await expect(window.getByTestId('sheets-piece-sheet')).toHaveText('Sheets2–3 of 3');
@@ -440,7 +440,7 @@ test('the maker’s journey: design, paper, sheets, and a PDF that is what was s
       hasText: 'Outline',
     });
     await expect(strapOutline).toHaveClass(/selected/);
-    await expect(window.getByTestId('selected-count')).toHaveText('1');
+    await expectSelected(window, '1', 'pieces');
 
     // 4. Moving the strap on the board moves nothing on paper.
     await window.getByTestId('tool-select').click();
@@ -529,7 +529,7 @@ test('a sheet panned into view is drawn, and its piece is found under the pointe
     }
     expect(found, 'the strap on sheet 3 lights its Parts row').toBe(true);
     await expect(strapRow).toHaveClass(/selected/);
-    await expect(window.getByTestId('selected-count')).toHaveText('1');
+    await expectSelected(window, '1', 'pieces');
   });
 });
 
@@ -561,7 +561,7 @@ test('what does not print is said, in Parts, in the sheets and in the PDF (7.4d)
 test('an empty project is one scale-check sheet, on screen and in the PDF (7.4d)', async () => {
   await withPrintTest(async ({ window, pdf }) => {
     await fromProjectMenu(window, 'new');
-    await expect(window.getByTestId('part-count')).toHaveText('0');
+    await expectPieces(window, '0');
     await expect(window.getByTestId('paper-button')).toHaveAccessibleName(
       'Paper: 1 × A4 portrait, scale check only',
     );

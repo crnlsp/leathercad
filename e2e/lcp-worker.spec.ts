@@ -6,6 +6,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
 import { drawAPanel, freshStateHome, openApp, withApp } from './launchApp.js';
+import { expectPieces } from './counts.js';
 
 /**
  * PERF-009: a project is made into its file in a worker, so saving a large
@@ -56,7 +57,7 @@ test('a large project is saved by the worker, and opens again as it was saved', 
 
   const { app, window } = await openApp({ args: [file] });
   try {
-    await expect(window.getByTestId('part-count')).toHaveText('40');
+    await expectPieces(window, '40');
     await countEncoded(window);
     await drawAPanel(window, { parts: '41' });
 
@@ -70,7 +71,7 @@ test('a large project is saved by the worker, and opens again as it was saved', 
 
   await withApp(
     async (window) => {
-      await expect(window.getByTestId('part-count')).toHaveText('41');
+      await expectPieces(window, '41');
     },
     { args: [file] },
   );
@@ -91,7 +92,7 @@ test('a large project’s recovery copy is made by the worker', async () => {
     env: { LEATHERCAD_RECOVERY_INTERVAL_MS: '250' },
   });
   try {
-    await expect(window.getByTestId('part-count')).toHaveText('40');
+    await expectPieces(window, '40');
     await countEncoded(window);
     await drawAPanel(window, { parts: '41' });
 

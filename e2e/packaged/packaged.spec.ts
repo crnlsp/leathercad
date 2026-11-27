@@ -9,6 +9,7 @@ import { _electron as electron, expect, test, type ElectronApplication } from '@
 import { closeApp } from '../closeApp.js';
 import { packagedExecutable } from '../packagedApp.js';
 import { expectAccurate, exportPrintTest, inkOn, measurePrintTest } from '../printTest.js';
+import { expectPieces } from '../counts.js';
 
 /**
  * The packaged app, not the development build.
@@ -74,13 +75,20 @@ test.afterAll(async () => {
 test('starts, and reports the packaged version through the bridge', async () => {
   const window = await app.firstWindow();
   await window.waitForLoadState('domcontentloaded');
-  // On its start screen (8.12), then a project, whose status bar has the version.
+  // On its start screen (8.12), then a project, whose About has the version.
   await expect(window.getByTestId('start-screen')).toBeVisible();
   await expect(window).toHaveTitle('LeatherCAD');
   await window.getByTestId('start-new').click();
   await expect(window).toHaveTitle('Untitled — LeatherCAD');
   await expect(window.getByTestId('bridge-error')).toHaveCount(0);
-  await expect(window.getByTestId('app-version')).toContainText(VERSION);
+  await window.getByTestId('help-menu').click();
+  await window.getByTestId('help-about').click();
+  await expect(window.getByTestId('about-version')).toContainText(VERSION);
+  // Closed again: the tests after this one share the window, and About's
+  // backdrop would take their clicks.
+  const about = window.getByTestId('about-dialog');
+  await about.getByTestId('about-close').click();
+  await expect(about).toHaveCount(0);
 });
 
 test('loads from the app origin with the sandbox and CSP intact (R6)', async () => {
@@ -236,7 +244,7 @@ test('draws a panel and writes it to a PDF', async () => {
     await window.mouse.down();
     await window.mouse.move(box!.x + 400, box!.y + 330, { steps: 5 });
     await window.mouse.up();
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
 
     await window.getByTestId('export-pdf').click();
     await expect.poll(() => existsSync(pdf), { timeout: 10_000 }).toBe(true);

@@ -65,10 +65,12 @@ describe('the Project and Help menus (8.7)', () => {
     open: noop,
     importSvg: noop,
     insertPieces: noop,
+    save: noop,
     saveAs: noop,
     saveAsTemplate: noop,
     rename: noop,
     openRecent: noop,
+    settings: noop,
   };
   const { t } = createI18n('en');
 
@@ -84,16 +86,31 @@ describe('the Project and Help menus (8.7)', () => {
       'open',
       'import-svg',
       'insert-pieces',
+      'menu-save',
       'save-as',
       'save-template',
       'rename',
       'separator',
       'group',
+      'separator',
+      'menu-settings',
     ]);
-    const group = entries.at(-1)!;
+    const group = entries.at(-3)!;
     expect(group.kind === 'group' && group.items.map((item) => [item.label, item.note])).toEqual([
       ['Wallet', '/p'],
     ]);
+  });
+
+  it('puts Save right before Save as, keyed Ctrl+S, refused with no project', () => {
+    const at = (noProject?: string) =>
+      projectMenu(actions, [], t, noProject).filter((entry) => entry.kind === 'item');
+    const save = at().find((entry) => entry.id === 'menu-save')!;
+    expect(save).toMatchObject({ label: 'Save', keys: 'save', refusal: undefined });
+    const ids = at().map((entry) => entry.id);
+    expect(ids.indexOf('menu-save')).toBe(ids.indexOf('save-as') - 1);
+    expect(at('No project is open').find((entry) => entry.id === 'menu-save')!.refusal).toBe(
+      'No project is open',
+    );
   });
 
   it('opens a recent project by its whole path, not the one shown', () => {
@@ -103,22 +120,33 @@ describe('the Project and Help menus (8.7)', () => {
       [{ path: '/home/m/Wallet.lcp', shown: '~/Wallet.lcp', pinned: false, modified: null }],
       t,
     );
-    const group = entries.at(-1)!;
+    const group = entries.at(-3)!;
     if (group.kind !== 'group') throw new Error('no recent projects');
     group.items[0]!.onChoose();
     expect(opened).toEqual(['/home/m/Wallet.lcp']);
   });
 
   it('says what fills the recent list while it is empty', () => {
-    const group = projectMenu(actions, [], t).at(-1)!;
+    const group = projectMenu(actions, [], t).at(-3)!;
     expect(group.kind === 'group' && group.empty).toBe('Projects you open or save appear here.');
   });
 
-  it('keeps Help to help and the application: no configuration', () => {
-    const labels = helpMenu({ about: noop }, t).flatMap((entry) =>
-      entry.kind === 'item' ? [entry.label] : [],
-    );
-    expect(labels).toEqual(['About LeatherCAD']);
+  it('ends the project menu with Settings, keyed Ctrl+,', () => {
+    const last = projectMenu(actions, [], t).at(-1)!;
+    expect(last).toMatchObject({ id: 'menu-settings', label: 'Settings…', keys: 'settings' });
+    expect(last.kind === 'item' && last.note).toBeUndefined();
+    const marked = projectMenu(actions, [], t, undefined, true).at(-1)!;
+    expect(marked.kind === 'item' && marked.note).toBe('A new version is available');
+  });
+
+  it('lists keyboard shortcuts before About', () => {
+    const entries = helpMenu({ shortcuts: noop, about: noop }, t);
+    expect(entries.map((entry) => (entry.kind === 'item' ? entry.id : entry.kind))).toEqual([
+      'help-shortcuts',
+      'separator',
+      'help-about',
+    ]);
+    expect(entries[0]).toMatchObject({ label: 'Keyboard shortcuts', keys: 'keyboardShortcuts' });
   });
 });
 

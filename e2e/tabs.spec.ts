@@ -14,6 +14,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import { closeApp } from './closeApp.js';
 import { drawAPanel, expectNoViolations, launchApp, openSample, withApp } from './launchApp.js';
 import { activeTab, closeActiveTab, fromProjectMenu, renameProject } from './projectMenu.js';
+import { expectPieces } from './counts.js';
 
 /**
  * Slice 8.12: several projects in one window, a tab each, as in Notepad.
@@ -32,11 +33,11 @@ test('each tab keeps its own project, history and view', async () => {
     // The wallet on its sheets; the drawing on its board, its undo intact.
     await window.getByTestId('view-sheets').click();
     await tabs.first().click();
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
     await expect(window.getByTestId('view-design')).toHaveAttribute('aria-selected', 'true');
     await expect(window.getByTestId('undo')).toBeEnabled();
     await tabs.nth(1).click();
-    await expect(window.getByTestId('part-count')).toHaveText('3');
+    await expect(window.getByTestId('project-name')).toHaveText('Bifold wallet');
     await expect(window.getByTestId('view-sheets')).toHaveAttribute('aria-selected', 'true');
     await expect(window.getByTestId('undo')).toBeDisabled();
   });
@@ -49,11 +50,11 @@ test('Ctrl+Page Down and Up go round the tabs; the title is the active one’s',
     await expect.poll(() => window.title()).toBe('Bifold wallet — LeatherCAD');
 
     await window.keyboard.press('ControlOrMeta+PageDown');
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
     // Unsaved, and the title says so.
     await expect.poll(() => window.title()).toBe('• Untitled — LeatherCAD');
     await window.keyboard.press('ControlOrMeta+PageUp');
-    await expect(window.getByTestId('part-count')).toHaveText('3');
+    await expectPieces(window, '3');
   });
 });
 
@@ -109,11 +110,11 @@ test('with every project closed the app stays open, on its start screen', async 
 
     // The ways back in: a new project, one from a template.
     await start.getByTestId('start-new').click();
-    await expect(window.getByTestId('part-count')).toHaveText('0');
+    await expectPieces(window, '0');
     await closeActiveTab(window);
     await start.getByTestId('start-template').click();
     await window.getByTestId('template-builtin:bifold-wallet').dblclick();
-    await expect(window.getByTestId('part-count')).toHaveText('3');
+    await expectPieces(window, '3');
     await expectNoViolations(window, 'a project open again');
   });
 });
@@ -137,8 +138,8 @@ test('a project saved without a name is named after its file', async () => {
       dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
     }, file);
     await drawAPanel(window, { parts: '1' });
-    await window.getByTestId('save').click();
-    await expect(window.getByTestId('save-state')).toHaveText('Saved');
+    await window.keyboard.press('ControlOrMeta+S');
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     await expect(window.getByTestId('project-name')).toHaveText('Portfel');
     await expect.poll(() => window.title()).toBe('Portfel — LeatherCAD');
   });
@@ -159,8 +160,8 @@ test('+ offers a new project, Open… and the recent projects', async () => {
       dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
     }, file);
     await drawAPanel(window, { parts: '1' });
-    await window.getByTestId('save').click();
-    await expect(window.getByTestId('save-state')).toHaveText('Saved');
+    await window.keyboard.press('ControlOrMeta+S');
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     await closeActiveTab(window);
 
     await window.getByTestId('new-tab').click();
@@ -168,7 +169,7 @@ test('+ offers a new project, Open… and the recent projects', async () => {
     await expect(window.getByTestId('tab-open')).toBeVisible();
     await window.getByTestId('tab-recent-0').click();
     await expect(window.getByTestId('project-name')).toHaveText('Belt');
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
   });
 });
 
@@ -188,7 +189,7 @@ test('a new project starts on its board, wherever the focus was: R 96 Tab 60 Ent
     await window.keyboard.press('Tab');
     await window.keyboard.type('60');
     await window.keyboard.press('Enter');
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
     const panel = window.getByTestId('property-panel');
     await expect(panel.getByLabel('Width')).toHaveValue('96');
     await expect(panel.getByLabel('Height')).toHaveValue('60');
@@ -224,8 +225,8 @@ test('the open tabs come back at the next start, the one in front in front', asy
           join(folder, `${name}.lcp`),
         );
         await drawAPanel(window, { parts });
-        await window.getByTestId('save').click();
-        await expect(window.getByTestId('save-state')).toHaveText('Saved');
+        await window.keyboard.press('ControlOrMeta+S');
+        await expect(window.getByTestId('announce-save')).toHaveText('Saved');
         await expect(window.getByTestId('project-name')).toHaveText(name);
         await window.keyboard.press('ControlOrMeta+n');
       }
@@ -257,7 +258,7 @@ test('the app starts on its start screen, and a project opened again bounces its
 
     await window.getByTestId('start-template').click();
     await window.getByTestId('template-builtin:bifold-wallet').dblclick();
-    await expect(window.getByTestId('part-count')).toHaveText('3');
+    await expectPieces(window, '3');
   } finally {
     await closeApp(app);
   }
@@ -271,8 +272,8 @@ test('opening a project that is open already goes to its tab, which bounces', as
       dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
     }, file);
     await drawAPanel(window, { parts: '1' });
-    await window.getByTestId('save').click();
-    await expect(window.getByTestId('save-state')).toHaveText('Saved');
+    await window.keyboard.press('ControlOrMeta+S');
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     await window.keyboard.press('ControlOrMeta+n');
 
     await fromProjectMenu(window, 'open');
@@ -294,8 +295,8 @@ test('renaming a saved project renames its file, never over another', async () =
       join(folder, 'Belt.lcp'),
     );
     await drawAPanel(window, { parts: '1' });
-    await window.getByTestId('save').click();
-    await expect(window.getByTestId('save-state')).toHaveText('Saved');
+    await window.keyboard.press('ControlOrMeta+S');
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     await expect(window.getByTestId('project-name')).toHaveText('Belt');
     writeFileSync(join(folder, 'Wallet.lcp'), 'another project');
 
@@ -313,7 +314,10 @@ test('renaming a saved project renames its file, never over another', async () =
     // Free: the project and its file both take the name.
     await renameProject(window, 'Watch strap');
     await expect(window.getByTestId('project-name')).toHaveText('Watch strap');
-    await expect(window.getByTestId('file-path')).toContainText('Watch strap.lcp');
+    await expect(window.getByTestId('project-name').locator('..')).toHaveAttribute(
+      'title',
+      /Watch strap\.lcp/,
+    );
     expect(existsSync(join(folder, 'Belt.lcp'))).toBe(false);
     expect(existsSync(join(folder, 'Watch strap.lcp'))).toBe(true);
   });
@@ -327,8 +331,8 @@ test('a tab’s own menu: reload from disk, duplicate, close others, move to the
       dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
     }, file);
     await drawAPanel(window, { parts: '1' });
-    await window.getByTestId('save').click();
-    await expect(window.getByTestId('save-state')).toHaveText('Saved');
+    await window.keyboard.press('ControlOrMeta+S');
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     await expect(window.getByTestId('project-name')).toHaveText('Belt');
     const tabs = window.getByTestId('tab-strip').getByRole('tab');
     const menuOf = async (index: number): Promise<void> => {
@@ -342,15 +346,18 @@ test('a tab’s own menu: reload from disk, duplicate, close others, move to the
     await window.getByTestId('tab-reload').click();
     await expect(window.getByTestId('unsaved-dialog')).toContainText('Reloading');
     await window.getByTestId('unsaved-discard').click();
-    await expect(window.getByTestId('part-count')).toHaveText('1');
-    await expect(window.getByTestId('save-state')).toHaveText('Saved');
+    await expectPieces(window, '1');
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
 
     // A copy, unsaved and with no file, in a tab of its own.
     await menuOf(0);
     await window.getByTestId('tab-duplicate').click();
     await expect(tabs).toHaveCount(2);
-    await expect(window.getByTestId('save-state')).toHaveText('Unsaved changes');
-    await expect(window.getByTestId('file-path')).toHaveCount(0);
+    await expect(window.getByTestId('announce-save')).toHaveText('Unsaved changes');
+    await expect(window.getByTestId('project-name').locator('..')).not.toHaveAttribute(
+      'title',
+      /\.lcp$/,
+    );
 
     // Without a file, what needs one is refused and says why.
     await menuOf(1);
@@ -391,17 +398,23 @@ test('undoing a rename gives the file its name back, as the project gets its own
       join(folder, 'Belt.lcp'),
     );
     await drawAPanel(window, { parts: '1' });
-    await window.getByTestId('save').click();
-    await expect(window.getByTestId('save-state')).toHaveText('Saved');
+    await window.keyboard.press('ControlOrMeta+S');
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     await renameProject(window, 'Watch strap');
     // The window, not the disk: the new name is linked before the old one
     // goes, and the project takes the name only once both are done.
-    await expect(window.getByTestId('file-path')).toContainText('Watch strap.lcp');
+    await expect(window.getByTestId('project-name').locator('..')).toHaveAttribute(
+      'title',
+      /Watch strap\.lcp/,
+    );
     expect(existsSync(join(folder, 'Watch strap.lcp'))).toBe(true);
 
     await window.getByTestId('undo').click();
     await expect(window.getByTestId('project-name')).toHaveText('Belt');
-    await expect(window.getByTestId('file-path')).toContainText('Belt.lcp');
+    await expect(window.getByTestId('project-name').locator('..')).toHaveAttribute(
+      'title',
+      /Belt\.lcp/,
+    );
     expect(existsSync(join(folder, 'Belt.lcp'))).toBe(true);
     expect(existsSync(join(folder, 'Watch strap.lcp'))).toBe(false);
   });
@@ -415,8 +428,8 @@ test('a file changed outside the app is said over the board, and reloads on requ
       dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
     }, file);
     await drawAPanel(window, { parts: '1' });
-    await window.getByTestId('save').click();
-    await expect(window.getByTestId('save-state')).toHaveText('Saved');
+    await window.keyboard.press('ControlOrMeta+S');
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     // The app's own save is not news.
     await window.waitForTimeout(800);
     await expect(window.getByTestId('outside-bar')).toHaveCount(0);
@@ -426,7 +439,7 @@ test('a file changed outside the app is said over the board, and reloads on requ
     const bar = window.getByTestId('outside-bar');
     await expect(bar).toContainText('Belt.lcp was changed outside LeatherCAD');
     await bar.getByTestId('outside-reload').click();
-    await expect(window.getByTestId('part-count')).toHaveText('3');
+    await expectPieces(window, '3');
     await expect(bar).toHaveCount(0);
 
     // Moved away: said, and Save writes it back where it was.
@@ -438,20 +451,20 @@ test('a file changed outside the app is said over the board, and reloads on requ
   });
 });
 
-test('the start screen has Settings and Help, and F1 opens Help there (8.12)', async () => {
+test('the start screen has Settings in the menu and Help in the corner, and F1 opens Help there (8.12)', async () => {
   const app = await launchApp({ startScreen: true });
   try {
     const window = await app.firstWindow();
     await expect(window.getByTestId('start-screen')).toBeVisible();
-    const strip = window.getByTestId('tab-strip');
-    await expect(strip.getByTestId('settings')).toBeVisible();
+    await expect(window.getByTestId('tab-strip').getByTestId('help-menu')).toHaveCount(0);
+    await expect(window.getByTestId('status-bar').getByTestId('help-menu')).toBeVisible();
     await window.keyboard.press('F1');
     await expect(window.getByTestId('help-about')).toBeVisible();
     await window.keyboard.press('Escape');
-    // With a project open, they are the project bar's again, once.
+    // With a project open, the corner is the same one, once.
     await window.getByTestId('start-new').click();
-    await expect(window.getByTestId('settings')).toHaveCount(1);
-    await expect(window.getByTestId('project-bar').getByTestId('settings')).toBeVisible();
+    await expect(window.getByTestId('help-menu')).toHaveCount(1);
+    await expect(window.getByTestId('status-bar').getByTestId('help-menu')).toBeVisible();
   } finally {
     await closeApp(app);
   }
@@ -534,13 +547,13 @@ test('Ctrl+Shift+T opens the project last closed again (8.12)', async () => {
       dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
     }, file);
     await drawAPanel(window, { parts: '1' });
-    await window.getByTestId('save').click();
-    await expect(window.getByTestId('save-state')).toHaveText('Saved');
+    await window.keyboard.press('ControlOrMeta+S');
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     await window.keyboard.press('ControlOrMeta+w');
     await expect(window.getByTestId('start-screen')).toBeVisible();
     await window.keyboard.press('ControlOrMeta+Shift+t');
     await expect(window.getByTestId('project-name')).toHaveText('Belt');
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
   });
 });
 
@@ -558,8 +571,8 @@ test('a recent project is pinned to the top of the start screen, or taken off it
         );
         await window.keyboard.press('ControlOrMeta+n');
         await drawAPanel(window, { parts: '1' });
-        await window.getByTestId('save').click();
-        await expect(window.getByTestId('save-state')).toHaveText('Saved');
+        await window.keyboard.press('ControlOrMeta+S');
+        await expect(window.getByTestId('announce-save')).toHaveText('Saved');
         await expect(window.getByTestId('project-name')).toHaveText(name);
       }
       for (let i = 0; i < 3; i++) await closeActiveTab(window);
@@ -597,8 +610,8 @@ test('the next start finds each tab on its view and zoom, and kept unsaved work 
         dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
       }, file);
       await drawAPanel(window, { parts: '1' });
-      await window.getByTestId('save').click();
-      await expect(window.getByTestId('save-state')).toHaveText('Saved');
+      await window.keyboard.press('ControlOrMeta+S');
+      await expect(window.getByTestId('announce-save')).toHaveText('Saved');
       // Read once it has moved: straight after the click it still says the old zoom.
       const before = await window.getByTestId('zoom-level').textContent();
       await window.getByTestId('zoom-in').click();
@@ -620,8 +633,8 @@ test('the next start finds each tab on its view and zoom, and kept unsaved work 
       const tabs = window.getByTestId('tab-strip').getByRole('tab');
       await expect(tabs).toHaveText(['Belt', 'Untitled']);
       // The untitled one, in front, unsaved, its drawing back.
-      await expect(window.getByTestId('save-state')).toHaveText('Unsaved changes');
-      await expect(window.getByTestId('part-count')).toHaveText('1');
+      await expect(window.getByTestId('announce-save')).toHaveText('Unsaved changes');
+      await expectPieces(window, '1');
       // Belt on its sheets, at the zoom it was left.
       await tabs.first().click();
       await expect(window.getByTestId('view-sheets')).toHaveAttribute('aria-selected', 'true');
@@ -649,7 +662,10 @@ test('a new project from a template, and any project saved as one (8.14)', async
       await expect(dialog.getByTestId('template-detail')).toContainText('3');
       await dialog.getByTestId('template-use').click();
       await expect(window.getByTestId('project-name')).toHaveText('Card holder');
-      await expect(window.getByTestId('file-path')).toHaveCount(0);
+      await expect(window.getByTestId('project-name').locator('..')).not.toHaveAttribute(
+        'title',
+        /\.lcp$/,
+      );
 
       // Saved as one of the maker's own; the same name again is said.
       await fromProjectMenu(window, 'save-template');
@@ -733,8 +749,8 @@ test('a polyline half drawn is given up when its tab reloads from disk (Q39)', a
       dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
     }, file);
     await drawAPanel(window, { parts: '1' });
-    await window.getByTestId('save').click();
-    await expect(window.getByTestId('save-state')).toHaveText('Saved');
+    await window.keyboard.press('ControlOrMeta+S');
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
 
     await startPolyline(window);
     await window.getByTestId('project-tab').first().click({ button: 'right' });

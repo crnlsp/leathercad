@@ -849,7 +849,7 @@ the same scene, so a DXF of a preset holds the layers an SVG of it does.
 **Print → LeatherCAD's Print Preview → the printer.** The decision and what was measured are in
 [ADR 0019](adr/0019-print-from-the-app.md).
 
-**One PDF.** *Print* (the window's primary action, in the paper's colour since U.7, Ctrl+P) writes the PDF from the same
+**One PDF.** *Print* (the window's primary action, Ctrl+P) writes the PDF from the same
 `SheetPlan` as *Export PDF*, in the print form: every page upright, a landscape sheet turned a
 quarter on it (§6.1). The preview draws **that file** with pdf.js, so the sheets shown are the bytes
 sent, not a second drawing. Only its view of a landscape page is turned back, a quarter clockwise,

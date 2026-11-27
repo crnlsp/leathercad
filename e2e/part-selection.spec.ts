@@ -5,6 +5,7 @@ import { join, resolve } from 'node:path';
 import { _electron as electron, expect, test } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
+import { expectPieces } from './counts.js';
 
 /** Q29: a part picked by its heading is a selection everywhere, not nothing. */
 
@@ -23,7 +24,7 @@ test('a part picked by its heading is shown, counted and deleted as the part (Q2
     await window.waitForLoadState('domcontentloaded');
     // The app starts on its start screen (8.12).
     await window.getByTestId('start-new').click();
-    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+    await expect(window.getByTestId('project-menu')).toBeVisible();
 
     const box = (await window.getByTestId('editor-canvas').boundingBox())!;
     await window.getByTestId('tool-rectangle').click();
@@ -31,14 +32,14 @@ test('a part picked by its heading is shown, counted and deleted as the part (Q2
     await window.mouse.down();
     await window.mouse.move(box.x + 300, box.y + 260, { steps: 5 });
     await window.mouse.up();
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
     await window.getByTestId('tool-select').click();
 
     const heading = window.locator('[data-testid^="part-heading-"]').first();
     await heading.click();
 
     // Counted as a part, and shown as the part, not as nothing.
-    await expect(window.getByTestId('status-counts')).toContainText('1 piece selected');
+    await expect(window.getByTestId('announce-selection')).toHaveText('Panel selected');
     const panel = window.getByTestId('property-panel');
     await expect(panel.getByTestId('property-header')).toContainText('Panel');
     await expect(panel.getByTestId('part-name')).toHaveValue('Panel');
@@ -47,15 +48,15 @@ test('a part picked by its heading is shown, counted and deleted as the part (Q2
 
     // The Delete key takes the part whole, as one step of undo.
     await window.keyboard.press('Delete');
-    await expect(window.getByTestId('part-count')).toHaveText('0');
+    await expectPieces(window, '0');
     await window.getByTestId('undo').click();
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
 
     // A duplicate is picked as its part, and shown as it.
     await heading.click();
     await window.locator('[data-testid^="part-menu-"]').first().click();
     await window.locator('[data-testid^="duplicate-part-"]').first().click();
-    await expect(window.getByTestId('part-count')).toHaveText('2');
+    await expectPieces(window, '2');
     await expect(panel.getByTestId('part-name')).toHaveValue('Panel copy');
   } finally {
     await closeApp(app);
@@ -75,7 +76,7 @@ test('Delete in Properties says so when a locked stitch line behind the outline 
     await window.waitForLoadState('domcontentloaded');
     // The app starts on its start screen (8.12).
     await window.getByTestId('start-new').click();
-    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+    await expect(window.getByTestId('project-menu')).toBeVisible();
 
     const box = (await window.getByTestId('editor-canvas').boundingBox())!;
     await window.getByTestId('tool-rectangle').click();

@@ -7,6 +7,7 @@ import { expect, test } from '@playwright/test';
 import { closeApp } from './closeApp.js';
 import { launchApp, openSample } from './launchApp.js';
 import { renameProject } from './projectMenu.js';
+import { expectPieces } from './counts.js';
 
 /**
  * Slice 8.3: a finished pattern to take apart. Since 8.14 it is the first
@@ -22,7 +23,7 @@ test('the sample wallet opens as a template, clean and untitled, and nowhere els
   try {
     const window = await app.firstWindow();
     await window.waitForLoadState('domcontentloaded');
-    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+    await expect(window.getByTestId('project-menu')).toBeVisible();
 
     // No offer of it in the empty Parts panel, nor in Help.
     await expect(window.getByTestId('parts-list')).not.toContainText('sample');
@@ -31,14 +32,17 @@ test('the sample wallet opens as a template, clean and untitled, and nowhere els
     await window.keyboard.press('Escape');
 
     await openSample(window);
-    await expect(window.getByTestId('part-count')).toHaveText('3');
+    await expectPieces(window, '3');
     await expect(window.getByTestId('project-name')).toHaveText('Bifold wallet');
     const parts = window.getByTestId('parts-list');
     for (const name of ['Outer', 'Lining', 'Card pocket']) await expect(parts).toContainText(name);
     // A sample that shows a problem teaches the wrong thing.
     await expect(window.getByTestId('problems-panel')).toContainText('Nothing to fix');
     // Untitled, and nothing to save yet.
-    await expect(window.getByTestId('file-path')).toHaveCount(0);
+    await expect(window.getByTestId('project-name').locator('..')).not.toHaveAttribute(
+      'title',
+      /\.lcp$/,
+    );
     expect(await window.title()).not.toContain('•');
 
     // Again, over unsaved work: in a tab of its own (8.12), so nothing is
@@ -67,9 +71,9 @@ test('no feature name in Parts breaks inside a word, at any window width (Q5)', 
   try {
     const window = await app.firstWindow();
     await window.waitForLoadState('domcontentloaded');
-    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+    await expect(window.getByTestId('project-menu')).toBeVisible();
     await openSample(window);
-    await expect(window.getByTestId('part-count')).toHaveText('3');
+    await expectPieces(window, '3');
 
     const brokenWords = (): Promise<string[]> =>
       window.evaluate(() => {

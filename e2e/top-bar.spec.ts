@@ -1,14 +1,14 @@
-import { mkdtempSync } from 'node:fs';
+import { existsSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { expect, test, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
-import { caption } from './keyCaption.js';
 import { drawAPanel, openApp, openSample } from './launchApp.js';
 import { choosePaper, fromProjectMenu, renameProject } from './projectMenu.js';
 import { resizeWindow } from './windowSize.js';
+import { expectPieces, expectSelected } from './counts.js';
 
 /**
  * Slice 8.7: the project bar's Project menu, Help and About. Each launch has
@@ -31,7 +31,9 @@ test('the Project menu opens by mouse and by keyboard, and gives focus back (8.7
     await window.keyboard.press('ArrowDown');
     await expect(window.getByTestId('open')).toBeFocused();
     await window.keyboard.press('End');
-    // An empty recent list: its line is the last thing focus reaches.
+    // Settings is the last thing focus reaches, after the empty recent list's line.
+    await expect(window.getByTestId('menu-settings')).toBeFocused();
+    await window.keyboard.press('ArrowUp');
     await expect(window.getByRole('menuitem', { name: /appear here/ })).toBeFocused();
     await window.keyboard.press('Home');
     await expect(window.getByTestId('new')).toBeFocused();
@@ -61,8 +63,11 @@ test('Save as… asks where, and saves there (8.7)', async () => {
     }, project);
     await drawAPanel(window, { parts: '1' });
     await fromProjectMenu(window, 'save-as');
-    await expect(window.getByTestId('file-path')).toContainText('Card holder');
-    await expect(window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
+    await expect(window.getByTestId('project-name').locator('..')).toHaveAttribute(
+      'title',
+      /Card holder/,
+    );
+    await expect(window.getByTestId('announce-save')).not.toHaveText('Unsaved changes');
   } finally {
     await closeApp(app);
   }
@@ -71,7 +76,7 @@ test('Save as… asks where, and saves there (8.7)', async () => {
 test('About says the version, and shows the log folder and the notices (8.7, 8.6b)', async () => {
   const { app, window } = await launch(fresh());
   try {
-    const version = (await window.getByTestId('app-version').textContent()) ?? '';
+    const version = await app.evaluate(({ app: electron }) => electron.getVersion());
     await window.getByTestId('help-menu').click();
     await window.getByTestId('help-about').click();
     const about = window.getByTestId('about-dialog');
@@ -124,8 +129,6 @@ const shown = (window: Page, id: string): Promise<string> =>
 
 // The Project menu is the tab strip's since 8.12, at its left.
 const BAR = [
-  'save-state',
-  'save',
   'view-design',
   'view-sheets',
   'paper-button',
@@ -133,8 +136,6 @@ const BAR = [
   'export-more',
   'print',
   'print-problems',
-  'settings',
-  'help-menu',
 ];
 
 test('the top bar fits every window, its words shortening with the room (8.7, R-06)', async () => {
@@ -145,12 +146,12 @@ test('the top bar fits every window, its words shortening with the room (8.7, R-
     await openSample(window);
     await choosePaper(window, 'A5', 'portrait');
     await renameProject(window, 'Bifold wallet, lined, with a card pocket each side');
-    await expect(window.getByTestId('save-state')).toHaveText('Unsaved changes');
+    await expect(window.getByTestId('announce-save')).toHaveText('Unsaved changes');
 
-    for (const [width, paper, saveWords] of [
-      [1920, '5 × A5 portrait', 'Unsaved changes'],
-      [1024, '5 × A5', 'Unsaved'],
-      [860, '5', ''],
+    for (const [width, paper] of [
+      [1920, 'Paper 5 × A5 portrait'],
+      [1024, 'Paper 5 × A5'],
+      [860, '5 × A5'],
     ] as const) {
       await resizeWindow(app, window, width, 600);
       const bar = (await window.getByTestId('project-bar').boundingBox())!;
@@ -165,7 +166,6 @@ test('the top bar fits every window, its words shortening with the room (8.7, R-
         );
       }
       expect(await shown(window, 'paper-button')).toBe(paper);
-      expect(await shown(window, 'save-state')).toBe(saveWords);
       // Both split buttons keep their labels at every width.
       expect(await shown(window, 'export-pdf')).toBe('Export PDF');
       expect(await shown(window, 'print')).toBe('Print');
@@ -184,30 +184,106 @@ test('the top bar fits every window, its words shortening with the room (8.7, R-
   }
 });
 
-test('the save state says saved or not, and Save says when there is nothing to save (R-06)', async () => {
+test('the save state is heard, not shown, and Ctrl+S saves (MS.2)', async () => {
   const project = join(mkdtempSync(join(tmpdir(), 'leathercad-e2e-')), 'Wallet.lcp');
   const { app, window } = await launch(fresh());
   try {
     await app.evaluate(({ dialog }, path) => {
       dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
     }, project);
-    const save = window.getByTestId('save');
-    // Nothing yet: no state, and Save says why it does nothing, with no key.
-    await expect(window.getByTestId('save-state')).toHaveText('');
-    await expect(save).toHaveAttribute('aria-disabled', 'true');
-    await save.hover();
-    await expect(window.getByRole('tooltip', { name: 'Nothing to save' })).toBeVisible();
-    await expect(window.getByRole('tooltip').locator('kbd')).toHaveCount(0);
+    await expect(window.getByTestId('save')).toHaveCount(0);
+    await expect(window.getByTestId('announce-save')).toHaveText('');
 
     await drawAPanel(window, { parts: '1' });
-    await expect(window.getByTestId('save-state')).toHaveText('Unsaved changes');
-    await expect(window.getByTestId('save-state').locator('.icon')).toHaveCount(1);
-    await expect(save).not.toHaveAttribute('aria-disabled');
-    await expect(save.locator('kbd')).toHaveText(caption('Ctrl+S'));
+    await expect(window.getByTestId('announce-save')).toHaveText('Unsaved changes');
+    await expect(window.getByTestId('project-tab')).toHaveClass(/unsaved/);
 
-    await save.click();
-    await expect(window.getByTestId('save-state')).toHaveText('Saved');
-    await expect(save).toHaveAttribute('aria-disabled', 'true');
+    await window.keyboard.press('ControlOrMeta+S');
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
+    await expect(window.getByTestId('project-tab')).not.toHaveClass(/unsaved/);
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('the Project menu’s Save writes the file, and a notice never moves the panel chips (MS.7)', async () => {
+  const project = join(mkdtempSync(join(tmpdir(), 'leathercad-e2e-')), 'Wallet.lcp');
+  const { app, window } = await launch(fresh());
+  try {
+    await app.evaluate(({ dialog }, path) => {
+      dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
+    }, project);
+    await drawAPanel(window, { parts: '1' });
+    const chipX = async (): Promise<number> =>
+      (await window.getByTestId('toggle-parts').boundingBox())!.x;
+    const before = await chipX();
+
+    await window.getByTestId('project-menu').click();
+    await window.getByTestId('menu-save').click();
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
+    expect(existsSync(project)).toBe(true);
+
+    // "Saved Wallet.lcp" shows for a few seconds, after the chips, not before.
+    await window.keyboard.press('ControlOrMeta+S');
+    await expect(window.getByTestId('status-bar')).toContainText('Wallet.lcp');
+    expect(await chipX()).toBe(before);
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('undo and redo sit in the tab strip', async () => {
+  const { app, window } = await launch(fresh());
+  try {
+    const strip = window.getByTestId('tab-strip');
+    await expect(strip.getByTestId('undo')).toBeVisible();
+    await expect(strip.getByTestId('redo')).toBeVisible();
+    await expect(window.getByTestId('work-bar').getByTestId('undo')).toHaveCount(0);
+    await expect(window.getByTestId('work-bar').getByTestId('redo')).toHaveCount(0);
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('undo and redo keep their keys from the tab strip', async () => {
+  const { app, window } = await launch(fresh());
+  try {
+    await drawAPanel(window, { parts: '1' });
+    await expect(window.getByTestId('parts-count')).toContainText('1');
+    await window.keyboard.press('ControlOrMeta+Z');
+    await expect(window.getByTestId('parts-count')).toContainText('0');
+    await window.keyboard.press('ControlOrMeta+Shift+Z');
+    await expect(window.getByTestId('parts-count')).toContainText('1');
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('the project menu glyph starts 12 px in', async () => {
+  const { app, window } = await launch(fresh());
+  try {
+    const left = async (id: string): Promise<number> =>
+      (await window.getByTestId(id).locator('svg').first().boundingBox())!.x;
+    expect(await left('project-menu')).toBeGreaterThanOrEqual(11);
+    expect(await left('project-menu')).toBeLessThanOrEqual(13);
+    expect(await left('view-design')).toBeGreaterThanOrEqual(11);
+    expect(await left('view-design')).toBeLessThanOrEqual(13);
+    // The rail's icons share the edge, with its names and without (MS.5).
+    expect(await left('tool-select')).toBeGreaterThanOrEqual(11);
+    expect(await left('tool-select')).toBeLessThanOrEqual(13);
+    // And the tool row's head, above them.
+    expect(await left('work-head')).toBe(await left('tool-select'));
+    // And the status bar's first chip, below them (MS.7).
+    expect(await left('toggle-parts')).toBeGreaterThanOrEqual(11);
+    expect(await left('toggle-parts')).toBeLessThanOrEqual(13);
+    await resizeWindow(app, window, 860, 600);
+    expect(await left('view-design')).toBeGreaterThanOrEqual(11);
+    expect(await left('view-design')).toBeLessThanOrEqual(13);
+    expect(await left('tool-select')).toBeGreaterThanOrEqual(11);
+    expect(await left('tool-select')).toBeLessThanOrEqual(13);
+    expect(await left('work-head')).toBe(await left('tool-select'));
+    expect(await left('toggle-parts')).toBeGreaterThanOrEqual(11);
+    expect(await left('toggle-parts')).toBeLessThanOrEqual(13);
   } finally {
     await closeApp(app);
   }
@@ -221,6 +297,7 @@ test('Rename… in the Project menu renames the project, as one step, by keyboar
     await window.keyboard.press('Enter');
     // The last of the actions, above the recent projects' line.
     await window.keyboard.press('End');
+    await window.keyboard.press('ArrowUp');
     await window.keyboard.press('ArrowUp');
     await expect(window.getByTestId('rename')).toBeFocused();
     await window.keyboard.press('Enter');
@@ -321,13 +398,39 @@ test('the paper button, the Sheets tab and the job totals count the same sheets 
   }
 });
 
+test('print is green only while nothing needs fixing (MS.1)', async () => {
+  const { app, window } = await launch(fresh());
+  try {
+    await openSample(window);
+    const print = window.getByTestId('print');
+    const background = () => print.evaluate((el) => getComputedStyle(el).backgroundColor);
+    await expect(window.getByTestId('print-problems')).toHaveAttribute('data-state', 'clear');
+    await expect.poll(background).toBe('rgb(74, 222, 128)');
+
+    // One warning: a piece named in letters the typeface cannot print.
+    await window.getByTestId('parts-list').getByText('Lining', { exact: true }).click();
+    await window.getByTestId('part-name').fill('Подкладка');
+    await window.getByTestId('part-name').press('Enter');
+    const indicator = window.getByTestId('print-problems');
+    await expect(indicator).toHaveAttribute('data-state', 'warning');
+    await expect(indicator).toHaveText('1');
+    await expect.poll(background).toBe('rgb(42, 46, 52)');
+
+    await window.getByTestId('undo').click();
+    await expect(indicator).toHaveAttribute('data-state', 'clear');
+    await expect.poll(background).toBe('rgb(74, 222, 128)');
+  } finally {
+    await closeApp(app);
+  }
+});
+
 test('Print’s second half shows the problems, opens the drawer, and Print lists them first (R-06)', async () => {
   const { app, window } = await launch(fresh());
   try {
     await openSample(window);
     const indicator = window.getByTestId('print-problems');
     await expect(indicator).toHaveAttribute('data-state', 'clear');
-    await expect(indicator).toHaveAccessibleName('Problems: nothing to fix');
+    await expect(indicator).toHaveAccessibleName('Problems: nothing to fix. Show Problems');
 
     // A warning: a piece named in letters the typeface cannot print.
     await window.getByTestId('parts-list').getByText('Lining', { exact: true }).click();
@@ -335,7 +438,7 @@ test('Print’s second half shows the problems, opens the drawer, and Print list
     await window.getByTestId('part-name').press('Enter');
     await expect(indicator).toHaveAttribute('data-state', 'warning');
     await expect(indicator).toHaveText('1');
-    await expect(indicator).toHaveAccessibleName('Problems: 1 warning');
+    await expect(indicator).toHaveAccessibleName('Problems: 1 warning. Show Problems');
 
     // And an error, which outranks it: an edge margin deeper than the edge.
     await window.getByTestId('parts-list').getByText('Stitch line').first().click();
@@ -347,12 +450,12 @@ test('Print’s second half shows the problems, opens the drawer, and Print list
     await margin.press('Enter');
     await expect(indicator).toHaveAttribute('data-state', 'error');
     const name = (await indicator.getAttribute('aria-label')) ?? '';
-    expect(name).toMatch(/^Problems: \d+ errors?, 1 warning$/);
+    expect(name).toMatch(/^Problems: \d+ errors?, 1 warning\. Show Problems$/);
     const errors = /(\d+) error/.exec(name)![1]!;
     await expect(indicator).toHaveText(errors);
     // The drawer says the same, from the same count.
     await expect(window.getByTestId('problems-verdict')).toHaveText(
-      name.slice('Problems: '.length),
+      name.slice('Problems: '.length, -'. Show Problems'.length),
     );
 
     // Each half is its own button, with its own name.
@@ -383,7 +486,7 @@ test('Print’s second half shows the problems, opens the drawer, and Print list
     // Choosing one goes to it, as the drawer does.
     await listed.getByTestId('problem-row').first().click();
     await expect(dialog).toHaveCount(0);
-    await expect(window.getByTestId('selected-count')).toHaveText('1');
+    await expectSelected(window, '1', 'features');
   } finally {
     await closeApp(app);
   }
@@ -396,7 +499,7 @@ test('F1 opens Help, and the keyboard gets its place back (U.7)', async () => {
     await expect(window.getByRole('tooltip', { name: /Help/ }).locator('kbd')).toHaveText('F1');
     await window.mouse.move(600, 500);
     await window.keyboard.press('F1');
-    await expect(window.getByTestId('help-about')).toBeFocused();
+    await expect(window.getByTestId('help-shortcuts')).toBeFocused();
     await window.keyboard.press('Escape');
     await expect(window.getByTestId('help-menu-items')).toHaveCount(0);
     await expect(window.getByTestId('help-menu')).toBeFocused();
@@ -436,7 +539,7 @@ test('the save state and the problems are said politely, once per change (§2)',
     await window.mouse.down();
     await window.mouse.move(box.x + 500, box.y + 260, { steps: 10 });
     await window.mouse.up();
-    await expect(window.getByTestId('part-count')).toHaveText('2');
+    await expectPieces(window, '2');
     await window.waitForTimeout(200);
     expect(await said()).toEqual({ save: 1, problems: 0 });
   } finally {
@@ -461,9 +564,81 @@ test('the window’s edited flag follows unsaved work (§2)', async () => {
 
     await drawAPanel(window, { parts: '1' });
     await expect.poll(edited).toBe(true);
-    await window.getByTestId('save').click();
-    await expect(window.getByTestId('save-state')).toHaveText('Saved');
+    await window.keyboard.press('ControlOrMeta+S');
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     await expect.poll(edited).toBe(false);
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('keys still reach Settings and Help after they leave the bar', async () => {
+  const { app, window } = await launch(fresh());
+  try {
+    await expect(window.getByTestId('project-bar').getByTestId('settings')).toHaveCount(0);
+    await expect(window.getByTestId('project-bar').getByTestId('help-menu')).toHaveCount(0);
+
+    await window.getByTestId('editor-canvas').focus();
+    await window.keyboard.press('ControlOrMeta+Comma');
+    await expect(window.getByTestId('settings-dialog')).toBeVisible();
+    await window.keyboard.press('Escape');
+    await expect(window.getByTestId('settings-dialog')).toHaveCount(0);
+    await expect(window.getByTestId('editor-canvas')).toBeFocused();
+
+    const help = window.getByTestId('status-bar').getByTestId('help-menu');
+    await window.keyboard.press('F1');
+    await expect(window.getByTestId('help-shortcuts')).toBeFocused();
+    await window.keyboard.press('Escape');
+    await expect(window.getByTestId('help-menu-items')).toHaveCount(0);
+    await expect(help).toBeFocused();
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('view tabs read as tabs', async () => {
+  const { app, window } = await launch(fresh());
+  try {
+    const bar = window.getByTestId('project-bar');
+    const tabs = bar.getByRole('tablist', { name: /view/i });
+    await expect(bar.locator('button, [role="tablist"]').first()).toHaveAttribute(
+      'role',
+      'tablist',
+    );
+    const selected = tabs.getByRole('tab', { selected: true });
+    expect(await selected.evaluate((el) => getComputedStyle(el).fontWeight)).toBe('600');
+    const accent = await window.evaluate(() =>
+      getComputedStyle(document.documentElement).getPropertyValue('--tan').trim(),
+    );
+    const shadow = await selected.evaluate((el) => getComputedStyle(el).boxShadow);
+    const rgb = (hex: string): string =>
+      `rgb(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(', ')})`;
+    expect(shadow).toContain(rgb(accent));
+    for (const id of ['view-design', 'view-sheets']) {
+      await expect(window.getByTestId(id).locator('svg')).toHaveCount(1);
+    }
+    await expect(window.getByTestId('view-design')).toContainText('Design');
+    await expect(window.getByTestId('view-sheets')).toContainText('Sheets');
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('the paper reads as a field', async () => {
+  const { app, window } = await launch(fresh());
+  try {
+    const paper = window.getByTestId('paper-button');
+    await expect(paper).toContainText(/^Paper\s*\d/);
+    await expect(paper.locator('svg')).toHaveCount(1);
+    const fill = await window.evaluate(() => {
+      const probe = document.createElement('i');
+      probe.style.background = 'var(--shell-900)';
+      document.body.append(probe);
+      const colour = getComputedStyle(probe).backgroundColor;
+      probe.remove();
+      return colour;
+    });
+    expect(await paper.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(fill);
   } finally {
     await closeApp(app);
   }

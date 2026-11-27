@@ -6,6 +6,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
 import { openApp, openSample } from './launchApp.js';
+import { openSettings } from './openSettings.js';
 
 /**
  * U.13, R-15: Settings › My tools. The maker's irons are what a hole set's
@@ -19,7 +20,7 @@ const launch = (configHome: string) =>
   openApp({ env: { XDG_CONFIG_HOME: configHome }, size: [1400, 860] });
 
 async function myTools(window: Page): Promise<ReturnType<Page['getByTestId']>> {
-  await window.getByTestId('settings').click();
+  await openSettings(window);
   await window.getByTestId('settings-tab-tools').click();
   return window.getByTestId('settings-pane-tools');
 }

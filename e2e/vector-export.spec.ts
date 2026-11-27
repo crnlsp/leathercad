@@ -30,7 +30,7 @@ test('the print test exports to an SVG that measures true in millimetres', async
   try {
     const window = await app.firstWindow();
     await window.waitForLoadState('domcontentloaded');
-    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+    await expect(window.getByTestId('project-menu')).toBeVisible();
 
     await openPrintTest(app, window, svg);
 
@@ -83,7 +83,7 @@ test('the print test exports to a DXF that measures true in millimetres', async 
   try {
     const window = await app.firstWindow();
     await window.waitForLoadState('domcontentloaded');
-    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+    await expect(window.getByTestId('project-menu')).toBeVisible();
 
     await openPrintTest(app, window, dxf);
 
@@ -129,7 +129,7 @@ test('the export menu offers nothing to export when nothing is drawn, and says w
   try {
     const window = await app.firstWindow();
     await window.waitForLoadState('domcontentloaded');
-    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+    await expect(window.getByTestId('project-menu')).toBeVisible();
 
     await window.getByTestId('export-more').click();
     const svg = window.getByTestId('export-svg');
@@ -156,7 +156,7 @@ for (const format of ['svg', 'dxf'] as const) {
     try {
       const window = await app.firstWindow();
       await window.waitForLoadState('domcontentloaded');
-      await expect(window.getByTestId('app-version')).not.toBeEmpty();
+      await expect(window.getByTestId('project-menu')).toBeVisible();
       await app.evaluate(({ dialog }, path) => {
         dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
       }, file);

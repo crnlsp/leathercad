@@ -5,6 +5,7 @@ import { readoutAt } from './cursorReadout.js';
 import { caption } from './keyCaption.js';
 import { openApp, openSample } from './launchApp.js';
 import { fromProjectMenu } from './projectMenu.js';
+import { pieceCount } from './counts.js';
 
 /**
  * U.4 (R-03): the zoom control at the canvas's bottom-right — − · the zoom ·
@@ -74,7 +75,7 @@ test('Shift+1 fits the drawing and Shift+2 the selection, a part picked by its h
   const { app, window } = await openApp();
   try {
     await openSample(window);
-    await expect(window.getByTestId('part-count')).not.toHaveText('0');
+    await expect.poll(() => pieceCount(window)).toBeGreaterThan(0);
     await window.getByTestId('tool-select').click();
     const level = window.getByTestId('zoom-level');
 
@@ -200,7 +201,7 @@ test('the same control drives the Sheets view, where Fit selection says why it c
   const { app, window } = await openApp();
   try {
     await openSample(window);
-    await expect(window.getByTestId('part-count')).not.toHaveText('0');
+    await expect.poll(() => pieceCount(window)).toBeGreaterThan(0);
     const level = window.getByTestId('zoom-level');
     await window.keyboard.press('ControlOrMeta+0');
     await expect(level).toHaveText('100 %');

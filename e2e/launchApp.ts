@@ -13,6 +13,7 @@ import {
 
 import { parseNumber } from '../packages/core/src/index.js';
 import { closeApp } from './closeApp.js';
+import { expectPieces } from './counts.js';
 
 const DESKTOP_DIR = resolve(import.meta.dirname, '../apps/desktop');
 
@@ -90,7 +91,7 @@ export async function launchApp(
     // the start screen leaves it an Untitled underneath, as before 8.12.
     const window = await app.firstWindow();
     const start = window.getByTestId('start-new');
-    await expect(start.or(window.getByTestId('app-version'))).toBeAttached({ timeout: 30_000 });
+    await expect(start.or(window.getByTestId('project-bar'))).toBeAttached({ timeout: 30_000 });
     if ((await start.count()) > 0) {
       await start.evaluate((button) => (button as HTMLButtonElement).click());
     }
@@ -136,7 +137,7 @@ export async function openApp(
   const window = await app.firstWindow();
   window.on('dialog', (dialog) => void dialog.dismiss().catch(() => undefined));
   await window.waitForLoadState('domcontentloaded');
-  await expect(window.getByTestId('app-version')).not.toBeEmpty();
+  await expect(window.getByTestId('project-menu')).toBeVisible();
   if (options.size !== undefined) {
     await app.evaluate(
       ({ BrowserWindow }, [width, height]) =>
@@ -169,7 +170,7 @@ export async function openSample(window: Page): Promise<void> {
   await window.getByTestId('project-menu').click();
   await window.getByTestId('new-template').click();
   await window.getByTestId('template-builtin:bifold-wallet').dblclick();
-  await expect(window.getByTestId('part-count')).toHaveText('3');
+  await expectPieces(window, '3');
 }
 
 /** `withApp`, with the sample wallet open. */
@@ -197,7 +198,7 @@ export async function drawAPanel(
   await window.mouse.down();
   await window.mouse.move(box.x + left + 150, box.y + 260, { steps: 5 });
   await window.mouse.up();
-  if (parts !== undefined) await expect(window.getByTestId('part-count')).toHaveText(parts);
+  if (parts !== undefined) await expectPieces(window, parts);
 }
 
 /**

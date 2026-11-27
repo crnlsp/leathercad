@@ -12,7 +12,7 @@ import type { Press } from './PanelFold.js';
  * The Project menu (8.7) — new, open, save as, rename, the recent projects —
  * at the left of the tab strip since 8.12: an icon that opens it, beside the
  * tabs it acts on, where it was the project's name in the bar below. It stays
- * on the start screen, with *Save as* and *Rename* refused.
+ * on the start screen, with *Save*, *Save as* and *Rename* refused.
  */
 export function ProjectMenu({
   hasProject,
@@ -24,10 +24,13 @@ export function ProjectMenu({
   onOpen,
   onImportSvg,
   onInsertPieces,
+  onSave,
   onSaveAs,
   onSaveAsTemplate,
   onRename,
   onOpenRecent,
+  onSettings,
+  updateAvailable,
 }: {
   /** A project is open: false on the start screen. */
   hasProject: boolean;
@@ -45,6 +48,8 @@ export function ProjectMenu({
   onImportSvg: () => void;
   /** *Insert pieces from template…* (9.7). */
   onInsertPieces: () => void;
+  /** *Save*: what Ctrl+S runs. */
+  onSave: () => void;
   onSaveAs: () => void;
   /** *Save as template…* (8.12). */
   onSaveAsTemplate: () => void;
@@ -52,6 +57,10 @@ export function ProjectMenu({
   onRename: (how: Press) => void;
   /** One that is gone is taken off the list, and this menu says why (U.20). */
   onOpenRecent: (path: string) => Promise<RecentOutcome>;
+  /** *Settings…*, the menu's last item (MS.3). */
+  onSettings: () => void;
+  /** A newer LeatherCAD is out (8.9): the button wears the mark and the menu says so. */
+  updateAvailable: boolean;
 }) {
   const { t } = useI18n();
   // A recent project that is no longer there: said in the app's own dialog,
@@ -61,7 +70,7 @@ export function ProjectMenu({
   return (
     <>
       <MenuButton
-        label={t('tabs.menu')}
+        label={updateAvailable ? t('tabs.menuUpdate') : t('tabs.menu')}
         tooltip={t('tabs.menuTooltip')}
         testId="project-menu"
         className="tool quiet icon-only project-menu-button"
@@ -73,8 +82,10 @@ export function ProjectMenu({
             open: onOpen,
             importSvg: onImportSvg,
             insertPieces: onInsertPieces,
+            save: onSave,
             saveAs: onSaveAs,
             saveAsTemplate: onSaveAsTemplate,
+            settings: onSettings,
             // A keyboard's choice gives focus back to the menu once the name
             // is set; the pointer's leaves it with the page (U.4).
             rename: (how) => onRename(how ?? 'keyboard'),
@@ -88,10 +99,12 @@ export function ProjectMenu({
           recent,
           t,
           hasProject ? undefined : t('tabs.noProject'),
+          updateAvailable,
         )}
         onOpen={onMenuOpen}
       >
         <Icon of="menu" />
+        {updateAvailable && <span className="update-mark" data-testid="update-mark" />}
       </MenuButton>
       {gone !== null && <GoneDialog path={gone} onClose={() => setGone(null)} />}
     </>

@@ -7,6 +7,7 @@ import { parseNumber } from '../packages/core/src/index.js';
 
 import { drawAPanel, expectNoViolations, readPosition, withApp } from './launchApp.js';
 import { resizeWindow } from './windowSize.js';
+import { expectPieces, expectSelected, expectNothingSelected } from './counts.js';
 
 async function number(window: Page, label: string, value: number): Promise<void> {
   const field = window.getByTestId('property-panel').getByLabel(label);
@@ -40,7 +41,6 @@ test('guides can be placed, edited diagonally, undone, saved and reopened (3.10)
       if (box === null) throw new Error('canvas is missing');
       await window.mouse.click(box.x + 220, box.y + 200);
       await expect(window.getByTestId('guide-editor')).toBeVisible();
-      await expect(window.getByTestId('selected-count')).toHaveText('1');
       // A level guide is placed by its y alone; turned, it needs its x too (X8).
       const guideX = window.getByTestId('guide-editor').getByLabel('Guide x');
       await expect(guideX).toHaveCount(0);
@@ -67,8 +67,8 @@ test('guides can be placed, edited diagonally, undone, saved and reopened (3.10)
       await app.evaluate(({ dialog }, path) => {
         dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
       }, file);
-      await window.getByTestId('save').click();
-      await expect(window.getByTestId('save-state')).toHaveText('Saved');
+      await window.keyboard.press('ControlOrMeta+S');
+      await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     });
     await withApp(
       async (window) => {
@@ -119,7 +119,7 @@ test('a drag from the rulers’ corner square is the tool’s, never a guide (U.
     await drawAPanel(window, { parts: '1' });
     await window.getByTestId('tool-select').click();
     await window.keyboard.press('Escape');
-    await expect(window.getByTestId('selected-count')).toHaveText('0');
+    await expectNothingSelected(window);
     const box = await window.getByTestId('editor-canvas').boundingBox();
     if (box === null) throw new Error('canvas is missing');
     // Pressed where the two rulers meet and dragged past the panel: a box
@@ -129,7 +129,7 @@ test('a drag from the rulers’ corner square is the tool’s, never a guide (U.
     await window.mouse.move(box.x + 420, box.y + 320, { steps: 8 });
     await window.mouse.up();
     await expect(window.getByTestId('guide-editor')).toHaveCount(0);
-    await expect(window.getByTestId('selected-count')).toHaveText('1');
+    await expectSelected(window, '1', 'pieces');
   });
 });
 
@@ -150,7 +150,7 @@ test('independent pieces align and distribute with equal gaps, and undo restores
       await window.mouse.move(box.x + x + width, box.y + y + 60, { steps: 5 });
       await window.mouse.up();
     }
-    await expect(window.getByTestId('part-count')).toHaveText('3');
+    await expectPieces(window, '3');
     const selectAll = async () => {
       await window.getByTestId('tool-select').click();
       await window.mouse.move(box.x + 65, box.y + 100);

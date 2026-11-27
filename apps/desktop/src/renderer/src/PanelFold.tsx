@@ -148,7 +148,7 @@ export function PartsStrip({
     <aside
       className="panel-strip parts"
       data-testid="parts-strip"
-      aria-label={t('panels.partsFolded')}
+      aria-label={t('panels.partsFoldedCount', { count: project.parts.length })}
     >
       {toggle}
       {project.parts.map((part) => {

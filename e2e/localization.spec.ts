@@ -22,12 +22,15 @@ import {
 } from './launchApp.js';
 import { closeActiveTab } from './projectMenu.js';
 import { resizeWindow } from './windowSize.js';
+import { expectWorkRowFits } from './workRow.js';
+import { openSettings } from './openSettings.js';
+import { expectPieces } from './counts.js';
 
 const CATALOGUES = { en, pl, de, ru, fr, es };
 const ENGLISH_SYSTEM = { LANGUAGE: 'en_GB', LC_ALL: 'en_GB.UTF-8', LANG: 'en_GB.UTF-8' };
 
 async function switchLanguage(window: Page, tag: keyof typeof CATALOGUES): Promise<void> {
-  await window.getByTestId('settings').click();
+  await openSettings(window);
   await window.getByTestId('settings-tab-language').click();
   const choice = window.getByTestId('setting-language');
   await choice.selectOption(tag);
@@ -92,8 +95,8 @@ test('production switches all registered languages and returns to English in the
     await expect(window.locator('html')).toHaveAttribute('lang', /^en/);
     for (const tag of ['pl', 'de', 'ru', 'fr', 'es', 'en'] as const) {
       await switchLanguage(window, tag);
-      await expect(window.getByTestId('settings')).toHaveAccessibleName(
-        CATALOGUES[tag].projectBar.settings,
+      await expect(window.getByTestId('project-menu')).toHaveAccessibleName(
+        CATALOGUES[tag].tabs.menu,
       );
       await app.evaluate(({ dialog }) => {
         dialog.showSaveDialog = async (_browser, options) => {
@@ -110,7 +113,7 @@ test('production switches all registered languages and returns to English in the
         .poll(() => app.evaluate(() => Reflect.get(globalThis, '__localizationSavePath')))
         .toBe(`${en.app.untitled}.lcp`);
     }
-    await window.getByTestId('settings').click();
+    await openSettings(window);
     await window.getByTestId('settings-tab-language').click();
     await expect(window.getByTestId('setting-language').locator('option')).toHaveCount(
       Object.keys(CATALOGUES).length + 1,
@@ -121,49 +124,44 @@ test('production switches all registered languages and returns to English in the
   }
 });
 
+const DRAW_MODES = ['outline', 'cut-out', 'stitch', 'stitch-allowance', 'fold', 'marking'] as const;
+
+test('fits Draw as in German at 1024 px', async () => {
+  const { app, window } = await openApp({ env: ENGLISH_SYSTEM });
+  try {
+    await switchLanguage(window, 'de');
+    await window.getByTestId('tool-line').click();
+    await resizeWindow(app, window, 1024, 768);
+    const row = await expectWorkRowFits(window, 'de at 1024 px');
+    expect(row.chips, 'de keeps its chips at 1024 px').toBe(true);
+  } finally {
+    await closeApp(app);
+  }
+});
+
 for (const tag of ['en', 'pl', 'de', 'ru', 'fr', 'es'] as const) {
-  test(`${tag} drawing controls fit on both sides of the 1200 px breakpoint`, async () => {
+  test(`${tag} drawing controls fit the tool row at every width`, async () => {
     const { app, window } = await openApp({ env: ENGLISH_SYSTEM });
     try {
       await switchLanguage(window, tag);
-      for (const width of [1199, 1200, 1201, 1280]) {
+      // What gives way is measured, in this language, at this width (MS.7).
+      for (const width of [860, 1024, 1280, 1440]) {
         await resizeWindow(app, window, width, 840);
-        const modes = window.getByTestId('draw-as-select');
-        const marking = window.getByTestId('draw-as-marking');
-        if (width < 1200) {
-          await expect(modes).toBeVisible();
-          await expect(marking).toBeHidden();
-          for (const mode of [
-            'outline',
-            'stitch-allowance',
-            'cut-out',
-            'stitch',
-            'fold',
-            'marking',
-          ]) {
+        const row = await expectWorkRowFits(window, `${tag} at ${width} px`);
+        if (row.select) {
+          const modes = window.getByTestId('draw-as-select');
+          for (const mode of DRAW_MODES) {
             await modes.selectOption(mode);
             await expect(modes).toHaveValue(mode);
           }
         } else {
-          await expect(modes).toBeHidden();
-          for (const mode of [
-            'outline',
-            'stitch-allowance',
-            'cut-out',
-            'stitch',
-            'fold',
-            'marking',
-          ]) {
+          for (const mode of DRAW_MODES) {
             const chip = window.getByTestId(`draw-as-${mode}`);
             await expect(chip).toBeInViewport({ ratio: 1 });
             await chip.click();
             await expect(chip).toHaveAttribute('aria-pressed', 'true');
           }
         }
-        const overflow = await window
-          .getByTestId('tool-options')
-          .evaluate((element) => element.scrollWidth > element.clientWidth);
-        expect(overflow, `${tag} drawing controls at ${width} px`).toBe(false);
         await noHorizontalOverflow(window);
         await expectNoViolations(window, `${tag} drawing controls at ${width} px`);
         await capture(window, `${tag}-drawing-controls-${width}`);
@@ -200,7 +198,7 @@ for (const tag of ['pl', 'de', 'ru', 'fr', 'es'] as const) {
     });
     try {
       await expect(second.window.locator('html')).toHaveAttribute('lang', new RegExp(`^${tag}`));
-      await second.window.getByTestId('settings').click();
+      await openSettings(second.window);
       await second.window.getByTestId('settings-tab-language').click();
       await expect(second.window.getByTestId('setting-language')).toHaveValue(tag);
       await second.window.getByTestId('setting-language').selectOption('system');
@@ -292,9 +290,9 @@ for (const tag of ['pl', 'de', 'ru', 'fr', 'es'] as const) {
         dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
       }, project);
       await window.getByTestId('start-open').click();
-      await expect(window.getByTestId('part-count')).toHaveText('3');
+      await expectPieces(window, '3');
       await window.keyboard.press('ControlOrMeta+Shift+s');
-      await expect(window.getByTestId('save-state')).toContainText(words.projectBar.saved);
+      await expect(window.getByTestId('announce-save')).toContainText(words.projectBar.saved);
       expect(loadProject(readFileSync(project)).project).toEqual(loadProject(original).project);
 
       // Open starts in Select (Q41); inspect drawing controls with a drawing tool.
@@ -306,22 +304,23 @@ for (const tag of ['pl', 'de', 'ru', 'fr', 'es'] as const) {
         await resizeWindow(app, window, width, height);
         await noHorizontalOverflow(window);
         if (width === 860) {
+          // Chips or the select, as the row has room in this language (MS.7);
+          // the choices in the groups' order either way.
+          const order = DRAW_MODES.map((mode) => words.drawMode[mode]);
           const modes = window.getByTestId('draw-as-select');
-          await expect(modes).toBeVisible();
-          await expect(modes.locator('option')).toHaveText([
-            words.drawMode.outline,
-            words.drawMode['stitch-allowance'],
-            words.drawMode['cut-out'],
-            words.drawMode.stitch,
-            words.drawMode.fold,
-            words.drawMode.marking,
-          ]);
-          await modes.selectOption('marking');
-          await expect(modes).toHaveValue('marking');
-          await modes.selectOption('outline');
+          if ((await expectWorkRowFits(window, `${tag} design at 860 px`)).select) {
+            await expect(modes.locator('option')).toHaveText(order);
+            await modes.selectOption('marking');
+            await expect(modes).toHaveValue('marking');
+            await modes.selectOption('outline');
+          } else {
+            await expect(
+              window.getByTestId('tool-options').locator('button[data-testid^="draw-as-"]'),
+            ).toHaveText(order);
+          }
         }
         await capture(window, `${tag}-design-${width}`);
-        await window.getByTestId('settings').click();
+        await openSettings(window);
         for (const section of [
           'general',
           'appearance',
@@ -393,7 +392,7 @@ for (const tag of ['pl', 'de', 'ru', 'fr', 'es'] as const) {
       }
       // A real edit asks the localized destructive-action question; cancel retains the work.
       await drawAPanel(window);
-      await window.getByTestId('settings').click();
+      await openSettings(window);
       await window.getByTestId('setting-keep-unsaved').uncheck();
       await window.getByTestId('settings-close').click();
       await window.keyboard.press('ControlOrMeta+w');
@@ -489,7 +488,7 @@ for (const tag of ['pl', 'de', 'ru', 'fr', 'es'] as const) {
         await capture(second.window, `${tag}-recovery-${width}`);
       }
       await second.window.getByTestId('recovery-recover').click();
-      await expect(second.window.getByTestId('part-count')).toHaveText('1');
+      await expectPieces(second.window, '1');
     } finally {
       await closeApp(second.app);
     }

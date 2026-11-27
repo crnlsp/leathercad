@@ -13,6 +13,13 @@ builds on [paper and orientation](2026-09-24-paper-and-orientation-design.md) (6
 > button — "3 × A4 portrait" — whose popover holds the paper, which way up and the sheets; and Print
 > is in the paper's colour, its second half the problems. The views, the plan and the count are as
 > this document decided. See [the top bar's successor note](2026-09-29-top-bar-and-settings-design.md).
+>
+> **Since MS.1–MS.7 (2026-11-23):** the bars are three rows with one job each — the document (☰,
+> Undo, Redo, the project tabs), the view and its output (Design | Sheets as tabs, the paper as a
+> field, Export PDF, Print, green when there is nothing to fix), and the active tool (its name above
+> the rail, Draw as grouped Cut · Stitch · Mark, "? all keys"). The tool's hint is the status bar's,
+> and the rows give way in a fixed order on a narrow window. See
+> [the main screen](2026-11-23-main-screen-design.md).
 
 ---
 

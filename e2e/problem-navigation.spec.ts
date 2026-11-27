@@ -10,6 +10,7 @@ import { saveProject } from '../packages/persist/src/index.js';
 import { closeApp } from './closeApp.js';
 import { openApp } from './launchApp.js';
 import { fromProjectMenu } from './projectMenu.js';
+import { openSettings } from './openSettings.js';
 
 function problemFile(dir: string, name = 'Problems.lcp'): string {
   const panel = rectanglePart('panel', 'outline', 'Body panel', rectShape({ x: 0, y: 0 }, 100, 80));
@@ -162,7 +163,7 @@ test('F8 walks every problem, including two on one feature, without editing the 
       [],
     );
     await expect(window.getByTestId('undo')).toBeDisabled();
-    await expect(window.getByTestId('save-state')).toHaveText('Saved');
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     expect(readFileSync(file)).toEqual(before);
   } finally {
     await closeApp(app);
@@ -221,7 +222,7 @@ test('problem shortcuts rebind, leave fields and dialogs alone, and do not carry
     await window.getByTestId('editor-canvas').focus();
     await window.keyboard.press('F8');
     await expect(current).toHaveAttribute('data-code', 'TEXT_GLYPH_MISSING');
-    await window.getByTestId('settings').click();
+    await openSettings(window);
     await window.getByTestId('settings-tab-shortcuts').click();
     await window.keyboard.press('F8');
     await expect(current).toHaveAttribute('data-code', 'TEXT_GLYPH_MISSING');
@@ -242,7 +243,7 @@ test('problem shortcuts rebind, leave fields and dialogs alone, and do not carry
       dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
     }, second);
     await fromProjectMenu(window, 'open');
-    await expect(window.getByTestId('save-state')).toHaveText('Saved');
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     await expect(current).toHaveCount(0);
     await window.getByTestId('editor-canvas').focus();
     await window.keyboard.press('Shift+F8');

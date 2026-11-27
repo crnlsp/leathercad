@@ -82,6 +82,7 @@ import { svgTree } from './svgTree.js';
 import { DeleteDialog } from './DeleteDialog.js';
 import { ContextMenu } from './Menu.js';
 import { TextFieldMenu } from './TextFieldMenu.js';
+import { Icon } from './icons/Icon.js';
 import { ExportDialog } from './ExportDialog.js';
 import { ExportNotice } from './ExportNotice.js';
 import { PrintPreview } from './PrintPreview.js';
@@ -93,7 +94,7 @@ import {
   type DrawingFormat,
   type ExportReport,
 } from './useProjectFile.js';
-import { AppControls, ProjectBar, windowTitle } from './ProjectBar.js';
+import { ProjectBar, windowTitle } from './ProjectBar.js';
 import { OutsideChangeBar } from './OutsideChangeBar.js';
 import { UnsavedProjectsDialog } from './UnsavedProjectsDialog.js';
 import { MessageDialog } from './MessageDialog.js';
@@ -128,11 +129,11 @@ import { nextDiagnostic } from './problemNavigation.js';
 import { PropertyPanel } from './PropertyPanel.js';
 import { SheetsParts, SheetsProperties } from './SheetsPanels.js';
 import { selectedParts } from './sheetContents.js';
-import { ToolOptions } from './ToolOptions.js';
+import { ToolOptions, WorkHead, useWorkRowFit } from './ToolOptions.js';
 import { ToolPalette } from './ToolPalette.js';
 import { UnsavedChangesDialog, type DiscardingAction } from './UnsavedChangesDialog.js';
-import { VersionButton } from './VersionButton.js';
 import { WrittenNote } from './WrittenNote.js';
+import { HelpButton } from './HelpButton.js';
 import { I18nProvider } from './i18n.js';
 import { RecoveryDialog } from './RecoveryDialog.js';
 import type { MakerTools } from './irons.js';
@@ -152,7 +153,7 @@ import { isTyping, pressesControl } from './shortcuts.js';
 import { useRecovery } from './useRecovery.js';
 import { getPlatformHost } from './platformBridge.js';
 import { OptionHints } from './OptionHintsRow.js';
-import { SHEETS_HINTS, hintsFor } from './optionHints.js';
+import { ALL_KEYS, SHEETS_HINTS, hintsFor } from './optionHints.js';
 import { chipSubject } from './outlineSizes.js';
 import { ALL_TOOLS, DRAWING_TOOL_IDS } from './tools.js';
 import { Tooltip } from './Tooltip.js';
@@ -901,6 +902,16 @@ export function App({
     tabMenuAt === null ? undefined : openTabs.find((each) => each.id === tabMenuAt.id);
   const [trashing, setTrashing] = useState<ProjectTab | null>(null);
 
+  // A rename of a saved project's file under way, resolving to whether the name
+  // took. Ctrl+S from the rename field waits for it, then saves to the renamed file.
+  const pendingRename = useRef<Promise<boolean> | null>(null);
+  // Runs `action` once a rename under way has finished, and not at all if it
+  // was refused (its own message stays): what Ctrl+S and ☰ › Save both do.
+  const afterPendingRename = useCallback((action: () => void) => {
+    const rename = pendingRename.current;
+    if (rename === null) action();
+    else void rename.then((took) => (took ? action() : undefined));
+  }, []);
   const renamed = useCallback(
     (next: string | null) => {
       const named = tabs.active;
@@ -909,7 +920,7 @@ export function App({
       if (back) requestAnimationFrame(() => projectMenuRef.current?.focus());
       if (named === null || next === null) return;
       if (next.trim() === named.store.getState().document.project.name.trim()) return;
-      void (async () => {
+      const run = (async (): Promise<boolean> => {
         // A project with a file renames its file too (8.12) — never over
         // another: then nothing is renamed, and the maker is told why. A
         // name cleared leaves the file as it is; the tab shows its name.
@@ -919,22 +930,27 @@ export function App({
             const outcome = await getPlatformHost().renameProjectFile(path, next);
             if (outcome.kind === 'exists') {
               setRenameRefusal(t('rename.exists', { file: outcome.file }));
-              return;
+              return false;
             }
             if (outcome.kind === 'invalid') {
               setRenameRefusal(t('rename.invalid', { name: next.trim() }));
-              return;
+              return false;
             }
             tabs.update(named.id, (each) => {
               each.file = { ...each.file, path: outcome.path };
             });
           } catch (error) {
             setRenameRefusal(t('rename.failed', { reason: fileErrorText(error, t) }));
-            return;
+            return false;
           }
         }
         named.store.dispatch(setProjectName(next.trim()));
+        return true;
       })();
+      pendingRename.current = run;
+      void run.finally(() => {
+        if (pendingRename.current === run) pendingRename.current = null;
+      });
     },
     [renaming, setRenameRefusal, t, tabs],
   );
@@ -1169,6 +1185,11 @@ export function App({
       .then(setUpdates)
       .catch(() => undefined);
   }, []);
+  // The mark is news about Updates, so the menu's Settings opens there while it shows.
+  const openSettings = useCallback(
+    () => setSettings(updates.state === 'available' ? 'updates' : 'general'),
+    [updates.state],
+  );
   const checkUpdates = useCallback(
     () =>
       getPlatformHost()
@@ -1292,7 +1313,7 @@ export function App({
       sheets: () => showView('sheets'),
       // The shortcut map (8.2), where many apps keep it: in Settings (8.7).
       keyboardShortcuts: () => setSettings('shortcuts'),
-      settings: () => setSettings('general'),
+      settings: openSettings,
       help: () => helpRef.current?.click(),
       // The view (8.4b, U.4): zoom in and out, fit, and true size.
       zoomIn: () => runZoom('zoomIn'),
@@ -1312,7 +1333,10 @@ export function App({
     };
     const onKey = (event: KeyboardEvent): void => {
       // A field's keys are its own, and so is a focused button's Space (U.12).
-      if (isTyping(event.target) || pressesControl(event)) return;
+      // Save is the exception to a field's keys: there is no Save button to
+      // reach for, and a name typed is unsaved work (MS.2).
+      const savesFromField = isTyping(event.target) && commandFor(event, IS_MAC) === 'save';
+      if ((isTyping(event.target) && !savesFromField) || pressesControl(event)) return;
       // Esc, once nothing before it claimed it — a menu, a field, a dialog,
       // the overlay it was pressed in, or a tool giving something up: an
       // overlay closes, then focus mode ends.
@@ -1341,13 +1365,25 @@ export function App({
       const action = actions[command];
       if (action === undefined) return;
       event.preventDefault();
-      action();
+      // Leaving the field first commits what is pending in it (a number
+      // typed, a name), synchronously, so the file holds it.
+      const field = savesFromField && event.target instanceof HTMLElement ? event.target : null;
+      field?.blur();
+      // A rename the blur started (a saved project's file moves) finishes
+      // first, and a refused one saves nothing: its own message stays.
+      afterPendingRename(() => {
+        action();
+        // The save has started: the maker's place is the field they typed in.
+        if (field?.isConnected) field.focus();
+      });
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [
     file,
     tabs,
+    afterPendingRename,
+    openSettings,
     closeTab,
     moveActiveTab,
     reopenTab,
@@ -1374,9 +1410,9 @@ export function App({
         if (action === 'undo') store.undo();
         else if (action === 'redo') store.redo();
         else if (action === 'about') setAboutOpen(true);
-        else setSettings('general');
+        else openSettings();
       }),
-    [store],
+    [store, openSettings],
   );
 
   const handleStatus = useCallback((next: CanvasStatus) => setStatus(next), []);
@@ -1653,8 +1689,6 @@ export function App({
   const badges = badgesOf(diagnostics);
   // And by severity, once, for Print's indicator and the drawer (U.7).
   const counts = countBySeverity(diagnostics);
-  // What the status bar counts: an accepted warning is quiet there too (9.16).
-  const problemCount = counts.error + counts.warning + counts.info;
 
   // Fit selection frames what the board draws of the selection, on Design: it
   // says why when it cannot (U.4). `evaluate` is memoised on the project.
@@ -1672,28 +1706,26 @@ export function App({
         ? undefined
         : t('zoom.nothingSelected');
 
-  // The work bar's hints (U.11): the active tool's, for what is selected and whether a
-  // shape is between its clicks.
+  const activeTool = ALL_TOOLS.find((entry) => entry.id === toolId)?.id ?? 'select';
+  // What the tool row keeps as the window narrows, in the spec's order (MS.7).
+  const [workFit, workBar] = useWorkRowFit(view === 'design' && DRAWING_TOOL_IDS.has(toolId));
+  // The tool's hints in the status bar (U.11, MS.5): the active tool's, for what is
+  // selected and whether a shape is between its clicks.
   const toolHints = useMemo(
     () =>
       hintsFor({
-        tool: ALL_TOOLS.find((entry) => entry.id === toolId)?.id ?? 'select',
+        tool: activeTool,
         selected: !isEmptySelection(storeState.selection),
         sizable: chipSubject(storeState.document.project, storeState.selection) !== null,
         underway: status?.underway ?? false,
       }),
-    [toolId, storeState.selection, storeState.document, status?.underway],
+    [activeTool, storeState.selection, storeState.document, status?.underway],
   );
 
   // The pieces the Sheets view's panels show as picked (U.9): the board's selection.
   const sheetsSelected = useMemo(
     () => selectedParts(storeState.document.project, storeState.selection),
     [storeState.document, storeState.selection],
-  );
-
-  const featureCount = storeState.document.project.parts.reduce(
-    (total, part) => total + part.features.length,
-    0,
   );
 
   // An area that failed to draw tries again after the maker's next step (QA2):
@@ -1716,6 +1748,9 @@ export function App({
               onNewFromTemplate={showTemplates}
               onOpen={() => void openProject()}
               onImportSvg={() => void importSvg()}
+              onSave={() =>
+                afterPendingRename(() => (active === null ? undefined : void file.save(active)))
+              }
               onSaveAs={() => (active === null ? undefined : void file.save(active, true))}
               onInsertPieces={() => {
                 setInsertingPieces(true);
@@ -1728,7 +1763,55 @@ export function App({
               // The main process checks it is on the list, grants it, and
               // hands it back through onOpenFile, which opens it in a tab.
               onOpenRecent={(path) => getPlatformHost().openRecent(path)}
+              onSettings={openSettings}
+              updateAvailable={updates.state === 'available'}
             />
+          }
+          history={
+            hasProject ? (
+              <div className="toolbar history" data-testid="history-group">
+                {/* Names what it will undo. Disabled needs no reason beyond its own
+              label: there is nothing to undo. */}
+                <Tooltip
+                  text={
+                    storeState.undoLabel === null
+                      ? null
+                      : t('work.undoTooltip', { action: historyText(storeState.undoLabel, t) })
+                  }
+                  keys="undo"
+                >
+                  <button
+                    type="button"
+                    className="tool quiet icon-only"
+                    data-testid="undo"
+                    aria-label={t('work.undo')}
+                    disabled={!storeState.canUndo}
+                    onClick={() => store.undo()}
+                  >
+                    <Icon of="undo" />
+                  </button>
+                </Tooltip>
+                <Tooltip
+                  text={
+                    storeState.redoLabel === null
+                      ? null
+                      : t('work.redoTooltip', { action: historyText(storeState.redoLabel, t) })
+                  }
+                  keys="redo"
+                >
+                  <button
+                    type="button"
+                    className="tool quiet icon-only"
+                    data-testid="redo"
+                    aria-label={t('work.redo')}
+                    disabled={!storeState.canRedo}
+                    onClick={() => store.redo()}
+                  >
+                    <Icon of="redo" />
+                  </button>
+                </Tooltip>
+              </div>
+            ) : null
           }
           add={
             <NewTabMenu
@@ -1747,53 +1830,54 @@ export function App({
           onClose={(id) => void closeTab(id)}
           onTabMenu={(id, at) => setTabMenuAt({ id, ...at })}
           onMove={(id, index) => tabs.move(id, index)}
-          // On the start screen there is no project bar: Settings and Help
-          // stand at the strip's end, F1 and the update mark with them.
-          trailing={
-            hasProject ? null : (
-              <AppControls
-                helpRef={helpRef}
-                onAbout={() => setAboutOpen(true)}
-                onSettings={() =>
-                  setSettings(updates.state === 'available' ? 'updates' : 'general')
-                }
-                updateAvailable={updates.state === 'available'}
-              />
-            )
-          }
         />
         {/* Not before the start has opened the last session's tabs: the start
             screen would show for a moment before them. */}
         {active === null ? (
           !started ? null : (
-            <StartScreen
-              recent={recent}
-              templates={startChoices}
-              onRefresh={refreshStart}
-              error={startError === null ? null : fileErrorText(startError, t)}
-              onNew={newProject}
-              onUseTemplate={(id) => void file.newFromTemplate(id)}
-              onNewFromTemplate={showTemplates}
-              onOpen={() => void openProject()}
-              onOpenRecent={(path) =>
-                void getPlatformHost()
-                  .openRecent(path)
-                  .then(refreshRecent)
-                  .catch(() => undefined)
-              }
-              onPin={(path, pinned) =>
-                void getPlatformHost()
-                  .pinRecent(path, pinned)
-                  .then(refreshRecent)
-                  .catch(() => undefined)
-              }
-              onRemove={(path) =>
-                void getPlatformHost()
-                  .removeRecent(path)
-                  .then(refreshRecent)
-                  .catch(() => undefined)
-              }
-            />
+            <>
+              <StartScreen
+                recent={recent}
+                templates={startChoices}
+                onRefresh={refreshStart}
+                error={startError === null ? null : fileErrorText(startError, t)}
+                onNew={newProject}
+                onUseTemplate={(id) => void file.newFromTemplate(id)}
+                onNewFromTemplate={showTemplates}
+                onOpen={() => void openProject()}
+                onOpenRecent={(path) =>
+                  void getPlatformHost()
+                    .openRecent(path)
+                    .then(refreshRecent)
+                    .catch(() => undefined)
+                }
+                onPin={(path, pinned) =>
+                  void getPlatformHost()
+                    .pinRecent(path, pinned)
+                    .then(refreshRecent)
+                    .catch(() => undefined)
+                }
+                onRemove={(path) =>
+                  void getPlatformHost()
+                    .removeRecent(path)
+                    .then(refreshRecent)
+                    .catch(() => undefined)
+                }
+              />
+              <footer className="app-status" data-testid="status-bar">
+                <span className="status-left">
+                  {/* One item, so the row's gap does not part the "v" from the number. */}
+                  <span>
+                    v<span data-testid="app-version">{version ?? '…'}</span>
+                  </span>
+                </span>
+                <HelpButton
+                  helpRef={helpRef}
+                  onShortcuts={() => setSettings('shortcuts')}
+                  onAbout={() => setAboutOpen(true)}
+                />
+              </footer>
+            </>
           )
         ) : (
           <>
@@ -1809,91 +1893,40 @@ export function App({
               counts={counts}
               settled={!store.inTransaction}
               onShowProblems={showProblems}
-              helpRef={helpRef}
-              onAbout={() => setAboutOpen(true)}
-              // The mark is news about Updates, so the button opens there while it shows.
-              onSettings={() => setSettings(updates.state === 'available' ? 'updates' : 'general')}
-              updateAvailable={updates.state === 'available'}
-              onSave={() => void file.save(tab)}
               onExport={() => void exportPdf()}
               onExportSvg={() => setExporting('svg')}
               onExportDxf={() => setExporting('dxf')}
               onPrint={() => setPrinting(true)}
             />
 
-            {/* The work bar (F.8): what the maker is doing right now — history, the
-          active tool's options and its hints (U.11). The project and
-          its output are the bar above's; nothing here is about files. */}
+            {/* The work bar (F.8): the active tool — its name above the rail, its
+          options, and the way to every key (MS.5). The project and its output
+          are the bar above's; nothing here is about files. */}
             <div
-              className="work-bar"
+              ref={workBar}
+              className={layout.railNames ? 'work-bar' : 'work-bar rail-collapsed'}
               data-testid="work-bar"
               role="region"
               aria-label={t('work.region')}
             >
-              <div className="toolbar history" data-testid="history-group">
-                {/* Names what it will undo. Disabled needs no reason beyond its own
-              label: there is nothing to undo. */}
-                <Tooltip
-                  text={
-                    storeState.undoLabel === null
-                      ? null
-                      : t('work.undoTooltip', { action: historyText(storeState.undoLabel, t) })
-                  }
-                  keys="undo"
-                >
-                  <button
-                    type="button"
-                    className="tool"
-                    data-testid="undo"
-                    disabled={!storeState.canUndo}
-                    onClick={() => store.undo()}
-                  >
-                    {t('work.undo')}
-                  </button>
-                </Tooltip>
-                <Tooltip
-                  text={
-                    storeState.redoLabel === null
-                      ? null
-                      : t('work.redoTooltip', { action: historyText(storeState.redoLabel, t) })
-                  }
-                  keys="redo"
-                >
-                  <button
-                    type="button"
-                    className="tool"
-                    data-testid="redo"
-                    disabled={!storeState.canRedo}
-                    onClick={() => store.redo()}
-                  >
-                    {t('work.redo')}
-                  </button>
-                </Tooltip>
-              </div>
+              <WorkHead toolId={activeTool} names={layout.railNames} />
               {view === 'design' ? (
-                <>
-                  <ToolOptions
-                    toolId={toolId}
-                    drawAs={drawAs}
-                    onDrawAs={setDrawAs}
-                    hardware={hardware}
-                    onHardware={setHardware}
-                    points={pointOptions}
-                    onPoints={setPointOptions}
-                  />
-                  {/* What the active tool does with a click, a drag and a key, true for that
-                tool and no other (F.1), and for the state it is in (U.11). The lowest
-                ranked give way as the bar narrows, whole; "all keys" never does. */}
-                  <OptionHints hints={toolHints} testId="tool-how-to" />
-                </>
+                <ToolOptions
+                  toolId={toolId}
+                  drawAs={drawAs}
+                  onDrawAs={setDrawAs}
+                  hardware={hardware}
+                  onHardware={setHardware}
+                  points={pointOptions}
+                  onPoints={setPointOptions}
+                  fit={workFit}
+                />
               ) : (
-                <>
-                  <OptionHints hints={SHEETS_HINTS} testId="sheets-hint" />
-                  {/* The plan in words, for a screen reader: the sheet count, what is taped and
-                  what is left off now sit in Parts and Properties. */}
-                  <SheetsSummary project={storeState.document.project} />
-                </>
+                /* The plan in words, for a screen reader: the sheet count, what is taped and
+                  what is left off now sit in Parts and Properties. */
+                <SheetsSummary project={storeState.document.project} />
               )}
+              <OptionHints hints={ALL_KEYS} testId="all-keys" shown={workFit.allKeys} />
             </div>
 
             <div
@@ -2153,74 +2186,6 @@ export function App({
             </div>
 
             <footer className="app-status" data-testid="status-bar">
-              {/*
-          The counts stay put whatever else is being said. A notice used to
-          replace them, which was harmless while every notice was a momentary
-          refusal — but "select a part first" stands for as long as it is true,
-          and hiding how many parts exist while telling the user to pick one is
-          the wrong way round.
-        */}
-              <span className="status-left">
-                <span data-testid="status-counts">
-                  <VersionButton version={version} updates={updates} onCheck={checkUpdates} />
-                  <span className="sep">·</span>
-                  <b data-testid="part-count">{storeState.document.project.parts.length}</b>{' '}
-                  {t('status.partsCount', { count: storeState.document.project.parts.length })}
-                  <span className="sep">·</span>
-                  <b data-testid="feature-count">{featureCount}</b>{' '}
-                  {t('status.features', { count: featureCount })}
-                  <span className="sep">·</span>
-                  {/* A part picked by its heading is a selection too (Q29), and says so. */}
-                  {storeState.selection.features.size === 0 &&
-                  storeState.selection.parts.size > 0 ? (
-                    <>
-                      <b data-testid="selected-count">{storeState.selection.parts.size}</b>{' '}
-                      {t('status.partsSelected', { count: storeState.selection.parts.size })}
-                    </>
-                  ) : (
-                    <>
-                      <b data-testid="selected-count">
-                        {storeState.selection.guide === undefined
-                          ? storeState.selection.features.size
-                          : 1}
-                      </b>{' '}
-                      {t('status.selected')}
-                    </>
-                  )}
-                  {problemCount > 0 && (
-                    <>
-                      <span className="sep">·</span>
-                      <b className="status-error" data-testid="problem-count">
-                        {problemCount}
-                      </b>{' '}
-                      {t('status.problems', { count: problemCount })}
-                    </>
-                  )}
-                  {tab.file.path !== null && (
-                    <>
-                      <span className="sep">·</span>
-                      <span data-testid="file-path">{fileName(tab.file.path)}</span>
-                    </>
-                  )}
-                </span>
-                {storeState.resourceLimit !== null ? (
-                  <span className="status-error" data-testid="file-error" role="alert">
-                    {fileErrorText(storeState.resourceLimit, t)}
-                  </span>
-                ) : status?.notice !== null && status?.notice !== undefined ? (
-                  <span className="status-error" data-testid="tool-notice">
-                    {describeProblem(status.notice, t)}
-                  </span>
-                ) : bridgeError !== null || tab.file.error !== null ? (
-                  <span className="status-error" data-testid="file-error">
-                    {fileErrorText(bridgeError === null ? tab.file.error : bridgeError.error, t)}
-                  </span>
-                ) : null}
-                {tab.file.error === null && storeState.resourceLimit === null && (
-                  <WrittenNote written={file.written} />
-                )}
-              </span>
-
               {/* Always all three (R-04): whatever shape a panel is in, its chip
               reaches it, so nothing is ever out of reach. */}
               <span className="status-panels" role="group" aria-label={t('status.panels')}>
@@ -2253,6 +2218,33 @@ export function App({
                 />
               </span>
 
+              <span className="status-left">
+                {storeState.resourceLimit !== null ? (
+                  <span className="status-error" data-testid="file-error" role="alert">
+                    {fileErrorText(storeState.resourceLimit, t)}
+                  </span>
+                ) : status?.notice !== null && status?.notice !== undefined ? (
+                  <span className="status-error" data-testid="tool-notice">
+                    {describeProblem(status.notice, t)}
+                  </span>
+                ) : bridgeError !== null || tab.file.error !== null ? (
+                  <span className="status-error" data-testid="file-error">
+                    {fileErrorText(bridgeError === null ? tab.file.error : bridgeError.error, t)}
+                  </span>
+                ) : null}
+                {tab.file.error === null && storeState.resourceLimit === null && (
+                  <WrittenNote written={file.written} />
+                )}
+              </span>
+
+              {/* What the active tool does with a click, a drag and a key, true for that
+              tool and no other (F.1), and for the state it is in (U.11). The lowest
+              ranked give way as the bar narrows, whole. */}
+              {view === 'design' ? (
+                <OptionHints hints={toolHints} testId="tool-how-to" />
+              ) : (
+                <OptionHints hints={SHEETS_HINTS} testId="sheets-hint" />
+              )}
               <MoveStatus move={move} t={t} />
               <span className="status-right" data-testid="cursor-readout">
                 {view === 'sheets' ? (
@@ -2265,6 +2257,11 @@ export function App({
                   <CursorReadout cursor={cursor} />
                 )}
               </span>
+              <HelpButton
+                helpRef={helpRef}
+                onShortcuts={() => setSettings('shortcuts')}
+                onAbout={() => setAboutOpen(true)}
+              />
             </footer>
           </>
         )}

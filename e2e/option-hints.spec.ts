@@ -7,7 +7,8 @@ import { resizeWindow } from './windowSize.js';
 /**
  * U.11, R-11: the work bar's one long sentence is short hints — a key as a cap
  * and a few words, per tool and state — the lowest-ranked dropping first as the
- * bar narrows, "? all keys" never, and none cut short by the edge.
+ * bar narrows, and none cut short by the edge. Since MS.5 they are the status
+ * bar's, and "? all keys" is the tool row's.
  */
 
 const hints = (window: Page): Locator => window.getByTestId('tool-how-to').locator('.work-hint');
@@ -44,8 +45,7 @@ test('Select says what a click, a key and a drag do, and what a selection adds (
     await expect(hint(window, 'hints.addsOrRemoves').locator('kbd')).toHaveText(caption('Shift'));
     await expect(hint(window, 'hints.dragBox')).toHaveText('Drag a box to select');
     await expect(hint(window, 'hints.deletes')).toHaveCount(0);
-    await expect(hints(window).last().locator('kbd')).toHaveText('?');
-    await expect(hints(window).last()).toHaveText('? all keys');
+    await expect(window.getByTestId('all-keys')).toHaveText('? all keys');
 
     // An outline selected: Enter opens its sizes, Del deletes.
     await window.getByTestId('feature-row-outer-outline').click();
@@ -77,8 +77,8 @@ test('every tool has its hints, and a tool that needs a selection says how to ge
     ]) {
       await window.getByTestId(`tool-${tool}`).click();
       const shown = await words(window);
-      expect(shown.length, tool).toBeGreaterThanOrEqual(3);
-      expect(shown.at(-1), tool).toBe('? all keys');
+      expect(shown.length, tool).toBeGreaterThanOrEqual(1);
+      expect(shown, tool).not.toContain('? all keys');
     }
 
     // Nothing is selected on the sample: Rotate cannot turn anything yet.
@@ -125,9 +125,9 @@ test('a shape under way offers Esc, and the keys of that run (U.11)', async () =
   });
 });
 
-test('as the bar narrows the lowest-ranked hints go first, whole, and "all keys" stays (U.11)', async () => {
+test('as the bar narrows the lowest-ranked hints go first, whole (U.11)', async () => {
   await withSample(async (window, app) => {
-    // The rectangle's options take most of the bar: the hints are what is left.
+    // The status bar's counts, chips and cursor take most of it: the hints are what is left.
     await window.getByTestId('tool-rectangle').click();
     const order = [
       'hints.rectangleDrag',
@@ -137,12 +137,9 @@ test('as the bar narrows the lowest-ranked hints go first, whole, and "all keys"
     ];
     for (const width of [1920, 1280, 1100, 1024, 900, 860]) {
       await resizeWindow(app, window, width, 700);
-      if (width === 1920) await expect(hints(window)).toHaveCount(5);
+      if (width === 1920) await expect(hints(window)).toHaveCount(4);
       await expectWhole(window);
-      const shown = await words(window);
-      expect(shown.at(-1), `${String(width)} px`).toBe('? all keys');
-      // The compact mode selector frees room below 1200 px, so hint counts can
-      // increase at that breakpoint. Priority and whole hints must still hold.
+      // Priority and whole hints hold at every width.
       const kept = await hints(window).evaluateAll((items) =>
         items.map((item) => item.getAttribute('data-hint')),
       );
@@ -151,20 +148,21 @@ test('as the bar narrows the lowest-ranked hints go first, whole, and "all keys"
         for (const later of order.slice(droppedAt)) expect(kept).not.toContain(later);
       }
     }
-    await expect(window.getByTestId('draw-as-select')).toBeVisible();
+    // English keeps its Draw as chips at 860 px; only their group names went (MS.7).
+    await expect(window.getByTestId('draw-as-outline')).toBeVisible();
 
     // Wider again, they come back.
     await resizeWindow(app, window, 1920, 1080);
-    await expect(hints(window)).toHaveCount(5);
+    await expect(hints(window)).toHaveCount(4);
   });
 });
 
 test('the Sheets view has its hints too, with the keys as caps (U.11)', async () => {
   await withSample(async (window) => {
     await window.getByTestId('view-sheets').click();
-    const bar = window.getByTestId('sheets-hint');
+    const bar = window.getByTestId('status-bar').getByTestId('sheets-hint');
     await expect(bar).toContainText('Click a piece to see where it prints');
     await expect(bar.locator('kbd').first()).toHaveText(caption('Ctrl+P'));
-    await expect(bar.locator('kbd').last()).toHaveText('?');
+    await expect(window.getByTestId('work-bar').getByTestId('all-keys')).toHaveText('? all keys');
   });
 });

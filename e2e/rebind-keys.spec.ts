@@ -8,6 +8,8 @@ import { closeApp } from './closeApp.js';
 import { caption } from './keyCaption.js';
 import { drawAPanel, openApp, openSample } from './launchApp.js';
 import { fromProjectMenu } from './projectMenu.js';
+import { openSettings } from './openSettings.js';
+import { pieceCount } from './counts.js';
 
 /**
  * Changing a key in Settings › Keyboard shortcuts (U.12, §2 *Shortcuts*): the
@@ -24,7 +26,7 @@ const launch = (configHome: string) =>
   openApp({ env: { XDG_CONFIG_HOME: configHome }, size: [1400, 900] });
 
 async function openShortcuts(window: Page): Promise<Locator> {
-  await window.getByTestId('settings').click();
+  await openSettings(window);
   await window.getByTestId('settings-tab-shortcuts').click();
   return window.getByTestId('settings-pane-shortcuts');
 }
@@ -83,24 +85,17 @@ test('a key changed is heard at once, shown on every cap, and its old key is fre
     await window.keyboard.press('Escape');
     await expect(window.getByTestId('settings-dialog')).toHaveCount(0);
 
-    // The bar's cap and its tooltip.
-    await expect(window.getByTestId('save').locator('kbd')).toHaveText('F5');
-    await window.getByTestId('save').hover();
-    // Save's own: Esc gave the keys back to the gear (U.19), whose tooltip
-    // shows at once for the keyboard, as R-10 has it.
-    await expect(
-      window.getByRole('tooltip', { name: /^Save the project/ }).locator('kbd'),
-    ).toHaveText('F5');
-    await window.mouse.move(5, 400);
-
     // The old key does nothing; the new one saves.
     await window.getByTestId('editor-canvas').focus();
     await window.keyboard.press('ControlOrMeta+s');
     await window.waitForTimeout(300);
     expect(await saveDialogs(app)).toBe(0);
-    await expect(window.getByTestId('save-state')).toHaveText('Unsaved changes');
+    await expect(window.getByTestId('announce-save')).toHaveText('Unsaved changes');
     await window.keyboard.press('F5');
-    await expect(window.getByTestId('file-path')).toContainText('Card holder');
+    await expect(window.getByTestId('project-name').locator('..')).toHaveAttribute(
+      'title',
+      /Card holder/,
+    );
     expect(await saveDialogs(app)).toBe(1);
 
     // Saving a saved project is still acknowledged: the second save asks
@@ -188,7 +183,7 @@ test('a clash names the command, and Cancel leaves both while Swap exchanges the
     await window.keyboard.press('Escape');
     await drawAPanel(window, { parts: '1' });
     await window.keyboard.press('ControlOrMeta+Comma');
-    await expect(window.getByTestId('file-path')).toContainText('Swap');
+    await expect(window.getByTestId('project-name').locator('..')).toHaveAttribute('title', /Swap/);
     await expect(window.getByTestId('settings-dialog')).toHaveCount(0);
   } finally {
     await closeApp(app);
@@ -267,7 +262,7 @@ test('Reset puts one command’s keys back, through a swap if it must; Reset all
     await window.getByTestId('settings-close').click();
     await window.getByTestId('tool-rectangle').click();
     await expect(hint(window, 'hints.backToSelect').locator('kbd')).toHaveText('B');
-    await expect(hint(window, 'hints.allKeys').locator('kbd')).toHaveText('F4');
+    await expect(window.getByTestId('all-keys').locator('kbd')).toHaveText('F4');
     await expect(window.getByTestId('tool-select').locator('kbd')).toHaveText('B');
 
     await openShortcuts(window);
@@ -276,7 +271,7 @@ test('Reset puts one command’s keys back, through a swap if it must; Reset all
     await expect(pane.getByTestId('shortcuts-reset-all')).toBeDisabled();
     await window.getByTestId('settings-close').click();
     await expect(hint(window, 'hints.backToSelect').locator('kbd')).toHaveText('V');
-    await expect(hint(window, 'hints.allKeys').locator('kbd')).toHaveText('?');
+    await expect(window.getByTestId('all-keys').locator('kbd')).toHaveText('?');
     await expect(window.getByTestId('tool-select').locator('kbd')).toHaveText('V');
   } finally {
     await closeApp(app);
@@ -349,7 +344,7 @@ test('a key moved stays out of fields, and a drawing tool keeps its own', async 
   const { app, window } = await launch(fresh());
   try {
     await openSample(window);
-    await expect(window.getByTestId('part-count')).not.toHaveText('0');
+    await expect.poll(() => pieceCount(window)).toBeGreaterThan(0);
     const pane = await openShortcuts(window);
     // Focus mode takes A from the Arc tool, which gets \ in its place.
     await change(window, 'focusMode', 'KeyA');
@@ -421,7 +416,7 @@ test('Parts’ rename moved to F4 renames a focused row, and nothing on the boar
   const { app, window } = await launch(fresh());
   try {
     await openSample(window);
-    await expect(window.getByTestId('part-count')).not.toHaveText('0');
+    await expect.poll(() => pieceCount(window)).toBeGreaterThan(0);
     await openShortcuts(window);
     await change(window, 'rename', 'F4');
     await expect(keysOf(window, 'rename')).toHaveText(['F4']);

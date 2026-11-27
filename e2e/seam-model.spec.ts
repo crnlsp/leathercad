@@ -17,6 +17,7 @@ import { loadProject, saveProject } from '../packages/persist/src/index.js';
 import { PathOps, Shapes } from '../packages/geometry/src/index.js';
 import { closeApp } from './closeApp.js';
 import { expectNoViolations, openApp } from './launchApp.js';
+import { expectFeatures } from './counts.js';
 
 test('a loaded seam is listed before deleting its holes, removed on consent and restored by undo (9.6a)', async () => {
   let document = emptyDocument('seam-project', 'Sewn panel');
@@ -62,7 +63,7 @@ test('a loaded seam is listed before deleting its holes, removed on consent and 
     await app.evaluate(({ dialog }, path) => {
       dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
     }, path);
-    await expect(window.getByTestId('feature-count')).toHaveText('4');
+    await expectFeatures(window, '4');
     await window.getByTestId('parts-list').getByText('Stitch holes', { exact: true }).click();
     await expect(window.getByTestId('follows').locator('option[value="closed-line"]')).toHaveCount(
       0,
@@ -81,17 +82,17 @@ test('a loaded seam is listed before deleting its holes, removed on consent and 
     writeFileSync(screenshot, Buffer.from(png, 'base64'));
     await test.info().attach('seam-delete', { path: screenshot, contentType: 'image/png' });
     await dialog.getByTestId('delete-cancel').click();
-    await expect(window.getByTestId('feature-count')).toHaveText('4');
+    await expectFeatures(window, '4');
     await window.getByTestId('delete-feature').click();
     await dialog.getByTestId('delete-all').click();
-    await expect(window.getByTestId('feature-count')).toHaveText('3');
-    await window.getByTestId('save').click();
-    await expect(window.getByTestId('save-state')).toHaveText('Saved');
+    await expectFeatures(window, '3');
+    await window.keyboard.press('ControlOrMeta+S');
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     expect(loadProject(readFileSync(path)).project.seams).toEqual([]);
     await window.getByTestId('undo').click();
-    await expect(window.getByTestId('feature-count')).toHaveText('4');
-    await window.getByTestId('save').click();
-    await expect(window.getByTestId('save-state')).toHaveText('Saved');
+    await expectFeatures(window, '4');
+    await window.keyboard.press('ControlOrMeta+S');
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     expect(loadProject(readFileSync(path)).project.seams).toEqual(document.project.seams);
   } finally {
     await closeApp(app);

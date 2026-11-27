@@ -11,6 +11,7 @@ import {
   recoveryDir,
   recoveryEntries,
 } from './launchApp.js';
+import { expectPieces } from './counts.js';
 
 /**
  * Slice 5.3b: crash recovery.
@@ -49,8 +50,8 @@ test('a crash with unsaved work is offered back, untitled and unsaved, and its f
     dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
   }, project);
   await drawAPanel(first.window, 150);
-  await first.window.getByTestId('save').click();
-  await expect(first.window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
+  await first.window.keyboard.press('ControlOrMeta+S');
+  await expect(first.window.getByTestId('announce-save')).not.toHaveText('Unsaved changes');
   const saved = readFileSync(project);
   // Saved, so its copy goes; until it has, the copy waited for below could
   // be this one, of the work before the save.
@@ -58,7 +59,7 @@ test('a crash with unsaved work is offered back, untitled and unsaved, and its f
 
   // Unsaved work, then a copy of it, then the crash.
   await drawAPanel(first.window, 350);
-  await expect(first.window.getByTestId('part-count')).toHaveText('2');
+  await expectPieces(first.window, '2');
   await expect.poll(() => recoveryCopies(state).length).toBe(1);
   await crashApp(first.app);
 
@@ -71,8 +72,8 @@ test('a crash with unsaved work is offered back, untitled and unsaved, and its f
     await dialog.getByTestId('recovery-recover').click();
 
     // Back, as it was — and untitled and unsaved, not the file it came from.
-    await expect(second.window.getByTestId('part-count')).toHaveText('2');
-    await expect(second.window.getByTestId('save-state')).toHaveText('Unsaved changes');
+    await expectPieces(second.window, '2');
+    await expect(second.window.getByTestId('announce-save')).toHaveText('Unsaved changes');
     await expect(second.window.getByTestId('status-bar')).not.toContainText(basename(project));
     expect(readFileSync(project).equals(saved)).toBe(true);
 
@@ -81,8 +82,8 @@ test('a crash with unsaved work is offered back, untitled and unsaved, and its f
     await second.app.evaluate(({ dialog: native }, path) => {
       native.showSaveDialog = async () => ({ canceled: false, filePath: path });
     }, elsewhere);
-    await second.window.getByTestId('save').click();
-    await expect(second.window.getByTestId('save-state')).not.toHaveText('Unsaved changes');
+    await second.window.keyboard.press('ControlOrMeta+S');
+    await expect(second.window.getByTestId('announce-save')).not.toHaveText('Unsaved changes');
     expect(existsSync(elsewhere)).toBe(true);
     expect(readFileSync(project).equals(saved)).toBe(true);
   } finally {
@@ -102,7 +103,7 @@ test('Not now keeps the copy until the next clean exit', async () => {
   const second = await launch(state);
   await second.window.getByTestId('recovery-decline').click();
   await expect(second.window.getByTestId('recovery-dialog')).toHaveCount(0);
-  await expect(second.window.getByTestId('part-count')).toHaveText('0');
+  await expectPieces(second.window, '0');
   // Declining is not deleting.
   expect(recoveryCopies(state)).toEqual(crashed);
 
@@ -121,7 +122,7 @@ test('a copy is kept only while there is unsaved work', async () => {
     await app.evaluate(({ dialog }, path) => {
       dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
     }, project);
-    await window.getByTestId('save').click();
+    await window.keyboard.press('ControlOrMeta+S');
     await expect.poll(() => recoveryCopies(state)).toEqual([]);
   } finally {
     await closeApp(app);
@@ -140,7 +141,7 @@ test('a damaged copy is set aside, and startup carries on', async () => {
     await expect.poll(() => recoveryEntries(state)).toEqual(['999999-1.lcp.corrupt']);
     await expect(window.getByTestId('recovery-dialog')).toHaveCount(0);
     await drawAPanel(window, 150);
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
   } finally {
     await closeApp(app);
   }

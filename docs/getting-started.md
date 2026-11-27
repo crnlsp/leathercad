@@ -226,8 +226,8 @@ SVG and the DXF, to line the pieces up while gluing.
 
 ## 4. Save
 
-**Save** (**Ctrl+S**, **⌘S** on macOS) writes a `.lcp` file. Beside the project's name the bar says
-*Unsaved changes* or *Saved*; with nothing to save, Save says so. If LeatherCAD or the computer
+**Save** (**Ctrl+S**, **⌘S** on macOS) writes a `.lcp` file; so does **Save** in the project menu (**☰**). The project's tab wears a dot while
+there is unsaved work, and a screen reader hears *Unsaved changes* or *Saved*. If LeatherCAD or the computer
 stops unexpectedly, it offers your unsaved work back the next time it starts; if you close with
 unsaved changes, it asks first.
 
@@ -238,13 +238,13 @@ back.
 ## 5. Print, and check the print
 
 1. Choose the paper in your printer with the paper button beside **Export PDF** — it reads, for
-   example, *3 × A4 portrait*. Each paper in its list says how many sheets it takes, the
+   example, *Paper 3 × A4 portrait*. Each paper in its list says how many sheets it takes, the
    tooltip of **Portrait** and **Landscape** what the other way up would take, and the line under
    them what is taped across sheets, so you can pick the one that uses the fewest sheets.
    In Design, a piece that will not print has a mark on its row in **Parts**, whose tooltip says
    why (it is hidden, or it has a problem); on the Sheets view, **Parts** says which sheet each
    piece prints on.
-2. Choose **Sheets** in the middle of the top bar (**Ctrl+2**), or *See the sheets* under the paper,
+2. Choose the **Sheets** tab (**Ctrl+2**), or *See the sheets* under the paper,
    to see the pieces on the paper exactly as the PDF will put them. A part bigger than a sheet is printed across
    several, taped together on a dashed join line with crosses on it; its joins also show on the
    board, labelled *Tape join*. Anything drawn in magenta is only on screen, never on paper.
@@ -297,10 +297,11 @@ not cut through both: move them apart, or *Export anyway*.
 
 ## Where things are
 
-- **The top bar:** at its left, the project menu — the LeatherCAD mark and the project's name —
-  holds *New project*, *Open…*, *Save as…*, *Rename…* and your recent projects, then whether it is
-  saved. In the middle, **Design | Sheets**. At its right the paper, **Export PDF** (with **▾** for
-  SVG and DXF) and **Print** (with the problems), then **⚙** Settings and **?** Help (**F1**).
+- **The top rows:** the first is the document: the project menu **☰** (*New project*, *Open…*,
+  *Save*, *Save as…*, *Rename…*, your recent projects and *Settings…*), then the project tabs with
+  Undo and Redo. The second is the view and the output: the **Design | Sheets** tabs, then the
+  paper, **Export PDF** (with **▾** for SVG and DXF) and **Print** (with the problems). The third
+  holds the active tool's options. **?** Help (**F1**) is at the status bar's right.
 - **Moving by keyboard:** with the board focused — click it, or reach it with **Tab** — the arrow
   keys move what is selected 1 mm, **Shift** with an arrow 10 mm, and **Alt** with an arrow (**⌥**
   on macOS) 0.1 mm. One press is one Undo step, and so is a key held down. **Ctrl+A** selects every
@@ -364,7 +365,7 @@ not cut through both: move them apart, or *Export anyway*.
   thumbnail of each piece — a click selects it, a locked one too — and Properties the mark of what
   is selected. On a narrow window the app folds them itself (below 1280 px Properties, below 900 px
   both), and a panel then opens over the board, until **Esc** or a click on the board; the three
-  chips at the status bar's right — *Parts*, *Focus*, *Properties* — reach them at every size. The
+  chips at the status bar's left — *Parts*, *Focus*, *Properties* — reach them at every size. The
   folds you make are kept for next time; the ones a small window makes are not. On a keyboard
   other than a US one, the keys are where a US keyboard has `[`, `]` and `\`, shown as yours
   prints them (`ü`, `+` and `#` on a German one).

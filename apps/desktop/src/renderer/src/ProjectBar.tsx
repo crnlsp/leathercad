@@ -1,20 +1,20 @@
 import type { DocumentStore, Selection } from '@leathercad/document';
 import type { Project, SeverityCounts } from '@leathercad/domain';
 import { isScaleCheckOnly } from '@leathercad/export';
-import { useState, type RefObject } from 'react';
+import { useState } from 'react';
 
 import type { Translate } from '../../shared/i18n.js';
 import type { CanvasView } from './CanvasHost.js';
 import { useI18n } from './i18n.js';
 import { Icon } from './icons/Icon.js';
-import { KeyCap } from './keyCaps.js';
 import { MenuButton } from './Menu.js';
-import { exportMenu, helpMenu } from './menus.js';
+import { exportMenu } from './menus.js';
 import { pressOf, type Press } from './PanelFold.js';
 import type { Room } from './panelLayout.js';
 import { PaperButton } from './PaperButton.js';
 import { describeCounts, indicatorOf } from './problemsIndicator.js';
 import { SeverityGlyph } from './SeverityGlyph.js';
+import { selectedCount } from './propertyFacts.js';
 import { selectionAnnouncement } from './selectionWords.js';
 import { describeSheets } from './sheetWords.js';
 import { sheetPlanFor } from './sheets.js';
@@ -26,13 +26,14 @@ import { ViewSwitch } from './ViewSwitch.js';
  * a glance: **is my work saved, am I designing or checking the sheets, and is
  * the pattern ready to print.**
  *
- * Left, the project: whether it is saved, and Save — its name and its menu are
- * the tab strip's above since 8.12, the menu at the strip's left. Centre,
+ * Left, nothing: the project's name, menu, history and saved state are the tab
+ * strip's above (8.12, MS.2); Ctrl+S saves. Centre,
  * Design | Sheets. Right, where the workflow ends: the paper, *Export PDF* with
  * the menu of its other formats as its second half, and *Print* — the one
- * primary action, in the paper's colour — whose second half is the problems
- * indicator, so what is wrong is on the button that would print it. Past a
- * rule, the application: Settings and Help. Nothing here edits the pattern;
+ * primary action — whose second half is the problems
+ * indicator, so what is wrong is on the button that would print it. Settings and Help are
+ * not here: Settings is the Project menu's last item and Help the status
+ * bar's corner (MS.3). Nothing here edits the pattern;
  * that is the work bar's.
  */
 export function ProjectBar({
@@ -47,11 +48,6 @@ export function ProjectBar({
   counts,
   settled,
   onShowProblems,
-  helpRef,
-  onAbout,
-  onSettings,
-  updateAvailable,
-  onSave,
   onExport,
   onExportSvg,
   onExportDxf,
@@ -74,13 +70,6 @@ export function ProjectBar({
   settled: boolean;
   /** Print's second half: open the Problems drawer. */
   onShowProblems: (press: Press) => void;
-  /** The Help menu's button, which F1 opens. */
-  helpRef: RefObject<HTMLButtonElement | null>;
-  onAbout: () => void;
-  onSettings: () => void;
-  /** A newer release exists (8.9): Settings carries a quiet mark. */
-  updateAvailable: boolean;
-  onSave: () => void;
   onExport: () => void;
   /** *Export SVG…* and *Export DXF…* (6.2, 6.5), from the menu beside *Export PDF*. */
   onExportSvg: () => void;
@@ -90,6 +79,7 @@ export function ProjectBar({
   const i18n = useI18n();
   const { t } = i18n;
   const plan = sheetPlanFor(project);
+  const picked = selectedCount(project, selection.features, selection.parts);
 
   const saveWords = dirty ? t('projectBar.unsaved') : saved ? t('projectBar.saved') : '';
   const problems = describeCounts(counts, i18n);
@@ -104,30 +94,6 @@ export function ProjectBar({
         {/* The product's name is the window title's and the icon's to carry;
           the document outline still starts with it. */}
         <h1 className="visually-hidden">LeatherCAD</h1>
-        <div className="project-identity">
-          <SaveState dirty={dirty} saved={saved} room={room} />
-          <Tooltip
-            text={dirty ? t('projectBar.saveTooltip') : t('projectBar.nothingToSave')}
-            {...(dirty ? { keys: 'save' as const } : {})}
-          >
-            <button
-              type="button"
-              className="tool save-button"
-              data-testid="save"
-              // Not `disabled`: a disabled button shows no tooltip, and this one
-              // says why it has nothing to do (R-06).
-              aria-disabled={!dirty || undefined}
-              onClick={() => {
-                if (dirty) onSave();
-              }}
-            >
-              {t('actions.save')}
-              {/* The same button either way, its key too: only whether it acts changes. */}
-              {room === 'wide' && <KeyCap command="save" />}
-            </button>
-          </Tooltip>
-        </div>
-
         <ViewSwitch
           view={view}
           onView={onView}
@@ -175,7 +141,7 @@ export function ProjectBar({
               <Icon of="chevron-down" size={12} />
             </MenuButton>
           </div>
-          <div className="split primary">
+          <div className="split primary" data-state={indicator.state}>
             <Tooltip
               text={t('projectBar.printTooltip', {
                 sheets: describeSheets(plan, t),
@@ -202,8 +168,8 @@ export function ProjectBar({
                 data-state={indicator.state}
                 aria-label={
                   problems === null
-                    ? t('projectBar.problemsNone')
-                    : t('projectBar.problems', { counts: problems })
+                    ? t('projectBar.problemsShowNone')
+                    : t('projectBar.problemsShow', { counts: problems })
                 }
                 onClick={(event) => onShowProblems(pressOf(event))}
               >
@@ -218,16 +184,6 @@ export function ProjectBar({
               </button>
             </Tooltip>
           </div>
-        </div>
-
-        {/* Past the rule is the application, not this project (8.7). */}
-        <div className="project-app" role="group" aria-label={t('projectBar.application')}>
-          <AppControls
-            helpRef={helpRef}
-            onAbout={onAbout}
-            onSettings={onSettings}
-            updateAvailable={updateAvailable}
-          />
         </div>
 
         {/* Said politely, once per change (§2): the save state, the problems and
@@ -246,7 +202,12 @@ export function ProjectBar({
               settled={settled}
             />
           </span>{' '}
-          <span data-testid="announce-selection">
+          <span
+            data-testid="announce-selection"
+            // What the words count, for a test that reads no language.
+            data-of={picked.of}
+            data-count={picked.count}
+          >
             <Settled value={selectionAnnouncement(project, selection, i18n)} settled={settled} />
           </span>
         </div>
@@ -263,80 +224,9 @@ function Settled({ value, settled }: { value: string; settled: boolean }) {
 }
 
 /**
- * Saved: a check and "Saved". Unsaved: an open dot and "Unsaved changes" —
- * "Unsaved" in a narrow window, the dot alone in a cramped one. Nothing for a
- * new project that has nothing in it yet.
- */
-function SaveState({ dirty, saved, room }: { dirty: boolean; saved: boolean; room: Room }) {
-  const { t } = useI18n();
-  if (!dirty && !saved) return <span className="save-state" data-testid="save-state" />;
-  const words = dirty
-    ? room === 'wide'
-      ? t('projectBar.unsaved')
-      : t('projectBar.unsavedShort')
-    : t('projectBar.saved');
-  return (
-    <span className={dirty ? 'save-state unsaved' : 'save-state'} data-testid="save-state">
-      <Icon of={dirty ? 'unsaved' : 'check'} size={dirty ? 8 : 12} />
-      <span className={room === 'cramped' ? 'visually-hidden' : undefined}>{words}</span>
-    </span>
-  );
-}
-
-/**
  * `LeatherCAD print test — LeatherCAD`, with a leading dot while there is
  * unsaved work: the active tab's name (8.12).
  */
 export function windowTitle(name: string, dirty: boolean, t: Translate): string {
   return t(dirty ? 'app.windowTitleUnsaved' : 'app.windowTitle', { name });
-}
-
-/**
- * The application's own controls (8.7): Settings — with 8.9's mark when a new
- * version is out — and the Help menu. Past the project bar's rule while a
- * project is open; at the tab strip's end on the start screen (8.12), where
- * there is no project bar, so F1 and the update mark are never out of reach.
- */
-export function AppControls({
-  helpRef,
-  onAbout,
-  onSettings,
-  updateAvailable,
-}: {
-  /** The Help menu's button, which F1 opens. */
-  helpRef: RefObject<HTMLButtonElement | null>;
-  onAbout: () => void;
-  onSettings: () => void;
-  /** A newer LeatherCAD is out (8.9): Settings is marked. */
-  updateAvailable: boolean;
-}) {
-  const { t } = useI18n();
-  return (
-    <>
-      <Tooltip text={t('projectBar.settingsTooltip')} keys="settings">
-        <button
-          type="button"
-          className="tool quiet icon-only settings-button"
-          data-testid="settings"
-          aria-label={t(updateAvailable ? 'projectBar.settingsUpdate' : 'projectBar.settings')}
-          onClick={onSettings}
-        >
-          <Icon of="settings" />
-          {updateAvailable && <span className="update-mark" data-testid="update-mark" />}
-        </button>
-      </Tooltip>
-      <MenuButton
-        label={t('projectBar.help')}
-        tooltip={t('projectBar.helpTooltip')}
-        keys="help"
-        testId="help-menu"
-        className="tool quiet icon-only"
-        align="end"
-        triggerRef={helpRef}
-        entries={helpMenu({ about: onAbout }, t)}
-      >
-        <Icon of="help" />
-      </MenuButton>
-    </>
-  );
 }

@@ -2,6 +2,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
 import { expectNoViolations, launchApp } from './launchApp.js';
+import { expectPieces } from './counts.js';
 
 /** The start screen, with every project closed (8.12, U.23). */
 async function onStartScreen(run: (window: Page) => Promise<void>): Promise<void> {
@@ -28,7 +29,7 @@ test('the start screen offers the blank project first, then the templates drawn 
     await expectNoViolations(window, 'the start screen');
 
     await window.getByTestId('start-card-builtin:card-holder').click();
-    await expect(window.getByTestId('part-count')).toHaveText('2');
+    await expectPieces(window, '2');
   });
 });
 
@@ -66,7 +67,18 @@ test('a project opened from the start screen by the keys leaves the focus on its
     await window.keyboard.press('Enter');
     await expect(window.getByTestId('template-builtin:bifold-wallet')).toBeVisible();
     await window.keyboard.press('Enter');
-    await expect(window.getByTestId('part-count')).toHaveText('3');
+    await expectPieces(window, '3');
     await expect(board).toBeFocused();
+  });
+});
+
+test('the start screen keeps Settings in ☰ and Help in the corner', async () => {
+  await onStartScreen(async (window) => {
+    const status = window.getByTestId('status-bar');
+    await expect(status).toBeVisible();
+    await expect(status.getByTestId('app-version')).not.toBeEmpty();
+    await expect(status.getByTestId('help-menu')).toBeVisible();
+    await window.getByTestId('project-menu').click();
+    await expect(window.getByTestId('menu-settings')).toBeVisible();
   });
 });

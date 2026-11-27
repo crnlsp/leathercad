@@ -20,6 +20,7 @@ import {
 } from './journeys.js';
 import { expectNoViolations, openApp } from './launchApp.js';
 import { piecesInPdf } from './pdfPieces.js';
+import { openSettings } from './openSettings.js';
 
 /**
  * R16, the journey the Smart Features audit found hardest: a card pocket from
@@ -41,7 +42,7 @@ test('a card pocket from a blank rectangle: open at the top, the edge problem, o
     const verdict = window.getByTestId('problems-verdict');
 
     // The maker's ease, once, in My tools: 4 mm.
-    await window.getByTestId('settings').click();
+    await openSettings(window);
     await window.getByTestId('settings-tab-tools').click();
     await enter(window.getByTestId('setting-pocket-ease').getByRole('textbox'), '4');
     await window.getByTestId('settings-close').click();

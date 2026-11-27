@@ -6,6 +6,7 @@ import { expect, test, type ElectronApplication, type Page } from '@playwright/t
 
 import { drawAPanel, expectNoViolations, withApp } from './launchApp.js';
 import { fromProjectMenu } from './projectMenu.js';
+import { expectPieces } from './counts.js';
 
 async function saveTemplate(window: Page): Promise<void> {
   await drawAPanel(window, { parts: '1' });
@@ -53,7 +54,7 @@ test('the list still opens with Enter and removes with Delete, with Undo availab
     await list.press('Enter');
     await expect(dialog).toHaveCount(0);
     await expect(window.getByTestId('tab-strip').getByRole('tab')).toHaveCount(2);
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
   });
 });
 

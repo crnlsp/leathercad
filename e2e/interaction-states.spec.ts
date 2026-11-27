@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { boardMap } from './boardMap.js';
 import { expectNoViolations, openSample, withApp } from './launchApp.js';
+import { expectNothingSelected } from './counts.js';
 
 /**
  * U.22: hover, selected, editing and locked read apart, on the board and in
@@ -79,7 +80,7 @@ test('a locked piece pointed at highlights its row, and a click still passes ove
     await window.getByTestId('tool-select').click();
     await window.getByTestId('editor-canvas').focus();
     await window.keyboard.press('Escape');
-    await expect(window.getByTestId('selected-count')).toHaveText('0');
+    await expectNothingSelected(window);
 
     const board = await boardMap(window);
     const body = board({ x: 150, y: 70 });
@@ -88,6 +89,6 @@ test('a locked piece pointed at highlights its row, and a click still passes ove
     await expect(outlineRow(window)).toHaveAccessibleDescription(/Locked/);
 
     await window.mouse.click(body.x, body.y);
-    await expect(window.getByTestId('selected-count')).toHaveText('0');
+    await expectNothingSelected(window);
   }, ROOM);
 });

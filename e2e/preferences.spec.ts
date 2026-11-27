@@ -8,6 +8,8 @@ import { closeApp } from './closeApp.js';
 import { drawAPanel, openApp } from './launchApp.js';
 import { closeActiveTab, fromProjectMenu } from './projectMenu.js';
 import { resizeWindow } from './windowSize.js';
+import { openSettings } from './openSettings.js';
+import { expectFeatures, expectPieces, expectSelected, expectNothingSelected } from './counts.js';
 
 /**
  * Slice 8.2: the app remembers how the maker likes it, and what they worked
@@ -133,7 +135,10 @@ test('a recent project reopens from the Project menu after a restart (8.7)', asy
     }, project);
     await drawAPanel(first.window);
     await first.window.keyboard.press('ControlOrMeta+s');
-    await expect(first.window.getByTestId('file-path')).toContainText('Wallet v1.2');
+    await expect(first.window.getByTestId('project-name').locator('..')).toHaveAttribute(
+      'title',
+      /Wallet v1\.2/,
+    );
     await expect.poll(() => recentNames(first.window)).toEqual(['Wallet v1.2']);
   } finally {
     await closeApp(first.app);
@@ -144,14 +149,20 @@ test('a recent project reopens from the Project menu after a restart (8.7)', asy
     // Its tab came back with the restart (8.12); closed, the project is
     // chosen from the menu, not a dialog: the main process grants the path
     // because it is on its own list.
-    await expect(second.window.getByTestId('file-path')).toContainText('Wallet v1.2');
+    await expect(second.window.getByTestId('project-name').locator('..')).toHaveAttribute(
+      'title',
+      /Wallet v1\.2/,
+    );
     await closeActiveTab(second.window);
     await expect(second.window.getByTestId('start-screen')).toBeVisible();
     await second.window.getByTestId('project-menu').click();
     await second.window.getByRole('menuitem', { name: /Wallet v1\.2/ }).click();
 
-    await expect(second.window.getByTestId('part-count')).toHaveText('1');
-    await expect(second.window.getByTestId('file-path')).toContainText('Wallet v1.2');
+    await expectPieces(second.window, '1');
+    await expect(second.window.getByTestId('project-name').locator('..')).toHaveAttribute(
+      'title',
+      /Wallet v1\.2/,
+    );
     // Saved back where it came from, without a dialog: the grant covers it.
     await second.window.keyboard.press('ControlOrMeta+s');
     await expect(second.window.getByTestId('file-error')).toHaveCount(0);
@@ -165,7 +176,7 @@ test('Settings opens on General from the gear and Ctrl+, and on Keyboard shortcu
   try {
     const dialog = window.getByTestId('settings-dialog');
 
-    await window.getByTestId('settings').click();
+    await openSettings(window);
     await expect(window.getByTestId('settings-pane-general')).toBeVisible();
     await expect(window.getByTestId('settings-tab-general')).toBeFocused();
     await window.keyboard.press('ArrowDown');
@@ -213,7 +224,7 @@ test('a setting applies at once and is kept, and Clear list empties the recent p
   try {
     // The legend shows only once there is something drawn for it to explain.
     await drawAPanel(first.window);
-    await first.window.getByTestId('settings').click();
+    await openSettings(first.window);
     await first.window.getByTestId('settings-tab-appearance').click();
     // It opens by default (U.10); the setting folds it away at once.
     await first.window.getByTestId('setting-legend-open').uncheck();
@@ -234,7 +245,7 @@ test('a setting applies at once and is kept, and Clear list empties the recent p
 
   const second = await launch(configHome);
   try {
-    await second.window.getByTestId('settings').click();
+    await openSettings(second.window);
     await second.window.getByTestId('settings-tab-appearance').click();
     await expect(second.window.getByTestId('setting-legend-open')).not.toBeChecked();
 
@@ -258,7 +269,7 @@ test('Smart guides is on until the maker turns it off, and stays off (3.20)', as
 
   const first = await launch(configHome);
   try {
-    await first.window.getByTestId('settings').click();
+    await openSettings(first.window);
     const toggle = first.window.getByTestId('setting-smart-guides');
     await expect(toggle).toBeChecked();
     await toggle.uncheck();
@@ -273,7 +284,7 @@ test('Smart guides is on until the maker turns it off, and stays off (3.20)', as
 
   const second = await launch(configHome);
   try {
-    await second.window.getByTestId('settings').click();
+    await openSettings(second.window);
     await expect(second.window.getByTestId('setting-smart-guides')).not.toBeChecked();
   } finally {
     await closeApp(second.app);
@@ -289,19 +300,19 @@ test('hiding a part lets go of what was selected in it (Q14)', async () => {
       .getByTestId('parts-list')
       .getByRole('treeitem', { name: /Outline/ })
       .click();
-    await expect(window.getByTestId('selected-count')).toHaveText('1');
+    await expectSelected(window, '1', 'pieces');
 
     await window
       .getByTestId('parts-list')
       .locator('[data-testid^="part-visible-"]')
       .first()
       .click();
-    await expect(window.getByTestId('selected-count')).toHaveText('0');
+    await expectNothingSelected(window);
 
     // Delete now has nothing to act on, so the hidden outline is still there.
     await window.getByTestId('editor-canvas').hover();
     await window.keyboard.press('Delete');
-    await expect(window.getByTestId('feature-count')).toHaveText('1');
+    await expectFeatures(window, '1');
   } finally {
     await closeApp(app);
   }
@@ -316,7 +327,7 @@ test('the interface language follows the system, or keeps the one chosen, at onc
   const first = await launch(configHome, unavailable);
   try {
     const system = await first.app.evaluate(({ app }) => app.getPreferredSystemLanguages());
-    await first.window.getByTestId('settings').click();
+    await openSettings(first.window);
     await first.window.getByTestId('settings-tab-language').click();
     const choice = first.window.getByTestId('setting-language');
 
@@ -352,7 +363,7 @@ test('the interface language follows the system, or keeps the one chosen, at onc
 
   const second = await launch(configHome, unavailable);
   try {
-    await second.window.getByTestId('settings').click();
+    await openSettings(second.window);
     await second.window.getByTestId('settings-tab-language').click();
     await expect(second.window.getByTestId('setting-language')).toHaveValue('en');
   } finally {

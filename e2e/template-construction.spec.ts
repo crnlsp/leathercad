@@ -24,7 +24,10 @@ for (const [id, name] of [
       await fromProjectMenu(window, 'new-template');
       await window.getByTestId('template-builtin:' + id).dblclick();
       await expect(window.getByTestId('project-name')).toHaveText(name);
-      await expect(window.getByTestId('file-path')).toHaveCount(0);
+      await expect(window.getByTestId('project-name').locator('..')).not.toHaveAttribute(
+        'title',
+        /\.lcp$/,
+      );
       expect(await window.title()).not.toContain('•');
       await expect(window.getByTestId('problems-panel')).toContainText('Nothing to fix');
       if (id === 'card-holder') {
@@ -51,7 +54,7 @@ for (const [id, name] of [
         dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
       }, project);
       await fromProjectMenu(window, 'save-as');
-      await expect(window.getByTestId('save-state')).toHaveText('Saved');
+      await expect(window.getByTestId('announce-save')).toHaveText('Saved');
       expect(diagnose(loadProject(readFileSync(project)).project)).toEqual([]);
       await app.evaluate(({ dialog, shell }, path) => {
         dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });

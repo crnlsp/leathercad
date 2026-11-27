@@ -15,7 +15,8 @@
     "add": "New tab",
     "addTooltip": "Start or open a project in a new tab",
     "menu": "Project menu",
-    "menuTooltip": "New, open, save as, rename, and recent projects",
+    "menuUpdate": "Project menu — a new version is available",
+    "menuTooltip": "New, open, save, save as, rename, and recent projects",
     "noProject": "No project is open",
     "alreadyOpen": "{{name}} is open already",
     "all": "All tabs",
@@ -109,7 +110,6 @@
     "drag": "drag"
   },
   "projectBar": {
-    "application": "Application",
     "exportMore": "More ways to export",
     "exportMoreTooltip": "SVG or DXF, in millimetres, for laser cutters, CNC and vector editors",
     "exportPdf": "Export PDF",
@@ -117,7 +117,6 @@
     "help": "Help",
     "helpTooltip": "Help",
     "name": "Project name",
-    "nothingToSave": "Nothing to save",
     "output": "Output",
     "paper": "Paper: {{sheets}}",
     "paperLong": "{{count}} × {{paper}} {{orientation}}",
@@ -137,15 +136,12 @@
     "printTooltip": "Preview {{sheets}}, then print them at 1:1",
     "problems": "Problems: {{counts}}",
     "problemsNone": "Problems: nothing to fix",
+    "problemsShow": "Problems: {{counts}}. Show Problems",
+    "problemsShowNone": "Problems: nothing to fix. Show Problems",
     "problemsNoneTooltip": "Nothing to fix",
     "problemsTooltip": "{{counts}}. Show them in Problems",
-    "saveTooltip": "Save the project",
     "saved": "Saved",
-    "settings": "Settings",
-    "settingsTooltip": "Settings",
-    "unsaved": "Unsaved changes",
-    "unsavedShort": "Unsaved",
-    "settingsUpdate": "Settings — a new version is available"
+    "unsaved": "Unsaved changes"
   },
   "menu": {
     "about": "About LeatherCAD",
@@ -160,6 +156,7 @@
     "recentEmpty": "Projects you open or save appear here.",
     "rename": "Rename…",
     "renameNote": "Also names the file and the PDF footer",
+    "save": "Save",
     "saveAs": "Save as…",
     "settings": "Settings…",
     "recentGone": "That project is no longer there",
@@ -169,7 +166,9 @@
     "importSvg": "Import SVG pattern…",
     "importSvgNote": "Inkscape or Illustrator drawings, at their true size",
     "insertPieces": "Insert pieces from template…",
-    "insertPiecesNote": "Your saved pieces, or any template's"
+    "insertPiecesNote": "Your saved pieces, or any template's",
+    "newVersion": "A new version is available",
+    "keyboardShortcuts": "Keyboard shortcuts"
   },
   "macMenu": {
     "edit": "Edit",
@@ -231,26 +230,15 @@
     "undoTooltip": "Undo {{action}}"
   },
   "status": {
-    "features_one": "feature",
-    "features_other": "features",
     "focus": "Focus",
     "panels": "Panels",
     "parts": "Parts",
-    "partsCount_one": "piece",
-    "partsCount_other": "pieces",
-    "problems_one": "problem",
-    "problems_other": "problems",
     "properties": "Properties",
-    "selected": "selected",
     "sheetOf": "Sheet {{number}} of {{count}}",
-    "partsSelected_one": "piece selected",
-    "partsSelected_other": "pieces selected",
     "announcePieces_one": "{{names}} selected",
     "announcePieces_other": "{{count}} pieces selected: {{names}}",
     "announceFeatures_one": "{{count}} feature selected in {{names}}",
     "announceFeatures_other": "{{count}} features selected in {{names}}",
-    "checkForUpdates": "Check for updates",
-    "versionNext": "to {{version}}",
     "saved": "Saved {{name}}",
     "exported": "Exported {{name}}",
     "savedTemplate": "Saved as a template. Find it under All templates › Mine"
@@ -355,6 +343,19 @@
     "outline": "Outline",
     "stitch": "Stitch line",
     "stitch-allowance": "Stitch line + allowance"
+  },
+  "drawGroup": {
+    "cut": "Cut",
+    "mark": "Mark",
+    "stitch": "Stitch"
+  },
+  "drawModeTip": {
+    "cut-out": "A hole in the selected piece",
+    "fold": "Where the selected piece folds",
+    "marking": "A reference line on the selected piece, never cut",
+    "outline": "A new piece's cut edge",
+    "stitch": "Holes along a line on the selected piece",
+    "stitch-allowance": "A new piece, from its stitch line"
   },
   "shortcuts": {
     "or": "or",
@@ -870,7 +871,8 @@
     "help": "About this",
     "hideParts": "Hide Parts",
     "hideProperties": "Hide Properties",
-    "partsFolded": "Parts, folded",
+    "partsFoldedCount_one": "Parts, folded, {{count}} piece",
+    "partsFoldedCount_other": "Parts, folded, {{count}} pieces",
     "propertiesFolded": "Properties, folded",
     "showParts": "Show Parts",
     "showProperties": "Show Properties"
@@ -1793,9 +1795,7 @@
     "available": "LeatherCAD {{version}} is available.",
     "availableLink": "See what is new, and download it",
     "failed": "Could not check for a new version. Check your connection, or try again later.",
-    "checkedAt": "Checked at {{time}}",
-    "again_one": "You can check again in {{count}} minute.",
-    "again_other": "You can check again in {{count}} minutes."
+    "checkedAt": "Checked at {{time}}"
   },
   "templates": {
     "title": "New project from template",

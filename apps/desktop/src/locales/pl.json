@@ -109,7 +109,6 @@
     "drag": "przeciągnij"
   },
   "projectBar": {
-    "application": "Aplikacja",
     "exportMore": "Inne formaty eksportu",
     "exportMoreTooltip": "Eksportuj do SVG lub DXF w milimetrach — do ploterów laserowych, CNC i edytorów grafiki wektorowej",
     "exportPdf": "Eksportuj PDF",
@@ -117,7 +116,6 @@
     "help": "Pomoc",
     "helpTooltip": "Pomoc",
     "name": "Nazwa projektu",
-    "nothingToSave": "Brak zmian do zapisania",
     "output": "Wynik",
     "paper": "Papier: {{sheets}}",
     "paperLong": "{{count}} × {{paper}} {{orientation}}",
@@ -143,13 +141,8 @@
     "problemsNone": "Problemy: brak uwag",
     "problemsNoneTooltip": "Brak uwag",
     "problemsTooltip": "{{counts}}. Pokaż w panelu Problemy",
-    "saveTooltip": "Zapisz projekt",
     "saved": "Zapisano",
-    "settings": "Ustawienia",
-    "settingsTooltip": "Ustawienia",
-    "unsaved": "Niezapisane zmiany",
-    "unsavedShort": "Niezapisane",
-    "settingsUpdate": "Ustawienia — dostępna nowa wersja"
+    "unsaved": "Niezapisane zmiany"
   },
   "menu": {
     "about": "O programie LeatherCAD",
@@ -231,30 +224,11 @@
     "undoTooltip": "Cofnij: {{action}}"
   },
   "status": {
-    "features_one": "element",
-    "features_few": "elementy",
-    "features_many": "elementów",
-    "features_other": "elementu",
     "focus": "Skupienie",
     "panels": "Panele",
     "parts": "Części",
-    "partsCount_one": "część",
-    "partsCount_few": "części",
-    "partsCount_many": "części",
-    "partsCount_other": "części",
-    "problems_one": "problem",
-    "problems_few": "problemy",
-    "problems_many": "problemów",
-    "problems_other": "problemu",
     "properties": "Właściwości",
-    "selected": "zaznaczone",
     "sheetOf": "Arkusz {{number}} z {{count}}",
-    "partsSelected_one": "część zaznaczona",
-    "partsSelected_few": "części zaznaczone",
-    "partsSelected_many": "części zaznaczonych",
-    "partsSelected_other": "części zaznaczonej",
-    "checkForUpdates": "Sprawdź aktualizacje",
-    "versionNext": "do {{version}}",
     "saved": "Zapisano {{name}}",
     "exported": "Wyeksportowano {{name}}"
   },
@@ -845,7 +819,6 @@
     "featureIn": "{{feature}} · {{part}}",
     "hideParts": "Ukryj Części",
     "hideProperties": "Ukryj Właściwości",
-    "partsFolded": "Części, zwinięte",
     "propertiesFolded": "Właściwości, zwinięte",
     "showParts": "Pokaż Części",
     "showProperties": "Pokaż Właściwości"
@@ -1543,11 +1516,7 @@
     "available": "Dostępny jest LeatherCAD {{version}}.",
     "availableLink": "Zobacz nowości i pobierz",
     "failed": "Nie udało się sprawdzić aktualizacji. Sprawdź połączenie lub spróbuj później.",
-    "checkedAt": "Sprawdzono: {{time}}",
-    "again_one": "Możesz sprawdzić ponownie za {{count}} minutę.",
-    "again_few": "Możesz sprawdzić ponownie za {{count}} minuty.",
-    "again_many": "Możesz sprawdzić ponownie za {{count}} minut.",
-    "again_other": "Możesz sprawdzić ponownie za {{count}} minuty."
+    "checkedAt": "Sprawdzono: {{time}}"
   },
   "templates": {
     "title": "Nowy projekt z szablonu",

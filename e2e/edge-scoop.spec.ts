@@ -8,6 +8,7 @@ import { closeApp } from './closeApp.js';
 import { readoutAt } from './cursorReadout.js';
 import { launchApp } from './launchApp.js';
 import { closeActiveTab, fromProjectMenu } from './projectMenu.js';
+import { expectFeatures, expectPieces } from './counts.js';
 
 /**
  * Slice 3.9a: the product spec's own example — "the card pockets are 95 × 60 mm
@@ -49,7 +50,7 @@ test('a card pocket with a thumb scoop is drawn, stitched on three sides, and re
   try {
     const window = await app.firstWindow();
     await window.waitForLoadState('domcontentloaded');
-    await expect(window.getByTestId('app-version')).not.toBeEmpty();
+    await expect(window.getByTestId('project-menu')).toBeVisible();
     await app.evaluate(({ dialog }, path) => {
       dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
       dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
@@ -80,8 +81,8 @@ test('a card pocket with a thumb scoop is drawn, stitched on three sides, and re
     await click(0, 60);
     await click(0, 0); // on the first point: closed
 
-    await expect(window.getByTestId('part-count')).toHaveText('1');
-    await expect(window.getByTestId('feature-count')).toHaveText('1');
+    await expectPieces(window, '1');
+    await expectFeatures(window, '1');
 
     // The curve is really in the outline. A straight top would measure
     // 312.0 mm; the scoop's arc (r 15.375 mm, 41.5 mm long) makes it 323.5 —
@@ -111,25 +112,25 @@ test('a card pocket with a thumb scoop is drawn, stitched on three sides, and re
     await click(92, 4);
     await click(92, 56);
     await window.keyboard.press('Enter');
-    await expect(window.getByTestId('feature-count')).toHaveText('2');
+    await expectFeatures(window, '2');
 
     await window.getByTestId('parts-list').getByText('Stitch line').click();
     await panel.getByTestId('add-stitch-holes').click();
-    await expect(window.getByTestId('feature-count')).toHaveText('3');
+    await expectFeatures(window, '3');
     const holes = (await panel.getByTestId('hole-count').textContent()) ?? '';
     expect(Number(holes)).toBeGreaterThan(40);
     const verdict = (await window.getByTestId('problems-toggle').textContent()) ?? '';
 
     // ── Saved, and the same pocket when it is opened again ──────────────────
-    await window.getByTestId('save').click();
-    await expect(window.getByTestId('save')).toHaveAttribute('aria-disabled', 'true');
+    await window.keyboard.press('ControlOrMeta+S');
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     // Its tab closed, so opening reads the file again rather than going back
     // to the tab (8.12).
     await closeActiveTab(window);
     await expect(window.getByTestId('start-screen')).toBeVisible();
     await fromProjectMenu(window, 'open');
 
-    await expect(window.getByTestId('feature-count')).toHaveText('3');
+    await expectFeatures(window, '3');
     await window.getByTestId('parts-list').getByText('Outline').click();
     await expect.poll(perimeter).toBe(drawn);
     await window.getByTestId('parts-list').getByText('Stitch holes').click();

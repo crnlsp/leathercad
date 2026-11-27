@@ -18,6 +18,7 @@ import { drawAPanel, freshStateHome } from '../launchApp.js';
 import { oneErrorFile } from '../oneErrorFile.js';
 import { openPrintTest } from '../printTest.js';
 import { chooseSvg } from '../svgPatterns.js';
+import { expectFeatures, expectPieces, expectSelected, expectNothingSelected } from '../counts.js';
 
 /**
  * What the app looks like, pixel for pixel. See docs/testing.md §5.2.
@@ -73,8 +74,8 @@ async function launch(
     await window.getByTestId('start-new').click();
   }
   await expect(
-    window.getByTestId(options.startScreen === true ? 'start-screen' : 'app-version'),
-  ).not.toBeEmpty();
+    window.getByTestId(options.startScreen === true ? 'start-screen' : 'project-menu'),
+  ).toBeVisible();
   await app.evaluate(({ BrowserWindow }, { width, height }) => {
     BrowserWindow.getAllWindows()[0]?.setContentSize(width, height);
   }, SIZE);
@@ -184,7 +185,7 @@ test('a stitched panel on the canvas', async () => {
     const panel = window.getByTestId('property-panel');
     await panel.getByTestId('add-stitch-line').click();
     await panel.getByTestId('add-stitch-holes').click();
-    await expect(window.getByTestId('feature-count')).toHaveText('3');
+    await expectFeatures(window, '3');
 
     // Nothing selected and the pointer off the canvas, so the picture is the
     // drawing and not the interaction with it. An empty point past the ruler:
@@ -192,7 +193,7 @@ test('a stitched panel on the canvas', async () => {
     // control its bottom-right (U.4).
     await window.getByTestId('tool-select').click();
     await window.mouse.click(box!.x + 60, box!.y + 60);
-    await expect(window.getByTestId('selected-count')).toHaveText('0');
+    await expectNothingSelected(window);
     await pointerAway(window);
 
     await expect(canvas).toHaveScreenshot('stitched-panel.png');
@@ -218,7 +219,7 @@ test('a hole set’s holes as each style of iron cuts them, close up (9.26)', as
     const panel = window.getByTestId('property-panel');
     await panel.getByTestId('add-stitch-line').click();
     await panel.getByTestId('add-stitch-holes').click();
-    await expect(window.getByTestId('feature-count')).toHaveText('3');
+    await expectFeatures(window, '3');
     await window.getByTestId('zoom-fit').click();
 
     const holeSet = window.locator('[data-testid^="feature-row-"]', { hasText: 'Stitch holes' });
@@ -245,7 +246,7 @@ test('a hole set’s holes as each style of iron cuts them, close up (9.26)', as
       await window.getByTestId('tool-select').click();
       await canvas.focus();
       await window.keyboard.press('Escape');
-      await expect(window.getByTestId('selected-count')).toHaveText('0');
+      await expectNothingSelected(window);
       await pointerAway(window);
       await expect(canvas).toHaveScreenshot(name);
     }
@@ -372,14 +373,14 @@ test('a piece hovered, selected, being edited and locked, each its own (U.22)', 
 
     // Hovered: the broad, light band, the piece left pale.
     await window.mouse.click(empty.x, empty.y);
-    await expect(window.getByTestId('selected-count')).toHaveText('0');
+    await expectNothingSelected(window);
     await window.mouse.move(body.x, body.y);
     await expect(window.locator('[data-board-hover]')).toHaveCount(1);
     expect(await board()).toMatchSnapshot('state-hover.png');
 
     // Selected: the narrow, dense band and the warmer piece.
     await window.mouse.click(body.x, body.y);
-    await expect(window.getByTestId('selected-count')).toHaveText('1');
+    await expectSelected(window, '1', 'pieces');
     await pointerAway(window);
     await expect(canvas).toHaveScreenshot('state-selected.png');
 
@@ -395,7 +396,7 @@ test('a piece hovered, selected, being edited and locked, each its own (U.22)', 
     await outline.hover();
     await outline.locator('[data-testid^="feature-locked-"]').click();
     await window.mouse.click(empty.x, empty.y);
-    await expect(window.getByTestId('selected-count')).toHaveText('0');
+    await expectNothingSelected(window);
     await window.mouse.move(body.x, body.y);
     await expect(window.locator('[data-board-hover]')).toHaveCount(1);
     expect(await board()).toMatchSnapshot('state-locked.png');
@@ -417,7 +418,7 @@ test('the print test on its sheets (7.4c)', async () => {
       resolve(import.meta.dirname, '../../fixtures/projects/print-test.lcp'),
     );
     await fromProjectMenu(window, 'open');
-    await expect(window.getByTestId('part-count')).toHaveText('3');
+    await expectPieces(window, '3');
 
     await window.getByTestId('view-sheets').click();
     await expect(window.getByTestId('sheets-summary')).toHaveText(
@@ -483,6 +484,8 @@ test('the start screen, blank first and the templates as cards (U.23)', async ()
       window.getByTestId('start-card-builtin:bifold-wallet').locator('img'),
     ).toBeVisible();
     await window.mouse.move(0, 0);
+    // The start screen's status bar says the version (MS.3).
+    await blankVersion(window);
     await expect(window).toHaveScreenshot('start-screen.png');
   } finally {
     await closeApp(app);

@@ -19,7 +19,7 @@ async function openKeyFob(window: Page) {
   await window.getByTestId('template-builtin:key-fob').dblclick();
   await expect(window.getByTestId('project-name')).toHaveText('Key fob');
   await window.getByTestId('tool-select').click();
-  await expect(window.getByTestId('problem-count')).toHaveCount(0);
+  await expect(window.getByTestId('print-problems')).toHaveAttribute('data-state', 'clear');
   return boardMap(window);
 }
 
@@ -78,7 +78,7 @@ test('a rivet carried to 2 mm from the edge reads clear, and nothing is listed (
 
     await drop(window);
     await expect(window.getByTestId('move-announcer')).toContainText('mm from the edge.');
-    await expect(window.getByTestId('problem-count')).toHaveCount(0);
+    await expect(window.getByTestId('print-problems')).toHaveAttribute('data-state', 'clear');
   }, ROOM);
 });
 

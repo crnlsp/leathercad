@@ -18,6 +18,7 @@ import { expectNoViolations, openApp } from './launchApp.js';
 import { piecesInPdf } from './pdfPieces.js';
 import { fromProjectMenu } from './projectMenu.js';
 import { chooseSvgFile } from './svgPatterns.js';
+import { expectPieces } from './counts.js';
 
 /**
  * R16: patterns that come from elsewhere — a drawing from Inkscape, and a
@@ -60,7 +61,7 @@ test('an Inkscape pattern imported at true size, stitched along its curves, to a
     await expect(dialog).toContainText('From the file’s own units');
     await expect(dialog.getByTestId('svg-import-pieces')).toHaveText('1 piece');
     await dialog.getByTestId('svg-import-open').click();
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
 
     // Stitched 3 mm in all round, its four curved corners included (9.19).
     await featureRow(window, 'card-holder', 'Outline').click();
@@ -106,13 +107,13 @@ test('a piece saved to the library inserts into a new project whole, holes and a
 
     // A new project, and the piece inserted from the library.
     await window.keyboard.press('ControlOrMeta+N');
-    await expect(window.getByTestId('part-count')).toHaveText('0');
+    await expectPieces(window, '0');
     await fromProjectMenu(window, 'insert-pieces');
     const dialog = window.getByTestId('template-dialog');
     await dialog.getByTestId('template-mine:Outer').click();
     await expect(dialog.getByTestId('template-pieces').getByRole('checkbox')).toHaveCount(1);
     await dialog.getByTestId('template-use').click();
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
     await expect(window.getByTestId('problems-verdict')).toHaveText('Nothing to fix.');
 
     const project = await saveAs(app, window, join(dir, 'Reused.lcp'));

@@ -22,6 +22,7 @@ import {
 import { expectNoViolations, openApp } from './launchApp.js';
 import { piecesInPdf } from './pdfPieces.js';
 import { fromProjectMenu, renameProject } from './projectMenu.js';
+import { expectPieces } from './counts.js';
 
 /**
  * R16: a five-piece bag, from a blank project. A front stitched round three
@@ -48,7 +49,7 @@ test('a five-piece bag, with a pocket copied from another tab: sewn, checked and
     await window.locator('[data-testid^="part-heading-"]', { hasText: 'Front' }).click();
     await window.getByTestId('editor-canvas').focus();
     await window.keyboard.press('ControlOrMeta+D');
-    await expect(window.getByTestId('part-count')).toHaveText('2');
+    await expectPieces(window, '2');
     await fields.getByTestId('part-name').fill('Back');
 
     // ── A strap and a closure tab, stitched all round ──────────────────────
@@ -58,7 +59,7 @@ test('a five-piece bag, with a pocket copied from another tab: sewn, checked and
     await drawRectangle(window, [550, 450, 620, 560]);
     await shapePiece(window, { name: 'Tab', width: 40, height: 60, radii: [5, 5, 5, 5] });
     await stitchAndPunch(window, 3);
-    await expect(window.getByTestId('part-count')).toHaveText('4');
+    await expectPieces(window, '4');
 
     // ── The inside pocket, copied from the card holder in another tab ──────
     await fromProjectMenu(window, 'new-template');
@@ -75,7 +76,7 @@ test('a five-piece bag, with a pocket copied from another tab: sewn, checked and
     await canvas.focus();
     await window.mouse.move(box.x + box.width * 0.7, box.y + box.height * 0.3);
     await window.keyboard.press('ControlOrMeta+V');
-    await expect(window.getByTestId('part-count')).toHaveText('5');
+    await expectPieces(window, '5');
     await expect(fields.getByTestId('part-name')).toHaveValue('Pocket');
     // One inside the bag, where the card holder cut two.
     await enter(fields.getByRole('textbox', { name: 'Cut, number of pieces' }), '1');

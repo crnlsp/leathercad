@@ -44,8 +44,8 @@ test('cut the pocket as a mirrored pair: Parts and the summary say 1 + 1 mirrore
     ).toBeVisible();
     await expectNoViolations(window, 'a mirrored pair in the production summary');
 
-    await window.getByTestId('save').click();
-    await expect(window.getByTestId('save-state')).toHaveText('Saved');
+    await window.keyboard.press('ControlOrMeta+S');
+    await expect(window.getByTestId('announce-save')).toHaveText('Saved');
     const bytes = readFileSync(saved);
     expect(readManifest(bytes).formatVersion).toBeGreaterThanOrEqual(15);
     expect(loadProject(bytes).project.parts.find((p) => p.id === 'pocket')).toMatchObject({

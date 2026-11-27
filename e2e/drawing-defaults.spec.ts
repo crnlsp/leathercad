@@ -6,6 +6,9 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 
 import { closeApp } from './closeApp.js';
 import { openApp } from './launchApp.js';
+import { openSettings } from './openSettings.js';
+import { resizeWindow } from './windowSize.js';
+import { expectPieces } from './counts.js';
 
 /**
  * U.18, R-16: while a Draw tool would make a new piece, Properties shows
@@ -23,7 +26,7 @@ const margin = (window: Page): Locator => section(window).getByLabel('Stitch lin
 const iron = (window: Page): Locator => section(window).getByLabel('Holes');
 
 async function myTools(window: Page): Promise<Locator> {
-  await window.getByTestId('settings').click();
+  await openSettings(window);
   await window.getByTestId('settings-tab-tools').click();
   return window.getByTestId('settings-pane-tools');
 }
@@ -125,7 +128,7 @@ test('the margin typed mid-draw goes to the field, and the rectangle under way k
     // Enter is the field's: it stores the margin and does not make the shape.
     await window.keyboard.press('Enter');
     await expect(margin(window)).toHaveValue('4.5');
-    await expect(window.getByTestId('part-count')).toHaveText('0');
+    await expectPieces(window, '0');
 
     // The draft is as it was: its sizes in Properties, its chips on the board.
     await expect(window.getByTestId('drawing-sizes')).toHaveText(sizes!);
@@ -136,7 +139,7 @@ test('the margin typed mid-draw goes to the field, and the rectangle under way k
     // And it is still under way: the second click makes it, at that size.
     await window.mouse.move(other.x, other.y);
     await window.mouse.click(other.x, other.y);
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
     await expect(window.getByTestId('property-panel').getByLabel('Width')).toHaveValue(
       width.replace(/\.?0+$/, ''),
     );
@@ -166,7 +169,7 @@ test('Stitch + allowance and the next steps make things with the values set in P
     // Stitch + allowance: the edge grows by the margin set here.
     await window.getByTestId('draw-as-stitch-allowance').click();
     await drag([380, 160], [560, 300]);
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
     await window.getByTestId('parts-list').locator('[data-testid^="feature-row-"]').last().click();
     await expect(panel.getByTestId('follows')).toBeVisible();
     await expect(panel.locator('label', { hasText: /^Edge margin/ }).locator('input')).toHaveValue(
@@ -188,6 +191,61 @@ test('Stitch + allowance and the next steps make things with the values set in P
     await expect(step).toHaveAttribute('data-step', 'holes');
     await step.click();
     await expect(panel.getByTestId('iron-preset').locator('option:checked')).toHaveText(chosen);
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('row 3 names the tool and groups Draw as (MS.5)', async () => {
+  const { app, window } = await launch(freshConfig());
+  try {
+    await window.getByTestId('tool-line').click();
+    const bar = window.getByTestId('work-bar');
+    const head = window.getByTestId('work-head');
+    await expect(head).toContainText('Line');
+    await expect(head.locator('kbd')).toHaveText('L');
+    // As wide as the rail below it, so the rail rises into the row.
+    const rail = (await window.getByTestId('tool-rail').boundingBox())!;
+    expect((await head.boundingBox())!.width).toBe(rail.width);
+
+    await expect(
+      bar.getByTestId('tool-options').locator('.draw-as-label, .draw-group-name'),
+    ).toHaveText(['Draw as', 'Cut', 'Stitch', 'Mark']);
+    for (const group of ['Cut', 'Stitch', 'Mark']) {
+      await expect(bar.getByRole('group', { name: group })).toBeVisible();
+    }
+    // Whether it makes a new piece is the tooltip's, read with the button.
+    const cutOut = window.getByTestId('draw-as-cut-out');
+    await cutOut.hover();
+    await expect(window.getByRole('tooltip')).toHaveText('A hole in the selected piece');
+    await expect(cutOut).toHaveAccessibleDescription('A hole in the selected piece');
+    for (const mode of ['outline', 'cut-out', 'stitch', 'stitch-allowance', 'fold', 'marking']) {
+      await expect(window.getByTestId(`draw-as-${mode}`).locator('.line-sample'), mode).toHaveCount(
+        1,
+      );
+    }
+
+    // The rail narrow, the head shows the tool's icon alone.
+    await resizeWindow(app, window, 1024, 768);
+    await expect(head.locator('kbd')).toHaveCount(0);
+    expect((await head.boundingBox())!.width).toBe(
+      (await window.getByTestId('tool-rail').boundingBox())!.width,
+    );
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('the hint moved to the status bar (MS.5)', async () => {
+  const { app, window } = await launch(freshConfig());
+  try {
+    await window.getByTestId('tool-line').click();
+    const hints = window.getByTestId('status-bar').getByTestId('tool-how-to');
+    await expect(hints).toBeVisible();
+    await expect(hints).toContainText('Drag end to end');
+    await expect(hints).not.toContainText('all keys');
+    await expect(window.getByTestId('work-bar').getByTestId('tool-how-to')).toHaveCount(0);
+    await expect(window.getByTestId('work-bar').getByTestId('all-keys')).toHaveText('? all keys');
   } finally {
     await closeApp(app);
   }

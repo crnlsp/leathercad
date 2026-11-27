@@ -64,19 +64,23 @@ export const ACCENT = {
 
 /**
  * The window's actions on the shell (R-06, U.7). **Print** is the one primary
- * action, in the paper's colour: it is what goes on paper. Green left the
- * actions in 1.5 — on the board green is the fold's colour (7.6 had Print
- * green). Export PDF is a secondary action on `SHELL[600]`. Each is a split
- * button whose narrow half is a shade apart: Print's problems indicator on
- * `primarySide`, Export's menu on `secondarySide`.
+ * action. Its green returned in MS.1 for *ready* only: the pattern has nothing
+ * to fix. With a warning or an error it sits on the shell like Export, beside
+ * the indicator's amber or red. The fold's green on the board is far darker
+ * and on the ground, so the two are not confused. Export PDF is a secondary
+ * action on `SHELL[600]`. Each is a split button whose narrow half is a shade
+ * apart: Print's problems indicator, Export's menu on `secondarySide`.
  */
 export const ACTION = {
   primary: GROUND.ground,
   /** Print's main half under the pointer: lighter still. */
   primaryHover: GROUND.pieceFill,
-  primarySide: GROUND.major,
+  /** Print's halves while nothing needs fixing. */
+  ready: '#4ade80',
+  readyHover: '#86efac',
+  readySide: '#22c55e',
   secondarySide: '#3a3f47',
-  /** Words and glyphs on `primary`, `primarySide`, and the shell's warning and error. */
+  /** Words and glyphs on `primary`, `ready`, `readySide`, and the shell's warning and error. */
   onPrimary: SHELL[900],
 } as const;
 

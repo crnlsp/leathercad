@@ -136,7 +136,7 @@ export async function saveAs(
 ): Promise<Project> {
   await answerSaveWith(app, file);
   await fromProjectMenu(window, 'save-as');
-  await expect(window.getByTestId('save-state')).toHaveText('Saved');
+  await expect(window.getByTestId('announce-save')).toHaveText('Saved');
   return loadProject(readFileSync(file)).project;
 }
 

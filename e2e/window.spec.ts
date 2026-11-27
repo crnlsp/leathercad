@@ -4,6 +4,9 @@ import { closeApp } from './closeApp.js';
 import { readoutAt } from './cursorReadout.js';
 import { drawAPanel, openApp } from './launchApp.js';
 import { fromProjectMenu } from './projectMenu.js';
+import { expectPieces } from './counts.js';
+import { resizeWindow } from './windowSize.js';
+import { expectWorkRowFits } from './workRow.js';
 
 /**
  * Slice 8.7: Linux and Windows have no application menu — the project bar
@@ -52,7 +55,7 @@ test('Ctrl+Q asks about unsaved work before it quits (8.7)', async () => {
     await expect(dialog).toBeVisible();
     await expect(dialog.getByTestId('unsaved-save')).toBeFocused();
     await dialog.getByTestId('unsaved-cancel').click();
-    await expect(window.getByTestId('part-count')).toHaveText('1');
+    await expectPieces(window, '1');
   } finally {
     await closeApp(app);
   }
@@ -125,6 +128,36 @@ test('the window opens with 1280 × 840 of room, and never has less than 860 × 
       BrowserWindow.getAllWindows()[0]!.setContentSize(400, 300),
     );
     await expect.poll(room).toEqual([860, 600]);
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('860 px gives way in order', async () => {
+  // The spec's order as the window narrows (MS.7): the rail's names, Properties,
+  // the paper's orientation word, Parts, "? all keys", the group names — and the
+  // choices become the select only if they themselves do not fit, which
+  // English's do here.
+  const { app, window } = await openApp();
+  try {
+    await window.getByTestId('tool-line').click();
+    await resizeWindow(app, window, 860, 600);
+
+    expect((await window.getByTestId('tool-rail').boundingBox())!.width).toBe(56);
+    // Neither panel keeps a column: each opens over the board from its chip.
+    for (const panel of ['parts', 'properties']) {
+      await expect(window.getByTestId(`toggle-${panel}`), panel).toBeVisible();
+    }
+    await expect(window.getByTestId('parts-list')).toBeHidden();
+    await expect(window.getByTestId('property-panel')).toBeHidden();
+    await expect(window.getByTestId('paper-button').locator('.paper-face')).toHaveText('1 × A4');
+
+    const row = await expectWorkRowFits(window, 'English at 860 px');
+    expect(row).toMatchObject({ allKeys: false, groupNames: false, chips: true, select: false });
+    // Given way, a group's name still names it to a screen reader.
+    for (const group of ['Cut', 'Stitch', 'Mark']) {
+      await expect(window.getByRole('group', { name: group })).toBeVisible();
+    }
   } finally {
     await closeApp(app);
   }
